@@ -1,0 +1,750 @@
+global proc sliceWiz()
+{
+
+}
+
+//SLICING LAYOUT
+//===========================================
+global proc slicingLayout(string $parent)
+{
+string $layout = `frameLayout
+	-l "Slicing"	
+	-ann ""
+	-bv true
+	-la "center"
+	-li 10
+	-lv true
+	-mw 10
+	-mh 10		
+	
+	-cll true
+	-cl true
+	-p $parent
+	`;
+	
+	slicingMenuLayout();			
+			
+	directionalSlicingLayout($layout);
+	
+	radialSlicingLayout($layout);
+	
+	setParent..;
+}
+
+global proc slicingMenuLayout()
+{
+string $menuBarLayout = `menuBarLayout slicingMenu`;	
+	menu -label "Slice";		
+		menuItem -label "Direction Slice" -command "directionalSliceSelectedObjects(`ls -sl`)";		
+		menuItem -label "Radial Slice" -command "radialSliceSelectedObjects(`ls -sl`)";
+	
+	menu -label "Separate";		
+		menuItem -label "Separate Selected Objects" -command "polySeparateSelectedObjects(`ls -sl`)";
+		menuItem -label "Clean Up Objects" -command "cleanUpPolySeparateObjects(`ls -sl`)";
+}
+
+global proc directionalSlicingLayout(string $parent)
+{
+	string $layout = `frameLayout
+		-l "Directional Slicing"	
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl false
+		-p $parent
+		`;
+		/*
+		
+		string $omgChangeCommand = ("int $xSl = `optionMenuGrp -q -sl directionSlicingCutOrderXOptionMenuGrp`;"
+		+"int $ySl = `optionMenuGrp -q -sl directionSlicingCutOrderXOptionMenuGrp`;
+		+"int $zSl = `optionMenuGrp -q -sl directionSlicingCutOrderXOptionMenuGrp`;
+		*/
+		optionMenuGrp 
+			-l "Cut Order:"
+			-cal 1 "left"
+			-cal 2 "left"
+			directionSlicingCutOrderXOptionMenuGrp;		
+				menuItem -label "1";
+				menuItem -label "2";
+				menuItem -label "3";
+				
+		intFieldGrp
+			-l "X Slices |"
+			-nf 1
+			-cal 1 "left"
+			-v1 0			
+			directionalSlicingXSlicesIntFieldGrp
+			;
+		
+		optionMenuGrp 
+			-l "Cut Order:"
+			-cal 1 "left"
+			-cal 2 "left"
+			directionSlicingCutOrderYOptionMenuGrp;		
+				menuItem -label "1";
+				menuItem -label "2";
+				menuItem -label "3";
+				
+		intFieldGrp
+			-l "Y Slices -"
+			-nf 1
+			-cal 1 "left"
+			-v1 0			
+			directionalSlicingYSlicesIntFieldGrp
+			;
+			
+		optionMenuGrp 
+			-l "Cut Order:"
+			-cal 1 "left"
+			-cal 2 "left"
+			directionSlicingCutOrderZOptionMenuGrp;		
+				menuItem -label "1";
+				menuItem -label "2";
+				menuItem -label "3";
+				
+		intFieldGrp
+			-l "Z Slices |"
+			-nf 1
+			-cal 1 "left"
+			-v1 0			
+			directionalSlicingZSlicesIntFieldGrp
+			;
+			
+		checkBox
+			-l "Orient To Object" 
+			-v 0 
+			directionalSlicingOrientToObjectCheckBox
+			;
+		
+		checkBox
+			-l "Orient Slices To Camera" 
+			-v 0 
+			directionalSlicingOrientSlicesToCameraCheckBox
+			;
+			
+		checkBox
+			-l "Extract Faces" 
+			-v 0 
+			directionalSlicingExtractFaceCheckBox
+			;
+			
+		checkBox
+			-l "Separate Pieces and Clean Up" 
+			-v 0 
+			directionalSlicingSeparatePiecesOption
+			;
+			
+		checkBox
+			-l "Select New Edges" 
+			-v 0 
+			directionalSlicingSelectNewEdgesOption
+			;
+						
+		button
+			-l "Slice"
+			-ann "This cuts any object selected. Make sure you only have Polygon Transforms Or Polygon Faces selected."
+			-c "directionalSliceSelectedObjects(`ls -sl`)"
+			directionalSliceSelectedObjectButton
+			;
+			
+	setParent..;
+}
+
+global proc radialSlicingLayout(string $parent)
+{
+	string $layout = `frameLayout
+		-l "Radial Slicing"	
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl false
+		-p $parent
+		`;
+	
+	intSliderGrp 
+			-l "Slices" 
+			-minValue 1	
+			-value 4
+			-fmn 1
+			-field true	
+			-ann "This is how many cuts you want to make, not how many pieces you want to end up with."
+			-cw 1 200
+			radialSliceCount			
+			;
+			
+		optionMenuGrp 
+			-l "Axis:"
+			-cal 1 "left"
+			-cal 2 "left"
+			-ann ("")
+			radialSlicingAxis;		
+				menuItem -label "X";
+				menuItem -label "Y";
+				menuItem -label "Z";
+				
+		checkBox
+			-l "Separate Pieces and Clean Up" 
+			-v 0 
+			radialSlicingSeparatePiecesOption
+			;
+			
+		button
+			-label "Slice"
+			-ann "This cuts any object selected. Make sure you only have Polygon Transforms selected."
+			-command "radialSliceSelectedObjects(`ls -sl`)"
+			radialSliceSelectedObject
+			;
+			
+	setParent..;
+}
+
+
+//SLICING
+//===============================
+global proc directionalSliceSelectedObjects(string $sel[])
+{
+
+	//int $sliceCount = `intSliderGrp -q -v directionalSliceCount`;
+	//string $axis = `optionMenuGrp -q -v directionalSlicingAxis`;
+	//float $sc = $sliceCount; //Convert int to float
+	for($i=0;$i<`size $sel`;$i++){
+		if(isComponentSelection($sel[$i]) == 1){
+			directionalSliceFace($sel[$i]);	
+		} else {
+			directionalSliceMesh($sel[$i]);	
+			//directionalSliceMesh($sel[$i], $sliceCount, $axis);
+		}
+	}
+	
+}
+
+//DIRECTION SLICE MESH
+//--------------------------------------
+
+
+//DIRECTION SLICE FACE
+//--------------------------------------
+global proc directionalSliceMesh(string $sel)
+{
+	//menuItem -e -cb true DirectionalSliceMeshDebugMenuItem;
+	
+	string $dbl = "-dmi DirectionalSliceMeshDebugMenuItem -t Direction Slice Mesh"; string $dbm = "add"; int $dbc = 1;
+	int $debug = `menuItem -q -cb DirectionalSliceMeshDebugMenuItem`;
+	string $cutPlane;
+	string $debugCutPlane;
+	
+	int $ef = 0;
+	if (`checkBox -q -v directionalSlicingExtractFaceCheckBox`){
+		$ef = 1;
+	}
+	
+	string $bbox = createRotationFrozenBBoxCube($sel);
+	float $bboxSize[];
+	float $bboxMin[];
+	float $cutPlaneSize[];
+	float $center[];
+	
+	if(`checkBox -q -v directionalSlicingOrientToObjectCheckBox`){
+		$bboxSize = `getAttr ($bbox + ".boundingBoxSize")`;
+		$bboxMin = `getAttr ($bbox + ".boundingBoxMin")`;		
+		$center = `getAttr ($bbox + ".center")`;
+	} else {
+		$bboxSize = `getAttr ($sel + ".boundingBoxSize")`;
+		$bboxMin = `getAttr ($sel + ".boundingBoxMin")`;		
+		$center = `getAttr ($sel + ".center")`;
+	}
+	$cutPlaneSize = `sort $bboxSize`; //Just use the largest bbox size. It doesn't matter too much.
+	float $cutPos[] = {$center[0],$center[1],$center[2]};
+	
+	debugListArray($dbl, " - BBox Size: ", (floatArrayToStringArray($bboxSize)), $dbc, $dbm, "", 0);	
+	debugListArray($dbl, " - BBox Min: ", (floatArrayToStringArray($bboxMin)), $dbc, $dbm, "", 0);	
+	debugListArray($dbl, " - Center: ", (floatArrayToStringArray($center)), $dbc, $dbm, "", 0);
+	
+	float $ro[] = {0,0,0};//Rotation of cut
+	float $cutSize[];
+	int $numSlices[];
+	float $objRot[] = `xform -q -ws -ro $sel`;
+	
+	$numSlices[0] = `intFieldGrp -q -v1 directionalSlicingXSlicesIntFieldGrp`;
+	$numSlices[1] = `intFieldGrp -q -v1 directionalSlicingYSlicesIntFieldGrp`;
+	$numSlices[2] = `intFieldGrp -q -v1 directionalSlicingZSlicesIntFieldGrp`;
+	float $ns[] = { (float($numSlices[0])), (float($numSlices[1])), (float($numSlices[2])) };
+	debugListArray($dbl, " - Cuts: ", (floatArrayToStringArray($ns)), $dbc, $dbm, "", 0);
+	
+	if($debug){
+		$debugCutPlane = createCutPlaneTool(("-n PolyCutDebugPlane1 -w " + $cutPlaneSize[(`size $cutPlaneSize` - 1)] + " -h " + $cutPlaneSize[(`size $cutPlaneSize` - 1)]));
+	}
+	
+	int $ok = 0;
+	int $i = 0;
+	
+	//Save the original edges for intersecting after operation is complete
+	string $originalEdges[] = wizConvertSelection({$sel}, "edge");
+	string $eSet = createSetFromSelection($originalEdges, "edgesBeforeSlicing");
+	debugListArray($dbl, " - Original Edges: ", $originalEdges, $dbc, $dbm, "[NEXT]", 0);
+	string $allNewEdges[];
+	float $da[];
+	
+	
+	for($q=0;$q<2;$q++){
+			
+		int $ok = 0;
+		int $i = 0;
+		
+		while($ok == 0){				
+			if($i == 0){
+				if($numSlices[0] == 0){
+					$i++;
+					continue;
+				} else {
+					$ro = {90,0,90};
+					$da = {1,0,0};
+					if(`checkBox -q -v directionalSlicingOrientToObjectCheckBox`){	
+						$ro = addArrays($ro, $objRot);
+					}
+				}
+			}
+			if($i == 1){
+				if($numSlices[1] == 0){
+					$i++;
+					continue;
+				} else {						
+					$ro = {90,0,0};
+					$da = {0,1,0};
+					if(`checkBox -q -v directionalSlicingOrientToObjectCheckBox`){	
+						$ro = addArrays($ro, $objRot);
+					}
+				}
+			}
+			if($i == 2){
+				if($numSlices[2] == 0){
+					$i++;
+					continue;
+				} else {					
+					$ro = {0, 0, 90};
+					$da = {0,0,1};
+					if(`checkBox -q -v directionalSlicingOrientToObjectCheckBox`){	
+						$ro = addArrays($ro, $objRot);
+					}
+				}
+			}		
+			
+			$cutSize = divideArrays($bboxSize, $ns);
+			
+			$cutPos = addArrays($bboxMin, $cutSize);
+			if($q==0){
+				debugListArray($dbl, " - Cut Pos: ", (floatArrayToStringArray($cutPos)), $dbc, $dbm, "[NEXT]", 0);
+				debugListArray($dbl, " - Cut Rot: ", (floatArrayToStringArray($ro)), $dbc, $dbm, "[NEXT]", 0);
+			}	
+			
+			for($s=0;$s<($numSlices[$i] - 1);$s++){			
+				select -r $sel;
+				
+				if($q==1){				
+					polySelectConstraint -m 3 -t 0x8000 -d 3 -db 0 0.001 -dp $cutPos[0] $cutPos[1] $cutPos[2] -da $da[0] $da[1] $da[2];
+					string $ne[] = `ls -fl -sl`;
+					debugListArray($dbl, " - New Edges: ", $ne, $dbc, $dbm, "[NEXT]", 0);
+					appendStringArray($allNewEdges, $ne, `size $ne`);
+	
+					polySelectConstraint -dis;
+					//continue;
+				}
+				if($q==2){
+					print("Q2!\n");
+					break;
+				}
+				
+				if($q == 0){
+					//polyCut -ch 1 -pc $cutPos[0] $cutPos[1] $cutPos[2] -ro $ro[0] $ro[1] $ro[2] -ps $cutPlaneSize[2] $cutPlaneSize[2] -df false -ef $ef -eo 0 0 0;
+					//polyCut -ch 1 -pc $cutPos[0] $cutPos[1] $cutPos[2] -ro $ro[0] $ro[1] $ro[2] -ps $cutPlaneSize[2] $cutPlaneSize[2] -df false -ef $ef -eo 0 0 0;
+					
+					polyCut -ch 1 -pc $cutPos[0] $cutPos[1] $cutPos[2] -ro $ro[0] $ro[1] $ro[2] -ps $cutPlaneSize[2] $cutPlaneSize[2] -eo 0 0 0 -ef $ef $sel;
+					
+					/*
+					//Get the new edges
+					$originalEdges = getComponentsFromSetFlat($eSet);
+					string $acEdges[] = wizConvertSelection({$sel}, "edge");			
+					string $newEdges[] = inverseIntersectStringArrays($originalEdges, $acEdges);
+					appendStringArray($allNewEdges, $newEdges, `size $newEdges`);
+					*/
+					
+					
+					if($debug){
+						select -r $debugCutPlane;
+						string $dupCutPlane[] = `duplicate $debugCutPlane`;
+						if($i == 0){
+							setOverrideShapeColor($dupCutPlane[0], 13);	
+						} else if($i == 1){
+							setOverrideShapeColor($dupCutPlane[0], 14);
+						} else if($i == 2){
+							setOverrideShapeColor($dupCutPlane[0], 6);
+						}
+						xform -ws -t $cutPos[0] $cutPos[1] $cutPos[2] $dupCutPlane[0];
+						xform -ws -ro $ro[0] $ro[1] $ro[2] $dupCutPlane[0];
+						select -r $sel;
+					}
+					
+				}
+				
+				//Increment the cut position
+				if($i == 0){
+					$cutPos = addArrays($cutPos, { $cutSize[0], 0.0, 0.0 });
+				} else if($i == 1){
+					$cutPos = addArrays($cutPos, { 0.0, $cutSize[1], 0.0 });
+				} else if($i == 2){
+					$cutPos = addArrays($cutPos, { 0.0, 0.0, $cutSize[2] });
+				}
+				
+			}
+			
+			if($i >= 2){
+				$ok = 1;
+				break;
+			}
+			$i++;
+		}
+		
+		if(`checkBox -q -v directionalSlicingSelectNewEdgesOption` == 0){
+			break;
+		}
+	
+	}
+	
+	//replaceTextScrollListWithSelectedObjects($allNewEdges, "selectMasterListB");
+	
+	debugListArray($dbl, " - All New Edges: ", $allNewEdges, $dbc, $dbm, "[NEXT]", 0);
+	
+	if(`checkBox -q -v directionalSlicingSeparatePiecesOption` == 1){
+		string $separate[] = `polySeparate -ch 1 $sel`;		
+		cleanUpPolySeparateObjects($separate);
+	}
+	
+	if(`objExists $sel`){	
+		select -r $sel;	
+	}
+	delete $bbox;
+	
+	if(`checkBox -q -v directionalSlicingSelectNewEdgesOption` == 1){
+		select -r $allNewEdges;
+	}
+	debugList($dbl, {(tslDiv("[END CUTTING]"))}, $dbc, $dbm);
+	
+}
+
+global proc string createCutPlaneTool(string $arg)
+{
+	float $w = float(getTagArgument("-w", $arg));
+	float $h = float(getTagArgument("-h", $arg));
+	string $n = getTagArgument("-n", $arg);
+	string $name = "PolyCutPlaneTool1";
+	if(`size $n` > 0){
+		$name = $n;
+	}
+	
+	if(`objExists $name`){
+		delete $name;		
+	}
+	
+	float $w = float(getTagArgument("-w", $arg));
+	float $h = float(getTagArgument("-h", $arg));
+	int $col = int(getTagArgument("-col", $arg));
+	if($col == 0) $col = 17;
+	
+	string $cp[] = `polyPlane -ch on -o on -w $w -h $h -sw 1 -sh 1 -cuv 2`;	
+	rename $cp[0] $name;
+	string $cutPlane = $name;	
+	string $cpShape[] = `listRelatives -s $cutPlane`;
+	setAttr ($cpShape[0] + ".overrideEnabled") 1;
+	setAttr ($cpShape[0] + ".overrideShading") 0;		
+	setAttr ($cpShape[0] + ".overrideColor") $col;
+	xform -ws -ro 90 0 0 $cutPlane;
+	makeIdentity -apply true -t 0 -r 1 -s 0 -n 0 $cutPlane;
+	delete -ch $cutPlane;
+	return $cutPlane;
+}
+
+//DIRECTION SLICE FACE
+//--------------------------------------
+global proc directionalSliceFace(string $f)
+{
+	string $dbl = "-dmi DirectionalSliceFaceDebugMenuItem -t Direction Slice Face"; string $dbm = "add"; int $dbc = 1;
+	int $debug = `menuItem -q -cb DirectionalSliceFaceDebugMenuItem`;
+	string $cutPlane;
+	string $debugCutPlane;	
+	
+	string $obj = getObjectFromComponent({$f});
+	debugListString($dbl, (" - Face: " + $f), $dbc, $dbm);
+	
+	string $fSet = createSetFromSelection({$f}, "tempSet");	
+	
+	int $ef = 0;
+	if(`checkBox -q -v directionalSlicingExtractFaceCheckBox`){
+		$ef = 1;
+	}
+	
+	float $objRot[];
+	if(`checkBox -q -v directionalSlicingOrientToObjectCheckBox`){
+		$objRot = `xform -q -ws -ro $obj`;
+	}
+		
+	//To Do... use the normals to get the angle of the vertices and cut across from vertice to vertice
+	float $normals[] = getFaceNormals({$f});
+	debugListArray($dbl, " - Face Normals: ", (floatArrayToStringArray($normals)), $dbc, $dbm, "", 0);
+	
+	float $bboxSize[] = getPolyFaceBoundingBoxSize($f);
+	debugListArray($dbl, " - Face BBox Size: ", (floatArrayToStringArray($bboxSize)), $dbc, $dbm, "", 0);
+	
+	float $bboxMin[] = getPolyFaceBoundingBoxMin($f);
+	debugListArray($dbl, " - Face BBox Min: ", (floatArrayToStringArray($bboxMin)), $dbc, $dbm, "", 0);
+	
+	float $cutPlaneSize[] = `sort $bboxSize`; //Just use the largest bbox size. It doesn't matter too much.
+	float $center[] = getFaceCenter($f);
+	debugListArray($dbl, " - Face Center: ", (floatArrayToStringArray($center)), $dbc, $dbm, "", 0);
+	
+	float $cutPos[] = {$center[0],$center[1],$center[2]};
+	float $ro[] = {0,0,0};//Rotation of cut
+	float $cutSize[];
+	int $numSlices[];
+		
+	$numSlices[0] = `intFieldGrp -q -v1 directionalSlicingXSlicesIntFieldGrp`;
+	$numSlices[1] = `intFieldGrp -q -v1 directionalSlicingYSlicesIntFieldGrp`;
+	$numSlices[2] = `intFieldGrp -q -v1 directionalSlicingZSlicesIntFieldGrp`;
+	float $ns[] = { (float($numSlices[0])), (float($numSlices[1])), (float($numSlices[2])) };
+	debugListArray($dbl, " - Cuts: ", (floatArrayToStringArray($ns)), $dbc, $dbm, "", 0);
+	
+	string $cam;
+	
+	if(`checkBox -q -v directionalSlicingOrientSlicesToCameraCheckBox`){
+		select -r $f;
+		//AlignCameraToPolygon;
+		$cam = `getCurrentCamera`;
+		$cutPlane = createCutPlaneTool(("-n DirectionSliceCutPlane1 -w " + $cutPlaneSize[(`size $cutPlaneSize` - 1)] + " -h " + $cutPlaneSize[(`size $cutPlaneSize` - 1)]));
+		aimConstraint -offset 0 0 0 -weight 1 -aimVector 1 0 0 -upVector 0 1 0 -worldUpType "scene" $cam $cutPlane;
+		xform -ws -t $cutPos[0] $cutPos[1] $cutPos[2] $cutPlane;
+		$objRot = `xform -q -ws -ro $cutPlane`;
+		//$objRot = invertFloatArray($objRot);
+	}
+	
+	if($debug){
+		$debugCutPlane = createCutPlaneTool(("-n PolyCutDebugPlane1 -w " + $cutPlaneSize[(`size $cutPlaneSize` - 1)] + " -h " + $cutPlaneSize[(`size $cutPlaneSize` - 1)]));
+	}
+	
+	int $ok = 0;
+	int $i = 0;
+	while($ok == 0){				
+		if($i == 0){
+			if($numSlices[0] == 0){
+				$i++;
+				continue;
+			} else {		
+				$ro = {90,0,90};				
+				if(`checkBox -q -v directionalSlicingOrientToObjectCheckBox` == 1 || `checkBox -q -v directionalSlicingOrientSlicesToCameraCheckBox` == 1 ){	
+					$ro = addArrays($ro, $objRot);
+				}
+			}
+		}
+		if($i == 1){
+			if($numSlices[1] == 0){	
+				$i++;
+				continue;
+			} else {
+				$ro = {90,0,0};
+				if(`checkBox -q -v directionalSlicingOrientToObjectCheckBox` == 1 || `checkBox -q -v directionalSlicingOrientSlicesToCameraCheckBox` == 1 ){	
+					$ro = addArrays($ro, $objRot);
+				}
+			}
+		}
+		if($i == 2){
+			if($numSlices[2] == 0){
+				$i++;
+				continue;
+			} else {
+				$ro = {0, 0, 90};
+				if(`checkBox -q -v directionalSlicingOrientToObjectCheckBox` == 1 || `checkBox -q -v directionalSlicingOrientSlicesToCameraCheckBox` == 1 ){	
+					$ro = addArrays($ro, $objRot);
+				}
+			}
+		}		
+		
+		$cutSize = divideArrays($bboxSize, $ns);		
+		$cutPos = addArrays($bboxMin, $cutSize);
+		
+		debugListArray($dbl, " - Cut Pos: ", (floatArrayToStringArray($cutPos)), $dbc, $dbm, "[NEXT]", 0);
+		debugListArray($dbl, " - Cut Rot: ", (floatArrayToStringArray($ro)), $dbc, $dbm, "[NEXT]", 0);
+		
+		for($s=0;$s<($numSlices[$i] - 1);$s++){	
+			$sel = getComponentsFromSetFlat($fSet);
+			select -r $sel;
+			
+			//Do the cutting
+			polyCut -ch 1 -pc $cutPos[0] $cutPos[1] $cutPos[2] -ro $ro[0] $ro[1] $ro[2] -ps $cutPlaneSize[2] $cutPlaneSize[2] -df false -ef $ef -eo 0 0 0 $sel;
+			
+			if(`checkBox -q -v directionalSlicingOrientSlicesToCameraCheckBox`){
+				xform -ws -t $cutPos[0] $cutPos[1] $cutPos[2] $cutPlane;
+				//$objRot = `xform -q -ws -ro $cutPlane`;
+				//$ro = addArrays($ro, $objRot);
+			}
+			
+			if($debug){
+				select -r $debugCutPlane;
+				string $dupCutPlane[] = `duplicate $debugCutPlane`;
+				if($i == 0){
+					setOverrideShapeColor($dupCutPlane[0], 13);	
+				} else if($i == 1){
+					setOverrideShapeColor($dupCutPlane[0], 14);
+				} else if($i == 2){
+					setOverrideShapeColor($dupCutPlane[0], 6);
+				}
+				xform -ws -t $cutPos[0] $cutPos[1] $cutPos[2] $dupCutPlane[0];
+				xform -ws -ro $ro[0] $ro[1] $ro[2] $dupCutPlane[0];
+				select -r $sel;
+			}
+			
+			//Increment the cut position
+			if($i == 0){
+				$cutPos = addArrays($cutPos, { $cutSize[0], 0.0, 0.0 });
+			} else if($i == 1){
+				$cutPos = addArrays($cutPos, { 0.0, $cutSize[1], 0.0 });
+			} else if($i == 2){
+				$cutPos = addArrays($cutPos, { 0.0, 0.0, $cutSize[2] });
+			}
+			refreshStep();
+			
+		}
+				
+		if($i >= 2){
+			$ok = 1;
+			break;
+		}
+		$i++;
+		
+	}
+			
+	$sel = getComponentsFromSetFlat($fSet);
+	
+	if(`checkBox -q -v directionalSlicingSeparatePiecesOption` == 1){
+		string $separate[] = `polySeparate -ch 1 $obj`;		
+		cleanUpPolySeparateObjects($separate);
+	}
+	
+	select -r $sel;	
+	debugList($dbl, {(tslDiv("[END CUTTING]"))}, $dbc, $dbm);
+	
+	emptyAndDeleteSet($fSet);
+}
+
+global proc sliceObjectIntoCubes(string $obj)
+{
+	int $sliceCount = `intSliderGrp -q -v directionalSliceCount`;
+	//string $axis = `optionMenuGrp -q -v directionalSlicingAxis`;
+	string $axis = "X";
+	float $sc = $sliceCount; //Convert int to float
+	
+	float $bboxSize[] = `getAttr ($obj + ".boundingBoxSize")`;
+	float $bboxMin[] = `getAttr ($obj + ".boundingBoxMin")`;
+	float $cutPlaneSize[] = `sort $bboxSize`; //Just use the largest bbox size. It doesn't matter too much.
+	float $center[] = `getAttr ($obj + ".center")`;
+	float $cutPos[] = {$center[0],$center[1],$center[2]};
+	float $ro[] = {0,0,0};//Rotation of cut
+	float $cutSize;
+	
+	for($i=0;$i<2;$i++){
+		if($i==0){
+			$axis = "X";	
+		} else {
+			$axis = "Y";
+		}
+		for($s=0;$s<($sc - 1);$s++){
+			
+			if($axis == "X"){
+				$cutSize = $bboxSize[0] / $sliceCount;
+				$cutPos[0] = $bboxMin[0] + $cutSize;
+				$ro = {90,0,90};
+			} else if($axis == "Y"){
+				$cutSize = ($bboxSize[1] / $sliceCount) / $bboxSize[0];
+				$cutPos[1] = $bboxMin[1] + $cutSize;
+				$ro = {90,0,0};
+			} 
+		
+			polyCut -ch 1 -pc $cutPos[0] $cutPos[1] $cutPos[2] -ro $ro[0] $ro[1] $ro[2] -ps $cutPlaneSize[2] $cutPlaneSize[2] -df false -ef true -eo 0 0 0 $obj;
+			if($axis == "X"){$cutPos[0] = $cutPos[0] + $cutSize;}
+			else {$cutPos[1] = $cutPos[1] + $cutSize;}
+		}
+		
+	}
+	if(`checkBox -q -v directionalSlicingSeparatePiecesOption` == 1){
+		string $separate[] = `polySeparate -ch 1 $obj`;
+		cleanUpPolySeparateObjects($separate);
+	}	
+
+}
+
+global proc radialSliceSelectedObjects(string $sel[])
+{
+
+int $sliceCount = `intSliderGrp -q -v radialSliceCount`;
+string $axis = `optionMenuGrp -q -v radialSlicingAxis`;
+float $sc = $sliceCount;//Convert int to float
+
+for($i=0;$i<`size $sel`;$i++){
+	float $bboxSize[] = `getAttr ($sel[$i] + ".boundingBoxSize")`;
+	float $cutSize[] = `sort $bboxSize`; //Just use the largest bbox size. It doesn't matter too much.
+	float $center[] = `getAttr ($sel[$i] + ".center")`;
+	float $cutRot = (180 / $sc) * 2;
+	float $cpRot[] = { 0,0,0};
+	if($axis == "X"){
+		$cpRot[0] = $cutRot;
+	} else if($axis == "Y"){
+		$cpRot[1] = $cutRot;
+	} else if($axis == "Z"){
+		$cpRot[2] = $cutRot;
+	} 
+	for($s=0;$s<($sc / 2);$s++){	
+		polyCut -ch 1 -pc $center[0] $center[1] $center[2] -ro $cpRot[0] $cpRot[1] $cpRot[2] -ps $cutSize[2] $cutSize[2] -df false -ef true -eo 0 0 0 $sel[$i];
+		if($axis == "X"){$cpRot[0] = $cpRot[0] + $cutRot;}
+		else if($axis == "Y"){$cpRot[1] = $cpRot[1] + $cutRot;}
+		else if($axis == "Z"){$cpRot[2] = $cpRot[2] + $cutRot;}
+	}
+	if(`checkBox -q -v radialSlicingSeparatePiecesOption` == 1){
+		string $separate[] = `polySeparate -ch 1 $sel[$i]`;
+		cleanUpPolySeparateObjects($separate);
+	}
+}
+
+}
+
+global proc polySeparateSelectedObjects(string $sel[])
+{
+for($i=0;$i<`size $sel`;$i++){
+	if(`objExists $sel[$i]` == false){ continue;}
+	polySeparate -ch 1 $sel[$i];
+}	
+}
+
+global proc cleanUpPolySeparateObjects(string $sel[])
+{
+deleteHistoryOnAllObjectsInArray($sel);	
+float $minSize = 0.001;
+for($i=0;$i<`size $sel`;$i++){
+	if(`objExists $sel[$i]` == false){ continue;}
+	int $vertCount[] = `polyEvaluate -v $sel[$i]`;
+	float $bboxSize[] = `getAttr ($sel[$i] + ".boundingBoxSize")`;
+	if($vertCount[0] <= 1){
+		delete $sel[$i];
+	} else if($bboxSize[0] < $minSize && $bboxSize[1] < $minSize && $bboxSize[2] < $minSize){
+		delete $sel[$i];
+	}
+}	
+}

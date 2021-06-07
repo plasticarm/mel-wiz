@@ -1,0 +1,37 @@
+int $pttCount = 540;
+string $filenamePrefix = "E:/maya/projects/SolarSystem/images/PlutoVR/TerrainTiles1/ptt";
+string $fileformat = "png";
+int $i = 540;
+int $imageSize = 512;
+
+global string $gMainProgressBar;
+int $abort;
+
+progressBar -edit -beginProgress -isInterruptable true -status "Transfering To Tiles..." -min 0 -max $i $gMainProgressBar;
+
+for ($v=0;$v<50;$v++){
+    for ($u=0;$u<9;$u++){    
+        string $filename = $filenamePrefix + "_u" + ($u + 1) + "_v" + ($v + 1);
+        surfaceSampler -target ("pttMeshShape" + ($i)) -source plutoPlanetMeshShape1 -mapOutput diffuseRGB -mapWidth $imageSize -mapHeight $imageSize -max 1 -mapSpace tangent -mapMaterials 1 -shadows 1 -filename $filename -fileFormat $fileformat -superSampling 2 -filterType 0 -filterSize 3 -overscan 1 -searchMethod 0 -useGeometryNormals 1 -ignoreMirroredFaces 0 -flipU 0 -flipV 0; 
+        $i = $i - 1;
+		
+		if (`progressBar -query -isCancelled $gMainProgressBar`) { $abort = 1; break; }
+		
+		if ($abort)  {
+			print("*** Terrain Tile Transfer ABORTED ***\n");
+			continue;
+		}
+
+		progressBar -e -step 1 -status ("Transfer : " + $i + " : COMPLETE") $gMainProgressBar;
+		print ("Terrain Tile : " + "u " + $u + " v " + $v + " : " + ($pttCount - $i) + " of 540 COMPLETE\n");
+		refresh -f;
+		
+    }
+    if ($abort)  {
+		continue;
+	}
+		
+}
+
+progressBar -edit -endProgress $gMainProgressBar;
+print ("Terrain Tile Transfer COMPLETE *****\n");

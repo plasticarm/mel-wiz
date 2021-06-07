@@ -1,0 +1,3276 @@
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//|||||||||||||||||||||||||:::WIZ:::||||||||||||||||||||||||||||||||||
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//                         NAME WIZ
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+/*====================================================================
+Author: Glen Johnson
+Email: plasticarm@gmail.com
+Website: plasticarm.com / hrpictures.com
+----------------------------------------------------------
+Summary:
+
+
+
+====================================================================*/
+
+//====================================================================
+//			GLOBAL VARS
+global string $WIZ_randomizationSetName;
+$WIZ_randomizationSetName = "randomizeWizSet";
+
+
+
+//====================================================================
+//========================================================================================================
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//                     LAYOUTS
+///////////////////                  /////////////////////////////////////////////////////////////////////
+
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//========================================================================================================
+//# RANDOMIZER CONTROL LAYOUT
+//====================================================================
+global proc randomizerControlLayout( string $parent )
+{
+    string $layout = `frameLayout
+		-l "Randomize Controls"	
+		-ann "Control center for wizCraft components."
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 5
+		-mh 5		
+		
+		-cll true
+		-cl true
+		-parent $parent		
+        randomizeWizControlFrameLayout
+		`;	
+	
+    randomizerMainMenuBarLayout();
+    
+	string $randomizeColumnLayout = `columnLayout
+		-adjustableColumn true
+		randomizeWizMainControlColumnLayout
+		`;
+		
+	wizCraftRandomizeControlsLayout($randomizeColumnLayout);
+	
+	wizFilePalletLayout("-root randomizeQue -n randomizeQue -p " + $randomizeColumnLayout);
+	wizFilePalletLayout("-root randomizeQue -n randomizationFileQue -type fileList -p " + $randomizeColumnLayout);
+
+	/*	
+	//-------------------------------------------------------
+	//########################<TAB>##########################
+	string $tabLayout = `tabLayout
+		-ann ""
+		-scrollable false
+		-imageVisible true
+		-tabsVisible true
+		-p $layout
+		wizCraft_randomizeControls_tabLayout
+		`;
+
+	//wizCraftAnalysisLayout($wizCraftTabLayout);			
+	wizCraftRandomizeControlsLayout($tabLayout);
+	
+	wizCraftAutoBuildLayout($tabLayout);
+
+	//-------------------------------------------------------
+	//########################<END TAB>#######################
+	  
+	tabLayout
+		-e
+		//-tl "wizCraftAnalysisColumnLayout" "Analysis"
+		-tl "wizCraft_randomizeControls_columnLayout" "Controls"
+		-tl "wizCraft_autoBuild_columnLayout" "Auto Build"
+		$tabLayout
+		;
+		
+		*/
+}
+
+//# WIZ CRAFT RANDOMIZE CONTROLS LAYOUT
+//====================================================================
+global proc wizCraftRandomizeControlsLayout( string $parent )
+{	   
+    string $columnLayout = `columnLayout 
+        -p $parent
+        wizCraft_randomizeControls_columnLayout
+        `;	
+    
+	//_________________________________________
+	// Buttons To Randomize All Of Type
+	string $rowColumnLayout = `rowColumnLayout
+		-nc 8		
+		wizCraft_randCtrl_rowColumnLayout
+		`;
+		
+		string $colA = `columnLayout
+			-rs 5
+			-p wizCraft_randCtrl_rowColumnLayout
+			`;
+			
+		wizHeaderText("-c Randomize");	
+		
+		float $butCol[] = getWizColor("optionButtonColor");
+
+		iconTextButton
+			-l "Randomize All"
+			-image "wiz/randomizeAllIcon_small1.png"
+			-style "iconAndTextHorizontal"
+			-c ("wizCraftMaterialPool(\"-rand -all\");randomizeAllRamputations();randomizeAllObjectsWithRandomizationAttributes();randomizeAllTexturePools();")
+			;
+		/*
+		iconTextButton
+			-l "Randomize All In NS"
+			-image "wiz/randomizeAllIcon_small1.png"
+			-style "iconAndTextHorizontal"
+			-c ("wizCraftMaterialPool(\"-rand -ans\");randomizeAllRamputations();randomizeAllObjectsWithRandomizationAttributes();randomizeAllTexturePools();")
+			;
+		*/	
+		$butCol = getWizColor("exportButtonColor");   
+		
+		separator -w 150 -st "out";
+				
+		$butCol = getWizColor("doButtonColor");
+ 
+		iconTextButton
+			-l "All Rand Attr"
+			-image "wiz/randomizeAllIcon_small1.png"
+			-style "iconAndTextHorizontal"
+			-c ("randomizeAllObjectsWithRandomizationAttributes();")
+			;
+						
+		iconTextButton
+			-l "All Ramputations"
+			-image "wiz/ramputationAllIcon_small1.png"
+			-style "iconAndTextHorizontal"
+			-c ("randomizeAllRamputations();")
+			;
+		
+		iconTextButton
+			-l "All Texture Pools"
+			-image "wiz/texturePoolAllIcon_small1.png"
+			-style "iconAndTextHorizontal"
+			-c ("randomizeAllTexturePools();")
+			;
+			
+		iconTextButton
+			-l "All Material Pools"
+			-image "wiz/materialPoolAllIcon_small1.png"
+			-style "iconAndTextHorizontal"
+			-c ("wizCraftMaterialPool(\"-rand -all\");")
+			;
+			
+		separator -w 150 -st "out";
+				
+		iconTextButton
+			-l "Selected Rand Attr"
+			-image "wiz/randomizeSelectedIcon_small1.png"
+			-style "iconAndTextHorizontal"
+			-c ("randomizeRandomizationAttributesOnSelectedObjects(`ls -sl`);");
+			;
+		/*
+		string $ranInNSCom = 
+		popupMenu ;
+		
+			menuItem -l "All In Selected NameSpace" -c ("wizSetSelectedOutlineColor(\"-sl -q -cs " + $csgName + "\");");
+		
+		setParent -menu..;
+			*/
+			
+		iconTextButton
+			-l "Selected Ramputations"
+			-image "wiz/ramputationIcon_small1.png"
+			-style "iconAndTextHorizontal"
+			-c ("rmbRandomizeRamputation(\"\");")
+			;
+		
+		iconTextButton
+			-l "Selected Texture Pools"
+			-image "wiz/texturePoolIcon_small1.png"
+			-style "iconAndTextHorizontal"
+			-c ("rmbRandomizeTexturePools(\"\");")
+			;
+			
+		iconTextButton
+			-l "Selected Material Pools"
+			-image "wiz/materialPoolIcon_small1.png"
+			-style "iconAndTextHorizontal"
+			-c -c ("wizCraftMaterialPool(\"-rand -sl\");")
+			;	
+		
+			
+		separator -w 150 -st "out";
+		
+		iconTextButton
+			-l "Increment And Save"
+			-image "wiz/incrementAndSaveIcon_tiny1.png"
+			-style "iconAndTextHorizontal"
+			-c ("incrementAndSaveWiz();")
+			;
+
+		$butCol = getWizColor("exportButtonColor");   	
+
+		separator -w 150 -st "out";
+		
+		wizCraftAutoBuildLayout($colA);
+	
+	separator -hr false -st "out" -p wizCraft_randCtrl_rowColumnLayout;
+		
+	int $width = 100;
+		
+	//_________________________________________
+	// 	Rand Attr	
+	string $colB = `columnLayout
+		-ebg true
+		-w $width
+		-p wizCraft_randCtrl_rowColumnLayout
+		wizCraft_randAttrControls_columnLayout
+		`;
+		
+		menuBarLayout ;
+		menu -l "Rand Attr";
+			menuItem -l "Update" -c ("wizCraftAddControlsToUI(\"-ra -l wizCraft_randAttrControlsButtons_columnLayout -p wizCraft_randAttrControls_columnLayout\");");
+			menuItem -l "Randomize All" -c ("randomizeAllObjectsWithRandomizationAttributes();");
+			
+		separator -w $width -st "out";
+		
+		columnLayout
+			wizCraft_randAttrControlsButtons_columnLayout
+			;
+
+			
+	separator -hr false -st "out" -p wizCraft_randCtrl_rowColumnLayout;	
+		
+	//_________________________________________
+	// 	Ramputations
+	string $colC = `columnLayout
+		-w $width
+		-p wizCraft_randCtrl_rowColumnLayout
+		wizCraft_ramputationControls_columnLayout
+		`;	
+		
+		menuBarLayout ;
+		menu -l "Ramputations";
+			menuItem -l "Update" -c ("wizCraftAddControlsToUI(\"-rp -l wizCraft_ramputationControlsButtons_columnLayout -p wizCraft_ramputationControls_columnLayout\");");
+			menuItem -l "Randomize All" -c ("randomizeAllRamputations();");
+			
+		separator -w $width -st "out";
+		
+		columnLayout
+			-ebg true
+			wizCraft_ramputationControlsButtons_columnLayout
+			;
+	
+	separator -hr false -st "out" -p wizCraft_randCtrl_rowColumnLayout;
+	
+	//_________________________________________
+	// 	Texture Pools
+	string $colD = `columnLayout
+		-p wizCraft_randCtrl_rowColumnLayout
+		wizCraft_texturePoolControls_columnLayout
+		`;
+					
+		menuBarLayout ;
+		menu -l "Texture Pools";
+			menuItem -l "Update" -image "wiz/texturePoolIcon_tiny1.png" -c ("wizCraftAddControlsToUI(\"-tp -l wizCraft_texturePoolControlsButtons_columnLayout -p wizCraft_texturePoolControls_columnLayout\");");
+			menuItem -l "Randomize All" -c ("randomizeAllTexturePools();");
+		separator -w $width -st "out";
+		
+		columnLayout
+			-ebg true
+			wizCraft_texturePoolControlsButtons_columnLayout
+			;
+			
+	separator -hr false -st "out" -p wizCraft_randCtrl_rowColumnLayout;	
+
+}
+
+global proc wizCraftAutoBuildLayout( string $parent )
+{
+	wizHeaderText("-c Auto Build");	
+	
+	string $columnLayout = `columnLayout 
+		-p $parent
+		wizCraft_autoBuild_columnLayout
+		`;
+	
+	float $butCol[] = getWizColor("optionButtonColor");
+	$butCol = getWizColor("exportButtonColor");
+		
+	wizCheckBox(
+		"-l Material Pools "
+		+"-v 1 "
+		+"-n wizCraft_randomizeMaterialPools_checkBox");
+		
+	wizCheckBox(
+		"-l Texture Pools "
+		+"-v 1 "
+		+"-n wizCraft_randomizeTexturePools_checkBox");
+
+	wizCheckBox(
+		"-l Reference Pools "
+		+"-v 1 "
+		+"-n wizCraft_randomizeReferencePools_checkBox");
+	
+	wizCheckBox(
+		"-l Import Pools "
+		+"-v 1 "
+		+"-n wizCraft_randomizeImportPools_checkBox");
+		
+	wizCheckBox(
+		"-l Ramputations "
+		+"-v 1 "
+		+"-n wizCraft_randomizeRamputations_checkBox");
+		
+	wizCheckBox(
+		"-l Randomization Attributes "
+		+"-v 1 "
+		+"-n wizCraft_randomizeRandomizationAttributes_checkBox");
+		
+	wizCheckBox(
+		"-l Build "
+		+"-v 0 "
+		+"-n wizCraft_build_checkBox");	
+		
+	wizCheckBox(
+		"-l Render Poster "
+		+"-v 1 "
+		+"-n wizCraft_renderPoster_checkBox");
+		
+	wizCheckBox(
+		"-l Export Export Sets "
+		+"-v 0 "
+		+"-n wizCraft_exportExportSets_checkBox");
+	
+	wizCheckBox(
+		"-l Product Info "
+		+"-v 0 "
+		+"-n wizCraft_outputProductInfo_checkBox");
+		
+	wizCheckBox(
+		"-l Batch Render "
+		+"-v 0 "
+		+"-n wizCraft_batchRender_checkBox");
+		
+	separator -w 150 -st "out";
+	
+	wizCheckBox(
+		"-l Skip Existing Files "
+		+"-v 1 "
+		+"-n wizCraft_skipExistingFiles_checkBox");
+		
+	separator -w 150 -st "out";
+	
+	wizFloatSliderGrp( 
+        "-l Playback " 	
+        +"-ann Pre-Render Playback Frame Count "
+        +"-v 0.0 "
+		+"-min 0.0 "
+		+"-max 1000 "
+		+"-fmn 0.0 "
+		+"-fmx 999999999 "
+        +"-n randomizerWiz_preRenderPlaybackFrameCount_floatSliderGrp"
+        );
+		
+	floatSliderGrp
+        -e
+		-cal 1 "left"
+        -cw3 50 50 50 
+        -adj 3 
+		randomizerWiz_preRenderPlaybackFrameCount_floatSliderGrp
+		;
+
+		
+	separator -w 150 -st "out";
+	
+	separator -w 150 -st "out";
+
+	wizIntSliderGrp( 
+        "-l Iterations " 	
+        +"-v 10 "
+		+"-min 1 "
+		+"-max 1000 "
+		+"-fmn 1 "
+		+"-fmx 999999999 "
+        +"-n randomizerWizAutoBuildIterationsIntSliderGrp"	
+        );
+
+	intSliderGrp
+		-e
+		-cal 1 "left" 
+        -cw3 50 50 50 
+        -adj 3 
+		randomizerWizAutoBuildIterationsIntSliderGrp
+        ;
+
+	separator -w 150 -st "out";
+	
+    iconTextButton
+        -l "Auto Build All"
+		-image "wiz/magicIcon1.png"
+		-style "iconAndTextHorizontal"
+        //-bgc $butCol[0] $butCol[1] $butCol[2]
+        -c ("wizAutoBuildAllRandomizableObjects();")
+        ;
+
+
+}
+
+global proc randomizerObjectControlsLayout( string $flags )
+{
+	/*
+	string $u[] = `listAttr -ud $obj`;
+    
+    for ($i=0;$i<`size $u`;$i++){
+        int $sw = startsWith($u[$i], "randomize_");
+        if ($sw == 0){
+        	continue;
+        }
+		//string $attr = stringRemovePrefix("randomize_", $all[$i]);
+		string $tok[] = tokenizeString($u[$i], "_");
+				
+		// $tok[1] is the name of the attribute we want to randomize
+		string $ranAttr = $tok[1];
+		
+		// skip attributes that don't exist... they might be child attributes of a compound attribute though...
+		if (`attributeExists $ranAttr $obj` == 0){
+			wizLog ("	[!] Attribute Does Not Exist : attributeExists " + $ranAttr + " " + $obj + ";");
+			string $alias = `aliasAttr -q ($obj + "." + $ranAttr)`;
+			if (`size $alias` == 0){				
+				wizLog ("	[!] Alias Attribute Does Not Exist : aliasAttr -q " + $obj + "." + $ranAttr + ";");
+				continue;
+			}
+		}
+	*/
+}
+
+//========================================================================================================
+//""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//                     MENUS
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+//========================================================================================================
+//# RANDOMIZER MAIN MENU BAR LAYOUT
+//====================================================================
+global proc randomizerMainMenuBarLayout()
+{
+    string $menuBarLayout = `menuBarLayout
+        randomizerWizMenuBarLayout
+        `;
+        
+	string $allCom = (
+	"wizCraftAddControlsToUI(\"-ra -l wizCraft_randAttrControlsButtons_columnLayout -p wizCraft_randAttrControls_columnLayout\");"
+	+"wizCraftAddControlsToUI(\"-rp -l wizCraft_ramputationControlsButtons_columnLayout -p wizCraft_ramputationControls_columnLayout\");"
+	+"wizCraftAddControlsToUI(\"-tp -l wizCraft_texturePoolControlsButtons_columnLayout -p wizCraft_texturePoolControls_columnLayout\");");
+	
+    menu -l "Controls" -to true;
+        menuItem -l "Add Controls For All Randomizable Objects" -c $allCom;
+    
+    menu -l "Auto Build" -to true;
+        menuItem -cb true -l "Randomize All Texture Pools" randomizerWizRandomizeTexturePoolsMenuItem;
+        menuItem -cb true -l "Randomize All Ramputations" randomizerWizRandomizeAllRamputationMenuItem;
+        menuItem -cb true -l "Randomize All Randomization Attributes" randomizerWizRandomizeAllRandomizationMenuItem;
+        
+
+        menuItem -cb true -l "Render Poster Image" randomizerWizRenderPosterMenuItem;
+        
+    menu -l "Attributes" -to true;
+		menuItem -l "Add Randomization To All Published Attributes" -c ("randomizationAttributeAssetPublish(\"-sl -rpa\");");;
+		menuItem -l "Publish All Radomized Attributes" -c ("randomizationAttributeAssetPublish(\"-sl -pa\");");
+		menuItem -l "Publish All Radomization Attributes" -c ("randomizationAttributeAssetPublish(\"-sl -pra\");");
+		
+	menu -l "Render";
+		menuItem -l "Save Thumbnail" -c ("saveSceneThumbnailImage();");
+			menuItem -ob true -c ("openCurrentOptionsLayout(\"sceneThumbnailOptions\");");
+			
+		menuItem -l "Render Poster Image" -c ("saveScenePosterImage();");
+			menuItem -ob true -c ("openCurrentOptionsLayout(\"posterImageOptions\");");
+		
+    menu -l "Export" -to true;
+			menuItem -l "Create Export Set From Selection" -c ("wizExportSet(\"-sl -ns\");");
+			menuItem -l "Export Selected Sets" -c ("wizExportSet(\"-ess\");");	
+			menuItem -l "Export All Sets" -c ("wizExportSet(\"-exportAll\");");
+
+        
+}
+
+//# ADD CONTROLS FOR ALL RANDOMIZABLE OBJECTS
+//====================================================================
+global proc wizCraftAddControlsToUI( string $flags )
+{	
+	string $obj, $layout, $p;
+	string $sel[];
+	int $ra, $ramputations, $tp;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-l" : case "-layout" :
+			$layout = $tok[($i + 1)];
+			break ;
+			
+			case "-all" : 
+			$ra = 1;
+			$ramputations = 1;
+			$tp = 1;
+			break ;	
+			
+			case "-ra" : case "-randomizationAttributes" :
+			$ra = 1;
+			break ;			
+			
+			case "-rp" : case "-ramputations" :
+			$ramputations = 1;
+			break ;
+			
+			case "-tp" : case "-texturePools" :
+			$tp = 1;
+			break ;
+			
+			case "-p" : case "-parent" :
+			$p = $tok[($i + 1)];
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	wizlog ("	[#] -layout : " + $layout);
+	wizlog ("	[#] -parent : " + $p);
+	
+	
+	if (`layout -ex $layout` == 1){
+		deleteUI -lay $layout;
+		
+		columnLayout
+			-p $p
+			$layout			
+			;
+			
+	}
+	
+	//_________________________________________
+	// RANDOMIZATION ATTRIBUTES
+	if ($ra){			
+		string $allRandomizeObj[] = getAllObjectsWithRandomizationAttributes();		
+		for ($i=0;$i<`size $allRandomizeObj`;$i++){
+			iconTextButton
+				-l ($allRandomizeObj[$i])
+				-ann ("Randomize " + $allRandomizeObj[$i])
+				-h 16
+				-image "wiz/randomizeSelectedIcon_tiny1.png"
+				-st "iconAndTextHorizontal"
+				-fn "smallPlainLabelFont"
+				-c ("string $ranObj = \"" + $allRandomizeObj[$i] + "\"; randomizeRandomizationAttributesOnSelectedObject($ranObj);")
+				-p $layout	
+				;
+		}	
+	}
+	
+	//_________________________________________
+	// RAMPUTATIONS
+	if ($ramputations){
+		string $allRamputations[] = getAllWizAssetsOfType("ramputationAsset");
+		for ($i=0;$i<`size $allRamputations`;$i++){
+			iconTextButton
+				-l ($allRamputations[$i])
+				-ann ("Randomize " + $allRamputations[$i])
+				-h 16
+				-image "wiz/ramputationIcon_tiny1.png"
+				-st "iconAndTextHorizontal"
+				-fn "smallPlainLabelFont"
+				-c ("select -r " + $allRamputations[$i] + "; rmbRandomizeRamputation(\"\");")
+				-p $layout	
+				;
+
+		}
+	}
+    
+	//_________________________________________
+	// TEXTURE POOLS
+	if ($tp){
+		 			
+		string $texPool[] = getAllWizAssetsOfType("texturePoolAsset");
+		
+		for ($i=0;$i<`size $texPool`;$i++){
+			iconTextButton
+				-l ($texPool[$i])
+				-ann ("Randomize " + $texPool[$i])
+				-h 16
+				-image "wiz/texturePoolIcon_tiny1.png"
+				-st "iconAndTextHorizontal"
+				-fn "smallPlainLabelFont"
+				-c ("string $rantp = \"" + $texPool[$i] + "\"; randomizeTexturePool($rantp);")
+				-p $layout	
+				;
+		
+		}
+
+	}
+	
+}
+
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         AUTO BUILD
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//@ WIZ AUTO BUILD ALL RANDOMIZABLE OBJECTS
+//====================================================================
+/*****************************************************************//**
+	Randomises all objects and increments and saves.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-tag1 string] [-tag2 linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	none.
+	
+	<b>Flags</b><br>
+	-tag1, -tag2
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	wizAutoBuildAllRandomizableObjects();
+	
+	</code>
+*********************************************************************/
+global proc wizAutoBuildAllRandomizableObjects()
+{
+    wizlog ("[@] wizAutoBuildAllRandomizableObjects"); 
+    int $iCount = `intSliderGrp -q -v randomizerWizAutoBuildIterationsIntSliderGrp`;
+			
+	string $sel[] = `ls -sl`;
+	
+	string $fileQue[] = `textScrollList -q -ai RandomizationFileQueBookmarksTextScrollList`;
+	if (`size $fileQue` == 0){
+		$fileQue[0] = `file -q -sn`;
+	} else {
+		if ((wizInformationDialog("Process File Que?", ("Process " + `size $fileQue` + " Files In File Que?"), "OK", "Cancel")) == 0){return;}
+	}
+	
+	for ($fi=0;$fi<`size $fileQue`;$fi++){				
+		string $curFile = `file -q -sn`;
+		if ($curFile != $fileQue[$fi]){
+			file -f -o $fileQue[$fi];
+		}
+		
+		wizProgressWindowStart("Auto Build Randomizing All", "Starting", 1);
+		int $max = $iCount;
+		wizProgressWindowMinMax(0,$max);
+		wizLog ("[-] Wiz Auto Build Starting [-]" + wizDiv("s"));
+		
+		for ($i=0;$i<$iCount;$i++){
+			wizProgressWindowUpdate(("Processing... File : " + $i + " : Of : " + $iCount), 1);
+			wizLog ("	[#] Processing File : " + $i + " : Of : " + $iCount + " [#]");
+			
+			//_________________________________________
+			// Material Pools
+			if (`checkBox -q -v wizCraft_randomizeMaterialPools_checkBox`){
+				wizCraftMaterialPool("-rand -all");
+			}
+			
+			//_________________________________________
+			// Texture Pools
+			if (`checkBox -q -v wizCraft_randomizeTexturePools_checkBox`){
+				randomizeAllTexturePools();
+			}
+			
+			//_________________________________________
+			// Import Pools
+			if (`checkBox -q -v wizCraft_randomizeImportPools_checkBox`){
+				wizCraftImportAllImportPools();
+			}
+			
+			//_________________________________________
+			// Ramputations
+			if (`checkBox -q -v wizCraft_randomizeRamputations_checkBox`){
+				randomizeAllRamputations();           
+			}
+			
+			//_________________________________________
+			// Radomization Attributes
+			if (`checkBox -q -v wizCraft_randomizeRandomizationAttributes_checkBox`){
+				randomizeAllObjectsWithRandomizationAttributes();
+			}		
+			
+			//wizCraftImportAllImportPools();
+			
+			refresh -f;
+			refreshAE;
+			
+			//_________________________________________
+			// WizCraft Build
+			if (`checkBox -q -v wizCraft_build_checkBox`){
+				wizCraftDoBuild;
+			}
+			
+			refresh -f;
+			refreshAE;
+			
+			//_________________________________________
+			// Run Simulation
+			if (`floatSliderGrp -q -v randomizerWiz_preRenderPlaybackFrameCount_floatSliderGrp` > 0.0){
+				float $fc = `floatSliderGrp -q -v randomizerWiz_preRenderPlaybackFrameCount_floatSliderGrp`;
+				wizRunSimulation("-f " + $fc);
+			}
+			
+			refresh -f;
+			refreshAE;
+						
+			//_________________________________________
+			// Increment And Save
+			if (`checkBox -q -v wizCraft_skipExistingFiles_checkBox` == 1){
+				wizIncrementAndSave("-se");
+			} else {
+				wizIncrementAndSave("");
+			}
+			
+			refresh -f;
+			refreshAE;
+			
+			if (wizProgressCancelled() == 1) return;
+			
+			//_________________________________________
+			// Render Poster Image
+			if (`checkBox -q -v wizCraft_renderPoster_checkBox`){
+				saveScenePosterImage();
+			}
+			
+			//_________________________________________
+			// Export Sets	
+			if (`checkBox -q -v wizCraft_exportExportSets_checkBox`){
+				wizExportSet("-exportAll -deo");
+				wizMeshThumbnailImage($curFile);
+			}
+			
+			//_________________________________________
+			// Batch Render		
+			if (`checkBox -q -v wizCraft_batchRender_checkBox`){
+				batchRender;
+			}
+						
+			wizProgressWindowUpdate("Processing... ", 1);
+					
+			if (wizProgressCancelled() == 1) return;
+			
+			 //_________________________________________
+			// Rewind
+			if (`floatSliderGrp -q -v randomizerWiz_preRenderPlaybackFrameCount_floatSliderGrp` > 0.0){
+				// rewind to beginning
+				float $minTime = `playbackOptions -q -min`;
+				currentTime -e $minTime;
+			}
+			
+			refresh -f;
+			refreshAE;
+			
+		}
+	}
+	
+    wizProgressWindowEnd();
+
+	wizLog ("[-] Wiz Auto Build Complete [-]" + wizDiv("e"));
+
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                   ADD RANDOMIZATION ATTRIBUTES
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//RANDOM ATTR FUNCTIONS
+//======================================================================================
+//ASSIGN RANDOM OBJECT ATTRIBUTES OBJECTS
+//-----------------------------------------------------------
+global proc assignRandomObjectAttributesObjects(string $parent)
+{
+	string $sel[]=`ls -sl`;
+	if(`size $sel`==0){
+		error "Nothing is selected.";
+		return;
+	}
+	int $i;
+	string $attr[];
+	string $attrSel[];
+	for ($i=0;$i<`size $sel`;$i++){
+		$attrSel = `listAttr -sa -m $sel[$i]`;
+		appendStringArray($attr, $attrSel, `size $attrSel`);
+	}
+	$attr = stringArrayRemoveDuplicates($attr);
+	for ($i=0;$i<`size $sel`;$i++){
+		textScrollList 	-e -a $sel[$i] randomizerObjectsToRandomizeTextScrollList;		
+	}
+	textScrollList	-edit -ra randomizerAttributesToRandomizeTextScrollList;
+	for ($i = 0; $i<`size $attr`; $i++){
+		textScrollList	-edit -a $attr[$i] randomizerAttributesToRandomizeTextScrollList;
+	}
+}
+
+
+global proc clearRandomObjectAttributesObjectsList()
+{
+	textScrollList	-edit -ra randomizerObjectsToRandomizeTextScrollList;
+	textScrollList -edit -ra randomizerAttributesToRandomizeTextScrollList;
+}
+
+global proc updateRandomObjectsAttributesList()
+{
+	string $sel[] = `textScrollList -q -ai getRandomAttributesObjects`;
+	int $i;
+	string $attr[];
+	string $attrSel[];
+	for ($i=0;$i<`size $sel`;$i++){
+		$attrSel = `listAttr -sa -m $sel[$i]`;
+		appendStringArray($attr, $attrSel, `size $attrSel`);
+	}
+	$attr = stringArrayRemoveDuplicates($attr);
+	textScrollList	-edit -ra attributesToRandomize;
+	for ($i = 0; $i<`size $attr`; $i++){
+		textScrollList	-edit -a $attr[$i] attributesToRandomize;
+	}
+}
+
+global proc sortRandomObjectAttributeAttributeList()
+{
+	string $attr[] = `textScrollList -q -ai randomizerAttributesToRandomizeTextScrollList`;
+	string $sortedList[] = `sort $attr`;
+	textScrollList	-edit -ra randomizerAttributesToRandomizeTextScrollList;	
+	int $i;
+	for ($i = 0; $i<`size $sortedList`; $i++){
+		textScrollList -edit -a $sortedList[$i]	randomizerAttributesToRandomizeTextScrollList;
+	}
+}
+
+global proc doRandomizeObjectAttributes()
+{
+	string $obj[] = `textScrollList -q -ai randomizerObjectsToRandomizeTextScrollList`;
+	string $attr[] = `textScrollList -q -si randomizerAttributesToRandomizeTextScrollList`;
+	float $lowRan = `floatFieldGrp -q -v1 randomObjectsAttributesAttributeRandomRange`;
+	float $highRan = `floatFieldGrp -q -v2 randomObjectsAttributesAttributeRandomRange`;	
+	int $i;
+	int $p;
+	for ($i=0;$i<`size $obj`;$i++){
+		for ($p=0;$p<`size $attr`;$p++){
+			if(`attributeExists $attr[$p] $obj[$i]`){
+				float $curVal = `getAttr ($obj[$i] + "." + $attr[$p])`;
+				float $ranVal = rand(($curVal + $lowRan), ($curVal + $highRan));
+				setAttr ($obj[$i] + "." + $attr[$p]) $ranVal;
+				//print("Randomized Obj: " + $obj + " Attr: " + $attr[$i] + " To Val: " + $ranVal + "\n");
+			}		
+		}
+	}
+}
+
+//@ CREATE RANDOMIZATION ATTRIBUTES FOR SELECTED
+//====================================================================
+global proc createRandomizationAttributesForSelected( string $obj, string $attr[], string $flags )
+{
+	int $ai;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-ai" : case "-allIndices" :
+			$ai = 1;
+			break ;
+			
+		}
+	}
+		
+	for ($i=0;$i<`size $attr`;$i++){
+		//string $attrType = `getAttr -q -typ ($obj + "." + $attr[$i])`;
+		string $type = `getAttr -typ ($obj + "." + $attr[$i])`;
+		if ($type == "TdataCompound"){
+			createRandomazationAttributesForCompoundAttribute($obj, $attr[$i], $flags);				
+			continue;				
+		}
+		//string $ranAttr[] = createRandomazationAttributes($obj, $attr[$i]);
+		string $ranAttr[] = wizRandomazationAttributes("-add -obj " + $obj + " -attr " + $attr[$i]);	
+	}
+}
+
+
+global proc string createRandomizeBoolAttribute( string $obj, string $attr )
+{
+	string $ln = "randomize" + $attr;
+	string $nn = "random" + $attr;
+	int $v = `getAttr ($obj + "." + $attr)`;
+	if (`attributeExists $ln $obj` == 0){
+		addAttr -ln $ln -nn $nn -at bool $obj;
+		setAttr -e -keyable true ($obj + "." + $ln);
+		setAttr ($obj + "." + $ln) $v;
+	} else {
+		setAttr ($obj + "." + $ln) $v;
+	}
+	return $ln;
+}
+
+
+/*======================| SUMMARY |===================================
+
+/*=======================| USAGE |===================================
+	string $sel[] = `ls -sl`;
+	string $ranAttr[] = createRandomazationAttributes($sel[0], "someAttribute");
+====================================================================*/
+//@ CREATE RANDOMAZATION ATTRIBUTES
+//====================================================================
+/*****************************************************************//**
+	Adds attributes to randomizes attributes.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-fa string] [-fb linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-fa, -fb
+	
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName("-fa aString -fb anotherString");
+	
+	</code>
+*********************************************************************/
+global proc string[] wizRandomazationAttributes( string $flags )
+{/*
+global proc string[] createRandomazationAttributes( string $obj, string $attr)
+{*/
+	wizLog("[@] wizRandomazationAttributes");
+	
+	string $obj, $attr;
+	int $smn, $smx, $add, $ai;
+	
+	int $rt; // add roundTo attribute	
+	int $alwaysAddRoundTo = `checkBox -q -v addRandomizationAlwaysAddRoundTo_checkBox`;
+	if ($alwaysAddRoundTo){
+		$rt = 1;
+	}
+	int $addBias; // add bias attribute
+	int $alwaysAddBias = `checkBox -q -v addRandomizationAlwaysAddBias_checkBox`;
+	if ($alwaysAddBias){
+		$addBias = 1;
+	}
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-attr" : case "-attribute" :
+			$attr = $tok[($i + 1)];
+			break ;
+			
+			case "-add" :
+			$add = 1;
+			break ;
+			
+			case "-smn" : case "-setMin" :
+			$smn = 1;
+			break ;			
+			
+			case "-smx" : case "-setMax" :
+			$smx = 1;
+			break ;
+			
+			case "-rt" : case "-roundTo" :
+			$rt = 1;
+			break ;
+			
+			case "-ab" : case "-addBias" :
+			$addBias = 1;
+			break ;
+			
+			case "-ai" : case "-allIndices" :
+			$ai = 1;
+			break ;
+			
+			
+		}
+	}
+	
+	string $minln, $minnn, $maxln, $maxnn, $rtln, $biln, $bwln;	
+	$minln = "minRandom_" + $attr;
+	$maxln = "maxRandom_" + $attr;
+	$rtln = "roundRandTo_" + $attr;
+	$biln = "bias_" + $attr;
+	$bwln = "biasWeight_" + $attr;
+	string $maParent;
+	
+	//_________________________________________
+	// Determine The Type of Attribute So We Know What To Do With It.
+	if ($ai){
+		wizlog ("	[#] All Indices [#]");
+		$minln = "minRandom_" + $attr;
+		$maxln = "maxRandom_" + $attr;
+	}
+	
+	if (`attributeExists $attr $obj` == 0 && $ai == 0){
+
+		wizLog (" 	[!] " + $obj + "." + $attr + " : Does not exist");
+		
+		// see if the attribute has a parent attribute or children attributes
+		string $lp[] = `attributeQuery -n $obj -lp $attr`;
+		string $lc[] = `attributeQuery -n $obj -lc $attr`;
+		wizlog ("	[*] " + "attributeQuery -n " + $obj + " -lp " + $attr);
+		wizLog ("	[#] List Parents Of : " + $obj + " Attr : " + $attr);
+		wizlog ((niceArrayList("	[#] Parents [#] ", $lp)));
+		
+		if (`size $lp` > 0){
+			wizLog ("	[#] " + $attr + " : Is Child Of Compound Attribute : " + $lp[0] + "\n");
+			// if the attribute still doesn't exist then it may be a compound attr of a multi attr
+			if (`attributeExists $lp[0] $obj` == 0){
+				wizLog (" 	[!] " + $obj + "." + $lp[0] + " : Does not exist");
+				string $lpp[] = `attributeQuery -n $obj -lp $lp[0]`;
+				wizlog ("	[*] " + "attributeQuery -n " + $obj + " -lp " + $lp[0]);
+				wizLog ("	[#] List Parents Of : " + $obj + " Attr : " + $lp[0]);
+				wizlog ((niceArrayList("	[#] Parents [#] ", $lpp)));
+				
+				if (`size $lpp` > 0){
+					int $mi[] =	`getAttr -mi ($obj + "." + $lpp[0])`;
+					$minln = "minRandom_" + $attr;
+					$maxln = "maxRandom_" + $attr;
+					
+					//$maParent = $lpp[0] + "[" + $mi[0] + "]." + $lp[0];
+					$maParent = $lpp[0] + "[" + $mi[0] + "].";
+				}
+			} else {
+				
+				int $mi[] =	`getAttr -mi ($obj + "." + $lp[0])`;
+				$minln = "minRandom_" + $attr;
+				$maxln = "maxRandom_" + $attr;
+				
+				$maParent = $lp[0] + "[" + $mi[0] + "].";
+			
+			}
+		
+		}
+				
+		
+	}
+		
+	wizLog ("	[#] Randomize : " + $obj + "." + $maParent + $attr + "\n");
+	
+    global string $WIZ_randomizationSetName;
+    addSelectedObjectsToSet({$obj}, $WIZ_randomizationSetName);
+    
+	string $ranAttr[];
+		
+	// WHAT TYPE OF ATTRIBUTE IS THIS > WHAT ARE WE GOING TO DO WITH IT
+	//====================================================================	
+	string $type = `getAttr -typ ($obj + "." + ($maParent + $attr))`;	
+	wizLog ("	[#] Object Attribute Type : " + $type + "\n");
+	
+	string $atType;	
+	string $intTypes[] = { "bool", "long", "short", "byte", "enum" };	
+	string $subtype; // subtype will be like double, or long if it's something like double3, or long2
+	string $stSuffix[];
+	string $childAttr[];
+	
+	//Determine if this is a compound or attribute with multiple sub attributes
+	
+	//_________________________________________
+	// TDataCompound ?
+	int $compound;
+	if ($type == "TdataCompound"){
+		///////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//	If This is a TdataCompound Then it should have been dealt with already
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//createRandomazationAttributesForCompoundAttribute($obj, $attr);
+		wizlog("	[!] TDataCompound [!]");
+		return {""};	
+		
+	}
+	
+	//_________________________________________
+	// Attribute With Child Attributes
+	
+	string $ctString = `match "[23]+" $type`;
+	wizLog ("	[#] Match 23 : " + $ctString + "\n");
+	int $dtc;
+	if (`size $ctString` == 0){
+		$dtc = 0;
+	} else {
+		$dtc = int($ctString);
+	
+	}
+	
+	wizLog ("	[#] data type children : " + $dtc + "\n");
+	
+	if ($dtc > 0){
+		int $find = stringArrayFind($type, 0, $intTypes);
+		if ($find > 0){
+			wizLog ("	[#] Attribute Is Type Int");
+			$atType = "int";	
+		} else {
+			wizLog ("	[#] Attribute Is Type Float");
+			$atType = "float";	
+		}
+		$childAttr = `attributeQuery -n $obj -lc $attr`;
+		wizlog ((niceArrayList("	[#] Child Attributes [#]", $childAttr)));
+
+	}
+	
+	//RGB ?
+	string $rgb = `match "[RGB]+" ($maParent + $attr)`;
+	if ($rgb == "RGB"){
+		$dtc = 3;	
+		$stSuffix = { "R", "G", "B" };
+		$atType = "float";
+	}
+	
+	
+	//ENUM ?
+	int $enum;
+	if ($type == "enum"){
+		$enum = 1;	
+		$subtype = "bool";
+		$atType = "int";
+		//$type = "bool";
+		$stSuffix = getEnumAttributeNames(($obj + "." + $attr));
+		$dtc = `size $stSuffix`;
+		wizLog ("	[#] Attribute Is Type Int");
+	}
+
+	float $min[];
+	float $max[];
+	int $minint[];
+	int $maxint[];	
+		
+	// MIN MAX ?
+	//===============
+	// Determine if we want to set a min or max value on the attributes	
+	wizLog ("	[#] Min : " + $min[0]);
+	wizLog ("	[#] Min : " + $max[0]);
+	wizLog ("	[#] MinInt : " + $minint[0]);
+	wizLog ("	[#] MaxInt : " + $maxint[0]);	
+
+	//_________________________________________
+	// Get Min Value Default
+	// Look for a softMin, then a min to use for a default min value
+	if (`attributeExists $attr $obj`){
+		if (`attributeQuery -n $obj -sme $attr`){
+			if ($atType == "int"){ 
+				$min = `attributeQuery -n $obj -smn $attr`;
+				$minint[0] = int($min[0]);
+			} else {				
+				$min = `attributeQuery -n $obj -smn $attr`;	
+			}	
+		} else if (`attributeQuery -n $obj -mne $attr`){
+			if ($atType == "int"){ 
+				$min = `attributeQuery -n $obj -min $attr`;
+				$minint[0] = int($min[0]);
+			} else {
+				$min = `attributeQuery -n $obj -min $attr`;
+			}			
+		} else {
+			if ($atType == "int"){ 
+				$minint[0] = 0;
+			} else {
+				$min[0] = 0;
+			}
+		}
+	
+
+		//_________________________________________
+		// Get Max Value Default
+		// Look for a softMax, then a max to use for a default max value
+		if (`attributeQuery -n $obj -sxe $attr`){
+			if ($atType == "int"){ 
+				$min = `attributeQuery -n $obj -smx $attr`;
+				$maxint[0] = int($max[0]);
+			} else {				
+				$max = `attributeQuery -n $obj -smx $attr`;	
+			}	
+		} else if (`attributeQuery  -n $obj -mxe $attr`){
+			if ($atType == "int"){
+				$max = `attributeQuery -n $obj -max $attr`;
+				$maxint[0] = int($max[0]);
+			} else {
+				$max = `attributeQuery -n $obj -max $attr`;
+			}	
+			
+		} else {
+			if ($atType == "int"){
+				$maxint[0] = 1;
+			} else {
+				$max[0] = 1;
+			}
+		}
+		
+	}
+	
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//	Add The Randomization Attributes For Each Type Of Attribute
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	//=================================================
+	//RANDOM ENABLED (---MANDATORY---)
+	//=================================================
+	//Make a attribute to toggle randomizing on or off
+	string $doRanName = makeNiceAttributeName(("randomize_" + $attr + "_Enabled"));	
+	
+	int $ranEnabled;
+	if (`attributeExists $doRanName $obj` == 0){
+		if ($smn || $smx){
+			wizlog ("	[!] Can not set min or max value on a non-randomized attribute [!]");
+			return {""};
+		}
+	
+		addAttr -ln $doRanName -at bool $obj;
+		wizLog("	[+] Add Attribute : " + $obj + "." + $doRanName);
+		setAttr -e -keyable true ($obj + "." + $doRanName);
+		$ranEnabled = 1;
+	} else {
+		$ranEnabled = `getAttr ($obj + "." + $doRanName)`;	
+	}
+	setAttr ($obj + "." + $doRanName) $ranEnabled;
+	$ranAttr[`size $ranAttr`] = $doRanName;	
+
+	//=================================================
+	//BOOL ATTRIBUTES
+	//=================================================
+	if ($type == "bool"){
+		int $bv = `getAttr ($obj + "." + ($maParent + $attr))`;
+		return $ranAttr;
+	}	
+	
+	//=================================================
+	//ENUM ATTRIBUTE
+	//=================================================
+	if ($type == "enum"){
+		wizlog ("	[+] Adding Random Enum Attributes For : " + $obj + "." + $attr);		
+		string $enumNames[] = getEnumAttributeNames(($obj + "." + $attr));
+		wizlog ((niceArrayList(" [#] Enum Names [#] ", $enumNames))); 
+		
+		for ($i=0;$i<`size $enumNames`;$i++){
+			string $ranEnumName = makeNiceAttributeName(("randomize_" + $attr + "_" + $enumNames[$i]));
+			
+			if (`attributeExists $ranEnumName $obj` == 0){
+				addAttr -ln $ranEnumName -at "bool" $obj;	
+				setAttr -e -keyable true ($obj + "." + $ranEnumName);										
+			}	
+			setAttr ($obj + "." + $ranEnumName) 1;
+			$ranAttr[`size $ranAttr`] = $ranEnumName;
+		}
+		return $ranAttr;
+	}
+	
+	//=================================================
+	//ALL OTHER FLOAT INT AND MULTI ATTRIBUTES
+	//=================================================
+	
+	string $addAttrCommand;	
+	string $setAttrCommand;
+	
+	string $minParLn, $maxParLn;	
+	
+	//=================================================
+	//ATTRIBUTES WITH NO CHILDREN
+	//=================================================
+	if ($dtc == 0){
+		//If not then just make a min and max attribute and we are done.
+		wizlog ("	[-] Not A Multi-Attribute\n");
+		wizLog("	[#] Min Ran Attr Name : " + $minln);
+		wizLog("	[#] Max Ran Attr Name : " + $maxln);
+		
+		// check for default values set in options menu
+		if (`checkBox -q -v addRandomizationUseRange_checkBox`){
+			$min[0] = `floatFieldGrp -q -v1 addRandomizationMinMaxRange_floatFieldGrp`;
+			$minint[0] = int($min[0]);
+			$max[0] = `floatFieldGrp -q -v2 addRandomizationMinMaxRange_floatFieldGrp`;
+			$maxint[0] = int($max[0]);
+		}
+		
+		//_________________________________________
+		// Min
+		if (`attributeExists $minln $obj` == 0){
+			//_________________________________________
+			// Adding Randomization Attribute
+			addAttr -ln $minln -at $type $obj;	
+			wizlog ("	[+] Adding Attribute : " + $obj + "." + $minln);
+			setAttr -e -keyable true ($obj + "." + $minln);
+			
+			if ($atType == "int"){ 
+				wizlog ("	[#] Setting Attribute : " + $obj + "." + $minln + " To : " + $minint[0]);
+				setAttr ($obj + "." + $minln) $minint[0];
+			} else {
+				wizlog ("	[#] Setting Attribute : " + $obj + "." + $minln + " To : " + $min[0]);
+				setAttr ($obj + "." + $minln) $min[0];
+			}
+			$ranAttr[`size $ranAttr`] = $minln;	
+			
+		} else {			
+			//_________________________________________
+			// If we are editing the min random value
+			if ($smn){
+			
+				if ($atType == "int"){ 
+					if ((catchQuiet(`getAttr ($obj + "." + $attr)`))){
+						wizlog ("	[!] Attribute Does Not Exist : " + $obj + "." + $attr);
+						return {""};
+					}
+
+					int $curVal = `getAttr ($obj + "." + $attr)`;
+					wizlog ("	[#] Setting Attribute : " + $obj + "." + $minln + " To Current Value: " + $curVal);
+					setAttr ($obj + "." + $minln) $curVal;					
+				} else {
+					if ((catchQuiet(`getAttr ($obj + "." + $attr)`))){
+						wizlog ("	[!] Attribute Does Not Exist : " + $obj + "." + $attr);
+						return {""};
+					}
+					float $curVal = `getAttr ($obj + "." + $attr)`;
+					wizlog ("	[#] Setting Attribute : " + $obj + "." + $minln + " To Current Value: " + $curVal);
+					setAttr ($obj + "." + $minln) $curVal;	
+				}
+				
+			} else if ($add){		
+				wizlog ("-w	[!] Attribute Already Exists : " + $obj + "." + $minln);
+			}
+		}		
+		
+		
+		//_________________________________________
+		// Max
+		if (`attributeExists $maxln $obj` == 0){
+			//_________________________________________
+			// Adding Randomization Attribute
+			addAttr -ln $maxln -at $type $obj;
+			wizlog ("	[+] Adding Attribute : " + $obj + "." + $maxln);			
+			setAttr -e -keyable true ($obj + "." + $maxln);		
+			if ($atType == "int"){
+				wizlog ("	[#] Setting Attribute : " + $obj + "." + $maxln + " To : " + $maxint[0]);
+				setAttr ($obj + "." + $maxln) $maxint[0];
+			} else { 
+				wizlog ("	[#] Setting Attribute : " + $obj + "." + $maxln + " To : " + $max[0]);
+				setAttr ($obj + "." + $maxln) $max[0];
+			}
+			$ranAttr[`size $ranAttr`] = $maxln;
+			
+		} else {
+			//_________________________________________
+			// If we are editing the max random value
+			if ($smx){
+				if ($atType == "int"){ 
+					int $curVal = `getAttr ($obj + "." + $attr)`;
+					wizlog ("	[#] Setting Attribute : " + $obj + "." + $maxln + " To Current Value: " + $curVal);
+					setAttr ($obj + "." + $maxln) $curVal;					
+				} else {
+					float $curVal = `getAttr ($obj + "." + $attr)`;
+					wizlog ("	[#] Setting Attribute : " + $obj + "." + $maxln + " To Current Value: " + $curVal);
+					setAttr ($obj + "." + $maxln) $curVal;	
+				}
+				
+			} else if ($add){			
+				wizlog ("-w	[!] Attribute Already Exists : " + $obj + "." + $maxln);
+			}
+		}
+		
+		//_________________________________________
+		// Add Round To Attribute
+		if ($rt){
+			if (`attributeExists $rtln $obj` == 0){
+				addAttr -ln $rtln -at $type $obj;
+			}
+		}
+		
+		//_________________________________________
+		// Add Bias Attribute
+		if ($addBias){
+			if (`attributeExists $biln $obj` == 0){
+				addAttr -ln $biln -at $type $obj;
+			}
+			if (`attributeExists $bwln $obj` == 0){
+				addAttr -ln $bwln -at $type $obj;
+			}
+			
+		}
+		
+		return $ranAttr;
+		
+		
+	} else {
+
+		//=================================================
+		//ATTRIBUTES WITH CHILDREN
+		//=================================================
+		
+		//If this is a attribute with children we have to make a parent attribute			
+		$minParLn = $minln;
+		wizlog ("	[#] Attribute Has : " + $dtc + " : Children [#]");
+		
+		// Min Parent Long Name
+		if (`attributeExists $minParLn $obj` == 0){
+			$addAttrCommand = ("addAttr -ln " + $minParLn + " -nc " + $dtc + " -at " + $type + " " + $obj + ";\n");
+		}
+		$ranAttr[`size $ranAttr`] = $minParLn;
+		
+		// Max Parent Long Name
+		$maxParLn = $maxln;	
+		if (`attributeExists $maxParLn $obj` == 0){	
+			$addAttrCommand = $addAttrCommand + ("addAttr -ln " + $maxParLn + " -nc " + $dtc + " -at " + $type + " " + $obj + ";\n");
+		}
+		$ranAttr[`size $ranAttr`] = $maxParLn;
+
+	}
+	
+	//====================================================
+	//NOW DEAL WITH THE PARENT/CHILDREN ATTRIBUTE TYPES
+	//====================================================
+	//Add the sub attributes for the compound type attributes
+	for ($i=0;$i<$dtc;$i++){
+		if (`attributeExists $childAttr[$i] $obj` == 0){
+			wizlog ("	[+] Attribute : " + $obj + "." + $childAttr[$i] + " : Does Not Exist\n");	
+			continue ;
+		}
+		
+		string $childType = `getAttr -type ($obj + "." + $childAttr[$i])`;
+		if ($childType == "float"){
+			$childType = "\"float\"";	
+		}
+		
+		//_________________________________________
+		// Make Names For Min Max Values
+		$minln = makeNiceAttributeName(("minRandom_" + $childAttr[$i]));
+		$maxln = makeNiceAttributeName(("maxRandom_" + $childAttr[$i]));
+		
+		//_________________________________________
+		// Add Round To Attribute
+		if ($rt){
+			$rtln = makeNiceAttributeName(("roundTo_" + $childAttr[$i]));
+			
+		}
+		
+		//_________________________________________
+		// Min Max Default Values
+		$minint[0] = 0;
+		$maxint[0] = 1;
+		$min[0] = 0;
+		$max[0] = 1;
+		
+		// check for default values set in options menu
+		if (`checkBox -q -v addRandomizationUseRange_checkBox`){
+			$min = `floatFieldGrp -q -v1 addRandomizationMinMaxRange_floatFieldGrp`;
+			$minint[0] = int($min[0]);
+			$max = `floatFieldGrp -q -v2 addRandomizationMinMaxRange_floatFieldGrp`;
+			$maxint[0] = int($max[0]);
+		} else {
+			//_________________________________________
+			// Get Min Value Default
+			// Look for a softMin, then a min to use for a default min value
+			if (`attributeQuery -n $obj -sme $childAttr[$i]`){
+				if ($atType == "int"){ 
+					$min = `attributeQuery -n $obj -smn $childAttr[$i]`;
+					$minint[0] = int($min[0]);
+				} else {				
+					$min = `attributeQuery -n $obj -smn $childAttr[$i]`;	
+				}	
+			} else if (`attributeQuery -n $obj -mne $childAttr[$i]`){
+				if ($atType == "int"){ 
+					$min = `attributeQuery -n $obj -min $childAttr[$i]`;
+					$minint[0] = int($min[0]);
+				} else {				
+					$min = `attributeQuery -n $obj -min $childAttr[$i]`;	
+				}			
+			}
+			//_________________________________________
+			// Get Max Value Default			
+			// Look for a softMax, then a max to use for a default max value
+			if (`attributeQuery -n $obj -sxe $childAttr[$i]`){
+				if ($atType == "int"){ 
+					$max = `attributeQuery -n $obj -smx $childAttr[$i]`;
+					$maxint[0] = int($max[0]);
+				} else {				
+					$max = `attributeQuery -n $obj -smx $childAttr[$i]`;	
+				}	
+			} else if (`attributeQuery  -n $obj -mxe $childAttr[$i]`){
+				if ($atType == "int"){ 
+					$max = `attributeQuery -n $obj -max $childAttr[$i]`;
+					$maxint[0] = int($max[0]);
+				} else {			
+					$max = `attributeQuery -n $obj -max $childAttr[$i]`;	
+				}
+					
+			}
+		}
+		
+		//_________________________________________
+		// Add Min Random Attribute
+		if (`attributeExists $minln $obj` == 0){
+			$addAttrCommand = $addAttrCommand + ("addAttr -ln " + $minln + " -at " + $childType + " -p " + $minParLn + " " + $obj + ";\n");			
+			$setAttrCommand = $setAttrCommand + ("setAttr -e -k true " + $obj + "." + $minln + ";"+"\n");			
+		}		
+		
+		if ($smn){
+			//_________________________________________
+			// Editing the min random value
+			if ($atType == "int"){
+				int $curVal = `getAttr ($obj + "." + $childAttr[$i])`;
+				$setAttrCommand = $setAttrCommand + ("setAttr " + $obj + "." + $minln + " " + $curVal + ";"+"\n");			
+			} else {
+				float $curVal = `getAttr ($obj + "." + $childAttr[$i])`;
+				$setAttrCommand = $setAttrCommand + ("setAttr " + $obj + "." + $minln + " " + $curVal + ";"+"\n");
+			}
+		
+		} else if ($add){
+			//_________________________________________
+			// Adding Randomization Attr
+			if ($atType == "int"){ 
+				$setAttrCommand = $setAttrCommand + ("setAttr " + $obj + "." + $minln + " " + $minint[0] + ";"+"\n");
+			} else {
+				$setAttrCommand = $setAttrCommand + ("setAttr " + $obj + "." + $minln + " " + $min[0] + ";"+"\n");
+			}		
+			$ranAttr[`size $ranAttr`] = $minln;
+		}
+		
+		//_________________________________________
+		// Add Max Random Attribute
+		if (`attributeExists $maxln $obj` == 0){
+			$addAttrCommand = $addAttrCommand + ("addAttr -ln " + $maxln + " -at " + $childType + " -p " + $maxParLn + " " + $obj + ";\n");			
+			$setAttrCommand = $setAttrCommand + ("setAttr -e -k true " + $obj + "." + $maxln + ";"+"\n");			
+		} 
+		
+		if ($smx){
+			//_________________________________________
+			// Editing the max random value
+			if ($atType == "int"){
+				int $curVal = `getAttr ($obj + "." + $childAttr[$i])`;
+				$setAttrCommand = $setAttrCommand + ("setAttr " + $obj + "." + $maxln + " " + $curVal + ";"+"\n");			
+			} else {
+				float $curVal = `getAttr ($obj + "." + $childAttr[$i])`;
+				$setAttrCommand = $setAttrCommand + ("setAttr " + $obj + "." + $maxln + " " + $curVal + ";"+"\n");
+			}
+		
+		} else if ($add){	
+			//_________________________________________
+			// Adding Randomization Attr
+			if ($atType == "int"){ 
+				$setAttrCommand = $setAttrCommand + ("setAttr " + $obj + "." + $maxln + " " + $maxint[0] + ";"+"\n");
+			} else {
+				$setAttrCommand = $setAttrCommand + ("setAttr " + $obj + "." + $maxln + " " + $max[0] + ";"+"\n");
+			}			
+			$ranAttr[`size $ranAttr`] = $maxln;
+			
+		}
+		
+		
+		//_________________________________________
+		// Add Round To Attribute
+		if ($rt){
+			if (`attributeExists $rtln $obj` == 0){
+				addAttr -ln $rtln -at $childType $obj;
+			}
+			
+		}
+		
+		//_________________________________________
+		// Add Bias Attribute
+		if ($addBias){
+			if (`attributeExists $biln $obj` == 0){
+				addAttr -ln $biln -at $childType $obj;
+			}
+			if (`attributeExists $bwln $obj` == 0){
+				addAttr -ln $bwln -at $type $obj;
+			}
+		}
+	}
+	
+	//_________________________________________
+	// Eval the addAttr Command
+	if (`size $addAttrCommand` > 0){
+		wizlog ("	[*] " + $addAttrCommand);
+		eval($addAttrCommand);
+	}
+	if (`size $setAttrCommand` > 0){
+		wizlog ("	[*] " + $setAttrCommand);
+		eval($setAttrCommand);
+	}
+	
+	
+	
+	return $ranAttr;
+
+}
+
+//@ CREATE RANDOMAZATION ATTRIBUTES FOR COMPOUND ATTRIBUTE
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName("-obj someObject -q -sl");
+	
+	</code>
+*********************************************************************/
+global proc createRandomazationAttributesForCompoundAttribute( string $obj, string $attr, string $flags )
+{
+	wizlog("[@] createRandomazationAttributesForCompoundAttribute");
+	int $addAttrForAllIndices;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-ai" : case "-allIndices" :
+			$addAttrForAllIndices = 1;
+			break ;
+			
+		}
+	}
+
+	
+	
+	if ($addAttrForAllIndices){
+		string $lc[] = `attributeQuery -node $obj -lc $attr`;
+		wizlog ((niceArrayList("	[#] Child Attributes [#]", $lc)));
+		int $mi[] = `getAttr -mi ($obj + "." + $attr)`;
+		for ($i=0;$i<`size $lc`;$i++){			
+			for ($j=0;$j<`size $mi`;$j++){
+				string $miAttr = $attr + "[" + $mi[$j] + "]." + $lc[$i];
+				
+				wizlog ("	[*] wizRandomazationAttributes(\"" + $obj + "\", \"" + $miAttr + "\";");
+				//string $alias = ($attr + "_" + $mi[$j] + "_" + $lc[$i]);
+				string $alias = ($attr + $mi[$j] + $lc[$i]);
+				$alias = substituteAllString($alias, "_", "");
+				
+				aliasAttr $alias ($obj + "." + $miAttr);
+				wizlog ("aliasAttr " + $alias + " " + $obj + "." + $miAttr);
+				wizRandomazationAttributes("-add -obj " + $obj + " -attr " + $alias + " -ai");	
+				
+			}
+		}
+		return ;
+	}
+	
+	
+	// If there are ALIASES for the attribute then make ran attributes for the aliases
+	if (`attributeExists "attributeAliasList" $obj`){
+		wizlog ("	[!] Alias Attributes Exist [!]");	
+			
+		string $alias[] = `listAttr -m ($obj + "." + $attr)`; 
+		if (`size $alias` > 0){
+			wizlog ((niceArrayList("	[#] Alisas [#]", $alias)));
+			
+			for ($i=0;$i<`size $alias`;$i++){
+				//createRandomazationAttributes( $obj, $alias[$i]);
+				wizRandomazationAttributes("-add -obj " + $obj + " -attr " + $alias[$i]);
+			}
+			return;
+		}	
+			
+	}
+
+	//RANDOM ENABLED (MANDATORY)
+	//=================================================
+	//Make a attribute to toggle randomizing on or off
+	string $doRanName = makeNiceAttributeName(("randomize_" + $attr + "_Enabled"));
+	int $ranEnabled;
+	if (`attributeExists $doRanName $obj` == 0){
+		addAttr -ln $doRanName -at bool $obj;
+		wizLog("	[+] Add Attribute : " + $obj + "." + $doRanName);
+		setAttr -e -keyable true ($obj + "." + $doRanName);
+		$ranEnabled = 1;
+	} else {
+		$ranEnabled = `getAttr ($obj + "." + $doRanName)`;	
+	}
+	setAttr ($obj + "." + $doRanName) $ranEnabled;
+
+	// add min max random indices attributes
+	addAttr -ln ("randomizeIndiceCount_" + $attr) -at bool $obj;
+	setAttr ($obj + "." + ("randomizeIndiceCount_" + $attr)) true;
+	addAttr -ln ("randomIndices_" + $attr) -at short2 $obj;
+    addAttr -ln ("minRandomIndices_" + $attr) -at short -parent ("randomIndices_" + $attr) $obj;
+	addAttr -ln ("maxRandomIndices_" + $attr) -at short -parent ("randomIndices_" + $attr) $obj;
+	setAttr ($obj + "." + ("minRandomIndices_" + $attr)) 5;
+	setAttr ($obj + "." + ("maxRandomIndices_" + $attr)) 10;
+	
+	// add ran attr for all child attrs
+	string $lc[] = `attributeQuery -node $obj -lc $attr`;
+	wizlog ((niceArrayList("	[#] Child Attributes [#]", $lc)));
+		
+	for ($i=0;$i<`size $lc`;$i++){
+
+		// if this is a color add ran attr for colors
+		int $uac = `attributeQuery -n $obj -uac $lc[$i]`;		
+		if ($uac == 1){
+			wizlog ("	[#] Attribute Is Color : " + $lc[$i] + " [#]");
+			string $lcc[] = `attributeQuery -n $obj -lc $lc[$i]`;
+			for ($p=0;$p<`size $lcc`;$p++){
+				wizlog ("	[*] wizRandomazationAttributes(\"" + $obj + "\", \"" + $lcc[$p] + "\";");	
+				wizRandomazationAttributes("-add -obj " + $obj + " -attr " + $lcc[$p]);
+			}
+		}
+			
+		wizlog ("	[*] wizRandomazationAttributes(\"" + $obj + "\", \"" + $lc[$i] + "\";");
+		//createRandomazationAttributes( $obj, $lc[$i]);	
+		wizRandomazationAttributes("-add -obj " + $obj + " -attr " + $lc[$i]);
+		
+	}
+
+	
+
+}
+
+
+
+
+/*
+string $lc[] = `attributeQuery -node strokeShapeBrush11 -lc pressureScale`;
+for($i=0;$i<`size $lc`;$i++){
+    
+    
+    }
+
+
+*/
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                 RANDOMIZE RADOMIZATION ATTRIBUTES
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//@ RANDOMIZE ALL OBJECTS WITH RANDOMIZATION ATTRIBUTES
+//====================================================================
+global proc randomizeAllObjectsWithRandomizationAttributes()
+{
+    string $allRandomizeObj[] = getAllObjectsWithRandomizationAttributes();
+	wizlog ((niceArrayList("	[All RANDOMIZATION OBJECTS]", $allRandomizeObj)));
+    randomizeRandomizationAttributesOnSelectedObjects($allRandomizeObj);
+    	
+}
+
+//@ RANDOMIZE RANDOMIZATION ATTRIBUTES ON SELECTED OBJECTS
+//====================================================================
+global proc randomizeRandomizationAttributesOnSelectedObjects( string $sel[] )
+{
+    for ($i=0;$i<`size $sel`;$i++){
+        randomizeRandomizationAttributesOnSelectedObject($sel[$i]);
+    }
+}
+
+/*======================| SUMMARY |===================================
+
+/*=======================| USAGE |====================================	
+    string $sel[] = `ls -sl`;
+    randomizeRandomizationAttributesOnSelectedObject($sel[0]);
+====================================================================*/
+//@ RANDOMIZE RANDOMIZATION ATTRIBUTES ON SELECTED OBJECT
+//====================================================================
+global proc randomizeRandomizationAttributesOnSelectedObject( string $obj )
+{
+	wizlog("[@] randomizeRandomizationAttributesOnSelectedObject");
+	string $co[];
+	
+    string $u[] = `listAttr -ud $obj`;
+    
+    for ($i=0;$i<`size $u`;$i++){
+        int $sw = startsWith($u[$i], "randomize_");
+        if ($sw == 0){
+        	continue;
+        }
+		//string $attr = stringRemovePrefix("randomize_", $all[$i]);
+		string $tok[] = tokenizeString($u[$i], "_");
+				
+		// $tok[1] is the name of the attribute we want to randomize
+		string $ranAttr = $tok[1];
+		
+		// skip attributes that don't exist... they might be child attributes of a compound attribute though...
+		if (`attributeExists $ranAttr $obj` == 0){
+			wizLog ("	[!] Attribute Does Not Exist : attributeExists " + $ranAttr + " " + $obj + ";");
+			string $alias = `aliasAttr -q ($obj + "." + $ranAttr)`;
+			if (`size $alias` == 0){				
+				wizLog ("	[!] Alias Attribute Does Not Exist : aliasAttr -q " + $obj + "." + $ranAttr + ";");
+				continue;
+			}
+		}
+		
+		//Just deal with the attributes called "randomize_someAttr_Enabled"
+		//We will just assemble all the min max and other var names from the tokenizes name of the enable attribute
+		if ($tok[(`size $tok` - 1)] == "Enabled"){
+			//Check to see if the randomization is enabled
+			int $enabled = `getAttr ($obj + "." + $u[$i])`;
+			if ($enabled == 0){
+				wizlog (" [-] Randomize : " + $obj + "." + $ranAttr + " : Is Disabled [-] ");
+				continue;
+			}
+				
+		} else {
+			continue;
+		}
+					
+		
+		wizlog ("	[+] Randomizing : " + $obj + "." + $ranAttr + " : Randomize Attribute Name : " + $u[$i]);
+		
+		// If size of tok is 2 then it's an enum attribute bool. move on...
+		//if (`size $tok` > 2){ continue; }
+		
+		// WHAT TYPE OF ATTRIBUTE IS THIS > WHAT ARE WE GOING TO DO WITH IT
+		//====================================================================
+
+		string $type = `getAttr -typ ($obj + "." + $ranAttr)`;
+		
+		if ($type == "TdataCompound"){
+			// get the children of the attribute
+			randomizeMultiIndiceAttribute("-ura -obj " + $obj + " -attr " + $ranAttr);		
+			continue;
+		}
+		
+		//ENUM
+		//Enum's are special cases. Deal with them separatly
+		if ($type == "enum"){
+			//print ("Randomize Enum Attribute : " + $obj + "." + $ranAttr + "\n");
+			randomizeEnumAttribute($obj, $tok[1]);
+			continue;
+		}
+		
+		//BOOL
+		// Booleans are simple just get them done
+		if ($type == "bool"){
+			randomizeBoolAttribute($obj, $ranAttr);
+			continue;
+		}
+		
+		//DEAL WITH ALL THE REST OF THE DATA TYPES
+		
+		string $atType;	
+		string $intTypes[] = { "bool", "long", "short", "byte", "enum" };	
+		string $childType; // will be like double, or long if it's something like double3, or long2
+
+		//Determine if this is a compound or attribute with multiple sub attributes
+		string $child[] = `attributeQuery -n $obj -lc $ranAttr`;
+		wizlog ("string $childCount[] = `attributeQuery -n " + $obj + "-lc " + $ranAttr + "`;");
+		
+		//wizlog ("Child Attributes Of : " + $ranAttr + " : " + stringArrayToString($child, ", "));
+		string $parent[] = `attributeQuery -n $obj -lp $ranAttr`;
+		
+		//wizlog ("Parent Attributes Of : " + $ranAttr + " : " + stringArrayToString($parent, ", "));
+		
+		//string $ctString = `match "[23]+" $u[$i]`;
+		//print ("Match 23 : " + $ctString + "\n");
+		
+		int $dtc = `size $child`;
+		int $isInt;
+		
+		int $attrExists = `attributeExists $ranAttr $obj`;
+		
+		wizlog ("Object : " + $obj + " : Random Attribute : " + $ranAttr + " : Children : " + `size $child` + " AttributeExists : " + $attrExists);
+		//If the attr has children
+		if (`size $child` > 0 && $attrExists == 1){
+			//print ("Is Int ? : " + "stringArrayFind(\"" + $type + "\", 0, " + "{ \"" + stringArrayToString($intTypes, "\", \"") + "\" };\n");
+			
+			$isInt = stringArrayFind($type, 0, $intTypes);
+			
+			for ($c=0;$c<`size $child`;$c++){
+				
+				if ($isInt > 0){
+					//print (" - Randomize Int - \n");
+					
+					int $minrani = `getAttr ($obj + ".minRandom_" + $child[$c])`;
+					int $maxrani = `getAttr ($obj + ".maxRandom_" + $child[$c])`;
+					int $ranValuei = randInt($minrani, $maxrani);
+					if (`attributeExists ("bias_" + $ranAttr) $obj`){
+						/*
+						//int $biaswi = 0;
+						if (`attributeExists ("biasWeight_" + $ranAttr) $obj`){						
+							int $biaswi = `getAttr ($obj + ".biasWeight_" + $ranAttr)`;							
+						} else {
+							int $biasi = `getAttr ($obj + ".bias_" + $ranAttr)`;
+							$ranValuei = randIntBias( $minrani, $maxrani, $biasi );
+						}
+						*/
+						int $biasi = `getAttr ($obj + ".bias_" + $ranAttr)`;
+						$ranValuei = randIntBias( $minrani, $maxrani, $biasi );
+					}
+					if (`attributeExists ("roundRandTo_" + $ranAttr) $obj`){
+						int $roundToi = `getAttr ($obj + ".roundRandTo_" + $ranAttr)`;
+						$ranValuei = constrainValue( $minrani, $maxrani, $roundToi, $ranValuei);
+					}
+					
+					wizlog ("[*] rand(" + $minrani + ", " + $maxrani + "); setAttr " + $obj + "." + $child[$c] + " " + $ranValuei + ";\n");
+					
+					catchQuiet(`setAttr ($obj + "." + $child[$c]) $ranValuei`);
+					$co[`size $co`] = ("setAttr " + $obj + "." + $child[$c] + " " + $ranValuei + ";\n");
+				} else {
+					//print (" - Randomize Float - \n");
+				
+					float $minran = `getAttr ($obj + ".minRandom_" + $child[$c])`;
+					float $maxran = `getAttr ($obj + ".maxRandom_" + $child[$c])`;
+					float $ranValue = rand($minran, $maxran);
+					if (`attributeExists ("bias_" + $ranAttr) $obj`){
+						float $bias = `getAttr ($obj + ".bias_" + $ranAttr)`;
+						$ranValue = randFloatBias( $minran, $maxran, $bias );
+					}
+					if (`attributeExists ("roundRandTo_" + $ranAttr) $obj`){
+						float $roundTo = `getAttr ($obj + ".roundRandTo_" + $ranAttr)`;
+						$ranValue = constrainValue( $minran, $maxran, $roundTo, $ranValue);
+					}
+					
+					wizlog ("[*] rand(" + $minran + ", " + $maxran + "); setAttr " + $obj + "." + $child[$c] + " " + $ranValue + ";\n");
+					catchQuiet(`setAttr ($obj + "." + $child[$c]) $ranValue`);
+					$co[`size $co`] = ("setAttr " + $obj + "." + $child[$c] + " " + $ranValue + ";\n");
+				}
+				
+				
+			}
+			
+		} else if (`size $child` == 0 || $attrExists == 0){		
+			// If no children
+			$isInt = stringArrayFind($type, 0, $intTypes);
+			if ($isInt > 0){
+				//print (" - Randomize Int - \n");
+			
+				int $minrani = `getAttr ($obj + ".minRandom_" + $ranAttr)`;
+				int $maxrani = `getAttr ($obj + ".maxRandom_" + $ranAttr)`;
+				int $ranValuei = randInt($minrani, $maxrani);
+				
+				if (`attributeExists ("bias_" + $ranAttr) $obj`){
+					int $biasi = `getAttr ($obj + ".bias_" + $ranAttr)`;
+					$ranValuei = randIntBias( $minrani, $maxrani, $biasi );
+				}
+				
+				if (`attributeExists ("roundRandTo_" + $ranAttr) $obj`){
+					int $roundToi = `getAttr ($obj + ".roundRandTo_" + $ranAttr)`;
+					$ranValuei = constrainValue( $minrani, $maxrani, $roundToi, $ranValuei);
+				}
+				
+				
+				catchQuiet(`setAttr ($obj + "." + $ranAttr) $ranValuei`);
+				$co[`size $co`] = ("setAttr " + $obj + "." + $ranAttr + " " + $ranValuei + ";\n");
+				wizlog ("[*] setAttr " + $obj + "." + $ranAttr + " " + $ranValuei + ";\n");
+			} else {
+				//print (" - Randomize Float - \n");
+		
+				float $minran = `getAttr ($obj + ".minRandom_" + $ranAttr)`;
+				float $maxran = `getAttr ($obj + ".maxRandom_" + $ranAttr)`;
+				float $ranValue = rand($minran, $maxran);
+				
+				if (`attributeExists ("roundRandTo_" + $ranAttr) $obj`){
+					float $roundTo = `getAttr ($obj + ".roundRandTo_" + $ranAttr)`;
+					$ranValue = constrainValue( $minran, $maxran, $roundTo, $ranValue);
+				}
+				if (`attributeExists ("bias_" + $ranAttr) $obj`){
+					float $bias = `getAttr ($obj + ".bias_" + $ranAttr)`;
+					$ranValue = randFloatBias( $minran, $maxran, $bias );
+				}
+				
+				catchQuiet(`setAttr ($obj + "." + $ranAttr) $ranValue`);
+				$co[`size $co`] = ("setAttr " + $obj + "." + $ranAttr + " " + $ranValue + ";\n");
+				wizlog ("[*] setAttr " + $obj + "." + $ranAttr + " " + $ranValue + ";\n");
+			}
+			
+		}
+		
+		/*
+		//RGB ?
+		string $rgb = `match "[RGB]+" $u[$i]`;
+		if ($rgb == "RGB"){
+			$dtc = 3;	
+			$stSuffix = { "R", "G", "B" };
+			$atType = "float";
+		}
+		
+		*/
+		        
+	}
+	wizlog("[END] randomizeRandomizationAttributesOnSelectedObject [END]" + wizDiv("e"));
+	//print (stringArrayToString($co, "") + "\n");
+
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                   RANDOMIZE ATTRIBUTES OF TYPE
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//@ RANDOMIZE ENUM ATTRIBUTE
+//====================================================================
+global proc int randomizeEnumAttribute( string $obj, string $enumAttr )
+{
+	wizlog ("[@] randomizeEnumAttribute");
+	string $co[];
+    string $ranEnum[];
+    int $useEnum[]; // The value of attr randomize_someAttr_someEnumName
+	// Determine if we want to randomize the enum
+    string $u[] = `listAttr -u $obj`;
+    for ($i=0;$i<`size $u`;$i++){
+        int $sw = startsWith($u[$i], ("randomize_" + $enumAttr));
+        if ($sw == 1){
+			if ( (endsWith($u[$i], "Enabled"))){
+				//wizlog ("[#] Enabled Attr : " + $u[$i]);
+				continue ;
+			}
+            string $tok[] = tokenizeString($u[$i], "_");
+            $ranEnum[`size $ranEnum`] = $tok[`size $tok`];
+            $useEnum[`size $useEnum`] = `getAttr ($obj + "." + $u[$i])`;           
+            //wizlog ("Enum Selection Bool : " + $tok[`size $tok`] + " Value : " + `getAttr ($obj + "." + $u[$i])`);
+        }
+    }
+    
+    int $useEnumIndex[]; // All the valid enum values to use
+    for ($i=0;$i<`size $useEnum`;$i++){
+        if ($useEnum[$i] == 1){
+            $useEnumIndex[`size $useEnumIndex`] = $i;
+			//wizlog ("[+] Use Enum : " + $i);
+        }
+    }
+    //int $useEnumCount = intArrayCount( 1 , $useEnum);
+    int $useEnumCount = intArrayCount( 1 , $useEnum);
+	//int $useEnumCount = `size $useEnumIndex`;
+	
+    //int $choice = int(floor(`rand 0 ($useEnumCount - 1)`));
+	int $choice = int(floor(`rand 0 ($useEnumCount)`));
+	print ("Number Of Enum To Choose From : " + $useEnumCount + " Random Enum Selection : " + $useEnumIndex[$choice] + " Total Choices : " + $choice + "\n");
+	
+	// in case the enum doesn't exist. we may be just requesting a value to use and not want to actually set the value.
+	if (`attributeExists $enumAttr $obj` == 0){
+		return $useEnumIndex[$choice];
+	}
+	
+	setAttr ($obj + "." + $enumAttr) $useEnumIndex[$choice];
+	//setAttr ($obj + "." + $enumAttr) $useEnum[$choice];
+	
+    $co[`size $co`] = ("setAttr " + $obj + "." + $enumAttr + " " + $useEnumIndex[$choice] + ";\n");
+    print (stringArrayToString($co, "") + "\n");
+
+	return $useEnumIndex[$choice];
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                 RANDOMIZE MULTI INDICE ATTRIBUTES
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//@ RANDOMIZE MULTI INDICE ATTRIBUTE
+//====================================================================
+/*****************************************************************//**
+	Randomizes the indice count and the children of a multi indice attr
+	<hr>
+	<b>Synopsis</b><br>
+	foo [-fa string] [-fb linear] <br>
+	Pass an object and a multiAttribute and randomization parameters to randomize. <br>
+	-udr will randomize the child attr using it's default range eg. 0.0 1.0 <br>
+	-ir indicates the minimum and maximum to use when randomizing the indice count. <br>
+	To use a specified range per child attribute : <br>
+	Pass flags ( In Order ) : -ca childAttrName -r 0.25 4.75 <br>
+	(the -r flag must be directly proceeded by the child attribute name) <br>
+	(the -ca and -r flags can be used multiple times) <br>
+	Using the -ca flag by itself will just specify that that attribute should be randomized <br>
+	and other attributes not flagged by -ca are skipped <br>
+	
+	<b>Return value</b><br>
+	string[] an array of values?
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-attribute(-attr) <br>
+	-useDefaultRange(-udr) <br>
+	-randomizeIndices(-ri) <br>
+	-indiceRange(-ir) <br>
+	
+	-minimum(-min) [not in use] <br>
+	-maximum(-max) [not in use] <br>
+	-range(-r) <br>
+	
+	-childAttr(-ca) <br>
+
+	
+	<hr>
+	<b>Related</b><br>
+	resetMultiIndiceAttribute(),
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	randomizeMultiIndiceAttribute("-udr -ir 5 10 -obj strokeShape1 -attr pressureScale");
+	randomizeMultiIndiceAttribute("-ca pressureScale_FloatValue -r 0 1 -ca pressureScale_Position -r 0 1 -ir 5 10 -obj strokeShape1 -attr pressureScale");
+	
+	</code>
+*********************************************************************/
+global proc string[] randomizeMultiIndiceAttribute( string $flags )
+{
+	wizlog("[@] randomizeMultiIndiceAttribute");
+	wizlog("	[-] Flags : " + $flags);
+	int $udr;
+	float $min, $max;
+	float $range[];
+	float $randRange[];
+	string $obj, $attr;
+	string $ca[];
+	string $tok[] = tokenizeString($flags, " ");
+	string $caAttrString[];
+	string $caRangeString[];
+	int $ura;
+	
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-min" : case "-minumum" :
+			$min = float($tok[($i + 1)]);
+			break;
+				
+			case "-max" : case "-maximum" :
+			$max = float($tok[($i + 1)]);
+			break;
+			
+			case "-udr" : case "-useDefaultRange" :
+			$udr = 1;
+			break;			
+			
+			case "-r" : case "-range" :
+			string $rangeArr[] = wizFlagArray($tok, $i);
+			//$caAttrString[`size $caAttrString`] = $tok[($i - 1)];
+			$caRangeString[`size $caRangeString`] = stringArrayToString($rangeArr, " ");
+			//$range = stringArrayToFloatArray($rangeArr);
+			
+			break;
+			
+			case "-ca" : case "-childAttr" :
+			$caAttrString[`size $caAttrString`] = $tok[($i + 1)];
+			break;
+			
+			case "-ir" : case "-range" :
+			string $randRangeString[] = wizFlagArray($tok, $i);
+			$randRange = stringArrayToFloatArray($randRangeString);
+			break;
+			
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break;
+			
+			case "-attr" : case "-attribute" :
+			$attr = $tok[($i + 1)];
+			break;
+			
+			case "-ura" : case "-useRandomizationAttributes" :	
+			$ura = 1;
+			break;
+			
+		}
+	}
+		
+	//_________________________________________
+	// Verify Object and Attribute
+	// make sure we have a valid object and attribute
+	string $sel[] = wizFlagObjTrail($flags);
+	if (`size $obj` == 0){
+		$obj = $sel[0];
+	}	
+	if (`size $attr` == 0){
+		$attr = $sel[1];
+	}	
+	if (`objExists $obj` == 0){
+		wizlog("-w		[!] Obj : " + $obj + " : Does Not Exist. Can Not Randomize Multi Indice Attribute [!]");	
+		return {""};
+	} else {
+		if (`attributeExists $attr $obj` == 0){
+			wizlog("-w		[!] Obj : " + $obj + " Attr : " + $attr + " : Attribute Does Not Exist. Can Not Randomize Multi Indice Attribute [!]");	
+			return {""};
+		}
+	}
+	
+
+
+	if ($ura){
+		int $minMaxIndiceRange[] = `getAttr ($obj + ".randomIndices_" + $attr)`;
+		$randRange = intArrayToFloatArray($minMaxIndiceRange);
+	}	
+	
+	string $cType[];
+	string $mins[];
+	
+	int $mi[] =	`getAttr -mi ($obj + "." + $attr)`;
+	int $miCount = `size $mi`; // the count of indices
+	
+	int $ranIndCount = 1;
+	if (`attributeExists ("randomizeIndiceCount_" + $attr) $obj` == 1){
+		$ranIndCount = `getAttr ($obj + ".randomizeIndiceCount_" + $attr)`;
+	}
+	if ($ranIndCount == 1){
+		// reset the multi indice attribute
+		resetMultiIndiceAttribute($obj, $attr);
+		// get a random amount of indices to create
+		$miCount = randInt($randRange[0], $randRange[1]);
+	} else {
+		wizlog ("	[#] Randomizing Indice Count Disabled [#]");
+	}
+	
+	// get the children of the attribute
+	string $nodeType = `nodeType $obj`;
+	string $lc[] = `attributeQuery -node $obj -lc $attr`;
+	int $mi[] =	`getAttr -mi ($obj + "." + $attr)`;	
+	
+	string $cAttr[];
+	
+	for ($i=0;$i<`size $lc`;$i++){
+		// see if this is a compound of a multi attr
+		string $lcc[] = `attributeQuery -node $obj -lc $lc[$i]`;
+		if (`size $lcc` > 0){
+			//$cAttr[`size $cAttr`] = $lc[$i];
+			// if so add the child attr for randomization
+			appendStringArray($cAttr, $lcc, `size $lcc`);
+			
+		} else {
+			$cAttr[`size $cAttr`] = $lc[$i];
+		}
+	
+	}
+	
+	for ($i=0;$i<`size $cAttr`;$i++){	
+		
+		$cType[$i] = `getAttr -typ ($obj + "." + $attr + "[" + $mi[0] + "]." + $cAttr[$i])`;
+		wizlog ("	[#] Attr : " + ($obj + "." + $attr + "[" + $mi[0] + "]." + $cAttr[$i]) + " Attr Type : " + $cType[$i]);
+		
+		// if we are using randomization attributes
+		if ($ura){
+			int $ranEnabled = `getAttr ($obj + ".randomize_" + $cAttr[$i] + "_Enabled")`;
+			if ($ranEnabled == 0){
+				wizlog("	[-] Skipping Child Attribute : " + $cAttr[$i] + " - Was Not Enabled In Randomization Attributes [-]");
+				
+				continue;
+			}		
+			
+		}
+		
+		// if child attributes are specified in flags, then only use the child attributes specified and skip the others.
+		if (`size $caAttrString` > 0){
+			if ((stringArrayContains($lc[$i], $caAttrString)) == 0){
+				wizlog ("	[-] Skipping Child Attribute : " + $cAttr[$i] + " - Was Not Included In Flags [-]");
+				continue;
+			}
+		}
+		wizlog ("	[#] Randomizing Child Attribute : " + $cAttr[$i] + " : Type : " + $cType[$i]);
+		
+		///////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//	Does attributeQuery -ld -range... always return a float array??? I guess so...
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////		
+		
+		// determine what range to use when randomizing the child attr
+		float $cRange[] = { 0.0, 1.0 };
+		
+		// for dealing with types that have more than one value... eg. float3
+		string $matchCType = $cType[$i];
+		string $m23 = match("[23+]", $matchCType);
+		int $vc;
+		if (`size $m23` > 0){
+			$vc = int($m23);
+		}
+		
+		string $rmes; // just a message about which range we are using
+		if ($udr){		
+			
+			// try to use the default range using either the range or the soft range			
+			if (`attributeQuery -re -type $nodeType $cAttr[$i]`){
+				$cRange = `attributeQuery -range -type $nodeType $cAttr[$i]`;
+				$rmes = " Using Default Range ";
+			} else if (`attributeQuery -se -type $nodeType $cAttr[$i]`){
+				$cRange = `attributeQuery -softRange -type $nodeType $cAttr[$i]`;
+				$rmes = " Using Soft Range ";
+			} else if (`attributeQuery -uac -type $nodeType $cAttr[$i]`){
+				// if it's used as a color use 0 - 1
+				$cRange = { 0.0, 1.0 };
+			}
+		} else if ($ura){
+			if ($cType[$i] == "enum"){
+				///////////////////////////////////////////////////////////////////////////////////////////////////////////
+				//	Skip this till we are randomizing the attribute
+				//////////////////////////////////////////////////////////////////////////////////////////////////////////
+				
+			} else {
+				if (`attributeExists ("minRandom_" + $cAttr[$i]) $obj`){
+					$cRange[0] = `getAttr ($obj + ".minRandom_" + $cAttr[$i])`;
+				}
+				if (`attributeExists ("maxRandom_" + $cAttr[$i]) $obj`){
+					$cRange[1] = `getAttr ($obj + ".maxRandom_" + $cAttr[$i])`;
+				}
+			}
+		} else {
+			$rmes = " Using User Specified Range ";
+			// use range specified by flags
+			for ($cas=0;$cas<`size $caAttrString`;$cas++){
+				if ($caAttrString[$cas] == $cAttr[$i]){
+					string $rTok[] = tokenizeString($caRangeString[$cas], " ");					
+					$cRange = stringArrayToFloatArray($rTok);
+				}				
+			}			
+		
+		}
+		
+		wizlog ("	[#] " + $rmes + " : Range : " + $cRange[0] + " - " + $cRange[1] + "[#]");
+	
+		
+		///////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//	Could also use wildcard [*] to set all indices at same time ?	
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////	
+
+		for ($a=0;$a<$miCount;$a++){
+			// randomize the value
+			string $ranValString = "";
+			
+			// if the type of data contains multiple values we need to deal with that...
+			if ($vc == 0){
+				// if there is only one value needed then just get one value
+				float $ranVal = rand($cRange[0], $cRange[1]);
+				$ranValString = $ranVal;
+			} else {
+				// if the type of data contains multiple values we need to deal with that...
+				float $rvs[];
+				for ($vcs=0;$vcs<($vc);$vcs++){
+					$rvs[`size $rvs`] = rand($cRange[0], $cRange[1]);
+					//$ranValString = $ranValString + " " + $ranVal;
+				}
+
+				$ranValString = floatArrayToString($rvs, " ");
+				wizLog ("	[#] Random Value String : " + $ranValString + " [#]");
+				clear ($rvs);
+			}
+					
+			// we have to pass the type of data for various types of data
+			// also convert int type data to an int...
+			string $passType;	
+				
+			switch ($cType[$i]){
+				case "enum" : case "bool" : case "int" : case "long" : case "short" : case "byte" :
+				// convert rand value to int for above types
+				$ranVal = float(randInt($cRange[0], $cRange[1]));	
+				break ;
+				
+				case "string" : 
+				// string needs quotes
+				$passType = "-type \"string\" ";
+				break;
+				
+				/*
+				case "float" : 
+				// float needs quotes
+				$passType = "-type \"float\" ";
+				break;
+				*/
+				case "matrix" : 
+				// matrix needs quotes
+				$passType = "-type \"matrix\" ";
+				break;
+				
+			}
+			
+			///////////////////////////////////////////////////////////////////////////////////////////////////////////
+			//	The enum randomization settings are formatted differently. each enum val has it's own checkbox.
+			//	if it's an enum we have to get the enums we have chosen from the generic obj.[enumAttrName]
+			//	we will get a random value from randomizeEnumAttribute() function and use that value.
+			//////////////////////////////////////////////////////////////////////////////////////////////////////////
+			
+			if ($cType[$i] == "enum"){
+				$ranVal = float(randomizeEnumAttribute($obj, $cAttr[$i]));
+				$ranValString = $ranVal;
+				wizLog("	[#] Random Enum Selection String : " + $ranValString + " [#]");
+			}
+			
+			int $ind = $a;
+			if ($ranIndCount == 0){
+				$ind = $mi[$a];
+			
+			}
+			
+			wizLog ("	[*] setAttr \"" + $obj + "." + $attr + "[" + $ind + "]." + $cAttr[$i] + "\" " + $passType + $ranValString + ";");
+			// use eval to evaluate a string command because it's hard to know if we need to use a float or int for value when using setAttr
+			string $setAttrCom = ("setAttr \"" + $obj + "." + $attr + "[" + $ind + "]." + $cAttr[$i] + "\" " + $passType + $ranValString + ";");
+			catchQuiet(eval($setAttrCom));
+			
+			
+			
+		}
+		
+	}
+	wizlog("[END] randomizeMultiIndiceAttribute [END]" + wizDiv("e"));
+	return {""};
+}
+
+
+//@ RESET MULTI INDICE ATTRIBUTE
+//====================================================================
+/*****************************************************************//**
+	This will attempt to reset a multi indice attribute to a default state.
+	<hr>
+	<b>Synopsis</b><br>
+	resetMultiIndiceAttribute [string $node] [string $attr] <br>
+	Removes as many indices as possible and resets any remaining indices attributes
+	to their default value.
+	
+	<b>Return value</b><br>
+	none.
+	
+	<b>Flags</b><br>
+	
+	<hr>
+	<b>Related</b><br>
+	randomizeMultiIndiceAttribute(),
+	
+	<b>Examples</b><br>
+	<code>
+	resetMultiIndiceAttribute("strokeShape1", "pressureScale");
+	
+	</code>
+*********************************************************************/
+global proc resetMultiIndiceAttribute( string $node, string $attr )
+{
+	wizlog("[@] resetMultiIndiceAttribute");
+	
+	// get the children of the attribute
+	string $nodeType = `nodeType $node`;
+	string $lc[] = `attributeQuery -node $node -lc $attr`;
+	int $mi[] =	`getAttr -mi ($node + "." + $attr)`;	
+	int $locked[] = multiIndiceLockQuery($node, $attr);
+	
+	// remove all indices except those with locked attributes
+	for ($i=1;$i<`size $mi`;$i++){
+		wizlog ("	[#] Indice : " + $mi[$i] + " Is Locked!");
+		if ($locked[$i] == 1){ continue; }
+		
+		catch (`removeMultiInstance -break true ($node + "." + $attr + "[" + $mi[$i] + "]")`);	
+		
+	}
+	$mi = `getAttr -mi ($node + "." + $attr)`;
+	
+	string $types[];
+	string $mins[];
+
+	for ($i=0;$i<`size $lc`;$i++){
+		$type[$i] = `getAttr -typ ($node + "." + $attr + "[" + $mi[0] + "]." + $lc[$i])`;
+		wizlog("	[-] Type : " + $type[$i]);
+		///////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//	Does attributeQuery -ld -range... always return a float array? Maybe.	
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////		
+		float $def[] = `attributeQuery -ld -type $nodeType $lc[$i]`;
+		for ($a=0;$a<`size $mi`;$a++){
+			
+			string $setAttrCom = ("setAttr \"" + $node + "." + $attr + "[" + $mi[$a] + "]." + $lc[$i] + "\" " + (floatArrayToString($def, " ")) + ";");
+			wizLog("	[*] setAttr " + $setAttrCom);
+			catchQuiet(eval($setAttrCom));
+			
+			//wizLog("	[*] setAttr " + $node + "." + $attr + "[" + $mi[$a] + "]." + $lc[$i] + "\" " + (floatArrayToString($def, \" \")) + ";");
+
+		}
+		//setAttr ($node + "." + $attr + "[" + $mi[0] + "]." + $lc[$i]) -type $type[$i] `attributeQuery -ld -type $nodeType $lc[$i]`;
+	}
+	wizlog("[END] resetMultiIndiceAttribute [END]" + wizDiv("e"));
+}
+
+//@ MULTI INDICE LOCK QUERY
+//====================================================================
+/*****************************************************************//**
+	Determines if any attribute in a multi indice attribute should be locked if
+	any children attributes are locked.
+	<hr>
+	<b>Synopsis</b><br>
+	multiIndiceLockQuery [string $obj] [string $attr] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	int[] the locked state of each indice
+	
+	<b>Flags</b><br>
+	
+	<hr>
+	<b>Related</b><br>
+	resetMultiIndiceAttribute()
+	
+	<b>Examples</b><br>
+	<code>
+	string $sel[] = `ls -sl`;
+	int $locked[] = multiIndiceLockQuery($sel[0], "pressureScale");
+	
+	</code>
+*********************************************************************/
+global proc int[] multiIndiceLockQuery( string $obj, string $attr )
+{
+	string $lc[] = `attributeQuery -node $obj -lc $attr`;
+	int $mi[] =	`getAttr -mi ($obj + "." + $attr)`;	
+	int $locked[];
+	
+	for ($i=0;$i<`size $mi`;$i++){
+		for ($c=0;$c<`size $lc`;$c++){	
+		
+			int $l = `getAttr -l ($obj + "." + $attr + "[" + $mi[$i] + "]." + $lc[$c])`;
+			wizlog("	[*] getAttr -l " + $obj + "." + $attr + "[" + $mi[$i] + "]." + $lc[$c]);
+			if ($l == 1){
+				$locked[$i] = $l;
+				break ;
+			}
+			
+			int $id = `connectionInfo -id ($obj + "." + $attr + "[" + $mi[$i] + "]." + $lc[$c])`;
+			if ($id == 1){
+				wizlog("	[*] Attribute Is Already Connected " + $obj + "." + $attr + "[" + $mi[$i] + "]." + $lc[$c]);
+			
+			}
+			$locked[$i] = $id;
+		}
+	}
+	
+	return $locked;
+}
+
+//@ RANDOMIZE BOOL ATTRIBUTE
+//====================================================================
+global proc randomizeBoolAttribute( string $obj, string $attr )
+{
+	int $randBool = randBool();
+	int $id = `connectionInfo -id ($obj + "." + $attr)`;
+	if ($id == 1){
+		wizlog("	[*] Attribute Is Already Connected " + $obj + "." + $attr);
+		return ;
+	}
+			
+	setAttr ($obj + "." + $attr) $randBool;
+	print ("setAttr " + $obj + "." + $attr + " " + $randBool + ";\n");
+}
+
+//@ GET ALL OBJECTS WITH RANDOMIZATION ATTRIBUTES
+//====================================================================
+global proc string[] getAllObjectsWithRandomizationAttributes()
+{
+    global string $WIZ_randomizationSetName;
+    string $ranWizSet[] = `ls -r on "*randomizeWizSet*"`;
+    string $ranObjs[];
+    if (`size $ranWizSet` > 0 ){
+		for ($i=0;$i<`size $ranWizSet`;$i++){
+			string $ranObjects[] = `sets -q $ranWizSet[$i]`;
+			appendStringArray($ranObjs, $ranObjects, `size $ranObjects`);
+			wizlog ((niceArrayList("	[#] Randomizable Objects [#]", $ranObjects)));
+		}
+        return $ranObjs;
+    }
+	return $ranObjs;
+ 
+}
+
+//@ PUBLISH RANDOMIZATION ATTRIBUTES
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	randomizationAttributeAssetPublish("-sl");
+	
+	</code>
+*********************************************************************/
+global proc randomizationAttributeAssetPublish( string $flags )
+{
+	string $obj, $type;
+	string $sel[];
+	int $edit;
+	int $pa, $pra, $rpa;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			$sel[0] = $obj;
+			break ;
+				
+			case "-typ" : case "-type" :
+			$type = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+			case "-pa" : case "-publishAttribute" :
+			$pa = 1;
+			break ;
+			
+			case "-pra" : case "-publishRandimizationAttributes" :
+			$pra = 1;
+			break ;
+			
+			case "-rpa" : case "-randomizePublishedAttributes" :
+			$rpa = 1;
+			break ;
+			
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	//_________________________________________
+	// Randomize Published Attributes
+	if ($rpa){
+	
+	}
+	
+	//_________________________________________
+	// Publish Attributes
+	if ($pa == 1 || $pra == 1){
+		
+		string $allRan[] = getAllObjectsWithRandomizationAttributes();
+		string $assContents[] = `container -q -nl $sel[0]`;
+		
+		string $intersect = `stringArrayIntersector`;
+		stringArrayIntersector -e -i $allRan $intersect;
+		stringArrayIntersector -e -i $assContents $intersect;
+		string $assRan[] = `stringArrayIntersector -q $intersect`;
+		
+		string $ranAttr[];
+	
+		for ($i=0;$i<`size $assRan`;$i++){
+			string $ud[] = `listAttr -ud $assRan[$i]`;
+			for ($ui=0;$ui<`size $ud`;$ui++){
+				if ($pa){
+					if ((endsWith($ud[$ui], "Enabled")) == 1){
+						string $tokName[] = tokenizeString($ud[$ui], "_");					
+						if (`attributeExists $tokName[1] $assRan[$i]` == 1){
+							container -e -pb ($assRan[$i] + "." + $tokName[1]) $tokName[1] $sel[0];
+						}
+					}
+						
+				}
+				
+				if ($pra){
+					if ((startsWith($ud[$ui], "randomize")) == 1 || (startsWith($ud[$ui], "minRandom")) == 1 || (startsWith($ud[$ui], "maxRandom")) == 1){
+						container -e -pb ($assRan[$i] + "." + $ud[$ui]) $ud[$ui] $sel[0];
+					}
+				
+				}
+				
+			}
+			
+		}
+	}
+	
+}
+
+
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         RANDOMIZE XFORM
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+global proc randomizeXFormLayout( string $parent )
+{
+	string $layout = wizStandardFrameLayout($parent, "Randomize XForm", "randomizerWiz_randomizeXForm_frameLayout");
+	
+	//Define layout elements
+	formLayout -numberOfDivisions 425 randomizeXForm_Form;
+
+	text -l "X Axis" XAxis;
+		text -l "Min" XMin;
+		text -l "Max" XMax;
+
+	text -l "Y Axis" YAxis;
+		text -l "Min" YMin;
+		text -l "Max" YMax;
+
+	text -l "Z Axis" ZAxis;
+		text -l "Min" ZMin;
+		text -l "Max" ZMax;
+
+	text "Translate";
+
+		floatField -w 50 -v -10 TranslateXMin;
+		floatField -w 50 -v 10 TranslateXMax;
+		checkBox -l "" TranslateXCheckBox;
+		
+		floatField -w 50 -v -10 TranslateYMin;
+		floatField -w 50 -v 10 TranslateYMax;
+		checkBox -l "" TranslateYCheckBox;
+		
+		floatField -w 50 -v -10 TranslateZMin;
+		floatField -w 50 -v 10 TranslateZMax;
+		checkBox -l "" TranslateZCheckBox;
+		
+		
+	text "Rotate";
+
+		floatField -w 50 -v 0 RotateXMin;
+		floatField -w 50 -v 360 RotateXMax;
+		checkBox -l "" RotateXCheckBox;
+		
+		floatField -w 50 -v 0 RotateYMin;
+		floatField -w 50 -v 360 RotateYMax;
+		checkBox -l "" RotateYCheckBox;
+		
+		floatField -w 50 -v 0 RotateZMin;
+		floatField -w 50 -v 360 RotateZMax;
+		checkBox -l "" RotateZCheckBox;
+		
+		
+	text "Scale";
+
+		floatField -w 50 -v 0.5 ScaleXMin;
+		floatField -w 50 -v 2.0 ScaleXMax;
+		checkBox -l "" ScaleXCheckBox;
+		
+		floatField -w 50 -v 0.5 ScaleYMin;
+		floatField -w 50 -v 2.0 ScaleYMax;
+		checkBox -l "" ScaleYCheckBox;
+		
+		floatField -w 50 -v 0.5 ScaleZMin;
+		floatField -w 50 -v 2.0 ScaleZMax;
+		checkBox -l "" ScaleZCheckBox;
+		
+		
+
+	radioCollection;
+	radioButton -sl "Absolute";
+	radioButton "Relative";
+		
+	button -label "OK" -command "executerandomizeXForm" OKButton;
+		
+	//Defining element positions    
+	formLayout -edit
+
+
+//Text
+    -af XAxis "top" 10
+    -af XAxis "left" 135
+    
+    -af XMin "top" 25
+    -af XMin "left" 112
+    
+    -af XMax "top" 25
+    -af XMax "left" 170
+    
+    
+    -af YAxis "top" 10
+    -af YAxis "left" 285
+    
+    -af YMin "top" 25
+    -af YMin "left" 262
+    
+    -af YMax "top" 25
+    -af YMax "left" 320
+    
+    
+    -af ZAxis "top" 10
+    -af ZAxis "left" 435
+    
+    -af ZMin "top" 25
+    -af ZMin "left" 412
+    
+    -af ZMax "top" 25
+    -af ZMax "left" 470
+
+
+//Translate Controls
+    -af Translate "top" 43
+    -af Translate "left" 10
+    
+    -af TranslateXMin "top" 40
+    -af TranslateXMin "left" 95
+    
+    -af TranslateXMax "top" 40
+    -af TranslateXMax "left" 155
+    
+    -af TranslateXCheckBox "top" 44
+    -af TranslateXCheckBox "left" 75
+    
+    
+    -af TranslateYMin "top" 40
+    -af TranslateYMin "left" 245
+    
+    -af TranslateYMax "top" 40
+    -af TranslateYMax "left" 305
+    
+    -af TranslateYCheckBox "top" 44
+    -af TranslateYCheckBox "left" 225
+    
+    
+    -af TranslateZMin "top" 40
+    -af TranslateZMin "left" 395
+    
+    -af TranslateZMax "top" 40
+    -af TranslateZMax "left" 455
+    
+    -af TranslateZCheckBox "top" 44
+    -af TranslateZCheckBox "left" 375
+    
+    
+//Rotate Controls
+    -af Rotate "top" 63
+    -af Rotate "left" 10
+    
+    -af RotateXMin "top" 60
+    -af RotateXMin "left" 95
+    
+    -af RotateXMax "top" 60
+    -af RotateXMax "left" 155
+    
+    -af RotateXCheckBox "top" 64
+    -af RotateXCheckBox "left" 75
+    
+    
+    -af RotateYMin "top" 60
+    -af RotateYMin "left" 245
+    
+    -af RotateYMax "top" 60
+    -af RotateYMax "left" 305
+    
+    -af RotateYCheckBox "top" 64
+    -af RotateYCheckBox "left" 225
+    
+    
+    -af RotateZMin "top" 60
+    -af RotateZMin "left" 395
+    
+    -af RotateZMax "top" 60
+    -af RotateZMax "left" 455
+    
+    -af RotateZCheckBox "top" 64
+    -af RotateZCheckBox "left" 375
+    
+    
+//Scale Controls
+    -af Scale "top" 83
+    -af Scale "left" 10
+    
+    -af ScaleXMin "top" 80
+    -af ScaleXMin "left" 95
+    
+    -af ScaleXMax "top" 80
+    -af ScaleXMax "left" 155
+    
+    -af ScaleXCheckBox "top" 84
+    -af ScaleXCheckBox "left" 75
+    
+    
+    -af ScaleYMin "top" 80
+    -af ScaleYMin "left" 245
+    
+    -af ScaleYMax "top" 80
+    -af ScaleYMax "left" 305
+    
+    -af ScaleYCheckBox "top" 84
+    -af ScaleYCheckBox "left" 225
+    
+    
+    -af ScaleZMin "top" 80
+    -af ScaleZMin "left" 395
+    
+    -af ScaleZMax "top" 80
+    -af ScaleZMax "left" 455
+    
+    -af ScaleZCheckBox "top" 84
+    -af ScaleZCheckBox "left" 375
+    
+    
+//Radio and Buttons    
+    -af Absolute "top" 105
+    -af Absolute "left" 75
+    
+    -af Relative "top" 120
+    -af Relative "left" 75
+    
+    
+    -af OKButton "top" 145
+    -af OKButton "left" 75
+    
+	randomizeXForm_Form;
+
+}
+
+
+
+
+
+
+//Main transform execution procs and loops. Switch/case is used to determine
+//absolute or relative. If else loop used to query the checkbox 
+//variables and do the transform if yes, do nothing if no.
+
+//Translate Execute
+proc randomizeXForm_TranslateProc()
+{
+
+
+	//Checkbox Queries again
+	int $TranslateXCheckboxOnOff = `checkBox -q -v TranslateXCheckBox`;
+	int $TranslateYCheckboxOnOff = `checkBox -q -v TranslateYCheckBox`;
+	int $TranslateZCheckboxOnOff = `checkBox -q -v TranslateZCheckBox`;
+
+	//floatFieldQueries
+	float $InputTransXMin = `floatField -q -v TranslateXMin`;
+	float $InputTransXMax = `floatField -q -v TranslateXMax`;
+
+		float $InputTransYMin = `floatField -q -v TranslateYMin`;
+		float $InputTransYMax = `floatField -q -v TranslateYMax`;
+		
+			float $InputTransZMin = `floatField -q -v TranslateZMin`;
+			float $InputTransZMax = `floatField -q -v TranslateZMax`;
+			
+	//RadioButton Query
+	int $RadioButtonAbsolute = `radioButton -q -sl Absolute`;
+
+
+	//Main Translate Loop
+	string $selectedObjects[] = `ls -sl`;
+	for ($objects in $selectedObjects)
+	{
+
+
+	//check current object attributes
+	float $TranslateRandom[] = `getAttr ($objects+".translate")`;
+
+
+	//Check radiobutton and use switch/case to determine absolute and relative
+	//If checkboxes are ticked change the string to the floatField value
+	switch($RadioButtonAbsolute) 
+	{
+	case true:
+	 if ($TranslateXCheckboxOnOff == 1)
+	  {
+		$TranslateRandom[0] = rand ($InputTransXMin,$InputTransXMax);
+	  }
+	  if ($TranslateYCheckboxOnOff == 1)
+	  {
+		$TranslateRandom[1] = rand ($InputTransYMin,$InputTransYMax);
+	  }
+	  if ($TranslateZCheckboxOnOff == 1)
+	  {
+		$TranslateRandom[2] = rand ($InputTransZMin,$InputTransZMax);
+	  }
+	xform -a -t $TranslateRandom[0] $TranslateRandom[1] $TranslateRandom[2] $objects;
+	break;
+	case false:
+	if ($TranslateXCheckboxOnOff == 1)
+	  {
+		$TranslateRandom[0] = rand ($InputTransXMin,$InputTransXMax);
+	  }
+	  else
+	  {
+		$TranslateRandom[0] = 0;
+	  }
+	  if ($TranslateYCheckboxOnOff == 1)
+	  {
+		$TranslateRandom[1] = rand ($InputTransYMin,$InputTransYMax);
+	  }
+	  else
+	  { 
+		$TranslateRandom[1] = 0;
+	  }
+	  if ($TranslateZCheckboxOnOff == 1)
+	  {
+		$TranslateRandom[2] = rand ($InputTransZMin,$InputTransZMax);
+	  }
+	  else
+	  { 
+		$TranslateRandom[2] = 0;
+	  }
+	xform -r -t $TranslateRandom[0] $TranslateRandom[1] $TranslateRandom[2] $objects;
+	break;
+	}
+
+	}
+
+}
+
+
+
+
+
+//Rotate Execute
+proc randomizeXForm_RotateProc()
+{
+
+
+	//Checkbox Queries again
+	int $RotateXCheckboxOnOff = `checkBox -q -v RotateXCheckBox`;
+	int $RotateYCheckboxOnOff = `checkBox -q -v RotateYCheckBox`;
+	int $RotateZCheckboxOnOff = `checkBox -q -v RotateZCheckBox`;
+
+	//floatFieldQueries
+	float $InputRotateXMin = `floatField -q -v RotateXMin`;
+	float $InputRotateXMax = `floatField -q -v RotateXMax`;
+		float $InputRotateYMin = `floatField -q -v RotateYMin`;
+		float $InputRotateYMax = `floatField -q -v RotateYMax`;
+			float $InputRotateZMin = `floatField -q -v RotateZMin`;
+			float $InputRotateZMax = `floatField -q -v RotateZMax`;
+
+	//RadioButton Query        
+	int $RadioButtonAbsolute = `radioButton -q -sl Absolute`;
+
+
+	//Main Rotate Loop
+	string $selectedObjects[] = `ls -sl`;
+	for ($objects in $selectedObjects)
+	{
+
+
+	//check current object attributes
+	float $RotateRandom[] = `getAttr ($objects+".rotate")`;
+
+
+	//Check radiobutton and use switch/case to determine absolute and relative
+	//If checkboxes are ticked change the string to the floatField value
+	switch($RadioButtonAbsolute) 
+	{
+	case true:
+	if ($RotateXCheckboxOnOff == 1)
+	  {
+		$RotateRandom[0] = rand ($InputRotateXMin,$InputRotateXMax);
+	  }
+	  if ($RotateYCheckboxOnOff == 1)
+	  {
+		$RotateRandom[1] = rand ($InputRotateYMin,$InputRotateYMax);
+	  }
+	  if ($RotateZCheckboxOnOff == 1)
+	  {
+		$RotateRandom[2] = rand ($InputRotateZMin,$InputRotateZMax);
+	  }
+	xform -a -ro $RotateRandom[0] $RotateRandom[1] $RotateRandom[2] $objects;
+	break;
+	case false:
+	if ($RotateXCheckboxOnOff == 1)
+	  {
+		$RotateRandom[0] = rand ($InputRotateXMin,$InputRotateXMax);
+	  }
+	  else
+	  {
+		$RotateRandom[0] = 0;
+	  }
+	  if ($RotateYCheckboxOnOff == 1)
+	  {
+		$RotateRandom[1] = rand ($InputRotateYMin,$InputRotateYMax);
+	  }
+	  else
+	  { 
+		$RotateRandom[1] = 0;
+	  }
+	  if ($RotateZCheckboxOnOff == 1)
+	  {
+		$RotateRandom[2] = rand ($InputRotateZMin,$InputRotateZMax);
+	  }
+	  else
+	  { 
+		$RotateRandom[2] = 0;
+	  }
+	xform -r -ro $RotateRandom[0] $RotateRandom[1] $RotateRandom[2] $objects;
+	break;
+	}
+
+	}
+
+}
+
+
+
+
+
+//ScaleExecute
+proc randomizeXForm_ScaleProc()
+{
+
+
+	//Checkbox Queries again
+	int $ScaleXCheckboxOnOff = `checkBox -q -v ScaleXCheckBox`;
+	int $ScaleYCheckboxOnOff = `checkBox -q -v ScaleYCheckBox`;
+	int $ScaleZCheckboxOnOff = `checkBox -q -v ScaleZCheckBox`;
+
+	//floatFieldQueries
+	float $InputScaleXMin = `floatField -q -v ScaleXMin`;
+	float $InputScaleXMax = `floatField -q -v ScaleXMax`;
+		float $InputScaleYMin = `floatField -q -v ScaleYMin`;
+		float $InputScaleYMax = `floatField -q -v ScaleYMax`;
+			float $InputScaleZMin = `floatField -q -v ScaleZMin`;
+			float $InputScaleZMax = `floatField -q -v ScaleZMax`;
+
+	//RadioButton Query   
+	int $RadioButtonAbsolute = `radioButton -q -sl Absolute`;
+
+
+	//Main Scale Loop
+	string $selectedObjects[] = `ls -sl`;
+	for ($objects in $selectedObjects)
+	{
+
+
+	//check current object attributes
+	float $ScaleRandom[] = `getAttr ($objects+".scale")`;
+
+
+	//Check radiobutton and use switch/case to determine absolute and relative
+	//If checkboxes are ticked change the string to the floatField value
+	switch($RadioButtonAbsolute) 
+	{
+	case true:
+	if ($ScaleXCheckboxOnOff == 1)
+	  {
+		$ScaleRandom[0] = rand ($InputScaleXMin,$InputScaleXMax);
+	  }
+	  if ($ScaleYCheckboxOnOff == 1)
+	  {
+		$ScaleRandom[1] = rand ($InputScaleYMin,$InputScaleYMax);
+	  }
+	  if ($ScaleZCheckboxOnOff == 1)
+	  {
+		$ScaleRandom[2] = rand ($InputScaleZMin,$InputScaleZMax);
+	  }
+	xform -a -s $ScaleRandom[0] $ScaleRandom[1] $ScaleRandom[2] $objects;
+	break;
+	case false:
+	if ($ScaleXCheckboxOnOff == 1)
+	  {
+		$ScaleRandom[0] = rand ($InputScaleXMin,$InputScaleXMax);
+	  }
+	  else
+	  {
+		$ScaleRandom[0] = 1;
+	  }
+	  if ($ScaleYCheckboxOnOff == 1)
+	  {
+		$ScaleRandom[1] = rand ($InputScaleYMin,$InputScaleYMax);
+	  }
+	  else
+	  { 
+		$ScaleRandom[1] = 1;
+	  }
+	  if ($ScaleZCheckboxOnOff == 1)
+	  {
+		$ScaleRandom[2] = rand ($InputScaleZMin,$InputScaleZMax);
+	  }
+	  else
+	  { 
+		$ScaleRandom[2] = 1;
+	  }
+	xform -r -s $ScaleRandom[0] $ScaleRandom[1] $ScaleRandom[2] $objects;
+	break;
+	}
+
+	}
+
+}
+
+
+
+
+
+// Proc executed when OK button is pressed
+global proc executerandomizeXForm()
+{
+
+
+	//Checkbox queries
+	int $TranslateXCheckboxOnOff = `checkBox -q -v TranslateXCheckBox`;
+	int $TranslateYCheckboxOnOff = `checkBox -q -v TranslateYCheckBox`;
+	int $TranslateZCheckboxOnOff = `checkBox -q -v TranslateZCheckBox`;
+
+	int $RotateXCheckboxOnOff = `checkBox -q -v RotateXCheckBox`;
+	int $RotateYCheckboxOnOff = `checkBox -q -v RotateYCheckBox`;
+	int $RotateZCheckboxOnOff = `checkBox -q -v RotateZCheckBox`;
+
+	int $ScaleXCheckboxOnOff = `checkBox -q -v ScaleXCheckBox`;
+	int $ScaleYCheckboxOnOff = `checkBox -q -v ScaleYCheckBox`;
+	int $ScaleZCheckboxOnOff = `checkBox -q -v ScaleZCheckBox`;
+
+
+	//Additional checkbox variables for determining conditionals for proc redirection
+	int $TranslateCheckboxAnyOn = ($TranslateXCheckboxOnOff + $TranslateYCheckboxOnOff + $TranslateZCheckboxOnOff);
+	int $RotateCheckboxAnyOn = ($RotateXCheckboxOnOff + $RotateYCheckboxOnOff + $RotateZCheckboxOnOff);
+	int $ScaleCheckboxAnyOn = ($ScaleXCheckboxOnOff + $ScaleYCheckboxOnOff + $ScaleZCheckboxOnOff);
+
+
+	//Conditionals to redirect to procs if checkboxes are ticked
+
+	//TranslateProcs
+	if ($TranslateCheckboxAnyOn > 0)
+	{
+		randomizeXForm_TranslateProc;
+	}
+
+
+
+	//RotateProcs
+	if ($RotateCheckboxAnyOn > 0)
+	{
+		randomizeXForm_RotateProc;
+	}
+
+
+
+	//ScaleProcs
+	if ($ScaleCheckboxAnyOn > 0)
+	{
+		randomizeXForm_ScaleProc;
+	}
+
+
+
+}

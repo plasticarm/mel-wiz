@@ -1,0 +1,146 @@
+/*
+todo
+
+possibly option to add more functions
+
+make a generic function that loads the scrolllist selection
+then passes it to the specified function and expects a return, or no return.
+then re posts to scroll list
+
+
+*/
+
+global proc doctorWiz()
+{
+
+}
+
+//GLOBAL VARS
+global int $WIZ_appStep;
+$WIZ_appStep = 0;
+global string $WIZ_prepForPaintingSets[];
+global string $WIZ_prepForPaintingSetName;
+$WIZ_prepForPaintingSetName = "p_p_";
+global string $WIZ_pfpSet;
+$WIZ_pfpSet = $WIZ_prepForPaintingSetName;
+
+global string $WIZ_currentOptionsLoaded;
+
+//MAIN MENU
+//====================================
+global int $Wiz_autoPrepForPaintingStep;
+
+global proc doctorWizLayout(string $parent)
+{
+
+	doctorTabLayout($parent);
+	
+}
+
+global proc doctorTabLayout(string $parent)
+{
+
+	string $tabLayout = `tabLayout
+		-scrollable false
+		-childResizable true
+		-imageVisible true
+		-tabsVisible true
+		-cc ("wizTabCC(\"doctorWizTabLayout\");")
+		-p $parent
+		doctorWizTabLayout
+		`;
+		
+	//Tabs
+	
+	prepForPaintingColumnLayout($tabLayout);
+	
+	prepForRiggingColumnLayout($tabLayout);
+	
+	inspectionReportLayout($tabLayout);
+	
+	
+	
+	//doctorMainLayout($doctorTabLayout);
+	
+	//inspectionLayout($doctorTabLayout);
+	
+	//doctorHelpLayout($doctorTabLayout);
+	
+	tabLayout
+		-e
+		//-tl "doctorWizMainColumnLayout" "Main"
+		//-tl "doctorWizHelpColumnLayout" "Help"
+		-tl "prepForPaintingColumnLayout" "PrepForPainting"
+		-tl "prepForRiggingColumnLayout" "PrepForRigging"
+		-tl "inspectionReportColumnLayout" "InspectionReports"
+		
+		doctorWizTabLayout
+		;
+	
+}
+
+global proc doctorMainLayout(string $parent)
+{
+string $columnLayout = `columnLayout
+	-adjustableColumn true
+	-p $parent
+	doctorWizMainColumnLayout
+	`;
+	
+	//MenubarLayout
+	doctorMenuBarLayout($columnLayout);	
+	
+	prepForPaintingColumnLayout($columnLayout);
+		
+	//uvLayoutLayout($columnLayout);
+	
+	//slicingLayout($columnLayout);
+	
+	//projectCurvesLayout($columnLayout);
+	
+	//fixTransformsLayout($columnLayout);
+	
+	
+	
+}
+
+global proc doctorHelpLayout(string $parent)
+{
+string $layout = `columnLayout
+	-adjustableColumn true
+	-p $parent
+	doctorWizHelpColumnLayout
+	`;
+
+	text 		 
+		-align "left"
+		-ww true
+		-l "Help on using Doctor"
+		;
+}
+
+global proc doctorMenuBarLayout(string $parent)
+{
+string $menuBarLayout = `menuBarLayout	PrepMenu`;
+	
+	menu -l "File";
+		exportSelectedMenuItems();
+		
+	menu -label "Prep";		
+		//menuItem -l "Check Normals" -c "checkPolyNormals";
+		menuItem -sm true -l "Prep For Painting";
+			prepForPaintingMainFunctionMenuItems();
+		setParent -menu..;
+		
+		menuItem -sm true -l "UV Layout";
+			sortUVShellsIntoGridAreasMainFunctionsMenuItems();
+		setParent -menu..;	
+		
+	wizGlobalUVMenu();
+	
+	wizTransformsMenu();
+	
+}
+
+
+

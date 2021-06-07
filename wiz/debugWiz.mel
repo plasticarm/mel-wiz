@@ -1,0 +1,1244 @@
+global proc debugWiz()
+{
+
+}
+
+//OPEN DEBUG WIZ
+//=========================
+//Shortcut for opening the tabs and frames to the debug wiz
+
+global proc openDebugWiz()
+{
+	/*	
+	global int $WIZ_debugList;
+	if($WIZ_debugList == 0){	return ;}
+	*/
+	
+	//Select the SkyrptKeeper Tab
+	selectAndOpenTabNumber("wizTabLayout", 4);
+	//Open the frame layout for the debug wiz
+	//frameLayout -e -cl false debugWizFrameLayout;
+	selectAndOpenTabNumber("scriptWizMainTabLayout", 1);
+}
+
+//LAYOUTS
+//==============================================================================
+//==============================================================================
+
+//DEBUG WIZ FRAME LAYOUT
+//---------------------------------
+global proc debugWizFrameLayout(string $parent)
+{
+	string $layout = wizStandardFrameLayout($parent, "Debugging", "debugWizFrameLayout");
+	debugWizLayout($layout);
+}
+
+
+
+//DEBUG WIZ COLUMN LAYOUT
+//---------------------------------
+global proc debugWizColumnLayout(string $parent)
+{
+	string $columnLayout = wizStandardColumnLayout($parent, "debugWizColumnLayout");
+	debugWizLayout($columnLayout);
+
+}
+
+//DEBUG WIZ LAYOUT
+//---------------------------------
+global proc debugWizLayout(string $parent)
+{
+	debugWizMenuBarLayout();
+	
+	debugTextScrollListLayout($parent);
+}
+
+//SCRIPT EDITOR LAYOUT
+//=========================================================
+//WIZ SCRIPT EDITOR FRAME LAYOUT
+//----------------------------------
+global proc wizScriptEditorFrameLayout(string $parent)
+{
+	string $layout = wizStandardFrameLayout($parent, "Script Editor", "wizScriptEditorFrameLayout");
+	//frameLayout -e -ec ("wizScriptEditorLayout($layout);") -cc ("destroyLayout(\"wizScriptEditorColumnLayout\");") $layout;
+	
+	//wizScriptEditorLayout($layout);
+}
+
+global proc wizScriptEditorColumnLayout(string $parent)
+{
+	string $columnLayout = wizStandardColumnLayout($parent, "wizScriptEditorColumnLayout");
+	/*
+	if(`columnLayout -q -ex "wizScriptEditorColumnLayout"` == 0){	
+		$columnLayout = wizStandardColumnLayout($parent, "wizScriptEditorColumnLayout");		
+		//wizScriptEditorLayout($columnLayout);
+	}
+	*/
+}
+
+//WIZ SCRIPT EDITOR LAYOUT
+//------------------------------------
+global proc wizScriptEditorLayout(string $parent)
+{
+	string $columnLayout = `columnLayout
+		-adjustableColumn true
+		//-columnOffset "both" 10
+		-p $parent
+		wizScriptEditorColumnLayoutB
+		`;
+		
+	cmdScrollFieldReporter
+		//-width 200
+		-height 200
+		;
+
+	cmdScrollFieldExecuter
+		-sln true
+		//-width 200
+		-height 200;
+		
+		
+	wizUIScratchPad($columnLayout);
+	
+		setParent..;		
+	
+	scriptJobWizLayout($columnLayout);
+	
+	
+}
+
+//WIZ UI SCRATCH PAD
+//--------------------------------
+//This is for experimenting
+global proc wizUIScratchPad(string $parent)
+{
+	string $layout = wizStandardFrameLayout($parent, "wizUIScratchPadFrameLayout", "wizUIScratchPadFrameLayout");
+	textField -tx "string $p = \"wizUIScratchPadFrameLayout\"; setParent $p;";
+
+	
+}
+
+//DEBUG LISTS
+//=======================================================
+//DEBUG TEXT SCROLL LISTS LAYOUT
+//-------------------------------------
+global proc debugTextScrollListLayout(string $parent)
+{
+				
+	string $rowLayout = `rowLayout
+			-nc 2
+			-rat 2 "top" 0
+			-rat 1 "top" 0
+			-p $parent
+			debugTextScrollListRowLayout
+			`;	
+	
+	debugTextScrollListColumns($rowLayout);
+		
+	
+}
+
+//DEBUG TEXT SCROLL LISTS COLUMNS
+//-------------------------------------
+global proc debugTextScrollListColumns(string $parent)
+{
+	string $colLayoutA = `columnLayout
+		-adj 1
+		-p $parent
+		debugTextScrollListColumnA
+		`;	
+		
+	string $colLayoutB = `columnLayout
+		-adj 1
+		-p $parent
+		debugTextScrollListColumnB
+		`;	
+}
+
+//COMMAND LIST
+//=======================================================
+
+//COMMAND LIST COLUMN LAYOUT
+//------------------------------------------
+global proc commandListColumnLayout(string $parent)
+{
+	string $columnLayout = wizStandardColumnLayout($parent, "commandListColumnLayout");
+	commandListLayout($columnLayout);
+	//mathWizLayout($columnLayout);
+}
+
+//COMMAND LIST LAYOUT
+//------------------------------------------
+global proc commandListLayout(string $parent)
+{
+	
+	string $commandList = `textScrollList
+		-h 400
+		-ams true
+		-dkc ("removeSelectedItemFromTextScrollList(\"commandListTextScrollList\");")
+		-dcc ("doTextScrollListDoubleClickScriptListCommand(\"commandListTextScrollList\")")
+		-sc ("doTextScrollListSelectScriptListCommand(\"commandListTextScrollList\")")
+		-dgc dragTextScrollListSelection
+		-dpc dropTextScrollListSelection
+		commandListTextScrollList
+		`;
+	
+	string $commandText = `textFieldButtonGrp
+		-l "Command:"
+		-text ""
+		-cal 1 "left"
+		-cw 1 50
+		-cal 2 "left"
+		-cal 3 "left"
+		-adj 2
+		//-cw 2 400
+		-buttonLabel "Add"
+		`;
+	
+	string $bc = ("string $command = `textFieldButtonGrp -q -text " + $commandText + "`;\n"
+	+"addObjectToTextScrollList($command,\"commandListTextScrollList\")");
+
+	textFieldButtonGrp -e -bc $bc $commandText;
+	
+	uiInfoDropper($parent);
+	
+	
+		
+}
+
+//UI INFO DROPPER
+//====================================================
+global proc uiInfoDropper(string $parent)
+{
+	textFieldButtonGrp
+		-l "UI Info:" 	
+		-dgc uiInfoDragCallback
+		-dpc uiInfoDropCallback
+		-p $parent
+		uiInfoDropper
+		;
+}
+
+global proc string[] uiInfoDragCallback(string $dragControl, int $x, int $y, int $mods)
+{
+	
+	//string $msgs[] = { "" };
+	//return $msgs;	
+	//return { $return }; 
+	return { $dragControl };
+}
+
+global proc uiInfoDropCallback(string $dragControl, string $dropControl, string $msgs[], int $x, int $y, int $type)
+{
+	string $objects[] = hitTest($dropControl, $x, $y);
+	if(size($objects) > 0)	{
+		print("Drop: " + (stringArrayToString($objects, " ")) + "\n");
+		textFieldButtonGrp -e -tx (stringArrayToString($objects, " ")) uiInfoDropper; 
+	}	
+}
+
+//MENUS
+//================================================================================
+
+//DEBUG WIZ DEBUG FUNCTIONS
+//===================================================================
+
+//DEBUG WIZ MENU BAR LAYOUT
+//============================================================
+global proc debugWizMenuBarLayout()
+{
+	string $menuBarLayout = `menuBarLayout	debugWizMenuBarLayout`;	
+		menu -l "Options";
+			menuItem -l "Clear Lists" -c ("clearAllDebugWizTextScrollLists()");
+			menuItem -l "Allow Overwrite" -cb true debugWizAllowOverwriteTextScrollListOption;
+			
+		menu -l "Functions" debugWizMenuBarFunctionsMenu;
+			debugWizFunctionMenuItems();
+		/*	
+		menuItem -sm true -l "Selection Commands";
+			radioMenuItemCollection;
+			menuItem -l "Select Matching Index" -rb on -c ("changeDebugTLSSelectCommand(\"selectMatchingIndex\");");
+			menuItem -l "Select Objects" -rb off -c ("changeDebugTLSSelectCommand(\"selectObjects\");");
+		*/	
+}
+
+
+//DEBUG WIZ FUNCTION MENU
+//============================================================
+
+//DEBUG WIZ DEBUG FUNCTION MENU ITEMS
+//------------------------------------------------
+global proc debugWizFunctionMenuItems()
+{
+	string $dfOptionVar = "WIZ_debugFunctionToggles";
+	/* USAGE
+	int $debug = `menuItem -q -cb SomeProcedureDebugMenuItem`;
+	string $dbl = Some Proc Name; string $dbm = "add"; int $dbc = 1;
+	
+	if($debug){
+		debugList($dbl, { ("Some Output: " + $var) }, $dbc, $dbm);
+	}
+	
+	(OR)
+	
+	string $dbl = "-dmi SomeProcNameDebugMenuItem -t Some Proc Name"; string $dbm = "add"; int $dbc = 1;
+	
+	debugListArray($dbl, " - Message: ", $arr, $dbc, $dbm, "[NEXT]", 100);
+	
+	debugList($dbl, { (" - Message: " + $var) }, $dbc, $dbm);
+	debugList($dbl, {(tslDiv("[NEXT]"))}, $dbc, $dbm);
+	
+	debugListString($dbl, (" - Message: " + $var), $dbc, $dbm);
+	
+	(OR)
+	
+	string $dbl = "-dmi SomeProcNameDebugMenuItem -p someProcName -t Some Proc Name"; string $dbm = "add"; int $dbc = 1;
+	
+	*/
+	
+	//Wiz
+	menuItem -sm true "Wiz";
+	string $wizFunctions[] = {
+	"wizCurrentOptions",
+	"getPutOptionVarStringArray"
+	};
+	buildDebugWizFunctionMenuItems($wizFunctions,0,$wizFunctions);
+	
+	//File Wiz
+	menuItem -sm true "File Wiz";
+	string $fileWizFunctions[] = {
+	"duplicateReferenceObject"
+	};
+	buildDebugWizFunctionMenuItems($fileWizFunctions,0,$fileWizFunctions);
+	
+	//wizCraft
+	menuItem -sm true "WizCraft";
+	string $wizCraftFunctions[] = {
+	"buildAnalysis"
+	};
+	buildDebugWizFunctionMenuItems($wizCraftFunctions,0,$wizCraftFunctions);
+	
+	//Poly Wiz
+	menuItem -sm true "Poly Wiz";
+	string $polyWizFunctions[] = {
+	"fixCommonPolygonProblems",
+	"getHighValenceVertices",
+	"fixHighValenceVertex",
+	"fixNonQuadGeometry",
+	"getTShapes",	
+	"getTShapeFacesOnBorder",
+	"getFacesWithTooManySides",
+	"maximizeMergeVertices",
+	"getFaceNormals",
+	"polyCompareSelected",
+	"getNextComponentInDirection",
+	"getComponentsInDirection",
+	"fixFacesWithTooManySides",
+	"spinEdgesConnectedToVertex",
+	"spinEveryOtherEdge",
+	"getAnglesOfFaceEdges",
+	"getAngleBetweenTwoEdges",
+	"directionalSliceFace",
+	"directionalSliceMesh",
+	"getPolyFaceBoundingBoxSize",
+	"getPolyFaceBoundingBoxMin",
+	"getPolyFaceBoundingBoxMax",
+	"getFaceCenter",
+	"processAllTerrainTilesInDirectory",
+	"getComponentsOnBoundingBoxSide",
+	"wizCraftGridSnapTileOntoVertices"
+	};
+	buildDebugWizFunctionMenuItems($polyWizFunctions,0,$polyWizFunctions);
+	
+	//UV Wiz
+	menuItem -sm true "UV Wiz";
+	string $uvWizFunctions[] = {	
+	"consolidateUVSpaceOnSelectedObjects",	
+	"mergeUVShellsBySelectionPropogationMethods",
+	"fitSelectedObjectsUVsIntoSingleUVSpace",
+	"uvWizCreateUVs",
+	"getHighValenceVertices",
+	"splitPolyFacesFromVertexToVertex",
+	"transferUVs"
+	};
+	buildDebugWizFunctionMenuItems($uvWizFunctions,0,$uvWizFunctions);
+	
+	//Rigging Wiz
+	menuItem -sm true "Rigging Wiz";
+	string $riggingWizFunctions[] = {
+	"generateStarfield",
+	"newStarfieldStar",
+	"formatStarfieldData",
+	"getByLineStarCSVDataFile"
+	};
+	buildDebugWizFunctionMenuItems($riggingWizFunctions,0,$riggingWizFunctions);
+	
+	//Shading Wiz
+	menuItem -sm true "Shading Wiz";
+	string $shadingWizFunctions[] = {
+	"assignSelectedAShaderToAllSelected",
+	"getObjectsWithNonMayaShaders"
+	};
+	buildDebugWizFunctionMenuItems($shadingWizFunctions,0,$shadingWizFunctions);
+	
+	//Prep For Painting Wiz
+	menuItem -sm true "Prep For Painting Wiz";
+	string $prepforpaintingWizFunctions[] = {
+	"autoPrepForPainting",	
+	"inspectPrepForPainting",
+	"applyRecommendedPrepForPaintingSettings",
+	"optimizeUVSpace",
+	"polyLayoutUVSelected"
+	};
+	buildDebugWizFunctionMenuItems($prepforpaintingWizFunctions,0,$prepforpaintingWizFunctions);
+	
+	//Select Wiz
+	menuItem -sm true "Select Wiz";
+	string $selectWizFunctions[] = {
+	"wizGetComponent",	
+	"getObjectsWithMultipleMaterials",
+	"propogateFaceSelectionMaxAngle",
+	"selectAdjacentFacesAtMaxAngle",
+	"selectAdjacentEdgesAtMaxAngle",
+	"getComponentsOfTypeInAxisDirection",
+	"sortByMatchingPolyGeometry",
+	"getComponentsOfTypeAtMinMaxAngle",
+	"getComponentsOfTypeAtDistanceFromPoint",
+	"getComponentsOfTypeOnBorder",
+	"doRepeatLastOnLists"
+	};
+	buildDebugWizFunctionMenuItems($selectWizFunctions,0,$selectWizFunctions);
+	
+	//Transform Wiz
+	menuItem -sm true "Transform Wiz";
+	string $transformWizFunctions[] = {
+	"straightenRotations",
+	"getObjectFacingRotation"
+	};
+	buildDebugWizFunctionMenuItems($transformWizFunctions,0,$transformWizFunctions);
+	
+	//Populator Wiz
+	menuItem -sm true "Populator Wiz";
+	string $populatorWizFunctions[] = {
+	"updateDuplicatesOnCurve"
+	};
+	buildDebugWizFunctionMenuItems($populatorWizFunctions,0,$populatorWizFunctions);
+	
+	
+	//Sort Wiz
+	menuItem -sm true "Sort Wiz";
+	string $sortWizFunctions[] = {
+	"sortByClosestToPoint",
+	"sortByDirection",
+	"sortByDistanceDirection",
+	"sortFloatStringArray",
+	"sortStringArrayByFloatArray",
+	"compareFloatArrayIndices",
+	"sortByMatchingTransforms",
+	"sortUVsbyUVspace"
+	};
+	buildDebugWizFunctionMenuItems($sortWizFunctions,0,$sortWizFunctions);
+	
+	//String Wiz
+	menuItem -sm true "String Wiz";
+	string $stringWizFunctions[] = {
+	"divideSeparatedStringArrayBy"
+	};
+	buildDebugWizFunctionMenuItems($stringWizFunctions,0,$stringWizFunctions);
+	
+	//Array Wiz
+	menuItem -sm true "Array Wiz";
+	string $arrayWizFunctions[] = {
+	"getCSVDataByLine",
+	"formatCSVData",
+	"print2dStringArray",
+	"getColumnsOfStringArray",
+	"getAndPrintCSVFile",
+	"closestFloat",
+	"farthestFloat",
+	"shufflePartStringArray"
+	};
+	buildDebugWizFunctionMenuItems($arrayWizFunctions,0,$arrayWizFunctions);
+	
+	//Layout Wiz
+	menuItem -sm true "Layout Wiz";
+	string $layoutWizFunctions[] = {
+	"getAllWizUI",
+	"getAllUIBelowParent",
+	"getAllLayoutsInWindow",
+	"getUIOfTypeUnderLayout"
+	};
+	buildDebugWizFunctionMenuItems($layoutWizFunctions,0,$layoutWizFunctions);
+	
+	//Math Wiz
+	menuItem -sm true "Math Wiz";
+	string $mathWizFunctions[] = {
+	"normalizeFloatArray"
+	};
+	buildDebugWizFunctionMenuItems($mathWizFunctions,0,$mathWizFunctions);
+	
+	//Hair Wiz
+	menuItem -sm true "Hair Wiz";
+	string $hairWizFunctions[] = {
+	"wizSelectHairSystemFolliclesOfType"
+	};
+	buildDebugWizFunctionMenuItems($hairWizFunctions,0,$hairWizFunctions);
+	
+	//Misc Wiz
+	menuItem -sm true "Misc Wiz";
+	string $miscWizFunctions[] = {
+	"attachSelectedToRope",
+	"updateFullDomeViewport"
+	};
+	buildDebugWizFunctionMenuItems($miscWizFunctions,0,$miscWizFunctions);
+	
+	
+	//Set menu item states;
+	menuItem -e -cb 1 GetCSVDataByLineDebugMenuItem;
+	menuItem -e -cb 1 FormatCSVDataDebugMenuItem;
+	menuItem -e -cb 1 Print2dStringArrayDebugMenuItem;
+	menuItem -e -cb 1 GetColumnsOfStringArrayDebugMenuItem;
+	menuItem -e -cb 1 GetAndPrintCSVFileDebugMenuItem;
+	
+}
+	
+global proc buildDebugWizFunctionMenuItems(string $function[], int $cb, string $name[])
+	{
+	for($i=0;$i<`size $function`;$i++){
+		addDebugWizDebugFunctionMenuItem($function[$i], $cb, $name[$i]);
+	}
+	setParent -menu..;	
+}
+
+//DEBUG WIZ FUNCTION MENU ITEM
+//-----------------------------------
+global proc string addDebugWizDebugFunctionMenuItem(string $function, int $cb, string $name)
+{
+	//setParent -menu debugWizMenuBarFunctionsMenu;
+	
+	string $fName = interToUI($function);
+	string $mName = capitalizeString($function);
+	$mName = $mName + "DebugMenuItem";
+	string $l = "Debug " + $fName;
+	//$cb = getOptionVarInt($mName, 0);
+	
+	string $c = ("putOptionVarStringArray(\"WIZ_debugFunctionToggles\",{\"" + $mName + "\"});");
+	//putOptionVarStringArray("WIZ_debugFunctionToggles", {$setAllName});	
+	//putOptionVarStringArray("WIZ_debugFunctionToggles", $mName);
+	//string $menuItem = `menuItem -l $l -cb $cb -c ("putOptionVarStringArray(" + "\"" + $mName + "\"" + ", {(string(`menuItem -q -cb " + $mName + "`))})") $mName`;
+	
+	//string $menuItem = `menuItem -l $l -cb $cb -c $c $mName`;
+	string $menuItem = wizMenuItem("-l " + $l 
+		+" -cb " + $cb
+		+" -n " + $mName);
+		
+	return $menuItem;
+}
+
+//DEBUG WIZ DEBUGGER MENU BAR
+//===========================================================
+//This if for adding debug menus to other layouts
+/* USAGE
+	string $functionList[] = { "someProc", "anotherProc" };
+	string $debugWizMenuBar = `addDebugWizDebuggerMenuBar parentName $functionList menuName`;
+	
+	global proc someProc()
+	{
+	int $debug = `menuItem -q -cb SomeProcDebugMenuItem`;
+	if($debug){ .... };
+	
+	}
+*/
+
+//ADD DEBUG WIZ DEBUGGER MENU BAR
+//---------------------------------------
+global proc string addDebugWizDebuggerMenuBar(string $parent, string $function[], int $cb[], string $name)
+{
+	setParent $parent;
+	string $menuBarLayout = `menuBarLayout $name`;	
+	debugWizDebuggerMenu($parent,$function,$cb,$name);
+	return $menuBarLayout;	
+}
+
+//DEBUG WIZ DEBUGGER MENU
+//----------------------------
+global proc debugWizDebuggerMenu(string $parent, string $function[], int $cb[], string $name)
+{
+	//debugWizDebugMenu(("-p " + $parent + "-f " + stringArrayToString($function, " ") + "-n " + $name));	
+		
+	string $fName[] = interToUIStringArray($function);
+	string $mName[] = capitalizeStringArray($function);
+	setParent $parent;
+	
+	menu -l "Debug";
+		
+		//Add menuItems for each function	
+		for($i=0;$i<`size $function`;$i++){
+			$mName[$i] = $mName[$i] + "DebugMenuItem";
+			string $l = "Debug " + $fName[$i];
+	
+			menuItem -l $l -cb $cb[$i] $mName[$i];
+			
+		}
+		
+		string $setAllName = $name + "SetAll";
+		menuItem -l "Set All" -cb true -c ("toggleAllDebugWizDebuggerMenuItems(" + stringArrayToStringArrayString($mName) + "," + "\"" + $setAllName + "\"" + ")") $setAllName;
+		
+		//This saves the settings to an option var	
+		putOptionVarStringArray("WIZ_debugFunctionToggles", {$setAllName});
+		
+		putOptionVarStringArray("WIZ_debugFunctionToggles", $mName);
+			
+}
+
+//DEBUG WIZ DEBUG MENU
+//----------------------------
+global proc debugWizDebugMenu(string $arg)
+{	
+	string $p;
+	string $f[];
+	string $n;
+	string $cb[];
+	string $tok[] = tokenizeString($arg, " ");
+	for($i=0;$i<`size $tok`;$i++){
+		switch($tok[$i]){
+			case "-p" : case "-parent" :
+			$p = $tok[$i + 1];
+			continue;
+			
+			case "-f" : case "-function" :
+			$f = appendStringArrayFromCurrentIndexToNextTagIndex($tok, $f, ($i + 1));		
+			continue;
+			
+			case "-n" : case "-name" :
+			$n = $tok[$i + 1];
+			continue;
+			
+			case "-cb" : case "-checkBox" : case "-v" : case "-value" :
+			$cb = appendStringArrayFromCurrentIndexToNextTagIndex($tok, $cb, ($i + 1));
+			continue;
+		}
+	}
+	string $fName[] = interToUIStringArray($f);
+	string $mName[] = capitalizeStringArray($f);
+	setParent $p;
+	
+	menu -l "Debug";
+		
+		//Add menuItems for each function	
+		for($i=0;$i<`size $f`;$i++){
+			$mName[$i] = $mName[$i] + "DebugMenuItem";
+			string $l = "Debug " + $fName[$i];
+			menuItem -l $l -cb $cb[$i] $mName[$i];
+			
+		}
+		
+		//Make a toggle all menuItem
+		string $setAllName = $n + "SetAll";
+		menuItem -l "Set All" -cb true -c ("toggleAllDebugWizDebuggerMenuItems(" + stringArrayToStringArrayString($mName) + "," + "\"" + $setAllName + "\"" + ")") $setAllName;
+		
+		//Save settings
+		putOptionVarStringArray("WIZ_debugFunctionToggles", {$setAllName});	
+		putOptionVarStringArray("WIZ_debugFunctionToggles", $mName);
+		
+}
+
+//TOGGLE ALL DEBUGGER MENU ITEMS
+//---------------------------------------
+global proc toggleAllDebugWizDebuggerMenuItems(string $menuItem[], string $setAll)
+{
+	int $setState = `menuItem -q -cb $setAll`;
+	for($i=0;$i<`size $menuItem`;$i++){
+		menuItem -e -cb $setState $menuItem[$i];
+	}
+	//Save the setting
+	putOptionVarStringArray("WIZ_debugFunctionToggles", {$setAll});
+}
+
+//TURN ALL DEBUG FUNCTIONS ON
+//---------------------------------------
+global proc turnAllDebugFunctionsOn()
+{
+	string $dfOptionVar = "WIZ_debugFunctionToggles";	
+	string $df[] = 	getOptionVarStringArray($dfOptionVar);
+	for($i=0;$i<`size $df`;$i++){
+		menuItem -e -cb true $df[$i];	
+		
+	}
+	//Save the setting
+	putOptionVarStringArray($dfOptionVar, $df);
+}
+
+//TURN ALL DEBUG FUNCTIONS OFF
+//---------------------------------------
+global proc turnAllDebugFunctionsOff()
+{
+	string $dfOptionVar = "WIZ_debugFunctionToggles";	
+	string $df[] = 	getOptionVarStringArray($dfOptionVar);
+	for($i=0;$i<`size $df`;$i++){
+		menuItem -e -cb false $df[$i];	
+	}
+	//Save the setting
+	putOptionVarStringArray($dfOptionVar, $df);
+}
+
+//DEBUG LIST
+//====================================================================================
+//====================================================================================
+//This creates a new text scroll list for printing debugging information
+/* USAGE:
+	string $dbl = "-dmi SomeProcDebugMenuItem -t Some Proc"; int $dbc = 1; string $dbm = "add";
+	
+	debugList($dbl, { ("Some Usefull Info: " + $var) }, $dbc, $dbm);
+	debugList($dbl, $someArr, $dbc, $dbm);
+
+*/
+
+//DEBUG LIST
+//---------------------------------------
+global proc string debugList(string $strArg, string $arr[], int $num, string $method)
+{
+	//If debugList is turned off skip everything
+	global int $WIZ_debugList;
+	if($WIZ_debugList == 0){
+		debugML1("DebugTSL is off!" + "\n");
+		return "";	
+	}
+	
+	//If there are no string arguments the strArg defaults to being the title of the list
+	string $title = $strArg;
+	string $debugMenuItem;	
+	string $parent;
+	int $width;
+	int $height;
+	string $proc;
+	string $tok[] = tokenizeString($strArg, " ");
+	for($i=0;$i<`size $tok`;$i++){
+		switch($tok[$i]){
+			case "-p" : case "-proc" : case "-f" : case "-function" :
+			$proc = $tok[($i + 1)];
+			continue;
+			
+			case "-dmi" : case "-debugMenuItem" : case "-menuItem" : case "-mi" :
+			$debugMenuItem = $tok[($i + 1)];
+			continue;
+			
+			case "-p" : case "-parent" : 
+			$parent = $tok[($i + 1)];
+			continue;
+			
+			case "-w" : case "-width" : 
+			$width = int($tok[($i + 1)]);
+			continue;
+			
+			case "-h" : case "-height" : 
+			$height = int($tok[($i + 1)]);
+			continue;
+			
+			case "-t" : case "-title" : case "-h" : case "-header" :
+			string $tsa[] = getStringArrayFromCurrentIndexToNextTagIndex($tok, ($i + 1));
+			$title = stringArrayToString($tsa, " ");
+			continue;
+			
+		}
+	}
+	
+	//If this debug list is turned off then skip everything else
+	if($debugMenuItem != ""){
+		if(`menuItem -q -ex $debugMenuItem` == 1){
+			if(`menuItem -q -cb $debugMenuItem` == 0){
+				return "";
+			}
+		}		
+	}
+	
+	//Determine which column to put the list in
+	if(`layout -q -ex debugTextScrollListColumnA` == 0){
+		return "";	
+	}
+	string $parent = "debugTextScrollListColumnA";
+	int $even = evenOrOdd($num);
+	if($even){
+		$parent = "debugTextScrollListColumnB";
+	}
+	
+	setParent $parent;
+	
+	//Make the name for the debugList list
+	string $debugTSLName;
+	string $debugTitle = makeNiceUIName($title);
+	//Make a new name or re-use existing
+	int $overwrite = `menuItem -q -cb debugWizAllowOverwriteTextScrollListOption`;
+	if($overwrite == 0){
+		$debugTSLName = createNumberedTextScrollListName($debugTitle + "DebugTSL", $num);	
+	} else {
+		$debugTSLName = $debugTitle + "DebugTSL" + $num;
+	}
+	
+	//Create the textScrollList and other elements if they don't exist yet
+	string $debugList;
+	if(`textScrollList -q -ex $debugTSLName` == 0){
+		$debugList = createDebugTSL($debugTSLName,$title,$arr,$num);
+		//Edit other optional properties
+		/*
+		if($parent != ""){
+			textScrollList -e -p $parent $debugList;	
+		}
+		
+		if($width > 0){
+			textScrollList -e -w $width $debugList;	
+		}
+		if($height > 0){
+			textScrollList -e -w $height $debugList;	
+		}
+		*/		
+	} else {
+		$debugList = $debugTSLName;
+	}
+	
+	//Edit the textScrollList
+	if($method == "add"){
+		addSelectedObjectsToTextScrollList($arr,$debugList);
+		debugTSLText($debugList,$title,$arr,"edit");
+	} else if($method == "replace"){
+		replaceTextScrollListWithSelectedObjects($arr,$debugList);
+		debugTSLText($debugList,$title,$arr,"edit");
+	}
+	
+	if (`menuItem -q -cb toggleDebugWizPrintMessagesMenuItem`){
+		wizlog ((stringArrayToString($arr, "\n")));
+	}
+		
+	return $debugList;
+	
+}
+
+//DEBUG LIST ARRAY
+//----------------------------------------------
+//A preformatted debug list
+global proc debugListArray(string $dbl, string $header, string $arr[], int $dbc, string $dbm, string $div, int $arrLimit)
+{
+	/* USAGE: ([list menu item and tile], [header, array], [list column], [list method], [divider message], [array limit])
+	
+	debugListArray($dbl, " - Header: ", $arr, $dbc, $dbm, "NEXT", 100);
+	
+	*/
+	debugList($dbl, { ($header + `size $arr`) }, $dbc, $dbm);
+	debugList($dbl, {(tslDiv(""))}, $dbc, $dbm);
+	if(`size $arr` > $arrLimit && $arrLimit != 0){
+		for($i=0;$i<$arrLimit;$i++){
+			debugList($dbl,{ ($arr[$i]) }, $dbc, $dbm);		
+		}
+		debugList($dbl, { ("... + " + (`size $arr` - $arrLimit) + " More") }, $dbc, $dbm);
+	} else if(`size $arr` < $arrLimit || $arrLimit == 0){
+		debugList($dbl, $arr, $dbc, $dbm);
+	}
+	debugList($dbl, {(tslDiv($div))}, $dbc, $dbm);	
+	
+}
+
+//DEBUG LIST STRING
+//----------------------------------------------
+//Just a short way of adding just a string instead of an array
+global proc debugListString(string $dbl, string $message, int $dbc, string $dbm)
+{
+	/* USAGE: ([list menu item and tile], [header, [list column], [list method])
+	
+	debugListString($dbl," * Some Proc Name * ", $dbc, $dbm);
+	debugListString($dbl, (" - Message: " + $var), $dbc, $dbm);
+	
+	*/	
+	debugList($dbl, { ($message) }, $dbc, $dbm);
+}
+
+//DEBUG TIME
+//-----------------------------------------------
+global proc debugTime(string $name, float $time)
+{
+	/* USAGE: 
+	
+	$startTime = `timerX`;
+	...
+	...
+	debugTime("someProc",(`timerX -startTime $startTime`));
+	
+	*/
+	
+	string $dbl = "-dmi toggleTimeProc -t Proc Time"; string $dbm = "add"; int $dbc = 1;
+	
+	global string $WIZ_printHeader;
+	string $whatIs;
+	if(catchQuiet(whatIs($name)) == 0){
+		$whatIs = whatIs($name);
+		$whatIs = basename($whatIs, ".mel");
+	}
+	string $headTitle = " : " + $name;
+	string $debugListLine = $whatIs + $headTitle + " " + $time;
+	debugList($dbl, { ($debugListLine) }, $dbc, $dbm);
+	
+}
+
+//DEBUG LIST TEXT SCROLL LIST
+//----------------------------------------------
+global proc string createDebugTSL(string $debugTSLName, string $title, string $arr[], int $num)
+{
+		
+	debugTSLText($debugTSLName,$title,$arr,"create");
+	
+	//TextScrollList	
+	string $debugList = `textScrollList
+		-h 200
+		-ams true
+		-dkc ("doSelectWizDeleteKeyCommand(" + "\"" + $debugTSLName + "\"" + ");")
+		//-dcc ("doDebugTextScrollListDoubleClickCommand(" + "\"" + $debugTSLName + "\"" + ");")
+		//-sc ("doDebugTextScrollListSelectCommand(" + "\"" + $debugTSLName + "\"" + ");")
+		-dcc ("doSelectWizDoubleClickCommand(" + "\"" + $debugTSLName + "\"" + ");")
+		-sc ("doSelectWizSelectCommand(" + "\"" + $debugTSLName + "\"" + ");")
+		-dgc dragTextScrollListSelection
+		-dpc dropTextScrollListSelection
+		$debugTSLName
+		`;
+		
+		
+	popupMenu ;
+		menuItem -l "Execute" -c ("doSelectWizDoubleClickCommand(" + "\"" + $debugTSLName + "\"" + ");");
+		menuItem -l "Select" -c ("doSelectWizSelectCommand(" + "\"" + $debugTSLName + "\"" + ");");
+		menuItem -l "Maximize" -c ("maximizeDebugList(" + "\"" + $debugTSLName + "\"" + ");");
+		menuItem -l "Minimize" -c ("minimizeDebugList(" + "\"" + $debugTSLName + "\"" + ");");
+		menuItem -l "Clear List" -c ("clearTextScrollList(" + "\"" + $debugTSLName + "\"" + ");");
+		
+	/*
+	string $debugList = `iconTextScrollList
+		-h 200
+		-ams true
+		-dkc ("doSelectWizDeleteKeyCommand(" + "\"" + $debugTSLName + "\"" + ");")
+		-dcc ("doSelectWizDoubleClickCommand(" + "\"" + $debugTSLName + "\"" + ");")
+		-sc ("doSelectWizSelectCommand(" + "\"" + $debugTSLName + "\"" + ");")
+		-dgc dragTextScrollListSelection
+		-dpc dropTextScrollListSelection
+		$debugTSLName
+		`;
+	*/	
+	//Options
+	debugTSLMenu($debugList);
+
+return 	$debugList;
+}
+
+//DEBUG TEXT SCROLL LIST TEXT
+//----------------------------------------------
+global proc debugTSLText(string $debugTSLName, string $title, string $arr[], string $action)
+{
+	
+	string $textName = $debugTSLName + "Text";
+	string $sizeTextName = $debugTSLName + "SizeText";
+	string $al = "center";
+	string $size;	
+	
+	if($action == "edit"){
+		int $ni = `textScrollList -q -ni $debugTSLName`;
+		$size = "Size: " + $ni;
+		text -e -l $title -al $al $textName;	
+		text -e	-l $size -al $al $sizeTextName;	
+	} else if($action == "create"){
+		$size = "Size: " + `size $arr`;
+		text -l $title -al $al $textName;	
+		text -l $size -al $al $sizeTextName;
+	}	
+}
+
+//GET DEBUG WIZ TEXT SCROLL LISTS
+//------------------------------------------
+global proc string[] getAllDebugWizTextScrollLists()
+{
+	string $listsA[] = `columnLayout -q -ca debugTextScrollListColumnA`;
+	string $listsB[] = `columnLayout -q -ca debugTextScrollListColumnB`;
+	string $allLists[];
+	appendStringArray($allLists,$listsA,`size $listsA`);
+	appendStringArray($allLists,$listsB,`size $listsB`);
+	string $allDebugTSL[];
+	for($i=0;$i<`size $allLists`;$i++){
+		if(`textScrollList -q -ex $allLists[$i]`){
+			$allDebugTSL[`size $allDebugTSL`] = $allLists[$i];		
+		}
+	}
+	return $allDebugTSL;
+}
+
+//CLEAR ALL DEBUG WIZ TEXT SCROLL LISTS
+//------------------------------------------
+global proc clearAllDebugWizTextScrollLists()
+{
+	deleteUI -lay "debugTextScrollListColumnA";
+	deleteUI -lay "debugTextScrollListColumnB";
+	string $rowLayout = "debugTextScrollListRowLayout";
+	debugTextScrollListColumns($rowLayout);	
+
+}
+
+//DEBUG LIST MENU
+//========================================================
+//These are the options below each debugList
+
+//DEBUG TSL MENU
+//------------------------------
+global proc debugTSLMenu(string $textScrollList)
+{
+	string $selectMasterLists[] = getWizUIElements("SelectMasterLists");
+	
+	string $menuBarLayout = `menuBarLayout ($textScrollList + "MenuBarLayout")`;
+	menu -l "Options";
+	
+		menuItem -l "Clear List" -c ("clearTextScrollList(" + "\"" + $textScrollList + "\"" + ");");
+		menuItem -l "Select All In List" -c ("selectAllInTextScrollList(" + "\"" + $textScrollList + "\"" + ")");
+		menuItem -l "Sort" -c ("sortTextScrollList(" + "\"" + $textScrollList + "\"" + ");");
+		
+		menuItem -d true;
+		
+		menuItem -sm true -l "Copy";
+			for($i=0;$i<`size $selectMasterLists`;$i++){
+				menuItem -l ("Copy Selected To: " + $selectMasterLists[$i]) -c ("copySelectionToTextScrollList(" + "\"" + $textScrollList + "\"" + "," + "\"" + $selectMasterLists[$i] + "\"" + ");openSelectWiz();");
+				menuItem -l ("Copy All To: " + $selectMasterLists[$i]) -c ("copyAllItemsToTextScrollList(" + "\"" + $textScrollList + "\"" + "," + "\"" + $selectMasterLists[$i] + "\"" + ");openSelectWiz();");
+			}
+			setParent -menu..;
+		
+		menuItem -d true;
+		
+		menuItem -l "Maximize List" -c ("maximizeDebugList(" + "\"" + $textScrollList + "\"" + ");");
+		menuItem -l "Minimize List" -c ("minimizeDebugList(" + "\"" + $textScrollList + "\"" + ");");
+		
+	menuItem -d true;
+		
+		menuItem -sm true -l "Expressions";
+			menuItem -l "New Get Object List Expression" -c ("passSelectionListToCommand(" + "\"" + $textScrollList + "\"" + ",\"makeNewSelectionMasterGetObjectExpression\");");
+			setParent -menu..;
+	
+		//PRINTING
+		menuItem -sm true -l "Print";
+			menuItem -l "Array - {\"Object1\",\"Object2\"}" -c ("passSelectionListToCommand(" + "\"" + $textScrollList + "\"" + ",\"printBracketedArrayList\");");
+			menuItem -l "Array - Object1,Object2" -c ("passSelectionListToCommand(" + "\"" + $textScrollList + "\"" + ",\"printCSVArrayList\");");
+			setParent -menu..;
+		
+	//This doesn't work yet...
+	/*		
+	string $intersectMenuItem = `menuItem -sm true -l "Intersect"`;
+	menuItem -e -pmc ("createIntersectMenuItems(" + "\"" + $textScrollList + "\"" + "," + "\"" + $menuBarLayout + "\"" + ");") $intersectMenuItem;	
+		setParent -menu..;
+	*/
+}
+
+//CREATE INTERSECT MENU ITEMS
+//-------------------------------------------
+//This doesn't work right yet...
+global proc createIntersectMenuItems(string $debugTSLName, string $parent)
+{
+	debugML1("createIntersectMenuItems" + "\n");
+	
+	setParent $parent;
+	
+	string $allDebugLists[] = getAllDebugWizTextScrollLists();
+	for($i=0;$i<`size $allDebugLists`;$i++){
+		menuItem -l ("Intersect With " + $allDebugLists[$i]) -c ("intersectTextScrollLists(" + "\"" + $debugTSLName + "\"" + "," + "\"" + $allDebugLists[$i] + "\"" + ");");
+	}
+	setParent -menu..;
+
+}
+
+//CREATE NUMBERED TEXT SCROLL LIST NAME
+//-------------------------------------------
+global proc string createNumberedTextScrollListName(string $name, int $startNum)
+{
+	string $tslName;	
+	int $ok = 0;
+	int $newNum = $startNum;
+	while($ok == 0){		
+		$tslName = $name + $newNum;
+		if(`textScrollList -q -ex $tslName` == 0){
+			$ok = 1;			
+		} else {
+			$newNum++;
+		}	
+	}	
+	return $tslName;
+}
+
+//TEXT SCROLL LIST COMMANDS
+//================================================================================
+//================================================================================
+
+//DEBUG TEXT SCROLL LIST SELECT COMMAND
+//-------------------------------------------
+global proc doDebugTextScrollListSelectCommand(string $textScrollList)
+{
+	global string $WIZ_printHeader;
+	string $sel[] = `textScrollList -q -si $textScrollList`;
+	string $title = `text -q -l ($textScrollList + "Text")`;
+	if(`size $sel` == 1){
+		print($WIZ_printHeader + $title + ": " + stringArrayToString($sel, " ") + "\n");
+	} else {
+		print($WIZ_printHeader + $title + ": " + stringArrayToStringNiceList($sel));
+	}
+
+	printSelectedMelCommandsInList($sel);
+	$sel = removeObjectsThatDontExist($sel);
+	if(`size $sel` == 0){ return;};
+	select -r $sel;
+	focusOnSelected($sel);
+}
+
+//DEBUG TEXT SCROLL LIST DOUBLE CLICK COMMAND
+//-------------------------------------------
+global proc doDebugTextScrollListDoubleClickCommand(string $textScrollList)
+{
+	string $sel[] = `textScrollList -q -si $textScrollList`;
+	executeSelectedMelCommandsInList($sel);
+	
+	//Select all matching indexes of all debug lists
+	int $selI[] = `textScrollList -q -sii $textScrollList`;
+	string $listsA[] = `columnLayout -q -ca debugTextScrollListColumnA`;
+	string $listsB[] = `columnLayout -q -ca debugTextScrollListColumnB`;
+	string $allLists[];
+	appendStringArray($allLists,$listsA,`size $listsA`);
+	appendStringArray($allLists,$listsB,`size $listsB`);
+	for($i=0;$i<`size $allLists`;$i++){
+		for($p=0;$p<`size $selI`;$p++){
+			if(`textScrollList -q -ex $allLists[$i]`){
+				catchQuiet(`textScrollList -e -sii $selI[$p] $allLists[$i]`);
+				catchQuiet(`textScrollList -e -shi $selI[$p] $allLists[$i]`);
+				
+			}
+		}	
+	}
+	
+	$sel = removeObjectsThatDontExist($sel);
+	if(`size $sel` == 0){ return;}
+	//select -r $sel;
+	isolateAndFocusOnSelected($sel);
+
+}
+
+//CHANGE DEBUG TEXT SCROLL LIST COMMAND
+//-------------------------------------------
+//Does nothing... 
+global proc changeDebugTLSSelectCommand(string $textScrollList, string $command)
+{
+	
+}
+
+global proc maximizeDebugList(string $textScrollList)
+{
+	textScrollList -e -h 400 -w 500 $textScrollList;	
+}
+
+global proc minimizeDebugList(string $textScrollList)
+{
+	textScrollList -e -h 200 -w 200 $textScrollList;	
+}
+
+//GET MEL COMMANDS
+//===============================================================================
+//===============================================================================
+
+//GET VALID COMMANDS FROM LIST
+//-------------------------------------
+global proc string[] getValidCommandsFromList(string $list[])
+{
+	string $command[];
+	for($i=0;$i<`size $list`;$i++){
+		if(getValidMelCommandsFromString($list[$i]) != ""){
+			$command[`size $command`] = $list[$i];
+		}
+	}
+	return $command;
+}
+
+//GET VALID COMMAND FROM STRING
+//-------------------------------------
+global proc string getValidMelCommandsFromString(string $command)
+{
+	string $spaceBuffer[];
+	int $numSTok = `tokenize $command " " $spaceBuffer`;
+	string $testCommand[];
+	int $numBTok = `tokenize $spaceBuffer[0] "(" $testCommand`;
+	//Strip out characters that will ruin test
+	$testCommand[0] = strip($testCommand[0]);
+	$testCommand[0] = removeIllegalCharacters($testCommand[0]);
+	$testCommand[0] = removeBackQuotes($testCommand[0]);
+	if(isValidMelCommand($testCommand[0]) == 1){
+		return $testCommand[0];
+	} else {
+		return "";
+	}
+}
+
+//IS VALID COMMAND
+//-------------------------------------
+global proc int isValidMelCommand(string $command)
+{
+	string $basename = basename($command, ".mel");
+	string $whatIs = whatIs($basename);
+	if(endsWith($whatIs, ".mel") == 1 || $whatIs == "Command"){
+		return 1;
+	} else {
+		return 0;
+	}
+}
+
+//DEBUG HUD
+//================================================================================
+//================================================================================
+
+//DEBUG HUD
+//-----------------------------------
+global proc string debugHud(string $name, string $command, string $ac)
+{
+	global int $WIZ_debugHud;
+	if($WIZ_debugHud == 0){ return "";}
+	
+	string $hud = "debugWizHud";
+	if(`headsUpDisplay -ex debugWizHud` == 0){
+		$hud = `headsUpDisplay
+			-ao true
+			-dp 2
+			-section 6
+			-block 1
+			-blockSize "small"
+			-label ""
+			-labelFontSize "small"
+			-c $command
+			-ac $ac
+			//-event "timeChanged"
+			-nodeChanges "attributeChange"
+			-vis true
+			debugWizHud
+			`;
+	}
+	return $hud;
+}
+
+//REMOVE DEBUG HUD
+//-----------------------------------
+global proc removeDebugHud()
+{
+	if(`headsUpDisplay -ex debugWizHud` == 1){	
+		headsUpDisplay -rem debugWizHud;	
+	}
+}
+
+//GET DEBUG HUD ATTR
+//-----------------------------------
+global proc string getDebugWizHudAttr(string $objAttr[])
+{
+	string $hudString;
+	for($i=0;$i<`size $objAttr`;$i++){
+		string $tok[];
+		int $numTok = `tokenize $objAttr[$i] "." $tok`;
+		string $attrName = interToUI($tok[1]);
+		string $attr[] = forceGetAttributeStringArray($objAttr[$i]);
+		$hudString = $hudString + $attrName + ": " + stringArrayToString($attr, " ") + "\n";
+		
+	}
+	return $hudString;
+
+}
+

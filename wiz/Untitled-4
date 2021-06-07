@@ -1,0 +1,91 @@
+import time
+
+#Make sure we have a selection
+numselected = CountSelectedObjects() 
+numSel = str(numselected)
+
+numselected = CountSelectedObjects() 
+
+if numselected>1:
+	message = "Please select only one object."
+elif numselected<1:
+	message = "Please Select A Terrain Object Before Running Script."
+
+#Get the selected terrain info
+sel = GetSelectedObjectByIndex(0)
+
+#Prompt to set the size of the tiles and how many tiles
+tileSize = Prompt('Terrain Tile Size: ','100.00', true, 'Size Of Terrain Tiles')
+divideBy = Prompt('Divide Terrain By: ','2', true, 'Divide Terrain Into Tiles')
+quality = Prompt('Export Quality Setting: ','5', true, 'Export Quality Setting ( 1 - 10 ) ')
+
+#Prompt for saving obj file
+fileDir = Prompt('Save Directory: ','Paste Directory Here', true, 'Directory')
+fileNamePrefix = Prompt('File Name Prefix: ','TerrainName', true, 'File Name')
+
+#Calculate sizes and positions
+divBy = int(divideBy)
+ts = float(tileSize)
+div = float(divideBy)
+move = ts * 2
+tileTotal = divBy * divBy
+
+xStart = 0 - ((ts * div) / 2)
+zStart = xStart
+xPos = xStart
+zPos = xStart
+
+pos = sel.Position()
+#Put the terrain in the start position
+sel.SetPosition(xPos, zPos, pos[2])
+
+mes = ("Ready To Export : " + str(tileTotal) + " : Total Tiles\n")
+mes += ("Current Position: " + str(pos[0]) + " : " + str(pos[1]) + " : " + str(pos[2]) + "\n" + "Start Position: X: " + str(xStart) + " Z: " + str(zStart) + " Y: " + str(pos[2]))
+Message(mes)
+
+mes = "Exporting Terrain Tiles: \n"
+Refresh()
+tileCount = totalTiles
+
+#Move the terrain and export obj files
+for z in range(0, divBy):
+	Refresh()	
+	Refresh()
+	for x in range(0, divBy):
+		print("Refreshing Terrain\n")
+		Refresh()
+		Refresh()
+		sel.SetPosition(xPos,zPos, pos[2])
+		
+		#Refresh a bunch of times because if the model is not refreshed vue will mess up mesh. There's probably a better way to do this.
+		waitForSeconds = 0
+		Refresh()		
+		while True:
+			Refresh()
+			waitForSeconds = waitForSeconds + 1
+			if waitForSeconds == 100:
+				break
+		
+		
+		fileName = fileDir + fileNamePrefix + str(x) + str(z) + ".obj"
+		print("Exporting Tile : " + str(x) + str(z) + " : To File : " + fileName + "\n")		
+		didExport = ExportObject(fileName, false, "","","","")
+		print("Finished Exported To File : " + fileName + "\n")
+		xPos += move
+		tileCount = tileCound - 1
+		print("Tiles Left To Export : " + str(tileCount) + "\n")
+		
+	xPos = xStart
+	zPos += move
+
+#Reset
+Refresh()
+sel.SetPosition(pos[0], pos[1], pos[2])
+mes = ("Terrain Successfully Exported Into " + str(tileTotal) + " Tiles")
+
+Message(mes)
+Refresh()
+
+	
+	
+

@@ -1,0 +1,2160 @@
+
+/*
+// Random Object Id For Instancer
+int $numberOfObjects = 10;
+nParticleShape1.rampPositionU = rand(0,$numberOfObjects);
+
+// Set Random Rotation Of Particles On Creation
+float $rotSpeed = 50;
+nParticleShape1.angularVelocityPP = << rand($rotSpeed), rand($rotSpeed), rand($rotSpeed) >>;
+
+
+*/
+
+/*
+	COLLISION EVENT
+	
+	global proc nParticleCollisionEvent(string $particleObject, int $particleId, string $geometryObject)
+	{ 
+		wizlog ("[COLLISION] Particle : " + $particleObject + " ID : " + $particleId + " Collided With : " + $geometryObject);
+		float $rotSpeed = 100;
+	
+		int $count = `getAttr collisionParticleShape1.count`;
+		
+		for($i=0;$i<$count;$i++){
+			float $pAge[] = `getParticleAttr -at age collisionParticleShape1.pt[$i]`;
+			if ($pAge[0] < 0.1){
+				float $ranID = floor(rand(0,5));
+				setParticleAttr -at instanceID -fv $ranID collisionParticleShape1.pt[$i];
+				setParticleAttr -at angularVelocityPP -vv (rand($rotSpeed)) (rand($rotSpeed)) (rand($rotSpeed)) collisionParticleShape1.pt[$i];
+				
+				//print ("	[+] New Particle : collisionParticleShape1.pt[" + $i + "] InstanceID : " + $ranID + "\n");
+		
+			}
+		
+		}
+
+
+	}
+
+
+*/
+
+/*
+KILL FIELD
+if (mag(inputForce[0]) >= 0.001){
+	lifespanPP = 0.0;
+}
+
+
+*/
+
+/*
+
+global proc scriptedNParticleCollisionEvent(string $particleObject, int $particleId, string $geometryObject)
+{ 			
+	int $feedback = 1;	
+	if (`objExists "hitInfoLocator1"`){
+		if (`attributeExists "feedback" hitInfoLocator1`){
+			$feedback = `getAttr "hitInfoLocator1.feedback"`;
+		}
+	}
+	
+	int $emitCount = 4;
+	float $spread = 1.0;		
+	float $inheritVelocity = 0.5;
+	
+	string $colEmitter;
+	float $emitVel[];
+
+	// Make sure no spaces are in object name
+	string $geoObj = substituteAllString($geometryObject, " ", "");
+
+	// Get the position and velocity of the colliding particle
+	float $pos[] = `getParticleAttr -at position ($particleObject + ".pt[" + $particleId + "]")`;
+	float $vv[] = `getParticleAttr -at velocity ($particleObject + ".pt[" + $particleId + "]")`;
+
+
+	float $emitVel[];
+
+	// Make a locator named "hitInfoLocator1" and an anotation named "hitInfoAnnotationShape1" For Visual Feedback
+	if ($feedback){	
+		print ("*********************\n");
+		print ("[COLLISION] Particle : " + $particleObject + " ID : " + $particleId + " Collided With : " + $geometryObject + "\n");			
+		print ("	Position : " + $pos[0] + " : " + $pos[1] + " : " + $pos[2] + "\n");
+		print ("	Velocity : " + $vv[0] + " : " + $vv[1] + " : " + $vv[2] + "\n");	
+		
+		if (`objExists "hitInfoAnnotationShape1"`){
+			setAttr -type "string" "hitInfoAnnotationShape1.text" $geoObj;		
+		}
+		if (`objExists "hitInfoLocator1"`){
+			xform -a -t $pos[0] $pos[1] $pos[2] "hitInfoLocator1";
+		}
+		
+	}
+
+	if ($geoObj == "SomeMesh"){
+		print ("[HIT OBJECT 1]\n");
+		
+		$colEmitter = "someNParticleShape1";
+
+		// Emit in opposite direction of collision
+		float $emitVel[] = { (0 - $vv[0]), (0 - $vv[1]), (0 - $vv[2]) };
+		
+		$emitCount = 6;
+		$spread = 2.0;
+	
+	} else if ($geoObj == "AnotherMesh") {
+		print ("[HIT OBJECT 2]\n");
+		
+		$colEmitter = "anotherNParticleShape1";
+
+		// Inherit a percentage of velocity
+		$emitVel = { ($vv[0] * $inheritVelocity), ($vv[1] * $inheritVelocity), ($vv[2] * $inheritVelocity) };
+		
+		$emitCount = 4;
+		$spread = 0.5;
+		
+	} else {
+		return ;
+	}
+
+	// Emit The Particles
+		
+	for ($i=0;$i<$emitCount;$i++){
+	
+		// Randomize postion of new particle
+		float $ranPos[] = { (rand(($pos[0] + $spread), ($pos[0] - $spread))), (rand(($pos[1] + $spread), ($pos[1] - $spread))), (rand(($pos[2] + $spread), ($pos[2] - $spread))) };
+		
+		// Emit
+		emit -o $colEmitter -pos $ranPos[0] $ranPos[1] $ranPos[20] -at velocity -vv $emitVel[0] $emitVel[1] $emitVel[2] ;
+
+	}
+
+}
+
+// TRAILS
+// POINT PARTICLE IN DIRECTION OF MOTION
+
+float $magVel = (mag(nParticleShape1.velocity));
+string $trailParticle = "trailNParticleShape1";
+
+int $trailCount = 7;
+float $trailDensity = 0.5;
+float $randomSpread = 1;
+float $curTime = `currentTime -q`;
+
+$trailCount = int(floor($trailCount - ($curTime * 0.01)));
+
+if ($magVel > 200 && $magVel < 400 && $trailCount > 0){
+	float $pPos[] = nParticleShape1.position;
+	float $vel[] = nParticleShape1.velocity;
+	$vel[0] = ($vel[0] * 0.5);
+	$vel[1] = ($vel[1] * 0.5);
+	$vel[2] = ($vel[2] * 0.5);
+	//wizlog ("[EMIT TRAIL] Velocity : " + $vel[0] + ", " + $vel[1] + ", " + $vel[2]);
+
+	float $sortVel[] = sort($vel);
+	float $dir[];
+	if ($sortVel[0] < $sortVel[2]){
+		$dir = { ($vel[0] / $sortVel[0]), ($vel[1] / $sortVel[0]), ($vel[2] / $sortVel[0]) };
+	} else {
+		$dir = { ($vel[0] / $sortVel[2]), ($vel[1] / $sortVel[2]), ($vel[2] / $sortVel[2]) };
+	}
+	//wizlog ("[DIRECTION] : " + $dir[0] + ", " + $dir[1] + ", " + $dir[2]);
+
+	for ($i=0; $i<$trailCount;$i++){
+		$trailDensity = $trailDensity * ($i * 0.5);
+		float $multPos[] = { (($dir[0] * $i) * $trailDensity), (($dir[1] * $i) * $trailDensity), (($dir[2] * $i) * $trailDensity) };
+		
+		float $rs = $randomSpread * ($i * 0.5);
+		$multPos[0] = $multPos[0] + rand((0 - $rs), $rs);
+		$multPos[1] = $multPos[1] + rand((0 - $rs), $rs);
+		$multPos[2] = $multPos[2] + rand((0 - $rs), $rs);
+
+		float $emitPos[] = { ($pPos[0] - $multPos[0]), ($pPos[1] - $multPos[1]), ($pPos[2] - $multPos[2]) };		
+
+		emit -o trailNParticleShape1 -pos $emitPos[0] $emitPos[1] $emitPos[2] -at velocity -vv $vel[0] $vel[1] $vel[2];	
+		
+	}
+
+
+}
+
+
+
+
+*/
+
+global proc nParticleWiz()
+{
+
+}
+
+global proc nParticleWizMainMenuBarLayout()
+{
+	string $menuBarLayout = `menuBarLayout`;
+	
+	nParticleWizMainMenu($menuBarLayout);
+		
+	
+}
+
+
+global proc nParticleWizMainMenu( string $parent )
+{
+	setParent $parent;
+	menu -l "nParticles" -to true;	
+		nParticleWizMainMenuItems();
+
+	
+}
+
+global proc nParticleWizMainMenuItems()
+{
+
+	menuItem -sm true -l "Copy" -to true;	
+		menuItem -l "Copy Particles Into Particle System" -c ("wizCopyParticlesIntoParticleSystem(\"-sl\");");
+			menuItem -ob true -c ("openCurrentOptionsLayout(\"wizCopyParticlesIntoParticleSystemOptions\");");
+	setParent -menu..;
+	
+	menuItem -sm true -l "Attributes" -to true;	
+		menuItem -l "Set Velocity To Zero" -c ("wizCopyParticlesIntoParticleSystem(\"-sl\");");
+			menuItem -ob true -c ("openCurrentOptionsLayout(\"wizCopyParticlesIntoParticleSystemOptions\");");
+	setParent -menu..;
+	
+	menuItem -sm true -l "Emitters" -to true;	
+		menuItem -l "Particle Line" -c ("wizCopyParticlesIntoParticleSystem(\"-sl -wiz\");");
+			menuItem -ob true -c ("openCurrentOptionsLayout(\"wizParticleLineOptions\");");
+	setParent -menu..;
+	
+}
+
+
+global proc nParticleModule(string $parent)
+{
+	string $layout = `frameLayout
+		-l "nParticles"	
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $parent		
+		`;	
+		
+		nParticleWizMainMenuBarLayout();
+				
+		wizParticleColorDuplicatorLayout($layout);
+		
+		wizCopyParticlesIntoParticleSystemLayout($layout);
+		
+		wizParticleLinesLayout($layout);
+		
+		setParent..;
+}
+
+global proc nParticleExpressionsLayout( string $parent )
+{
+	   string $layout = `frameLayout
+			-l "Expressions"	
+			-ann ""
+			-bv true
+			-la "center"
+			-li 10
+			-lv true
+			-mw 10
+			-mh 10		
+			
+			-cll true
+			-cl true
+			-p $parent
+			nParticleWiz_expressions_frameLayout
+			`;
+				
+		
+		button 
+			-l "Create Particle Cluster Expression"
+			-ann "Select the particle you want to create the expression for."
+			-c "createnParticleClustersExpression"
+			;
+		
+		button 
+			-l "Create Fast Particle Cluster Expression"
+			-c "createFastnParticleClustersExpression"
+			;
+}
+
+
+global proc wizParticleLinesLayout( string $parent )
+{
+	string $layout = `frameLayout
+			-l "Particle Lines"	
+			-ann ""
+			-bv true
+			-la "center"
+			-li 10
+			-lv true
+			-mw 10
+			-mh 10		
+			
+			-cll true
+			-cl true
+			-p $parent
+			nParticleWiz_particleLines_frameLayout
+			`;
+			
+	//... content...
+
+	wizIntFieldGrp(
+		"-l Rate "
+		+"-nf 1 "
+		+"-v1 10000 "
+		+"-n wizParticleLine_rate_intFieldGrp"
+		);
+		
+
+	wizFloatFieldGrp(
+		"-l Emit Frames "
+		+"-nf 1 "
+		+"-v1 3 "
+		+"-n wizParticleLine_emitFrames_floatFieldGrp"
+		);
+		
+	/*	
+	string $c = ("int $emitRate = `intFieldGrp -q -v1 wizParticleLine_rate_intFieldGrp`;"+"\n"
+		+"float $emitFrames = `floatFieldGrp -q -v1 wizParticleLine_emitFrames_floatFieldGrp`;"+"\n"
+		+"wizParticleLine(\"-sl -ef \" + $emitFrames + \" -wiz\");"
+		);
+		*/
+	string $c = ("wizParticleLine(\"-sl -wiz\");");	
+
+		
+	button
+		-l "Create Particle Lines"
+		-c $c
+		;	
+
+		
+}
+
+
+
+global proc createnParticleClustersExpression()
+{
+	//string $particle = `textFieldButtonGrp -q -text getParticle`;	
+	//string $myParticle = $partShape[0];
+	string $sel[] = `ls -dag -s -sl`;
+	string $particle = $sel[0];
+	string $emitters[] = `listConnections -t pointEmitter $particle`;
+	string $emitter = $emitters[0];
+
+	print("Particle:" + $particle + " Emitter: " + $emitter + "\n");
+
+	//Emitter Particle Cluster Attributes
+	if(attributeExists ("particleClusterAttributes", $particle)==0){	
+		addAttr -ln particleClusterAttributes -multi $particle;
+		addAttr -ln particleClusterSize -at long -k 1 -min 0 -max 100 -smx 10 -dv 1 $particle;
+		addAttr -ln randomClusterSize -at double -k 1 -min 0 -max 100 -smx 10 -dv 0 $particle;
+		addAttr -ln clusterSpread -at double -k 1 -min 0 -max 100 -smx 10 -dv 0 $particle;
+		addAttr -ln clusterRandomVelocity -at double -k 1 -min 0 -max 100 -smx 10 -dv 0 $particle;
+		
+		addAttr -ln extraEmitterAttributes -multi $particle;
+		addAttr -ln randomizeRate -at double -k 1 -min 0 -max 100 -smx 10 -dv 0 $particle;
+		addAttr -ln randomizeDirection -at double -k 1 -min 0 -max 100 -smx 10 -dv 0 $particle;
+		addAttr -ln initEmitRate -at double -h 1 $particle;
+		addAttr -ln initEmitDirX -at double -h 1 $particle;
+		addAttr -ln initEmitDirY -at double -h 1 $particle;
+		addAttr -ln initEmitDirZ -at double -h 1 $particle;
+
+	}
+
+
+	//Per Particle Attributes
+	if (attributeExists ("TLAge0", $particle)==0){
+		addAttr -ln TLAge0  -dt doubleArray -h 1 $particle;
+	}
+	if (attributeExists ("TLAge", $particle)==0){
+		addAttr -ln TLAge  -dt doubleArray -h 1 $particle;
+	}
+	setAttr -e-keyable true ($particle + ".TLAge");
+
+	if (attributeExists ("TLBirth0", $particle)==0){
+		addAttr -ln TLBirth0  -dt doubleArray -h 1 $particle;
+	}
+
+	if (attributeExists ("TLBirth", $particle)==0){
+		addAttr -ln TLBirth  -dt doubleArray -h 1 $particle;
+	}
+	setAttr -e-keyable true ($particle + ".TLAge");
+
+	if (attributeExists ("Cluster0", $particle)==0){
+		addAttr -ln Cluster0  -dt doubleArray -h 1  $particle;
+	}
+	if (attributeExists ("Cluster", $particle)==0){
+		addAttr -ln Cluster  -dt doubleArray -h 1 $particle;
+	}
+	setAttr -e-keyable true ($particle + ".Cluster");
+
+	string $quotes="\"";
+	string $particleVar = "string $particle = " + $quotes + $particle + $quotes;
+	string $emitterVar = "string $emitter = " + $quotes + $emitter + $quotes;
+
+	dynExpression -rad -s (
+	"float $pClusterSize = particleClusterSize;\n"
+	+"if($pClusterSize > 0){\n"
+	+"	emitParticleClusters();\n"
+	+"}\n"
+	+"global proc emitParticleClusters()\n"
+	+"{\n"
+	+ $particleVar + " ;\n"
+	+"float $pClusterSize = particleClusterSize;\n"
+	+"float $ranClusterSize = randomClusterSize;\n"
+	+"float $cSpread = clusterSpread;\n"
+	+"float $cRanVel = clusterRandomVelocity;\n"
+	+"float $minRanDis = 0.25;\n"
+	+"float $ranRate = randomizeRate;\n"
+	+"float $ranDir = randomizeDirection;\n"
+	+"float $pos[], $partDens[], $partVel[];\n"
+	+"float $currentTime = `currentTime -q`;\n"
+	+"float $clus[];\n"
+	+"int $pCount = `particle -ct -q $particle`;\n"
+
+	+"// Clear the trail array if this is a new simulation \n"
+	+"if($pCount <= 1){\n"
+	+"	float $partBirth[] = `getParticleAttr -at TLBirth ($particle + \".pt[0]\")`;\n"
+	+"	$partAge = `getParticleAttr -at age ($particle + \".pt[0]\")`;\n"
+	+"	if($partBirth[0] == 0){\n"
+	+"		if($ranRate > 0 || $ranDir > 0){\n"
+	+"			resetInitEmitterValues();\n"
+	+"			setInitEmitterValues();\n"
+	+"		}\n"
+	+"	}\n"
+	+"}\n"
+	+"\n"
+
+	+"string $emitCmd = (\"emit -object \" + $particle);\n"
+	+"$newParticles = false;\n"
+	+"float $clusterCount = 0;\n"
+	+"for($i = 0;$i< $pCount; $i++){\n"
+	+"	// retrieve age for every particle \n"
+	+"	$partAge = `getParticleAttr -at age ($particle + \".pt[\" + $i + \"]\")`;\n"
+	+"	// retrieve coordinates for every particle \n"
+	+"	$pos = `getParticleAttr -at worldPosition ($particle + \".pt[\" + $i + \"]\")`;\n" 
+	+"	// retrieve cluster data for every particle \n"
+	+"	$clus = `getParticleAttr -at Cluster ($particle + \".pt[\" + $i + \"]\")`;\n"
+	+"	// retrieve velocity for every particle \n"
+	+"	$partVel = `getParticleAttr -at velocity ($particle + \".pt[\" + $i + \"]\")`;\n"
+	+"	//print(\"Clus: \" + $clus[0] + \"\\n\");\n"
+	+"	if($partAge[0] < 0.25 && $clus[0] == 0){\n"
+	+"		int $c = 0;\n"
+	+"		if($cSpread > 0){\n"
+	+"			$minRanDis = $cSpread;\n"
+	+"		} else {\n"
+	+"			$minRanDis = $minRanDis * ((sqrt($pClusterSize)) * 2);\n"
+	+"		}\n"
+	+"		\n"
+	+"		if($ranClusterSize > 0){\n"
+	+"			$pClusterSize = trunc(rand($pClusterSize - $ranClusterSize,$pClusterSize + $ranClusterSize));\n"
+	+"		}\n"
+	+"		//print(\"MinRanDis: \" + $minRanDis + \"\\n\");\n"
+	+"		for($c=0; $c < $pClusterSize; $c++){\n"
+	+"			// This writes the commands that will emit all the cluster particles \n"
+	+"			float $ranX = rand($pos[0] - $minRanDis, $pos[0] + $minRanDis);\n"
+	+"			float $ranY = rand($pos[1] - $minRanDis, $pos[1] + $minRanDis);\n"
+	+"			float $ranZ = rand($pos[2] - $minRanDis, $pos[2] + $minRanDis);\n"
+	+"			vector $ranPos = <<$ranX,$ranY,$ranZ>>;\n"
+	+"			$emitCmd += \" -pos \"+ $ranPos;\n"
+	+"			$emitCmd += \" -at velocity \";\n"
+	+"			$ranX = rand($partVel[0] - $cRanVel, $partVel[0] + $cRanVel);\n"
+	+"			$ranY = rand($partVel[1] - $cRanVel, $partVel[1] + $cRanVel);\n"
+	+"			$ranZ = rand($partVel[2] - $cRanVel, $partVel[2] + $cRanVel);\n"
+	+"			vector $vel = <<($partVel[0] + $ranX),($partVel[1] + $ranY),($partVel[2] + $ranZ)>>;\n"
+	+"			//print(\"PartVel: \" + $partVel[0] + \" Vel: \" + $vel + \"\\n\");\n"
+	+"			$emitCmd += \" -vv \" + $vel;\n"
+	+"			$emitCmd += \" -at Cluster -fv 1 \" + \"\\n\";\n"
+	+"			//print( $emitCmd + \"\\n\");\n"
+	+"			$clusterCount++;\n"
+	+"			$newParticles = true;\n"
+	+"		}\n"
+	+"		select ($particle + \".pt[\" + $i + \"]\");\n"
+	+"		setParticleAttr -at Cluster -fv 1;\n"
+	+"	}\n"
+	+"	if($clus[0] == 1){\n"
+	+"		$clusterCount++;\n"
+	+"		//print(\"ClusterAge: \" + $partAge[0] + \"\\n\");\n"
+	+"	}\n"
+	+"}\n"
+	+"if($newParticles){\n"
+	+"	// Execute the emission of the cluster particle commands \n"
+	+"	eval( $emitCmd );\n"
+	+"}\n"
+	+"int $pCount = `particle -ct -q $particle`;\n"
+	+"float $pDiff = $pCount - $clusterCount;\n"
+	+"//print(\"ParticleCount: \" + $pDiff + \" ClusterCount: \" + $clusterCount + \"\\n\");\n"
+
+	+"// Set the Age of each particle to correspond to the timeline \n"
+	+"select ($particle + \".pt[\" + $i + \"]\");\n"
+	+"float $tlAge[] = `getParticleAttr -at TLAge ($particle + \".pt[\" + $i + \"]\")`;\n"
+	+"float $tlBirth[] = `getParticleAttr -at TLBirth ($particle + \".pt[\" + $i + \"]\")`;\n"
+	+"// If the particles tlBirth = 0 then this is right when the particle was born. \n"
+	+"if($tlBirth[0] == 0){\n"
+	+"	setParticleAttr -at TLBirth -fv $currentTime;\n"
+	+"	$tlBirth[0] = $currentTime;\n"
+	+"}\n"
+	+"float $newTLAge = $currentTime - $tlBirth[0];\n"
+	+"setParticleAttr -at TLAge -fv $newTLAge;\n"
+	+"}\n"
+
+	+"global proc setInitEmitterValues()\n"
+	+"{\n"
+	+ $particleVar + " ;\n"
+	+ $emitterVar + " ;\n"
+	+"float $emitRate = `getAttr ($emitter + \".rate\")`;\n"
+	+"float $emitDirX = `getAttr ($emitter + \".directionX\")`;\n"
+	+"float $emitDirY = `getAttr ($emitter + \".directionY\")`;\n"
+	+"float $emitDirZ = `getAttr ($emitter + \".directionZ\")`;\n"
+	+"// Set the attributes \n"
+	+"setAttr ($particle + \".initEmitRate\") $emitRate;\n"
+	+"setAttr ($particle + \".initEmitDirX\") $emitDirX;\n"
+	+"setAttr ($particle + \".initEmitDirY\") $emitDirY;\n"
+	+"setAttr ($particle + \".initEmitDirZ\") $emitDirZ;\n"
+	+"}\n"
+
+	+"global proc resetInitEmitterValues()\n"
+	+"{\n"
+	+ $particleVar + " ;\n"
+	+ $emitterVar + " ;\n"
+	+"float $emitRate = `getAttr ($particle + \".initEmitRate\")`;\n"
+	+"float $emitDirX = `getAttr ($particle + \".initEmitDirX\")`;\n"
+	+"float $emitDirY = `getAttr ($particle + \".initEmitDirY\")`;\n"
+	+"float $emitDirZ = `getAttr ($particle + \".initEmitDirZ\")`;\n"
+	+"// Set the attributes \n"
+	+"setAttr ($emitter + \".rate\") $emitRate;\n"
+	+"setAttr ($emitter + \".directionX\") $emitDirX;\n"
+	+"setAttr ($emitter + \".directionY\") $emitDirY;\n"
+	+"setAttr ($emitter + \".directionZ\") $emitDirZ;\n"
+	+"}\n"
+
+	) $particle;
+
+}
+
+global proc createFastnParticleClustersExpression()
+{
+	string $sel[] = `ls -dag -s -sl`;
+	string $particle = $sel[0];
+
+	//Emitter Particle Cluster Attributes
+	if(attributeExists ("particleClusterAttributes", $particle)==0){	
+		addAttr -ln particleClusterAttributes -multi $particle;
+		addAttr -ln particleClusterSize -at long -k 1 -min 0 -max 100 -smx 10 -dv 1 $particle;
+		addAttr -ln randomClusterSize -at double -k 1 -min 0 -max 100 -smx 10 -dv 0 $particle;
+		addAttr -ln clusterSpread -at double -k 1 -min 0 -max 100 -smx 10 -dv 0 $particle;
+		addAttr -ln clusterRandomVelocity -at double -k 1 -min 0 -max 100 -smx 10 -dv 0 $particle;
+		
+	}
+
+	//Per Particle Attributes
+	if (attributeExists ("cluster0", $particle)==0){
+		addAttr -ln cluster0  -dt doubleArray -h 1  $particle;
+	}
+	if (attributeExists ("cluster", $particle)==0){
+		addAttr -ln cluster  -dt doubleArray -h 1 $particle;
+	}
+	setAttr -e-keyable true ($particle + ".cluster");
+
+	string $quotes="\"";
+	string $particleVar = "string $particle = " + $quotes + $particle + $quotes;
+
+	dynExpression -rad -s (
+	"float $pClusterSize = particleClusterSize;\n"
+	+"if($pClusterSize > 0){\n"
+	+"	emitParticleClusters();\n"
+	+"}\n"
+	+"global proc emitParticleClusters()\n"
+	+"{\n"
+	+ $particleVar + " ;\n"
+	+"float $pClusterSize = particleClusterSize;\n"
+	+"float $ranClusterSize = randomClusterSize;\n"
+	+"float $cSpread = clusterSpread;\n"
+	+"float $cRanVel = clusterRandomVelocity;\n"
+	+"float $minRanDis = 0.25;\n"
+	+"float $pos[], $partDens[], $partVel[];\n"
+	+"float $currentTime = `currentTime -q`;\n"
+
+	+"float $cluster[] = `getParticleAttr -array true -at cluster $particle`;\n"
+	+"float $newPartIndex[];\n"
+	+"for($i=0;$i<`size $cluster`;$i++){\n"
+	+"	if($cluster[$i] == 0){\n"
+	+"		$newPartIndex[`size $newPartIndex`] = $i;\n"
+	+"		select ($particle + \".pt[\" + $i + \"]\");\n"
+	+"		setParticleAttr -at cluster -fv 1;\n"
+	+"	}\n"
+	+"}\n"
+
+	+"string $emitCmd = (\"emit -object \" + $particle);\n"
+	+"$newParticles = false;\n"
+	+"for($i=0;$i<`size $newPartIndex`;$i++){\n"
+	+"	int $p;\n"
+	+"	$p = $newPartIndex[$i];\n"
+	+"	// retrieve coordinates for every new particle \n"
+	+"	$pos = `getParticleAttr -at worldPosition ($particle + \".pt[\" + $p + \"]\")`;\n" 
+	+"	// retrieve velocity for every new particle \n"
+	+"	$partVel = `getParticleAttr -at velocity ($particle + \".pt[\" + $p + \"]\")`;\n"
+	+"	if($cSpread > 0){\n"
+	+"		$minRanDis = $cSpread;\n"
+	+"	} else {\n"
+	+"		$minRanDis = $minRanDis * ((sqrt($pClusterSize)) * 2);\n"
+	+"	}\n"
+	+"	if($ranClusterSize > 0){\n"
+	+"		$pClusterSize = trunc(rand($pClusterSize - $ranClusterSize,$pClusterSize + $ranClusterSize));\n"
+	+"	}\n"
+	+"	//print(\"MinRanDis: \" + $minRanDis + \"\\n\");\n"
+	+"	for($c=0;$c<$pClusterSize;$c++){\n"
+	+"		// This writes the commands that will emit all the cluster particles \n"
+	+"		float $ranX = rand($pos[0] - $minRanDis, $pos[0] + $minRanDis);\n"
+	+"		float $ranY = rand($pos[1] - $minRanDis, $pos[1] + $minRanDis);\n"
+	+"		float $ranZ = rand($pos[2] - $minRanDis, $pos[2] + $minRanDis);\n"
+	+"		vector $ranPos = <<$ranX,$ranY,$ranZ>>;\n"
+	+"		$emitCmd += \" -pos \"+ $ranPos;\n"
+	+"		$emitCmd += \" -at velocity \";\n"
+	+"		$ranX = rand($partVel[0] - $cRanVel, $partVel[0] + $cRanVel);\n"
+	+"		$ranY = rand($partVel[1] - $cRanVel, $partVel[1] + $cRanVel);\n"
+	+"		$ranZ = rand($partVel[2] - $cRanVel, $partVel[2] + $cRanVel);\n"
+	+"		vector $vel = <<($partVel[0] + $ranX),($partVel[1] + $ranY),($partVel[2] + $ranZ)>>;\n"
+	+"		//print(\"PartVel: \" + $partVel[0] + \" Vel: \" + $vel + \"\\n\");\n"
+	+"		$emitCmd += \" -vv \" + $vel;\n"
+	+"		$emitCmd += \" -at cluster -fv 1 \" + \"\\n\";\n"
+	+"		//print( $emitCmd + \"\\n\");\n"
+	+"		$newParticles = true;\n"
+	+"	}\n"
+	+"}\n"
+	+"if($newParticles){\n"
+	+"	// Execute the emission of the cluster particle commands \n"
+	+"	eval( $emitCmd );\n"
+	+"}\n"
+	+"}\n"
+	) $particle;
+}
+
+/*
+
+global proc createnParticleTrailsExpression()
+{
+
+	string $sel[] = `ls -dag -s -sl`;
+	string $particle = $sel[0];
+	string $emitters[] = `listConnections -t pointEmitter $particle`;
+	string $emitter = $emitters[0];
+
+	print("Particle:" + $particle + " Emitter: " + $emitter + "\n");
+
+	//Emitter Particle Cluster Attributes
+	if (attributeExists ("particleTrailAttributes", $particle)==0){	
+		addAttr -ln particleTrailAttributes -multi $particle;
+		addAttr -ln trailParticleCount -at long -k 1 -min 0 -max 100 -smx 10 -dv 1 $particle;
+		addAttr -ln trailDensity -at double -k 1 -min 0 -max 100 -smx 10 -dv 0 $particle;
+		addAttr -ln trailSpread -at double -k 1 -min 0 -max 100 -smx 10 -dv 0 $particle;
+		addAttr -ln inheritVelocity -at double -k 1 -min 0 -max 100 -smx 10 -dv 0 $particle;
+		
+		addAttr -ln extraEmitterAttributes -multi $particle;
+		addAttr -ln randomizeRate -at double -k 1 -min 0 -max 100 -smx 10 -dv 0 $particle;
+		addAttr -ln randomizeDirection -at double -k 1 -min 0 -max 100 -smx 10 -dv 0 $particle;
+		addAttr -ln initEmitRate -at double -h 1 $particle;
+		addAttr -ln initEmitDirX -at double -h 1 $particle;
+		addAttr -ln initEmitDirY -at double -h 1 $particle;
+		addAttr -ln initEmitDirZ -at double -h 1 $particle;
+
+	}
+
+
+	//Per Particle Attributes
+	if (attributeExists ("TLAge0", $particle)==0){
+		addAttr -ln TLAge0  -dt doubleArray -h 1 $particle;
+	}
+	if (attributeExists ("TLAge", $particle)==0){
+		addAttr -ln TLAge  -dt doubleArray -h 1 $particle;
+	}
+	setAttr -e-keyable true ($particle + ".TLAge");
+
+	if (attributeExists ("TLBirth0", $particle)==0){
+		addAttr -ln TLBirth0  -dt doubleArray -h 1 $particle;
+	}
+
+	if (attributeExists ("TLBirth", $particle)==0){
+		addAttr -ln TLBirth  -dt doubleArray -h 1 $particle;
+	}
+	setAttr -e-keyable true ($particle + ".TLAge");
+
+	if (attributeExists ("Trail0", $particle)==0){
+		addAttr -ln Trail0  -dt doubleArray -h 1  $particle;
+	}
+	if (attributeExists ("Trail", $particle)==0){
+		addAttr -ln Trail  -dt doubleArray -h 1 $particle;
+	}
+	setAttr -e-keyable true ($particle + ".Trail");
+
+	string $quotes="\"";
+	string $particleVar = "string $particle = " + $quotes + $particle + $quotes;
+	string $emitterVar = "string $emitter = " + $quotes + $emitter + $quotes;
+
+	dynExpression -rad -s (
+	"float $pTrailSize = particleTrailSize;\n"
+	+"if($pTrailSize > 0){\n"
+	+"	emitParticleTrails();\n"
+	+"}\n"
+	+"global proc emitParticleTrails()\n"
+	+"{\n"
+	+ $particleVar + " ;\n"
+	+"float $pTrailSize = particleTrailSize;\n"
+	+"float $ranTrailSize = randomTrailSize;\n"
+	+"float $cSpread = trailSpread;\n"
+	+"float $cRanVel = trailRandomVelocity;\n"
+	+"float $minRanDis = 0.25;\n"
+	+"float $ranRate = randomizeRate;\n"
+	+"float $ranDir = randomizeDirection;\n"
+	+"float $pos[], $partDens[], $partVel[];\n"
+	+"float $currentTime = `currentTime -q`;\n"
+	+"float $clus[];\n"
+	+"int $pCount = `particle -ct -q $particle`;\n"
+
+	+"// Clear the trail array if this is a new simulation \n"
+	+"if($pCount <= 1){\n"
+	+"	float $partBirth[] = `getParticleAttr -at TLBirth ($particle + \".pt[0]\")`;\n"
+	+"	$partAge = `getParticleAttr -at age ($particle + \".pt[0]\")`;\n"
+	+"	if($partBirth[0] == 0){\n"
+	+"		if($ranRate > 0 || $ranDir > 0){\n"
+	+"			resetInitEmitterValues();\n"
+	+"			setInitEmitterValues();\n"
+	+"		}\n"
+	+"	}\n"
+	+"}\n"
+	+"\n"
+
+	+"string $emitCmd = (\"emit -object \" + $particle);\n"
+	+"$newParticles = false;\n"
+	+"float $trailCount = 0;\n"
+	+"for($i = 0;$i< $pCount; $i++){\n"
+	+"	// retrieve age for every particle \n"
+	+"	$partAge = `getParticleAttr -at age ($particle + \".pt[\" + $i + \"]\")`;\n"
+	+"	// retrieve coordinates for every particle \n"
+	+"	$pos = `getParticleAttr -at worldPosition ($particle + \".pt[\" + $i + \"]\")`;\n" 
+	+"	// retrieve trail data for every particle \n"
+	+"	$clus = `getParticleAttr -at Trail ($particle + \".pt[\" + $i + \"]\")`;\n"
+	+"	// retrieve velocity for every particle \n"
+	+"	$partVel = `getParticleAttr -at velocity ($particle + \".pt[\" + $i + \"]\")`;\n"
+	+"	//print(\"Clus: \" + $clus[0] + \"\\n\");\n"
+	+"	if($partAge[0] < 0.25 && $clus[0] == 0){\n"
+	+"		int $c = 0;\n"
+	+"		if($cSpread > 0){\n"
+	+"			$minRanDis = $cSpread;\n"
+	+"		} else {\n"
+	+"			$minRanDis = $minRanDis * ((sqrt($pTrailSize)) * 2);\n"
+	+"		}\n"
+	+"		\n"
+	+"		if($ranTrailSize > 0){\n"
+	+"			$pTrailSize = trunc(rand($pTrailSize - $ranTrailSize,$pTrailSize + $ranTrailSize));\n"
+	+"		}\n"
+	+"		//print(\"MinRanDis: \" + $minRanDis + \"\\n\");\n"
+	+"		for($c=0; $c < $pTrailSize; $c++){\n"
+	+"			// This writes the commands that will emit all the trail particles \n"
+	+"			float $ranX = rand($pos[0] - $minRanDis, $pos[0] + $minRanDis);\n"
+	+"			float $ranY = rand($pos[1] - $minRanDis, $pos[1] + $minRanDis);\n"
+	+"			float $ranZ = rand($pos[2] - $minRanDis, $pos[2] + $minRanDis);\n"
+	+"			vector $ranPos = <<$ranX,$ranY,$ranZ>>;\n"
+	+"			$emitCmd += \" -pos \"+ $ranPos;\n"
+	+"			$emitCmd += \" -at velocity \";\n"
+	+"			$ranX = rand($partVel[0] - $cRanVel, $partVel[0] + $cRanVel);\n"
+	+"			$ranY = rand($partVel[1] - $cRanVel, $partVel[1] + $cRanVel);\n"
+	+"			$ranZ = rand($partVel[2] - $cRanVel, $partVel[2] + $cRanVel);\n"
+	+"			vector $vel = <<($partVel[0] + $ranX),($partVel[1] + $ranY),($partVel[2] + $ranZ)>>;\n"
+	+"			//print(\"PartVel: \" + $partVel[0] + \" Vel: \" + $vel + \"\\n\");\n"
+	+"			$emitCmd += \" -vv \" + $vel;\n"
+	+"			$emitCmd += \" -at Trail -fv 1 \" + \"\\n\";\n"
+	+"			//print( $emitCmd + \"\\n\");\n"
+	+"			$trailCount++;\n"
+	+"			$newParticles = true;\n"
+	+"		}\n"
+	+"		select ($particle + \".pt[\" + $i + \"]\");\n"
+	+"		setParticleAttr -at Trail -fv 1;\n"
+	+"	}\n"
+	+"	if($clus[0] == 1){\n"
+	+"		$trailCount++;\n"
+	+"		//print(\"TrailAge: \" + $partAge[0] + \"\\n\");\n"
+	+"	}\n"
+	+"}\n"
+	+"if($newParticles){\n"
+	+"	// Execute the emission of the trail particle commands \n"
+	+"	eval( $emitCmd );\n"
+	+"}\n"
+	+"int $pCount = `particle -ct -q $particle`;\n"
+	+"float $pDiff = $pCount - $trailCount;\n"
+	+"//print(\"ParticleCount: \" + $pDiff + \" TrailCount: \" + $trailCount + \"\\n\");\n"
+
+	+"// Set the Age of each particle to correspond to the timeline \n"
+	+"select ($particle + \".pt[\" + $i + \"]\");\n"
+	+"float $tlAge[] = `getParticleAttr -at TLAge ($particle + \".pt[\" + $i + \"]\")`;\n"
+	+"float $tlBirth[] = `getParticleAttr -at TLBirth ($particle + \".pt[\" + $i + \"]\")`;\n"
+	+"// If the particles tlBirth = 0 then this is right when the particle was born. \n"
+	+"if($tlBirth[0] == 0){\n"
+	+"	setParticleAttr -at TLBirth -fv $currentTime;\n"
+	+"	$tlBirth[0] = $currentTime;\n"
+	+"}\n"
+	+"float $newTLAge = $currentTime - $tlBirth[0];\n"
+	+"setParticleAttr -at TLAge -fv $newTLAge;\n"
+	+"}\n"
+
+	+"global proc setInitEmitterValues()\n"
+	+"{\n"
+	+ $particleVar + " ;\n"
+	+ $emitterVar + " ;\n"
+	+"float $emitRate = `getAttr ($emitter + \".rate\")`;\n"
+	+"float $emitDirX = `getAttr ($emitter + \".directionX\")`;\n"
+	+"float $emitDirY = `getAttr ($emitter + \".directionY\")`;\n"
+	+"float $emitDirZ = `getAttr ($emitter + \".directionZ\")`;\n"
+	+"// Set the attributes \n"
+	+"setAttr ($particle + \".initEmitRate\") $emitRate;\n"
+	+"setAttr ($particle + \".initEmitDirX\") $emitDirX;\n"
+	+"setAttr ($particle + \".initEmitDirY\") $emitDirY;\n"
+	+"setAttr ($particle + \".initEmitDirZ\") $emitDirZ;\n"
+	+"}\n"
+
+	+"global proc resetInitEmitterValues()\n"
+	+"{\n"
+	+ $particleVar + " ;\n"
+	+ $emitterVar + " ;\n"
+	+"float $emitRate = `getAttr ($particle + \".initEmitRate\")`;\n"
+	+"float $emitDirX = `getAttr ($particle + \".initEmitDirX\")`;\n"
+	+"float $emitDirY = `getAttr ($particle + \".initEmitDirY\")`;\n"
+	+"float $emitDirZ = `getAttr ($particle + \".initEmitDirZ\")`;\n"
+	+"// Set the attributes \n"
+	+"setAttr ($emitter + \".rate\") $emitRate;\n"
+	+"setAttr ($emitter + \".directionX\") $emitDirX;\n"
+	+"setAttr ($emitter + \".directionY\") $emitDirY;\n"
+	+"setAttr ($emitter + \".directionZ\") $emitDirZ;\n"
+	+"}\n"
+
+	) $particle;
+
+}
+*/
+
+//WIZ NODE CAST OPTIONS
+//--------------------------------------------
+global proc wizCopyParticlesIntoParticleSystemLayout( string $parent )
+{
+/*
+	string $columnLayout = "wizCopyParticlesIntoParticleSystemOptionsColumnLayout";
+	/*
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Particle Copy Options", $parent);
+		return;	
+	}
+	
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	*/
+	//wizFrameLayout("-p " + $parent + " -l Copy Particles Into Particle System -n nParticleWiz_copyParticlesIntoParticleSystem_frameLayout");
+	//setParent $columnLayout;
+	string $layout = `frameLayout
+		-l "Copy Particles Into Particle System"	
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $parent	
+		nParticleWiz_copyParticlesIntoParticleSystem_frameLayout	
+		`;
+	
+	frameLayout
+		-l "Selected Particles"	
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $layout
+		nParticleWiz_copyParticlesIntoParticleSystemSelectedParticles_frameLayout	
+		;
+		
+	wizObjectSelectionTextScrollListLayout(
+		"-l Source Particles "
+		+"-p nParticleWiz_copyParticlesIntoParticleSystemSelectedParticles_frameLayout "
+		+"-n wizCopyParticlesIntoParticleSystem_sourceParticles"
+		);
+	
+	wizObjectSelectionTextScrollListLayout(
+		"-l Target Particles "
+		+"-p nParticleWiz_copyParticlesIntoParticleSystemSelectedParticles_frameLayout "
+		+"-n wizCopyParticlesIntoParticleSystem_targetParticles"
+		);
+		
+	setParent $layout;
+	
+	text -l "Attributes To Copy" -fn "boldLabelFont" -h 20 -al "left";
+		
+	/*	
+	wizCheckBox( 
+		"-l Age " 
+		+"-ann Copy Age Values "
+		+"-v 1 "
+		+"-n wizCopyParticlesIntoParticleSystem_copyAge_checkBox"
+		);
+	*/
+	
+	wizCheckBox( 
+		"-l Radius " 
+		+"-ann Copy Radius Values "
+		+"-v 1 "
+		+"-n wizCopyParticlesIntoParticleSystem_copyRadius_checkBox"
+		);
+		
+	wizCheckBox( 
+		"-l Velocity " 
+		+"-ann Copy Velocity Values "
+		+"-v 0 "
+		+"-n wizCopyParticlesIntoParticleSystem_copyVelocity_checkBox"
+		);
+		
+	wizCheckBox( 
+		"-l RGB " 
+		+"-ann Copy RGB Values "
+		+"-v 1 "
+		+"-n wizCopyParticlesIntoParticleSystem_copyRGB_checkBox"
+		);
+					
+	wizCheckBox( 
+		"-l Incandescence " 
+		+"-ann Copy Incandescence Values "
+		+"-v 0 "
+		+"-n wizCopyParticlesIntoParticleSystem_copyIncandescence_checkBox"
+		);
+		
+	wizCheckBox( 
+		"-l Opacity " 
+		+"-ann Copy Opacity Values "
+		+"-v 1 "
+		+"-n wizCopyParticlesIntoParticleSystem_copyOpacity_checkBox"
+		);
+		
+	wizCheckBox( 
+		"-l Rotation " 
+		+"-ann Copy Rotation Values "
+		+"-v 0 "
+		+"-n wizCopyParticlesIntoParticleSystem_copyRotation_checkBox"
+		);		
+		
+	wizSeparator();
+	text -l "Copy Into" -fn "boldLabelFont" -h 20 -al "left";
+			
+	wizCheckBox( 
+		"-l Random Particle System " 
+		+"-ann Copies randomly into multiple new particle systems "
+		+"-v 1 "
+		+"-n wizCopyParticlesIntoParticleSystem_randomParticleSystem_checkBox"
+		);
+		
+	wizCheckBox( 
+		"-l New Particle System " 
+		+"-ann Copies randomly into multiple new particle systems "
+		+"-v 1 "
+		+"-n wizCopyParticlesIntoParticleSystem_newParticleSystem_checkBox"
+		);
+		
+	wizIntFieldGrp(
+		"-l New Particle System Count "
+		+"-nf 1 "
+		+"-v 0 "
+		+"-n wizCopyParticlesIntoParticleSystem_newParticleSystemCount_intFieldGrp"
+		);
+	/*
+	wizCheckBox( 
+		"-l Connect Internal Ramps " 
+		+"-ann Connects Internal Ramps "
+		+"-v 1 "
+		+"-n wizCopyParticlesIntoParticleSystem_connectInternalRamps_checkBox"
+		);
+	*/
+	wizSeparator();
+	
+	wizCheckBox( 
+		"-l Copy ParticleShape Attributes " 
+		+"-ann Copies all the other attributes from source particle to target particle "
+		+"-v 1 "
+		+"-n wizCopyParticlesIntoParticleSystem_copyAttributes_checkBox"
+		);
+		
+	wizSeparator();
+	
+	wizIntFieldGrp(
+		"-l Skip Particles "
+		+"-nf 1 "
+		+"-v 0 "
+		+"-n wizCopyParticlesIntoParticleSystem_skipParticles_intFieldGrp"
+		);
+	
+	wizSeparator();
+	
+	string $com = ("int $skipP = `intFieldGrp -q -v1 wizCopyParticlesIntoParticleSystem_skipParticles_intFieldGrp`;"+"\n"
+	+"int $copyVel = `checkBox -q -v wizCopyParticlesIntoParticleSystem_copyVelocity_checkBox`;"+"\n"
+	+"int $randPart = `checkBox -q -v wizCopyParticlesIntoParticleSystem_randomParticleSystem_checkBox`;"+"\n"
+	+"int $npsc = `intFieldGrp -q -v1 wizCopyParticlesIntoParticleSystem_newParticleSystemCount_intFieldGrp`;"+"\n"
+	+"int $nps = `checkBox -q -v wizCopyParticlesIntoParticleSystem_newParticleSystem_checkBox`;"+"\n"
+	);
+	/*
+	+"int $cir = `checkBox -q -v wizCopyParticlesIntoParticleSystem_connectInternalRamps_checkBox`;"+"\n"
+	+"if ($nps == 1){"+"\n"
+	+"	string $newTp[] = wizCreateNewParticleSystemForCopy(\"-c \" + $npsc);"+"\n"
+	+"}"+"\n"
+	*/
+	string $ncom = $com + "wizCopyParticlesIntoParticleSystem(\"-wiz -skip \" + $skipP + \" -rps \" + $randPart + \" -new \" + $nps + \" -nc \" + $npsc);"+"\n";
+		
+	
+	
+	string $ccom = $com + "wizCopyParticlesIntoParticleSystem(\"-sl -classic -skip \" + $skipP + \" -rps \" + $randPart + \" -nc \" + $npsc);"+"\n";
+	
+	button
+		-l "Copy Particles Into Particle System"
+		-c $ncom
+		;	
+	
+	button
+		-l "Copy Particles Into Classic Particle System"
+		-c $ccom
+		;
+		
+}
+
+
+
+
+//@ WIZ DUPLICATE OBJECTS ON PARTICLES
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName("-obj someObject -q -sl");
+	
+	</code>
+*********************************************************************/
+global proc string[] wizDuplicateObjectsOnParticles( string $flags )
+{
+	string $obj, $type;
+	string $p;
+	string $sel[];
+	int $edit;
+	int $doRot;
+	int $duplicate;
+	int $instance;
+	int $refCopy;
+	int $nc;
+	string $dupMethod = "duplicate";
+	string $tok[] = tokenizeString($flags, " ");
+	int $colMatch = `checkBox -q -v wizParticleColorDuplicator_useMatchColor_checkBox`;
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+			
+			case "-p" : case "-particle" :
+			$p = $tok[($i + 1)];
+			break ;
+			
+			case "-typ" : case "-type" :
+			$type = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+			case "-dup" : case "-duplicate" : case "-copy" :
+			$duplicate = 1;
+			$dupMethod = "duplicate";
+			break ;
+			
+			case "-i" : case "-instance" :
+			$instance = 1;
+			$dupMethod = "instance";
+			break ;
+			
+			case "-rc" : case "-referenceCopy" :
+			$refCopy = 1;
+			$dupMethod = "referenceCopy";
+			break ;
+			
+			case "-dm" : case "-duplicateMethod" :
+			$dupMethod = $tok[($i + 1)];
+			break ;
+			
+			case "-cm" : case "-colorMatch" :
+			$colMatch = 1;
+			break ;
+			
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	if (`size $p` == 0){
+		$p = $sel[(`size $sel` - 1)];
+		stringArrayRemoveAtIndex((`size $sel` - 1), $sel);
+		
+	}
+
+	string $ps[] = smartSelectObjectsOfType({$p}, "nParticle");
+	
+	if (`size $ps` == 0){
+		wizlog ("	[!] A nParticle object must be selected [!]");
+		return {""};
+	} else {
+		$p = $ps[0];
+	}
+	
+	float $pos[] = `getParticleAttr -at position -a true $p`;
+	float $rot[];
+	if (`attributeExists "rotationPP" $p`){
+		$doRot = 1;
+		$rot = `getParticleAttr -at rotationPP -a true $p`;
+	}
+	
+	float $scale[] = `getParticleAttr -at radiusPP -a true $p`;
+	float $pCol[] = `getParticleAttr -a true -at rgbPP $p`;
+	
+	if ($colMatch){
+		string $allColMatSets[] = `ls -r true "wizColorMatchSet"`;
+		//select -r $allColMatSets;
+		//$sel = `ls -sl`;
+		$sel = `sets -q $allColMatSets[0]`;
+	}
+	
+	int $pCount = (`size $pos` / 3);
+	int $pi;
+	string $return[];
+	for ($i=0;$i<$pCount;$i++){
+		string $dup[];
+		if ($colMatch){
+			select -r $sel;
+			string $dupObj[] = wizMatchColor("-sl -match " + $pCol[$pi] + " " + $pCol[($pi + 1)] + " " + $pCol[($pi + 2)]);
+			if (`size $dupObj` == 0){
+				continue;
+			}
+			$dup = wizDoDuplicate({$dupObj[0]}, ("-meth " + $dupMethod));
+			
+		} else {
+			int $ranI = randInt(0,(`size $sel` - 1));
+			$dup = wizDoDuplicate({$sel[$ranI]}, ("-meth " + $dupMethod));
+		}
+				
+		xform -ws -t $pos[$pi] $pos[($pi + 1)] $pos[($pi + 2)] $dup[0];
+		if ($doRot){
+			xform -ro $rot[$pi] $rot[($pi + 1)] $rot[($pi + 2)] $dup[0];
+		}
+		xform -a -s $scale[$pi] $scale[($pi + 1)] $scale[($pi + 2)] $dup[0];
+		$return[`size $return`] = $dup[0];
+		$pi = $pi + 3;
+	}
+	
+	return $return;
+
+}
+
+//@ WIZ COPY PARTICLES INTO PARTICLE SYSTEM
+//====================================================================
+/*****************************************************************//**
+	Copies particles into a new or existing particle.
+	<hr>
+	<b>Synopsis</b><br>
+	wizCopyParticlesIntoParticleSystem <br>
+	Select multiple source particles and then a target particle to
+	copy multiple particle systems into a single particle system.
+	
+	<b>Return value</b><br>
+	string[] the new target particle system.
+	
+	<b>Flags</b><br>
+	-sourceParticle(-sp) <br>
+	-targetParticle(-tp) <br>
+	-selected(-sl) <br>
+	-new(-n) <br>
+	-velocity(-v) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	wizDuplicateObjectsOnParticles(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $newParticles[] = wizCopyParticlesIntoParticleSystem("-new -sl");
+	
+	</code>
+*********************************************************************/
+global proc string[] wizCopyParticlesIntoParticleSystem( string $flags )
+{
+	wizlog("[@] wizCopyParticlesIntoParticleSystem");
+	string $sp[];
+	string $tp[];
+	string $sel[] = `ls -sl`;;
+	int $doRot;
+	int $new;
+	int $skip;
+	int $init;
+	string $return[];
+	int $classic;
+	int $nc = 1;
+	int $randPartSys = 1;
+		
+	string $tok[] = tokenizeString($flags, " ");	
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-init" :
+			$init = 1;
+			break ;
+			
+			case "-wiz" : 
+			$sp = `textScrollList -q -ai wizCopyParticlesIntoParticleSystem_sourceParticles_textScrollList`;
+			$tp = `textScrollList -q -ai wizCopyParticlesIntoParticleSystem_targetParticles_textScrollList`;
+			break ;
+			
+			case "-sp" : case "-sourceParticle" :
+			$sp = wizFlagArray($tok, $i);
+			break ;
+			
+			case "-tp" : case "-targetParticle" :
+			$tp[`size $tp`] = $tok[($i + 1)];
+			$return = $tp;
+			break ;		
+			
+			case "-new" : case "-n" : 
+			$new = int ($tok[($i + 1)]);
+			if ($new == 1){
+				wizlog ("	[#] Creating New Particles");
+			}
+			
+			//string $emitter[] = `emitter -pos 0 0 0 -type volume -r 100 -sro 0 -nuv 0 -cye none -cyi 1 -spd 1 -srn 0 -nsp 1 -tsp 0 -mxd 0 -mnd 0 -dx 1 -dy 0 -dz 0 -sp 0 -vsh cube -vof 0 0 0 -vsw 360 -tsr 0.5 -afc 1 -afx 1 -arx 0 -alx 0 -rnd 0 -drs 0 -ssz 0 `;
+			//string $nParticle[] = `nParticle`;
+			//connectDynamic -em $emitter[0] $nParticle[0];
+			//setAttr ($nParticle[0] + ".incandescenceInput") 2;
+			//$tp[`size $tp`] = $nParticle[0];
+			//$new = 1;
+			//$return = { $nParticle[0], $emitter[0] };
+			break ;	
+			
+			case "-sl" : case "-selected" :
+			//$sel = `ls -sl`;
+			$sp = smartSelectObjectsOfType(`ls -sl`, "-type nParticle");
+			wizlog(niceArrayList("	[#] Selected Particles [#]", $sp));
+			/*
+			if ($new == 0 && `size $sp` > 1){		
+				wizlog ("	[#] Creating New Particles");
+				$tp[`size $tp`] = $sp[(`size $sp` - 1)];
+				stringArrayRemoveAtIndex((`size $sp` - 1), $sp);
+			}
+			*/
+			//$sp = $sel;
+			break ;		
+			
+			case "-v" : case "-velocity" :
+			$v = 1;
+			break ;
+			
+			case "-sk" : case "-skip" :
+			$skip = int ($tok[($i + 1)]);
+			break ;
+			
+			case "-cla" : case "-classic" :
+			$classic = 1;
+			string $emitter[] = `emitter -pos 0 0 0 -type volume -r 100 -sro 0 -nuv 0 -cye none -cyi 1 -spd 1 -srn 0 -nsp 1 -tsp 0 -mxd 0 -mnd 0 -dx 1 -dy 0 -dz 0 -sp 0 -vsh cube -vof 0 0 0 -vsw 360 -tsr 0.5 -afc 1 -afx 1 -arx 0 -alx 0 -rnd 0 -drs 0 -ssz 0 `;
+			string $cParticle[] = `particle`;
+			connectDynamic -em $emitter[0] $cParticle[0];
+			setAttr ($cParticle[0] + ".incandescenceInput") 2;
+			$tp[`size $tp`] = $cParticle[0];
+			$new = 1;
+			$return = { $cParticle[0], $emitter[0] };
+			break ;
+			/*
+			case "-new" : 
+			$new = int($tok[($i + 1)]);
+			break;
+			*/
+			
+			case "-nc" : case "-newCount" : 
+			$nc = int($tok[($i + 1)]);
+			break;
+			
+			case "-rps" : case "-randomParticleSystem" :
+			$randPartSys = int($tok[($i + 1)]);
+			break; 
+			
+			
+		}
+	}
+	
+	if ($new == 0 && `size $sp` > 1 && `size $tp` == 0){		
+		wizlog ("	[#] Creating New Particles");
+		$tp[`size $tp`] = $sp[(`size $sp` - 1)];
+		stringArrayRemoveAtIndex((`size $sp` - 1), $sp);
+	}
+		
+	if (`size $tp` == 0 || $new == 1){
+		if ($nc == 0){
+			$nc = 1;
+		}
+		wizlog ("	[#] Creating : " + $nc + " : New Particle Systems");
+		
+		for ($i=0;$i<$nc;$i++){			
+			
+			string $emitter[] = `emitter -pos 0 0 0 -type volume -r 100 -sro 0 -nuv 0 -cye none -cyi 1 -spd 1 -srn 0 -nsp 1 -tsp 0 -mxd 0 -mnd 0 -dx 1 -dy 0 -dz 0 -sp 0 -vsh cube -vof 0 0 0 -vsw 360 -tsr 0.5 -afc 1 -afx 1 -arx 0 -alx 0 -rnd 0 -drs 0 -ssz 0 `;
+			string $nParticle[] = `nParticle`;
+			connectDynamic -em $emitter[0] $nParticle[0];
+			//setupNParticleConnections $nParticle[0];
+			refresh -f;
+			refreshAE;
+			
+			//disconnectAttr ($nParticle[1] + ".internalColorRamp") ($nParticle[1] + ".rgbPP");
+			
+			string $tarPart[] = smartSelectObjectsOfType($nParticle, "-type nParticle");
+			
+			$tp[`size $tp`] = $tarPart[0];
+			$new = 1;
+			wizlog ("	[#] New Particle System : " + $nParticle[0]);
+			$return[`size $return`] = $nParticle[0];
+			$return[`size $return`] = $emitter[0];
+			
+			if (`checkBox -q -v wizCopyParticlesIntoParticleSystem_copyAttributes_checkBox`){
+				if ($i == 0 && $nc == 1){
+					select -r $sp[0];
+					select -add $tarPart[0];
+					createTempNodePresetAndApplyToSelectedObjects();
+				} else if (`size $sp` == $nc){
+					select -r $sp[$i];
+					select -add $tarPart[0];
+					createTempNodePresetAndApplyToSelectedObjects();
+				}
+			}
+			
+			refresh -f;
+			refreshAE;
+			
+		}
+		
+	}
+
+	if (`size $sp` == 0){
+		wizlog ("	[!] A nParticle object must be selected [!]");
+		return {""};
+	} 
+	
+	wizlog (niceArrayList("	[#] Source Particles [#]", $sp));
+	wizlog (niceArrayList("	[#] Taget Particle(s) : ", $tp));
+	
+	refresh -f;
+	refreshAE;
+	
+	float $pos[];
+	float $rot[];
+	float $rad[];
+	float $pCol[];
+	float $pInc[];
+	float $pOp[];
+	float $pAge[];
+	
+	// get the attr of all source particles
+	for ($i=0;$i<`size $sp`;$i++){		
+		float $ppos[] = `getParticleAttr -at position -a true $sp[$i]`;
+		$pos = appendFloatArray($pos, $ppos, `size $ppos`);
+		
+		/*
+		if (`checkBox -q -v wizCopyParticlesIntoParticleSystem_copyAge_checkBox`){
+			if (`attributeExists "age" $sp[$i]`){
+				float $ppAge[] = `getParticleAttr -at age -a true $sp[$i]`;
+				$pAge = appendFloatArray($pAge, $ppAge, `size $ppAge`);
+				
+			}
+		}
+		*/
+		
+		if (`checkBox -q -v wizCopyParticlesIntoParticleSystem_copyRadius_checkBox`){
+			if (`attributeExists "radiusPP" $sp[$i]`){
+				float $prad[] = `getParticleAttr -at radiusPP -a true $sp[$i]`;
+				$rad = appendFloatArray($rad, $prad, `size $prad`);
+				
+			}
+		}
+		
+		
+		
+		if (`checkBox -q -v wizCopyParticlesIntoParticleSystem_copyRGB_checkBox`){
+			if (`attributeExists "rgbPP" $sp[$i]`){
+				wizlog ("	[#] Copy rgbPP [#] ");
+				float $ppCol[] = `getParticleAttr -a true -at rgbPP $sp[$i]`;		
+				$pCol = appendFloatArray($pCol, $ppCol, `size $ppCol`);
+				/*
+				for ($j=0;$j<`size $tp`;$j++){
+						disconnectAttr ($tp[$j] + ".internalColorRamp") ($tp[$j] + ".rgbPP");
+						//addAttr -ln rgbPP -dt vectorArray $tp[$j];
+						//addAttr -ln rgbPP0 -dt vectorArray $tp[$j];
+				}
+				*/
+			}
+						
+		}
+		
+		if (`checkBox -q -v wizCopyParticlesIntoParticleSystem_copyIncandescence_checkBox`){
+			if (`attributeExists "incandescencePP" $sp[$i]`){
+				float $ppInc[] = `getParticleAttr -a true -at incandescencePP $sp[$i]`;		
+				$pInc = appendFloatArray($pInc, $ppInc, `size $ppInc`);
+				for ($j=0;$j<`size $tp`;$j++){
+					if (`attributeExists "incandescencePP" $tp[$j]` == 0){
+						addAttr -ln incandescencePP -dt vectorArray $tp[$j];
+						addAttr -ln incandescencePP0 -dt vectorArray $tp[$j];
+					}
+				}
+			}
+		}
+		
+		if (`checkBox -q -v wizCopyParticlesIntoParticleSystem_copyOpacity_checkBox`){
+			if (`attributeExists "opacityPP" $sp[$i]`){
+				float $ppOp[] = `getParticleAttr -a true -at opacityPP $sp[$i]`;
+				$pOp = appendFloatArray($pOp, $ppOp, `size $ppOp`);
+				for ($j=0;$j<`size $tp`;$j++){
+					if (`attributeExists "opacityPP" $tp[$j]` == 0){
+						addAttr -ln opacityPP -dt vectorArray $tp[$j];
+						addAttr -ln opacityPP0 -dt vectorArray $tp[$j];
+					}
+				}
+			}
+		}
+		
+		
+		if (`checkBox -q -v wizCopyParticlesIntoParticleSystem_copyRotation_checkBox`){
+			if (`attributeExists "rotationPP" $sp[$i]`){
+				$doRot = 1;
+				float $prot[] = `getParticleAttr -at rotationPP -a true $sp[$i]`;
+				$rot = appendFloatArray($rot, $prot, `size $prot`);
+				for ($j=0;$j<`size $tp`;$j++){
+					if (`attributeExists "rotationPP" $tp[$j]` == 0){
+						addAttr -ln rotationPP -dt vectorArray $tp[$j];
+						addAttr -ln rotationPP0 -dt vectorArray $tp[$j];
+					}
+				}
+				
+			}
+		}
+		
+	}
+	
+	//_________________________________________
+	// Disconnect internal ramps if we are copying those attributes
+	refresh -f;
+	refreshAE;
+	
+	/*
+	string $disConCom[];
+	
+	for ($i=0;$i<`size $tp`;$i++){
+		if (`checkBox -q -v wizCopyParticlesIntoParticleSystem_copyRGB_checkBox`){
+			if (`attributeExists "internalColorRamp" $tp[$i]` == 1){
+				$disConCom[`size $disConCom`] = "disconnectAttr " + $tp[$i] + ".internalColorRamp  " + $tp[$i] + ".rgbPP ;";	
+			}
+		}
+		if (`checkBox -q -v wizCopyParticlesIntoParticleSystem_copyOpacity_checkBox`){
+			if (`attributeExists "internalOpacityRamp" $tp[$i]` == 1){
+				//disconnectAttr ($tp[$i] + ".internalOpacityRamp") ($tp[$i] + ".opacityPP");	
+				$disConCom[`size $disConCom`] = "disconnectAttr " + $tp[$i] + ".internalOpacityRamp  " + $tp[$i] + ".opacityPP ;";
+			}
+		}
+		if (`checkBox -q -v wizCopyParticlesIntoParticleSystem_copyRadius_checkBox`){
+			if (`attributeExists "internalRadiusRamp" $tp[$i]` == 1){
+				$disConCom[`size $disConCom`] = "disconnectAttr " + $tp[$i] + ".internalRadiusRamp  " + $tp[$i] + ".radiusPP ;";
+				//disconnectAttr ($tp[$i] + ".internalRadiusRamp") ($tp[$i] + ".radiusPP");	
+			}
+		}
+	}
+	*/
+	
+
+	int $pCount = (`size $pos` / 3);
+	int $pi;
+	select -r $tp;
+	int $skipCount;
+	int $tpi;
+	string $emitCom[];
+	string $setAttrCom[];
+	
+	for ($i=0;$i<$pCount;$i++){			
+		
+		if ($skip > 0){			
+			if ($skipCount == $skip){
+				$skipCount = 0;	
+			} else {
+				$skipCount++;
+				continue ;	
+			}
+			
+		}
+		
+		// emit particle	
+		
+		if ($randPartSys){
+			$tpi = randInt(0, ($nc - 1));	
+		}
+		
+		string $emitCommand = ("emit"
+		+" -o " + $tp[$tpi]
+		+" -pos " + $pos[$pi] + " " + $pos[($pi + 1)] + " " + $pos[($pi + 2)]
+		+" -at rgbPP -vv " + $pCol[$pi] + " " + $pCol[($pi + 1)] + " " + $pCol[($pi + 2)]
+		+" -at incandescencePP -vv " + $pInc[$pi] + " " + $pInc[($pi + 1)] + " " + $pInc[($pi + 2)]
+		+" -at opacityPP -vv " + $pOp[$pi] + " " + $pOp[($pi + 1)] + " " + $pOp[($pi + 2)]
+		);
+		
+		//wizlog ("	[*] Emit Command : " + $emitCommand);
+		
+		$emitCom[`size $emitCom`] = $emitCommand;
+		
+		//_________________________________________
+		// Set Attr Commands
+	
+		/*	
+		if (`size $pCol` > 0){
+			$setAttrCom[`size $setAttrCom`] = "setParticleAttr -at rgbPP -vv " + $pCol[$pi] + " " + $pCol[($pi + 1)] + " " + $pCol[($pi + 2)] + " " + $tp[$tpi] + ".pt[" + $i + "];";	
+			
+		}
+		
+		
+		if (`size $pInc` > 0){
+			$setAttrCom[`size $setAttrCom`] = "setParticleAttr -at incandescencePP -vv " + $pInc[$pi] + " " + $pInc[($pi + 1)] + " " + $pInc[($pi + 2)] + " " + $tp[$tpi] + ".pt[" + $i + "];";
+		}
+		
+		
+		
+		if (`size $pOp` > 0){
+			$setAttrCom[`size $setAttrCom`] = "setParticleAttr -at opacityPP -vv " + $pOp[$pi] + " " + $pOp[($pi + 1)] + " " + $pOp[($pi + 2)] + " " + $tp[$tpi] + ".pt[" + $i + "];";
+		}	
+		*/
+		
+		if ($doRot){
+			$setAttrCom[`size $setAttrCom`] = "setParticleAttr -at rotationPP -vv " + $rot[$pi] + " " + $rot[($pi + 1)] + " " + $rot[($pi + 2)] + " " + $tp[$tpi] + ".pt[" + $i + "];";
+		}
+		
+		
+		
+		/*
+		emit
+			-o $tp
+			-pos $pos[$pi] $pos[($pi + 1)] $pos[($pi + 2)]
+			-at radiusPP
+			-fv $rad[$i]
+			-at rgbPP
+			-vv $pCol[$pi] $pCol[($pi + 1)] $pCol[($pi + 2)]
+			-at incandescencePP
+			-vv $pInc[$pi] $pInc[($pi + 1)] $pInc[($pi + 2)]
+			-at opacityPP
+			-vv $pOp[$pi] $pOp[($pi + 1)] $pOp[($pi + 2)] 
+			;	
+		
+		*/
+		
+		$pi = $pi + 3;
+		//$tpi = $tpi + 1;
+	}
+	
+	
+	refresh -f;
+	refreshAE;
+	
+	//evalCopyParticleIntoParticle($emitCom, $setAttrCom, $disAttrCom, $tp);
+	/*
+	for ($i=0;$i<`size $disConCom`;$i++){
+		wizlog ($disConCom[$i]);
+		//eval($disConCom[$i]);
+		//evalDeferred($disConCom[$i]);		
+	}
+	*/
+	
+	//evalDeferred ($emitCommand);
+	/*
+	evalDeferred(
+	"for ($i=0;$i<" + `size $emitCom` + ";$i++){"+"\n"
+	+"	eval(\"" + $emitCom[$i] + "\");"+"\n"
+	+"}");
+	*/
+	//evalDeferred("print(\"Executing Particle Copy...\");");
+	
+	for ($i=0;$i<`size $emitCom`;$i++){
+		wizlog ($emitCom[$i]);
+		eval($emitCom[$i]);
+		
+		//evalDeferred($emitCom[$i]);
+	}
+	select -r $tp;
+	
+	setNClothStartState;
+	
+	
+	float $curTime = `currentTime -q`;
+	$curTime = $curTime + 1;
+	currentTime -e $curTime;
+	
+	for ($i=0;$i<`size $setAttrCom`;$i++){
+		wizlog ($setAttrCom[$i]);
+		eval($setAttrCom[$i]);		
+		//evalDeferred($setAttrCom[$i]);
+	}
+	select -r $tp;
+	setNClothStartState;
+	
+	return $return;
+	
+	
+}
+
+/*
+global proc string[] wizCreateNewParticleSystemForCopy( string $flags )
+{
+	string $obj, $type;
+	string $sel[];
+	int $edit;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-typ" : case "-type" :
+			$type = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	
+}
+
+global proc evalCopyParticleIntoParticle( string $emitCom[], string $setAttrCom[], string $disAttrCom[], string $tp[])
+{
+
+
+}
+*/
+
+global proc wizParticleColorDuplicatorLayout( string $parent )
+{
+	string $layout = `frameLayout
+		-l "Particle Color Duplicator"	
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-p $parent
+        particleColorDuplicator_frameLayout
+		`;
+    
+		string $mbl = `menuBarLayout`;
+	
+
+		string $columnLayout = `columnLayout 
+			-p $layout
+			wizParticleColorDuplicator_columnLayout
+			`;
+		
+		menu -l "Add";
+			//menuItem -l "Add Match Color Attributes" -c ("colorParticleObjectLayout(\"-add\");");
+			menuItem -l "Add Match Color Attributes" -c ("wizMatchColor(\"-sl -add\");");
+		
+		setParent -menu ..;
+		menu -l "Duplicate";
+			duplicateOnParticlesMenuItems();
+			
+			
+		checkBox
+			-l "Use Match Color"
+			-v false
+			wizParticleColorDuplicator_useMatchColor_checkBox
+			;
+			
+		setParent -menu ..;
+		
+
+	
+}
+
+//@ WIZ MATCH COLOR
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $colMatchObjs[] = wizMatchColor("-mat 0.12 0.55 0.9");
+	
+	</code>
+*********************************************************************/
+global proc string[] wizMatchColor( string $flags )
+{
+	wizlog ("[@] wizMatchColor");
+	string $colMatSetName = "wizColorMatchSet";
+	string $obj, $type;
+	int $add, $remove;
+	string $sel[];
+	int $edit;
+	int $match;
+	float $matchCol[];
+	string $tok[] = tokenizeString($flags, " ");
+	string $allColMatSets[];
+	float $t[];
+	float $ro[];
+	float $s[];
+	string $return[];
+	
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			$sel[`size $sel`] = $obj;
+			break ;
+				
+			case "-a" : case "-add" :
+			$add = 1;
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+			case "-mat" : case "-match" :
+			string $colString[] = wizFlagArray($tok, $i);
+			$matchCol = stringArrayToFloatArray($colString);
+			$match = 1;
+			break ;
+			
+			case "-t" : case "-translate" :
+			string $tS[] = wizFlagArray($tok, $i);
+			$t = stringArrayToFloatArray($tS);
+			break ;
+			
+			case "-ro" : case "-rotation" :
+			string $roS[] = wizFlagArray($tok, $i);
+			$ro = stringArrayToFloatArray($roS);
+			break ;
+			
+			case "-s" : case "-scale" :
+			string $sS[] = wizFlagArray($tok, $i);
+			$s = stringArrayToFloatArray($sS);
+			break ;
+			
+			case "-dm" : case "-duplicateMethod" :
+			$method = $tok[($i + 1)];
+			break ;
+			
+			case "-mo" : case "-matchObjects" :
+			$sel = wizFlagArray($tok, $i);
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	
+	
+	if ($add){
+		//_________________________________________
+		// Add colorMatch attributes
+		addColorAttributeToNodes($sel, {"matchColor_color"});
+		
+		for ($i=0;$i<`size $sel`;$i++){		
+			if (`attributeExists "matchColor_threshold" $sel[$i]` == 0){
+				addAttr -ln "matchColor_threshold" -at double -dv 0.01 $sel[$i];
+				setAttr -e -keyable true ($sel[$i] + ".matchColor_threshold");	
+			} else {
+				setAttr ($sel[$i] + ".matchColor_threshold") 0.01;
+			}
+			
+		}
+		
+		//_________________________________________
+		// Add objects to wizColorMatchSet
+		string $colMatSet;
+		if (`objExists $colMatSetName` == 0){
+			$colMatSet = createSetFromSelection($sel, $colMatSetName);
+		} else {
+			$colMatSet = addSelectedObjectsToSet($sel, $colMatSetName);
+		}
+	
+	}
+	
+	if ($match){
+		if (`size $sel` == 0){
+			$allColMatSets = `ls -r true $colMatSetName`;
+			select -r $allColMatSets;
+			$sel = `ls -sl`;
+		}
+		wizlog (niceArrayList("	[#] Color Match Objects", $sel));
+		for ($i=0;$i<`size $sel`;$i++){
+				float $objCol[] = `getAttr ($sel[$i] + ".matchColor_color")`;
+				wizlog ("	[#] Match Color : " + $matchCol[0] + " " + $matchCol[1] + " " + $matchCol[2]);
+				wizlog ("	[#] Obj Match Color : " + $objCol[0] + " " + $objCol[1] + " " + $objCol[2]);
+				
+				float $thres = `getAttr ($sel[$i] + ".matchColor_threshold")`;
+				wizlog ("	[#] Threshold : " + $thres);
+				int $mR = equivalentTol($matchCol[0], $objCol[0], $thres);
+				int $mG = equivalentTol($matchCol[1], $objCol[1], $thres);
+				int $mB = equivalentTol($matchCol[2], $objCol[2], $thres);
+				wizlog (" [*] equivalentTol( " + $matchCol[0] + ", " + $objCol[0] + ", " + $thres + ");");
+				wizlog (" [*] equivalentTol( " + $matchCol[1] + ", " + $objCol[1] + ", " + $thres + ");");
+				wizlog (" [*] equivalentTol( " + $matchCol[2] + ", " + $objCol[2] + ", " + $thres + ");");
+				wizlog ("Equivalent : [R] " + $mR + " [G] " + $mG + " [B] " + $mB);
+				if ($mR == 1 && $mG == 1 && $mB == 1){
+					//string $dup[] = wizDoDuplicate($sel[$i],
+					$return[`size $return`] = $sel[$i];	
+					wizlog ("	[+] Color Match : " + $sel[$i] + " [+]");
+				}
+				
+		}
+		
+	}
+	return $return;
+}
+
+//@ WIZ GET N SOLVER FROM N OBJ
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $nuc[] = wizGetNSolverFromNObj("-sl");
+	
+	</code>
+*********************************************************************/
+global proc string[] wizGetNSolverFromNObj( string $flags )
+{
+	string $obj, $type;
+	string $sel[];
+	int $edit;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-typ" : case "-type" :
+			$type = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	string $nuc[];
+	for ($i=0;$i<`size $sel`;$i++){
+		string $con[] = smartSelectObjectsOfType({$sel[$i]}, "-type nucleus");
+		wizlog ("	[OBJ] : " + $sel[$i] + "	[NUCLEUS] : " + $con[0]);
+		if (`size $con` > 0){
+			$nuc[`size $nuc`] = $con[0];
+		}
+	}
+	
+	return $nuc;
+	
+	
+}
+
+
+/*
+global proc killRandomParticles( string $flags )
+{
+	string $sel[];
+	int $edit;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+		}
+	}
+
+	// NOT FINISHED
+	for ($i=0;$i<`size $sel`;$i++){
+		int $count = `getAttr ($sel[$i] + ".count")`;
+		for ($i=0;$i<$count;$i++){
+			
+		}
+		
+		
+	}
+	//lifespanPP = 0.0;
+	
+}
+*/
+
+
+/*
+global proc colorParticleObjectLayout( string $flags )
+{
+	string $coName = "particleColorObject";
+	int $i = 1;
+	while (true ){
+		if (`columnLayout -ex ($coName + $i + "_columnLayout")` == 0){
+			$coName = ($coName + $i);
+			break ;
+		}
+		$i++;
+	
+	}
+	string $columnLayout = `columnLayout 
+        -p wizParticleColorDuplicator_columnLayout
+        `;
+
+	colorSliderGrp -cal 1 "left" -cw 1 50 -l "RGB" -rgb 0 0 0 colorWizRGBColorSelectorColorSliderGrp;
+		
+		
+}
+*/
+
+global proc wizSetParticleAttributes( string $flags )
+{
+	
+	setParticleAttr -at velocity -vv 0.0 0.0 0.0;	
+	setParticleAttr -at accelleration -vv 0.0 0.0 0.0;	
+			
+		
+}
+
+global proc wizParticleLine( string $flags )
+{
+	wizlog ("[@] wizParticleLine");
+	string $sel[];
+
+	int $rate;
+	float $emitFrames = 3.0;
+	
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-r" : case "-rate" :
+			$rate = int($tok[($i + 1)]);
+			break ;
+			
+			case "-wiz" : 
+			$rate = `intFieldGrp -q -v1 wizParticleLine_rate_intFieldGrp`;
+			$emitFrames = `floatFieldGrp -q -v1 wizParticleLine_emitFrames_floatFieldGrp`;
+			break ;
+		}
+	}
+	
+	if (`size $sel` == 0){
+		wizlog ("[!] You Must Select At Least One Curve To Emit From!");	
+	}
+	
+	string $controlParticle[];
+	string $allParticles[];
+	
+	// Make a ramp to connect to all the particles colors	
+	string $ramp = wizCreateNewRampTexture("ParticleLineColorRamp");
+	select -r $ramp ;
+	removeMultiInstance -break true ($ramp + ".colorEntryList[1]");
+	setAttr ($ramp + ".colorEntryList[0].color") -type double3 0 1 1 ;
+
+	for($i=0;$i<`size $sel`;$i++){
+		// Create emitter and particles	
+		select -r $sel[$i];
+		
+		string $emitter[] = `emitter -type curve -r 100 -sro 0 -nuv 0 -cye none -cyi 1 -spd 1 -srn 0 -nsp 1 -tsp 0 -mxd 0 -mnd 0 -dx 1 -dy 0 -dz 0 -sp 0  `;
+
+		string $nParticle[] = `nParticle`;
+
+		connectDynamic -em $emitter[1] $nParticle[0];
+		
+		// Set Emitter Attributes
+		setAttr ($emitter[1] + ".scaleRateByObjectSize") 1;
+		
+		setAttr ($emitter[1] + ".rate") $rate;
+		
+		// Set Particle Attributes
+		
+		setAttr ($nParticle[1] + ".ignoreSolverWind") 1;
+		setAttr ($nParticle[1] + ".forcesInWorld") 0;
+		setAttr ($nParticle[1] + ".lifespanMode") 1;
+		setAttr ($nParticle[1] + ".lifespan") 0.01;
+
+		setAttr ($nParticle[1] + ".particleRenderType") 8;
+		
+		// Connect the color ramp
+		removeMultiInstance -break true ($nParticle[1] + ".color[1]");
+		connectAttr -force ($ramp + ".outColor") ($nParticle[1] + ".color[0].color_Color");
+		
+		// Connect attributes to control particle
+		if ($i==0){
+			$controlParticle = $nParticle; 
+		} else {
+			connectAttr ($controlParticle[1] + ".radius") ($nParticle[1] + ".radius");
+		}
+		
+		// Emit for one frame
+		
+		refresh -f;
+		refreshAE;
+		
+		//wizlog ("Emitting Particles For : " + $emitFrames );
+		
+		wizRunSimulation("-f 3");
+		
+		//refresh -f;
+		//refreshAE;
+		
+		// Set the init state
+		
+		select -r $nParticle[0];
+		
+		setNClothStartState;
+		
+		refresh -f;
+		refreshAE;
+
+		$allParticles[`size $allParticles`] = $nParticle[0];
+	
+		// Rewind and continue on to next particle line
+		
+		float $minTime = `playbackOptions -q -min`;
+		currentTime -e $minTime;
+		
+		refresh -f;
+		refreshAE;
+		
+		select -r $nParticle[0];
+		HideSelectedObjects;
+		
+	}
+	
+	/*
+	select -r $allParticles;
+	ShowSelectedObjects;
+	*/
+		
+}

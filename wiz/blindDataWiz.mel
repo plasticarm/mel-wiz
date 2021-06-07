@@ -1,0 +1,255 @@
+
+global proc blindDataWiz()
+{
+
+
+}
+
+global proc wizBlindDataAssignmentLayout( string $flags )
+{
+	string $parent, $name;
+	int $edit;
+	string $lt = "frameLayout";
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-p" : case "-parent" :
+			$parent = $tok[($i + 1)];
+			break ;
+				
+			case "-n" : case "-name" :
+			$name = $tok[($i + 1)];
+			break ;
+				
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+			case "-lt" : case "-layoutType" :
+			$lt = $tok[($i + 1)];
+			break ;
+			
+		}
+	}
+	
+	string $layout;
+	//string $ann = "If you assign blind data to the components of meshes you can do stuff.";
+	if ($lt == "frameLayout"){
+		$layout = `frameLayout
+			-l ($name + "Blind Data")	
+			-ann "Assign blind data to poly components."
+			-bv true
+			-la "center"
+			-li 10
+			-lv true
+			-mw 10
+			-mh 10		
+			
+			-cll true
+			-cl true
+			("wizBlindData_" + $name + "_frameLayout")
+			`;
+	} else if ($lt == "columnLayout"){
+		$layout = `columnLayout
+			-adjustableColumn true
+			("wizBlindData_" + $name + "_columnLayout")
+			`;	
+	}
+	
+		wizIntFieldGrp(
+			"-l ID "
+			+"-v 0 "
+			+"-ann Blind Data Must Have an ID Number. Any number will do. "
+			+"-n wizBlindData_" + $name + "_id_intFieldGrp"
+			);
+			
+		wizTextFieldGrp(
+			"-l Data Name "
+			+"-tx dataName "
+			+"-ann Blind Data Must Have A Name. Give the data a name. "
+			+"-n wizBlindData_" + $name + "_dataName_textFieldGrp"
+			);
+			
+		string $atlabels[] = { "any", "face", "vertex", "object" };
+		wizOptionMenuGrpMenuItems("Association Type", ("wizBlindData_" + $name + "_associationType_optionMenuGrp"), $atlabels);
+			
+		string $dtlabels[] = { "Double", "Int", "Hex", "Boolean", "String", "Binary" };
+		wizOptionMenuGrpMenuItems("Data Type", ("wizBlindData_" + $name + "_dataType_optionMenuGrp"), $dtlabels);
+		optionMenuGrp
+			-e
+			-v "String"
+			("wizBlindData_" + $name + "_dataType_optionMenuGrp")
+			;
+						
+		wizTextFieldGrp(
+			"-l Data "
+			+"-tx data "
+			+"-ann This is the data that will be assigned to each component. "
+			+"-n wizBlindData_" + $name + "_stringData_textFieldGrp"
+			);
+			
+		string $bc = ("int $id = `intFieldGrp -q -v1 wizBlindData_" + $name + "_id_intFieldGrp`;"+"\n"
+		+"string $dataName = `textFieldGrp -q -tx wizBlindData_" + $name + "_dataName_textFieldGrp`;"+"\n"
+		+"string $associationType = `optionMenuGrp -q -v wizBlindData_" + $name + "_associationType_optionMenuGrp`;"+"\n"
+		+"string $dataType = `optionMenuGrp -q -v wizBlindData_" + $name + "_dataType_optionMenuGrp`;"+"\n"
+		+"string $data = `textFieldGrp -q -tx wizBlindData_" + $name + "_stringData_textFieldGrp`;"+"\n"
+		);
+		
+		string $assignBc = $bc + "wizBlindData(\"-sl -id \" + $id + \" -ldn \" + $dataName + \" -at \" + $associationType + \" -sd \" + $data);";
+		string $matchBc = $bc + "wizBlindData(\"-q -sl -id \" + $id + \" -ldn \" + $dataName + \" -at \" + $associationType + \" -sd \" + $data);";
+		
+		button
+			-l "Assign Data To Selected Components"
+			-c $assignBc
+			;
+	
+		button
+			-l "Query Selected Components"
+			-c $matchBc
+			;
+			
+}
+
+//@ wizBlindData
+//====================================================================
+/*****************************************************************//**
+	Assign and Query Poly Blind Data.
+	<hr>
+	<b>Synopsis</b><br>
+	wizBlindData [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $bd[] = wizBlindData("-id 0 someObject -q -sl");
+	
+	</code>
+*********************************************************************/
+global proc string[] wizBlindData( string $flags )
+{
+	string $obj, $type;
+	string $sel[];
+	string $ldn, $sdn, $at, $dt;
+	int $id;
+	int $edit;
+	int $q;
+	string $sd;
+	string $qString = "-id ";
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-typ" : case "-type" :
+			$type = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+			case "-id" : case "-typeId" :
+			$id = int($tok[($i + 1)]);
+			break ;
+			
+			case "-dn" : case "-dataName" : case "-ldn" : case "-longDataName" :
+			$ldn = $tok[($i + 1)];
+			$qString = "-ldn ";
+			break ;
+			
+			case "-sdn" : case "-shortDataName" : 
+			$sdn = $tok[($i + 1)];
+			$qString = "-sdn ";
+			break ;
+			
+			case "-at" : case "-associationType" :
+			$at = $tok[($i + 1)];
+			break ;
+			
+			case "-dt" : case "-dataType" :
+			$dt = $tok[($i + 1)];
+			break ;
+			
+			case "-sd" : case "-stringData" :
+			$sd = $tok[($i + 1)];
+			break ;
+			
+			case "-q" : case "-query" :
+			$q = 1;
+			break ;
+			
+			
+		}
+	}
+	if (`size $sdn` == 0){
+		$sdn = substring($ldn, 1, 3);
+	}
+
+	/*
+	1 - Create blind data type
+	blindDataType -id 0 -dataType "string" -longDataName "dataName" -shortDataName "dn";
+	blindDataType -id 0 -dt "string" -ldn "dataName" -sdn "dn";
+	
+	2 - Set blind data
+	polyBlindData -id 0 -associationType "face" -longDataName "dataName" -stringData "purpleFace" pCube1.f[0];
+	polyBlindData -id 0 -at "face" -ldn "dataName" -sd "purpleFace" pCube1.f[0];
+	
+	3 - Query blind data
+	polyQueryBlindData -id 0 pCube1.f[0];
+	
+	returns : purple
+	*/
+	
+	//_________________________________________
+	// Check if id exists, If not, create new blindData 
+	int $qId[] = `blindDataType -q -id $id`;
+	if (`size $qId` == 0){
+		blindDataType -id $id -dataType "string" -ldn $ldn -sdn $sdn ;
+		wizlog ("[New Blind Data Type] blindDataType -id " + $id + " -dataType \"string\" -ldn " + $ldn + " -sdn " + $sdn);
+	}
+	
+	//_________________________________________
+	// Query 
+	if ($q){
+		wizlog ("[BLIND DATA QUERY]");
+		string $queryData[];
+		if (`size $ldn` > 0){
+			$queryData = `polyQueryBlindData -ldn $ldn $sel`;
+		} else {
+			$queryData = `polyQueryBlindData -id $id $sel`;
+		}
+		if (`size $queryData` > 0){
+			wizlog (niceArrayList("[BLIND DATA]", $queryData));
+			//select -r $queryData;
+		}
+		return $queryData;
+	}
+	
+	//_________________________________________
+	// Assign data
+	polyBlindData -id $id -at $at -ldn $ldn -sdn $sdn -sd $sd $sel;
+	wizlog ("[Add Blind Data] polyBlindData -id " + $id + " -at " + $at + " -ldn " + $ldn + " -sdn " + $sdn + " -sd " + $sd + " " + (stringArrayToString($sel, " ")));
+	
+	return {""};
+	
+}

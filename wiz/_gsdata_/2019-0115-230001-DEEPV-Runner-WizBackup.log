@@ -1,0 +1,17 @@
+2019-01-15 23:00:02: -- Analysis Started by On Schedule Hour=23 DayWeek=2 , Under Runner
+2019-01-15 23:00:02: R: State file does not exist: G:/maya/scripts/wiz/_gsdata_/_file_state_v4._gs
+2019-01-15 23:00:02: Not enough free space on disk file:///G: need 26.7 MB, have 0 bytes
+2019-01-15 23:00:02: Changes: 330, Conflicts: 0, CopyTime: 0, CopyState: 0/0, Errors: 0, All: 381
+2019-01-15 23:00:02: Left to Right: Copy File: 330 
+2019-01-15 23:00:02: == Sync Started by On Schedule Hour=23 DayWeek=2 , Under Runner
+2019-01-15 23:00:02: Create Folder 'G:/maya/scripts/wiz/aiScripts'
+2019-01-15 23:00:02: Create Folder 'G:/maya/scripts/wiz/aiScripts/To_Gif_Jpeg_Png'
+2019-01-15 23:00:02: Create Folder 'G:/maya/scripts/wiz/Temp'
+2019-01-15 23:00:02: Create Folder 'G:/maya/scripts/wiz/wizIcons'
+2019-01-15 23:00:02: Create Folder 'G:/maya/scripts/wiz/wizIcons/.mayaSwatches'
+2019-01-15 23:00:02: DISK FULL error reported but 5 % of the disk is free (204474080 Kb). 
+This is most likely caused by FAT volume not accepting a large file or too many files in one folder.
+2019-01-15 23:00:02: Copy New 'H:/maya/scripts/wiz/aiScripts/To_Gif_Jpeg_Png/ToGIF.jsx' -> 'G:/maya/scripts/wiz/aiScripts/To_Gif_Jpeg_Png/ToGIF.jsx'
+- ERROR: Error copying file: There is not enough space on the disk.  (error 112)
+2019-01-15 23:00:02: Error copying file: There is not enough space on the disk.  (error 112)
+2019-01-15 23:00:02: 

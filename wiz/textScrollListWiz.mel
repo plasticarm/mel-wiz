@@ -1,0 +1,1225 @@
+global proc textScrollListWiz()
+{
+
+}
+
+//SELECT COMMANDS
+//=====================================
+//DOUBLE CLICK
+global proc doSelectWizDoubleClickCommand(string $textScrollList)
+{
+	string $sel[];
+	$sel = `textScrollList -q -si $textScrollList`;
+	/*
+	if(`textScrollList -q -ex $textScrollList`){
+		 $sel = `textScrollList -q -si $textScrollList`;	
+	} else if(`iconTextScrollList -q -ex $textScrollList`){
+		 $sel = `iconTextScrollList -q -si $textScrollList`;
+	}
+	*/
+	executeSelectedMelCommandsInList($sel);
+	$sel = removeObjectsThatDontExist($sel);
+	//$sel = removeSeparators($sel);
+	select -r $sel;
+	
+	if(`checkBox -q -v selectWizDoubleClickIsolateCheckBox`){
+		setIsolateSelectState(1);
+		setToggleAutoLoadState(1);
+	}
+	if(`checkBox -q -v selectWizDoubleClickFitViewCheckBox`){
+		inspectWizViewFit($sel);
+	}
+	setToggleAutoLoadState(0);
+	//isolateAndFocusOnSelected($sel);
+
+}
+
+//SELECT
+global proc doSelectWizSelectCommand(string $textScrollList)
+{
+	global string $WIZ_printHeader;
+	string $sel[];
+	$sel = `textScrollList -q -si $textScrollList`;
+	/*
+	if(`textScrollList -q -ex $textScrollList`){
+		 $sel = `textScrollList -q -si $textScrollList`;	
+	} else if(`iconTextScrollList -q -ex $textScrollList`){
+		 $sel = `iconTextScrollList -q -si $textScrollList`;
+	}
+	*/
+	printSelectedMelCommandsInList($sel);
+	if(`size $sel` == 1){
+		print($WIZ_printHeader + stringArrayToString($sel, " ") + "\n");
+	} else {
+		print($WIZ_printHeader + stringArrayToStringNiceList($sel));
+	}
+	setActiveSelectionList($textScrollList);
+	//$sel = removeSeparators($sel);
+	$sel = removeObjectsThatDontExist($sel);
+	select -r $sel;
+	if(`checkBox -q -v selectWizSelectIsolateCheckBox`){
+		setIsolateSelectState(1);
+		setToggleAutoLoadState(1);
+	}
+	if(`checkBox -q -v selectWizSelectFitViewCheckBox`){
+		inspectWizViewFit($sel);
+	}
+	setToggleAutoLoadState(0);
+	
+	//focusOnAndSelect($sel);
+
+}
+
+global proc doTextScrollListSelectScriptListCommand(string $textScrollList)
+{
+	global string $WIZ_printHeader;
+	string $sel[];
+	if(`textScrollList -q -ex $textScrollList`){
+		 $sel = `textScrollList -q -si $textScrollList`;	
+	} else if(`iconTextScrollList -q -ex $textScrollList`){
+		 $sel = `iconTextScrollList -q -si $textScrollList`;
+	}
+	
+	printSelectedMelCommandsInList($sel);
+}
+
+global proc doTextScrollListDoubleClickScriptListCommand(string $textScrollList)
+{
+	string $sel[];
+	if(`textScrollList -q -ex $textScrollList`){
+		 $sel = `textScrollList -q -si $textScrollList`;	
+	} else if(`iconTextScrollList -q -ex $textScrollList`){
+		 $sel = `iconTextScrollList -q -si $textScrollList`;
+	}
+	//executeSelectedMelCommandsInList($sel);
+	for($i=0;$i<`size $sel`;$i++){
+		//catchQuiet(eval($script));
+		eval($sel[$i]);
+	}
+}
+
+global proc executeSelectedMelCommandsInList(string $list[])
+{
+	string $testMel[] = getObjectsThatDoNotExist($list);
+	string $mel[] = getValidCommandsFromList($testMel);
+	if(`size $mel` == 0){ return;}
+	if(`size $mel` > 0){
+		for($m in $mel){
+			catchQuiet(eval($m));
+		}
+	}
+
+}
+
+global proc addCustomSelectCommandToTextScrollList(string $textScrollList, string $command)
+{
+	//string $curSelCom = `textScrollList -q -sc $textScrollList`;
+	print("Add Custom Select Command To TextScrollList: " + $textScrollList + " Command: " + $command + "\n");
+	string $selectCommand = $command;
+	textScrollList -e -sc $selectCommand $textScrollList;
+	//print("New Command: " + `textScrollList -q -sc $textScrollList` + "\n");
+}
+
+global proc printSelectedMelCommandsInList(string $list[])
+{
+	global string $WIZ_printHeader;
+	string $testMel[] = getObjectsThatDoNotExist($list);
+	string $mel[] = getValidCommandsFromList($testMel);
+	if(`size $mel` == 0){ return;}
+	if(`size $mel` == 1){
+		print($WIZ_printHeader + "Double Click To Execute: " + stringArrayToString($mel, " ") + "\n");
+	} else {
+		print($WIZ_printHeader + "Double Click To Execute: " + stringArrayToStringNiceList($mel));
+	}
+}
+
+//DELETE KEY COMMANDS
+//===================================
+global proc doSelectWizDeleteKeyCommand(string $textScrollList)
+{
+	
+	string $si[];
+	int $sii[] = `textScrollList -q -sii $textScrollList`;
+	if (`menuItem -q -ex ($textScrollList + "DeleteAction")`){
+		int $deleteFromScene = `menuItem -q -cb ($textScrollList + "DeleteAction")`;
+		if($deleteFromScene){
+			$si = `textScrollList -q -si $textScrollList`;
+			delete `ls $si`;
+			
+		}
+	}
+	removeSelectedItemFromTextScrollList($textScrollList);
+	
+	for ($i=0;$i<`size $sii`;$i++){
+		catchQuiet(`textScrollList -edit -sii $sii[$i] $textScrollList`);	
+	}
+
+}
+
+
+
+//PASS TEXT SCROLL LIST TO COMMAND
+//======================================================
+global proc passSelectionListToCommand(string $textScrollList, string $command)
+{
+	string $sel[] = `textScrollList -q -ai $textScrollList`;
+	if(`size $sel` == 0){
+		$sel = `ls -sl`;
+		if(`size $sel` == 0){
+			print("WIZ| Nothing Selected. Cannot Continue." + "\n");	
+			return;
+		}
+	}
+	string $selString = stringArrayToStringArrayString($sel);
+	string $eval = $command + "(" + $selString + ")";
+	eval($eval);
+
+}
+
+global proc passSelectionListSelectedToCommand(string $textScrollList, string $command)
+{
+	string $sel[] = `textScrollList -q -si $textScrollList`;
+	if(`size $sel` == 0){
+		$sel = `ls -sl`;
+		if(`size $sel` == 0){
+			print("WIZ| Nothing Selected. Cannot Continue." + "\n");	
+			return;
+		}
+	}
+	
+	string $selString = stringArrayToStringArrayString($sel);
+	string $eval = $command + "(" + $selString + ")";
+	eval($eval);
+
+}
+
+global proc passSelectionListToCommandGetReturnSelectionList(string $textScrollList, string $command)
+{
+	string $sel[] = `textScrollList -q -ai $textScrollList`;
+	if(`size $sel` == 0){
+		$sel = `ls -sl`;
+		if(`size $sel` == 0){
+			print("WIZ| Nothing Selected. Cannot Continue." + "\n");	
+			return;
+		}
+	}
+	
+	string $selString = stringArrayToStringArrayString($sel);
+	string $eval = $command + "(" + $selString + ")";
+	string $return[] = `eval($eval)`;
+	replaceTextScrollListWithSelectedObjects($return,$textScrollList);
+}
+
+//GET SELECTION LIST FROM EVAL COMMAND
+//=================================================
+global proc evalCommandGetReturnSelectionList(string $textScrollList, string $command)
+{
+	debugList("Eval", {$command}, 1, "add");
+	//string $es = `encodeString $command`;
+	//debugList("Eval", {$es}, 1, "add");
+	string $return[] = `eval($command)`;
+	replaceTextScrollListWithSelectedObjects($return,$textScrollList);
+}
+
+//MANAGING TEXT SCROLL LISTS
+//==============================================================================
+//ADD
+//=============================================
+//ADD OBJECT
+//-------------------------------
+global proc addObjectToTextScrollList(string $sel, string $textScrollList)
+{
+	textScrollList -edit -append $sel $textScrollList;	
+}
+
+//ADD SELECTED OBJECT(S)
+//-------------------------------
+global proc addSelectedObjectsToSelectList( string $sel[], string $textScrollList)
+{
+	string $so = $textScrollList + "SingleObj";	
+	int $singleObj = `menuItem -q -cb $so`;	
+	for($i=0;$i<`size $sel`;$i++){
+		if($singleObj == 1 && $i == 1){	break;}	
+		textScrollList -edit -append $sel[$i] $textScrollList;	
+	}
+}
+
+//ADD SELECTED OBJECTS
+//-------------------------------
+global proc addSelectedObjectsToTextScrollList( string $sel[], string $textScrollList)
+{
+	for($i=0;$i<`size $sel`;$i++){
+		textScrollList -edit -append $sel[$i] $textScrollList;
+	}	
+}
+
+//REPLACE
+//=============================================
+//REPLACE WITH SELECTED
+//-------------------------------
+global proc replaceTextScrollListWithSelectedObjects( string $sel[], string $textScrollList)
+{
+	textScrollList -edit -ra $textScrollList;
+	for($i=0;$i<`size $sel`;$i++){
+		textScrollList -edit -append $sel[$i] $textScrollList;
+	}	
+}
+
+//REPLACE WITH HEIRARCHY
+//-------------------------------
+global proc replaceSelectionWithHeirarchyOfSelection(string $textScrollList)
+{
+	string $sel[] = `textScrollList -q -ai $textScrollList`;
+	if(`size $sel` == 0){
+		$sel = `ls -sl`;	
+	}	
+	//We should really get our current selection tags here.
+	string $below[] = getTransformsBelow($sel);
+	replaceTextScrollListWithSelectedObjects($below, $textScrollList);
+}
+
+//REMOVE
+//=============================================
+//REMOVE SELECTED ITEMS
+//-------------------------------
+global proc removeSelectedItemFromTextScrollList(string $textScrollList)
+{
+	string $sel[] = `textScrollList -q -si $textScrollList`;
+	for($i=0;$i<`size $sel`;$i++){
+		textScrollList -edit -ri $sel[$i] $textScrollList;
+	}	
+}
+
+//REMOVE LIST OF OBJECTS
+//-------------------------------
+global proc removeFromTextScrollList(string $sel[], string $textScrollList)
+{
+	for($i=0;$i<`size $sel`;$i++){
+		textScrollList -edit -ri $sel[$i] $textScrollList;
+	}	
+}
+
+//REMOVE DUPLICATES FROM TEXTSCROLLLIST
+//-------------------------------
+global proc removeDuplicatesFromTextScrollList( string $textScrollList )
+{
+	string $ai[] = `textScrollList -q -ai $textScrollList`;
+	string $rd[] = stringArrayRemoveDuplicates($ai);
+	replaceTextScrollListWithSelectedObjects($rd,$textScrollList);
+
+}
+//CLEAR
+//=============================================
+//CLEAR ALL
+//-------------------------------
+global proc clearTextScrollList(string $textScrollList)
+{
+	textScrollList -edit -ra $textScrollList;	
+}
+
+//SHOW INDEXED ITEM
+//=============================================
+global proc showAllIndexedItemsInTextScrollList(string $textScrollList)
+{
+	int $sii[] = `textScrollList -q -sii $textScrollList`;	
+	for($i=0;$i<`size $sii`;$i++){
+		textScrollList -e -shi $sii[$i] $textScrollList;
+	}
+}
+
+//MOVE
+//=============================================
+//MOVE TO TEXTSCROLL LIST IN DIRECTION
+//------------------------------------------
+global proc moveTextScrollListSelected(int $dir)
+{
+	//Down is 1 up is -1
+	global string $WIZ_activeSelectList;
+	string $sel[] = `textScrollList -q -si $WIZ_activeSelectList`;
+	int $selI[] = `textScrollList -q -sii $WIZ_activeSelectList`;
+	string $all[] = `textScrollList -q -ai $WIZ_activeSelectList`;
+	
+	debugList("MoveSelection: ", $sel, 1, "replace");
+	string $in[] = intArrayToStringArray($selI);
+	debugList("SelectionIndex: ", $in, 2, "replace");
+	//debugML1("MoveSelection: " + "\n" + multiArrayToNiceList2("Selection: ", $sel, "Index: ", intArrayToStringArray($selI)));
+	int $max;
+	int $maxOut;
+	$max = `size $all`;
+	$maxOut = (`size $all` + 1);
+	if($dir == -1){
+		$max = 1;
+		$maxOut = 0;
+	}
+	
+	if(intArrayContains($max,$selI)){
+		int $outI = $dir + $max;
+		if($outI == $maxOut){
+			textScrollList -e -si $sel $WIZ_activeSelectList;
+			return;
+		}
+	}
+	string $newSel[];
+	if($dir == 1){
+		//$dir = 0;
+	}
+	//debugML1("Moving: " + stringArrayToStringNiceList($sel));
+	int $move = `size $sel`;
+	string $moveItem[];
+	appendStringArray($moveItem,$sel,`size $sel`);
+	string $dirString = "Up";
+	if($dir == 1){
+		$dirString = "Down";
+	}
+	for($i=0;$i<$move;$i++){	
+		string $temp = $moveItem[$i];
+		int $apIndex = $selI[$i] + $dir;
+		//debugML1("Moving - " + $moveItem[$i] + " - " + $dirString + " From[" + $selI[$i] + "] To[" + $apIndex + "]" + "\n");
+		textScrollList -e -ri $sel[$i] $WIZ_activeSelectList;
+		textScrollList -e -ap $apIndex $temp $WIZ_activeSelectList;
+		textScrollList -e -si $temp $WIZ_activeSelectList;	
+	
+	}
+
+}
+
+//TEXT SCROLL LIST DIV
+//=============================================
+//This is just a quick way to create a line of --- for dividing lists
+global proc string tslDiv(string $message)
+{
+	string $div = "-----------------";
+	$div = $div + $message + $div;
+	return $div;
+}
+
+//MOVE TO FROM ACTIVE LIST TO DIRECTION
+//------------------------------------------
+global proc moveSelectionFromActiveListToTextScrollListDir(int $dir)
+{
+	global string $WIZ_activeSelectList;
+	if($WIZ_activeSelectList == "selectMasterListA"){
+		if($dir == 1){
+			moveSelectionToTextScrollList("selectMasterListA", "selectMasterListB");
+		}
+	} else if($WIZ_activeSelectList == "selectMasterListB"){
+		if($dir == -1){
+			moveSelectionToTextScrollList("selectMasterListB", "selectMasterListA");
+		}
+	}
+}
+
+//MOVE SELECTION TO TEXTSCROLLLIST
+//------------------------------------------
+global proc moveSelectionToTextScrollList(string $fromTSL, string $toTSL)
+{
+	string $sel[] = `textScrollList -q -si $fromTSL`;
+	string $aiTo[] = `textScrollList -q -ai $toTSL`;
+	for($i=0;$i<`size $sel`;$i++){
+		textScrollList -e -append $sel[$i] $toTSL;
+		textScrollList -e -ri $sel[$i] $fromTSL;
+	}
+}
+
+global proc moveAllItemsFromTextScrollListToTextScrollList(string $fromTSL, string $toTSL)
+{
+	string $aiFrom[] = `textScrollList -q -ai $fromTSL`;
+	string $aiTo[] = `textScrollList -q -ai $toTSL`;
+	for($i=0;$i<`size $aiFrom`;$i++){
+		textScrollList -e -append $aiFrom[$i] $toTSL;
+		textScrollList -e -ri $aiFrom[$i] $fromTSL;
+	}	
+}
+
+//COPY
+//=============================================
+//COPY SELECTION TO TEXTSCROLLLIST
+//------------------------------------------
+global proc copySelectionToTextScrollList(string $fromTSL, string $toTSL)
+{
+	copySelectedItemsToTextScrollList($fromTSL,$toTSL);
+}
+
+global proc copySelectedItemsToTextScrollList(string $fromTSL, string $toTSL)
+{
+	string $si[] = `textScrollList -q -si $fromTSL`;
+	if(`size $si` == 0){
+		$si = `textScrollList -q -ai $fromTSL`;	
+	}
+	string $aiTo[] = `textScrollList -q -ai $toTSL`;
+	for($i=0;$i<`size $si`;$i++){
+		textScrollList -e -append $si[$i] $toTSL;	
+	}
+}
+
+//COPY ALL TO TEXTSCROLLLIST
+//------------------------------------------
+global proc copyAllItemsToTextScrollList(string $fromTSL, string $toTSL)
+{
+	string $aiFrom[] = `textScrollList -q -ai $fromTSL`;
+	string $aiTo[] = `textScrollList -q -ai $toTSL`;
+	for($i=0;$i<`size $aiFrom`;$i++){
+		textScrollList -e -append $aiFrom[$i] $toTSL;	
+	}
+}
+
+//INTERSECT
+//=============================================
+global proc intersectTextScrollLists(string $toTSL, string $fromTSL)
+{
+	string $aiTo[] = `textScrollList -q -ai $toTSL`;
+	string $aiFrom[] = `textScrollList -q -ai $fromTSL`;
+	
+	int $ap = 2;
+	for($i=0;$i<`size $aiTo`;$i++){
+		textScrollList -e -ap $ap $aiFrom[$i] $toTSL;	
+		$ap = $ap + 2;
+	}
+
+}
+
+//SUBTRACT TEXTSCROLL LIST FROM TEXTSCROLLLIST
+//=============================================
+global proc string[] subtractTextScrollListFromTextScrollList( string $tslA, string $tslB)
+{
+	string $aList[] = `textScrollList -q -ai $tslA`;
+	string $bList[] = `textScrollList -q -ai $tslB`;
+				
+	// Create an intersector
+	string $myIntersector = `stringArrayIntersector`;
+	stringArrayIntersector -edit -intersect $aList $myIntersector;
+	stringArrayIntersector -edit -intersect $bList $myIntersector;
+	
+	// Query the intersector to see what the intersection is so far
+	//
+	string $intersection[] = `stringArrayIntersector -query $myIntersector`;
+	string $return[] = stringArrayRemove($intersection, $aList);
+	stringArrayIntersector -edit -reset $myIntersector;
+	
+	deleteUI $myIntersector;
+	return $return;
+	
+}
+
+//SORT
+//=============================================
+global proc sortTextScrollList(string $textScrollList)
+{
+	string $sorted[] = sort(`textScrollList -q -ai $textScrollList`);
+	replaceTextScrollListWithSelectedObjects($sorted, $textScrollList);
+}
+
+global proc string[] convertPolySelectionList(string $textScrollList, string $convertTo)
+{
+	string $sel[] = `textScrollList -q -si $textScrollList`;
+	if(`size $sel` == 0){
+		$sel = `textScrollList -q -ai $textScrollList`;
+	}
+	string $conSel[];
+	switch($convertTo){
+		case "vertices" :
+		case "vert" :
+		case "Vertices" :
+		$conSel = doPolyVertexSelectionConversion($sel);
+		break;
+		case "faces" :
+		case "Faces" :
+		$conSel = doPolyFacesSelectionConversion($sel);
+		break;
+	}
+	replaceTextScrollListWithSelectedObjects($conSel, $textScrollList);
+	return $conSel;
+}
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			SELECTING ITEMS
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//====================================================================
+//CHANGE SELECTION IN LIST
+global proc string[] selectNextInDirection(string $textScrollList, int $dir)
+{
+	int $sii[] = `textScrollList -q -sii $textScrollList`;	
+	int $moveSize = (`size $sii` - 1) + abs($dir);
+	textScrollList -e -da $textScrollList;
+	for($i=0;$i<`size $sii`;$i++){	
+		$sii[$i] = $sii[$i] + ($moveSize * $dir);
+		textScrollList -e -sii $sii[$i] $textScrollList;
+	}
+	
+	string $sel[] = `textScrollList -q -si $textScrollList`;
+	return $sel;
+}
+
+global proc string[] selectAllInTextScrollList(string $textScrollList)
+{
+	string $ai[] = `textScrollList -q -ai $textScrollList`;
+	textScrollList -e -da $textScrollList;
+	for($i=0;$i<`size $ai`;$i++){	
+		textScrollList -e -si $ai[$i] $textScrollList;
+	}
+	return $ai;
+}
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			DRAG AND DROP
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//====================================================================
+
+//DRAG AND DROP
+//==================================
+global proc string[] dragTextScrollListSelection( string $dragControl, int $x, int $y, int $mods)
+{	
+	//print("Drag from " + $dragControl + "\n");
+	//The msg array returned from the drag callback must _not_ be empty,
+	//else the drop callback will not trigger.
+	
+	string $sel[] = `textScrollList -q -si $dragControl`;
+	if(`size $sel` == 0){
+		$sel = 	`textScrollList -q -ai $dragControl`;
+	}
+	string $return = stringArrayToString($sel, ",");
+	return { $return };  
+
+}
+
+global proc dropTextScrollListSelection( string $drag, string $drop, string $msgs[], int $x, int $y, int $type)
+{
+	//print("Drop on " + $drop + " from " + $msgs[0] + "\n");
+	print ("Drop On : " + $drop + " Messages : " + stringArrayToString($msgs, ", ") + "\n");
+	string $sel[] = tokenizeCSV($msgs[0]);
+	if(`textScrollList -q -exists $drop`){
+		for($i=0;$i<`size $sel`;$i++){
+			textScrollList -e -append $sel[$i] $drop;
+		}
+		//textScrollList -e -append ("Drop from " + $msgs[0]) $drop;
+	}
+}
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			PRINTING
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//====================================================================
+//TEXTSCOLLLIST PRINT FUNCTIONS MENU ITEMS
+//==================================
+global proc textScrollListPrintFunctionsMenuItems( string $textScrollList )
+{
+	menuItem -sm true -l "Print";
+		menuItem -l "Array - {\"Object1\",\"Object2\"}" -c ("passSelectionListToCommand(" + "\"" + $textScrollList + "\"" + ",\"printBracketedArrayList\");");
+		menuItem -l "Array - Object1,Object2" -c ("passSelectionListToCommand(" + "\"" + $textScrollList + "\"" + ",\"printCSVArrayList\");");
+		menuItem -l "Print Test Int Array" -c ("printTestIntArray(0,100,20);");
+			menuItem -ob true -c ("openCurrentOptionsLayout(\"printTestArrayOptions\");");
+		menuItem -l "Print Test Float Array" -c ("printTestFloatArray(0,100,20);");
+			menuItem -ob true -c ("openCurrentOptionsLayout(\"printTestArrayOptions\");");
+		menuItem -l "Print Test String Array" -c ("printTestStringArray(0,100,20,\"float\");");
+			menuItem -ob true -c ("openCurrentOptionsLayout(\"printTestArrayOptions\");");
+	
+	setParent -menu..;
+	
+}
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			GENERIC TEXT SCROLL LISTS
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//====================================================================
+//OBJECT SELECTION TEXTSCROLLLIST FRAME LAYOUT
+//====================================================
+/*
+	USAGE:
+	string $tsl = objectSelectionTextScrollListFrameLayout("Some Selection List", $layout, "someSelectionListTextScrollList");
+	
+*/
+
+global proc string objectSelectionTextScrollListFrameLayout( string $label, string $parent, string $name)
+{
+	string $tslName = $name;
+    /*
+	string $layout = `frameLayout
+		-l $label	
+		-ann ""
+		-bv false
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll false
+		-cl false
+		-p $parent		
+		($name + "FrameLayout")
+		`;
+    */  
+    string $layout = `columnLayout
+        -adj true
+        -cal "left"
+		-p $parent		
+		($name + "ColumnLayout")
+		`;    
+       
+	text
+        -l $label
+        -al "center"
+        ;
+        
+	string $tsl = `textScrollList
+		-h 200
+		-ams true
+		-dkc ("doSelectWizDeleteKeyCommand(\"" + $tslName + "\");")
+		//-dcc ("doSelectWizDoubleClickCommand(\"" + $tslName + "\");")
+		//-sc ("doSelectWizSelectCommand(\"" + $tslName + "\");")
+		-dgc dragTextScrollListSelection
+		-dpc dropTextScrollListSelection
+		-p $layout
+		$tslName		
+		`;	
+
+	string $rl = `rowLayout
+		-numberOfColumns 2
+		-p $layout
+		`;
+		
+		button 
+			-l "Select"
+			-c ("addSelectedObjectsToTextScrollList(`ls -sl`, \"" + $tslName + "\");")
+			;
+			
+		button 
+			-l "Clear List"
+			-c ("clearTextScrollList(\"" + $tslName + "\");")
+			;
+					
+	setParent..;
+	setParent..;
+	
+	return $tslName;
+	
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                     OBJECT ICON TEXTSCOLLLIST
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//@ WIZ OBJECT SELECTION TEXT SCROLL LIST LAYOUT
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $tsl = wizObjectSelectionTextScrollListLayout("-p someParent -l Some Label -n SomeName");
+	
+	</code>
+*********************************************************************/
+global proc string wizObjectSelectionTextScrollListLayout( string $flags )
+{
+	string $label;
+	string $parent;
+	string $name;
+	string $tslName = $name;
+	string $obj, $type;
+	string $sel[];
+	int $edit;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-l" : case "-label" :
+			$label = wizFlagString($tok, $i);
+			break ;
+				
+			case "-n" : case "-name" :
+			$name = $tok[($i + 1)];
+			break ;
+			
+			case "-p" : case "-parent" :
+			$parent = $tok[($i + 1)];
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+		}
+	}
+	
+		
+	string $tslName = $name + "_textScrollList";
+	
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+		
+    /*
+	string $layout = `frameLayout
+		-l $label	
+		-ann ""
+		-bv false
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll false
+		-cl false
+		-p $parent		
+		($name + "FrameLayout")
+		`;
+    */  
+    string $layout = `columnLayout
+        -adj true
+        -cal "left"
+		-p $parent		
+		($name + "ColumnLayout")
+		`;    
+       
+	text
+        -l $label
+        -al "center"
+        ;
+        
+	string $rowLayout = `rowLayout
+		-nc 2
+		-adj 1
+		-p $layout
+		($name + "ObjectSelRowLayout")
+		`;
+		
+	string $tsl = `textScrollList
+		-w 150
+		-h 256
+		-ams false
+		-dkc ("doSelectWizDeleteKeyCommand(\"" + $tslName + "\");")
+		//-dcc ("doSelectWizDoubleClickCommand(\"" + $tslName + "\");")
+		//-sc ("doSelectWizSelectCommand(\"" + $tslName + "\");")
+		-dgc dragTextScrollListSelection
+		-dpc dropTextScrollListSelection
+		-sc ("updateWizObjectList(\"-n " + $name + " -select -sl\");")
+		-p $rowLayout
+		$tslName		
+		`;	
+
+	popupMenu ;
+			string $selCom = ("string $sel[] = `textScrollList -q -si " + $tslName + "`;"+"\n"
+			+"select -r $sel;"+"\n"
+			);
+			
+			menuItem -l "Select" -c $selCom;
+	
+			menuItem -l "Render Icon" -c ("updateWizObjectList(\"-ri -n " + $name + " -select -sl\");");
+				menuItem -ob true -c ("openCurrentOptionsLayout(\"objectIconOptions\");");
+		
+			menuItem -l "Render All Icons" -c ("updateWizObjectList(\"-rai -n " + $name + " -select -sl\");");
+				menuItem -ob true -c ("openCurrentOptionsLayout(\"objectIconOptions\");");
+				
+				
+				
+			
+	string $imageFrameLayout = `frameLayout
+		-w 256
+		-h 256
+		-bv true
+		
+		-lv false
+		-mh 0
+		-mw 0
+		-p $rowLayout
+		($name + "ObjectSelIconImageFrameLayout")
+		`;
+            
+            image
+                -w 256
+                -h 256
+                -p $imageFrameLayout
+                ($name + "ObjectSelIconImage")
+                ;
+				
+				
+	//setParent $rowLayout;	
+	
+	string $rl = `rowLayout
+		-numberOfColumns 2
+		-p $layout
+		`;
+		
+		button 
+			-l "Select"
+			-c ("addSelectedObjectsToTextScrollList(`ls -sl`, \"" + $tslName + "\");")
+			;
+			
+		button 
+			-l "Clear List"
+			-c ("clearTextScrollList(\"" + $tslName + "\");")
+			;
+					
+	setParent..;
+	setParent..;
+	
+	return $tslName;
+}
+
+global string $WIZ_wizObjectIconSuffix;
+$WIZ_wizObjectIconSuffix = "_OBJICON";
+
+global proc updateWizObjectList( string $flags )
+{
+	wizlog ("[@] updateWizObjectList");
+	global string $WIZ_wizObjectIconSuffix;
+	
+	//string $si[] = `textScrollList -q -si ($name + "_textScrollList")`;
+	
+	string $obj, $type;
+	string $sel[];
+	string $name;
+	int $edit;
+	int $ri;
+	int $rai;
+	int $select;
+	string $iconFile;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			$sel[`size $sel`] = `textScrollList -q -si ($name + "_textScrollList")`;
+			break ;
+				
+			case "-sel" : case "-select" :
+			$select = 1;
+			
+			break ;
+			
+			case "-sl" : case "-selected" :
+			//$sel = `ls -sl`;
+			$sel = `textScrollList -q -si ($name + "_textScrollList")`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+			case "-n" : case "-name" :
+			$name = $tok[($i + 1)];
+			break ;
+			
+			case "-ri" : case "-renderIcon" :
+			$ri = 1;
+			break ;
+			
+			case "-rai" : case "-renderAllIcons" :
+			$rai = 1;
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	if ($ri){
+		$iconFile = wizRenderObjectIcon("-obj " + $sel[0]);
+	}
+	
+	if ($rai){
+		wizlog ("	[#] Rendering All Icons [#]");
+		string $ai[] = `textScrollList -q -ai ($name + "_textScrollList")`;
+		for ($i=0;$i<`size $ai`;$i++){
+			textScrollList -e -si $i ($name + "_textScrollList");
+			select -r $ai[$i];
+			refresh -f;
+			wizRenderObjectIcon("-obj " + $ai[$i]);
+		}
+		return;
+	}
+	
+	if ($select){
+				
+		//_________________________________________
+		// Get The Icon Name
+		$iconFile = wizObjectSelectionGetIcon("-obj " + $sel[0]);
+		//wizlog ("
+		int $fileExists = `filetest -e $iconFile`;
+		if ($fileExists == 0){
+			//wizlog ("[!] Object Has No Icon : " + $iconFile);
+			//int $ranNullIcon = randInt(1, 4);
+			//$iconFile = $iconDir + "ObjectIconPlaceholderIcon" + $ranNullIcon + ".png";
+			string $iconDir = getWizIconsDirectory();
+			int $ranNullIcon = randInt(1, 4);
+			$iconFile = $iconDir + "SceneThumbnailPlaceholderIcon" + $ranNullIcon + ".png";
+        
+		} 
+		
+		wizlog ("	[#] Icon File : " + $iconFile);
+		image
+			-e
+			-i $iconFile
+			($name + "ObjectSelIconImage")
+			;    
+	
+
+		
+	}
+	
+}
+
+global int $WIZ_objectIconButtonSize;
+$WIZ_objectIconButtonSize = 56;
+//@ WIZ OBJECT SELECTION GET ICON
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = wizObjectSelectionGetIcon("-sl");
+	
+	</code>
+*********************************************************************/
+global proc string wizObjectSelectionGetIcon( string $flags )
+{
+	global string $WIZ_wizObjectIconSuffix;
+	string $iconSuffix = $WIZ_wizObjectIconSuffix;
+	string $obj, $type;
+	string $sel[];
+	int $edit;
+	int $bi;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			$sel[`size $sel`] = $obj;
+			break ;
+				
+			case "-typ" : case "-type" :
+			$type = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+			case "-bi" : case "-buttonIcon" :
+			$bi = 1;
+			$iconSuffix = $iconSuffix + "BUT";
+			wizlog ("	[!] Button Icon [!]");
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	
+	//_________________________________________
+	// Get The Icon Name
+	string $curFile = `file -q -sn`;
+	if (`size $curFile` == 0){
+		int $saved = wizSaveFile();
+		if ($saved == 0){
+			warning ("File Must Be Saved Before Output Paths Can Be Created!\n");
+			return "";
+		} else {
+			$curFile = `file -q -sn`;
+		}
+		
+	}
+	string $filePathSplice[] = wizSpliceFilePath($curFile, "-fn -dir -ex");
+	string $ext = "png";
+	
+	string $fileName = removeSpecialCharacters("-col -s " + $sel[0]);
+	
+	wizlog ("	[#] Selected Object : " + $sel[0]);
+	
+	//string $iconFile = $fileName + $WIZ_wizObjectIconSuffix + "." + $ext;
+	
+	
+	//int $v = getLatestFileVersionNumber($iconFile);
+	
+	global string $WIZ_subFileFolderSuffix;
+	string $newDir = wizMakeDir(($filePathSplice[1] + $filePathSplice[0] + $WIZ_subFileFolderSuffix + "/"));
+	if ($newDir == ""){ return "";}
+	
+	
+	//$exportName = $newDir + $filePathSplice[0] + $objType + $v + "." + $ext;
+	string $iconFile = $newDir + $fileName + $iconSuffix + "." + $ext;
+	/*
+	int $fileExists = `filetest -e $iconFile`;
+	
+	if ($fileExists == 0){
+		wizlog ("[!] Object Has No Icon : " + $iconFile);
+		//int $ranNullIcon = randInt(1, 4);
+		//$iconFile = $iconDir + "ObjectIconPlaceholderIcon" + $ranNullIcon + ".png";
+		string $iconDir = getWizIconsDirectory();
+		//int $ranNullIcon = randInt(1, 4);
+		//$iconFile = $iconDir + "objectIconPlaceholderIcon" + $ranNullIcon + ".png";
+		$iconFile = $iconDir + "objectIconPlaceholderIcon1.png";
+	}
+	*/
+	wizlog ("	[#] Object Icon File : " + $iconFile);
+	
+	
+	wizLog ("	[#] Object Type : " + $fileName + "\n	- File Name : " + $iconFile + "\n");
+
+	return $iconFile;
+		
+	
+
+}
+
+//@ TEXT SCROLL LIST AUTO FIND
+//====================================================================
+/*****************************************************************//**
+	Finds text from a textFieldButtonGrp in a textScrollList and scrolls to and
+	selects matched item.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	textFieldButtonGrp
+		-l "Attr"
+		-tx ""
+		-cw1 0
+		-cw2 50
+		-cw3 10
+		-tcc ("textScrollListAutoFind(\"connectMaster_autoFillAttrName_textFieldButtonGrp\", \"connectMasterListA\", \"autoFind\");")
+		-bl "Find"
+		-bc ("textScrollListAutoFind(\"connectMaster_autoFillAttrName_textFieldButtonGrp\", \"connectMasterListA\", \"find\");")
+		connectMaster_autoFillAttrName_textFieldButtonGrp
+		;
+	</code>
+*********************************************************************/
+global proc string textScrollListAutoFind( string $matchField, string $tsl, string $method )
+{
+	string $matchTx = `textFieldButtonGrp -q -tx $matchField`;
+	if (`size $matchTx` == 0){ 
+		return "";
+	}
+	//wizlog ("	[#] TextFieldButtonGrp : " + $matchField + " TextScrollList : " + $tsl);
+	//wizlog ("	[#] Match Text : " + $matchTx);
+	string $return;
+	string $attr[] = `textScrollList -q -ai $tsl`;
+	if ($method == "autoFind"){			
+		for ($i=0;$i<`size $attr`;$i++){
+			//wizlog ("	[#] Starts With : " + $attr[$i] + " Match Text : " + $matchTx);
+			if ((startsWith($attr[$i], $matchTx)) == 1 ||( startsWith((tolower($attr[$i])), $matchTx)) == 1){
+				//wizlog ("	[Match]");
+				textScrollList -e -da $tsl;
+				textScrollList -e -sii ($i + 1) $tsl;
+				textScrollList -e -shi ($i + 1) $tsl;
+				$return = $attr[$i];
+				break ;
+			}
+		}
+		
+	} else if ($method == "find"){
+		int $find = stringArrayFind($matchTx, 0, $attr);
+		if ($find >= 0){
+			textScrollList -e -da $tsl;
+			textScrollList -e -sii ($find + 1) $tsl;
+			textScrollList -e -shi ($find + 1) $tsl;	
+			$return = $attr[$find];
+		}		
+	}
+	
+	if (`size $return` == 0){
+		for ($i=0;$i<`size $attr`;$i++){
+			int $gmatch = gmatch($attr[$i], ("*" + $matchTx + "*"));
+			int $lowgmatch = gmatch((tolower($attr[$i])), ("*" + $matchTx + "*"));
+			if ($gmatch || $lowgmatch){
+				textScrollList -e -da $tsl;
+				textScrollList -e -sii ($i + 1) $tsl;
+				textScrollList -e -shi ($i + 1) $tsl;
+				$return = $attr[$i];
+				break ;
+			}
+		
+		}
+	}
+	return $return;
+}
+
+global proc string[] sortTextScrollList( string $tsl, string $method )
+{
+	string $ai[] = `textScrollList -q -ai $tsl`;
+	string $sorted[];
+	if ($method == "alpha" || $method == "az"){
+		$sorted = sort($ai);
+		wizlog ((niceArrayList("	[SORTED]", $sorted)));
+		replaceTextScrollListWithSelectedObjects($sorted, $tsl);
+		return $sorted;
+	} else if ($method == "date" || $method == "d"){
+			
+	}
+	
+	
+}

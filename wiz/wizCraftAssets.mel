@@ -1,0 +1,1713 @@
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         WIZ CRAFT ASSET
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+global proc wizCraftAssets()
+{
+
+}
+
+//@ CREATE WIZ CRAFT ASSET
+//====================================================================
+//@ PROC NAME
+//====================================================================
+/*****************************************************************//**
+	This will create a wizCraft Asset.
+	<hr>
+	<b>Synopsis</b><br>
+	createWizCraftAsset [-edit bool] [-wizCraftAsset string] [-name string]<br>
+	Pass the flag -e to edit the selected wizCraft asset and update it's attributes
+	
+	<b>Return value</b><br>
+	string the wizCraftAsset
+	
+	<b>Flags</b><br>
+	-edit(-e) <br>
+	-wizCraftAsset(-wca) <br>
+	-name(-n) <br>
+	-addFeatureType(-aft) <br>
+
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	
+	</code>
+*********************************************************************/
+global proc string createWizCraftAsset( string $flags )
+{
+	wizlog ("[@] createWizCraftAsset");
+	wizlog ("	[*] createWizCraftAsset(\"" + $flags + "\");");
+	global string $WIZCRAFT_featureTypes[];
+	int $edit;
+	string $asset;
+	string $name = "wizCraft";
+	string $ft[];
+	int $aft;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+	
+			case "-wca" : case "-wizCraftAsset" :
+			$asset = $tok[($i + 1)];
+			break ;
+			
+			case "-n" : case "-name" :
+			$name = $tok[($i + 1)];
+			break ;
+			
+			case "-aft" : case "-addFeatureType" :
+			$aft = 1;
+			if ($tok[($i + 1)] == "all"){
+				$ft = $WIZCRAFT_featureTypes;		
+				wizlog ("	[+] Add All Feature Types : " + stringArrayToString($ft, ", "));
+			} else {
+				$ft[`size $ft`] = $tok[($i + 1)];
+				wizlog ("	[+] Add Feature Type : " + stringArrayToString($ft, ", "));
+			}			
+			break ;
+			
+		}
+	}
+	string $sel[] = `ls -typ dagContainer -sl`;
+	
+	if ($edit == 1 || $aft == 1){			
+		if ($asset == ""){
+			string $sel[] = `ls -typ dagContainer -sl`;
+			if (`size $sel` == 0){
+				wizLog("-w	[!] You must select a wizCraftAsset to update [!]");
+				return "";
+			}
+			$asset = $sel[0];
+		}		
+	} else {
+		$asset = `container -n $name -type dagContainer -ind "inputs" -includeHierarchyBelow -includeShapes -includeTransform`;
+		addWizAssetTypeAttributeToSelectedAsset($asset, "wizCraftAsset");
+	}
+	
+	if ($aft == 1){
+
+		for ($i=0;$i<`size $ft`;$i++){
+			string $layout = ("wizCraft_" + $ft[$i] + "ColumnLayout");			
+			createObjAttributesFromGUIObjectsInLayout($asset, $layout, "");	
+
+			createObjAttributesFromGUIObjectsInLayout($asset, "wizCraftBuildSettingsColumnLayout", "");	
+			
+			global string $WIZCRAFT_componentPoolTypes[];
+			for ($p=0;$p<`size $WIZCRAFT_componentPoolTypes`;$p++){
+				addAttr -ln ($ft[$i] + $WIZCRAFT_componentPoolTypes[$p]) -dt "string" $asset;	
+			}
+			
+		}
+	}
+		
+    setAttr -type "string" ($asset + ".rmbCommand") "assetWiz";
+    string $dir = getWizIconsDirectory();
+    setAttr -type "string" ($asset + ".iconName") ($dir + "wizCraftIcon1.png");
+	/*
+    createObjAttributesFromGUIObjectsInLayout($asset, "wizCraftAnalysisMainColumnLayout", "");
+	createObjAttributesFromGUIObjectsInLayout($asset, "wizCraftBuildSettingsColumnLayout", "");
+	*/
+	
+    string $componentPoolAttr[] =  getWizCraftPoolNames();    	
+    for ($i=0;$i<`size $componentPoolAttr`;$i++){
+        if (`attributeExists $componentPoolAttr[$i] $asset` == 0){
+            addAttr -ln $componentPoolAttr[$i] -dt "string" $asset;
+        } 		
+    }
+	
+	string $polyReduceSet[] = wizCraftSetConnectionAttribute("-n wiz_polyReduceSet -obj " + $asset);
+	
+	/*
+	string $bsSets[] =  getWizCraftBuildSetNames();
+	for ($i=0;$i<`size $bsSets`;$i++){
+        if (`attributeExists $bsSets[$i] $asset` == 0){
+            addAttr -ln $bsSets[$i] -dt "string" $asset;
+        } 
+		
+    }
+	*/
+
+
+	return $asset;
+}
+
+//@ WIZ CRAFT SET CONNECTION ATTRIBUTE
+//====================================================================
+/*****************************************************************//**
+	Creates a set and an attribute on an object and connects the set to the attribute via message.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	This can be used as an easy means to create sets associate
+	with some object for batch processing.
+	
+	<b>Return value</b><br>
+	string[] the new set and the name of the attribute connected to set.
+	
+	<b>Flags</b><br>
+	-name(-n) <br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-stringMessage(-sm) <br>
+	-text(-tx) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $setAttr[] = wizCraftSetConnectionAttribute("-n someAttrName -sl");
+	
+	</code>
+*********************************************************************/
+global proc string[] wizCraftSetConnectionAttribute( string $flags )
+{
+	string $name, $obj, $type, $tx;
+	string $setName;
+	string $sel[];
+	int $sm;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-n" : case "-name" :
+			$name = $tok[($i + 1)];
+			break ;
+			
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+			
+			case "-typ" : case "-type" :
+			$type = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			$obj = $sel[0];
+			break ;			
+			
+			case "-tx" : case "-text" :
+			$tx = $tok[($i + 1)];
+			break ;
+			
+			case "-sm" : case "-stringMessage" :
+			$sm = 1;
+			break ;
+			
+		}
+	}
+
+	//_________________________________________
+	// Add the attribute to the object
+	string $ln, $nn;
+	$ln = makeNiceAttributeName($name);		
+	$nn = makeNiceAttributeName($ln);
+			
+	if (`attributeExists $ln $obj` == 0){
+		//addAttr -ln $ln -nn $nn -dt "string" $obj;
+		if ($sm){
+			addAttr -ln $ln -nn $nn -at message $obj;
+		} else {
+			addAttr -ln $ln -nn $nn -dt "string" $obj;
+			setAttr -type "string" ($obj + "." + $ln) $tx;
+		}
+	} else {
+		setAttr -type "string" ($obj + "." + $ln) $tx;
+	}
+	wizlog ("	[+] Add String Attr : " + $ln + " Value : " + $tx);
+
+	
+	//_________________________________________
+	// Create the set and connect to the attribute
+	if ((endsWith($name, "Set")) == 0){
+		$setName = ($name + "Set");
+	} else {
+		$setName = $name;
+	}
+		
+	
+	string $newSet = `sets -em -n $setName`;
+	wizlog (" [#] New Set : " + $newSet);
+	connectAttr ($newSet + ".message") ($obj + "." + $name);
+	
+	return {$newSet, $ln};
+
+}
+
+
+//@ CREATE S BLDR ASSET
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-fa string] [-fb linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-fa, -fb
+	
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName("-fa aString -fb anotherString");
+	
+	</code>
+*********************************************************************/
+global proc string createSBldrAsset( string $flags )
+{
+	int $edit;
+	string $asset;
+	string $name;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break;
+	
+			case "-wca" : case "-wizCraftAsset" :
+			$asset = $tok[(`size $tok` + 1)];
+			break;
+			
+			case "-n" : case "-name" :
+			$name = $tok[(`size $tok` + 1)];
+			break;
+		}
+	}
+	if ($name == ""){
+		$name = $flags;
+	}
+	string $assetName = $name + "_sBldr";
+	
+	if ($edit == 0){
+		$asset = `container -n $assetName -type dagContainer -ind "inputs" -includeHierarchyBelow -includeShapes -includeTransform`;
+		addWizAssetTypeAttributeToSelectedAsset($asset, "sBldrAsset");		
+	} else {
+		if ($asset == ""){
+			string $sel[] = `ls -typ dagContainer -sl`;
+			if (`size $sel` == 0){
+				wizLog("-w	[!] You must select a sBldrAsset to update [!]");
+				return "";
+			}
+			$asset = $sel[0];
+		}		
+	}
+	
+	string $layout = ("wizCraft_" + $name + "ColumnLayout");
+    createObjAttributesFromGUIObjectsInLayout($asset, $layout, "");
+    setAttr -type "string" ($asset + ".rmbCommand") "assetWiz";
+  
+    string $componentPoolAttr[] =  { ($name + "ComponentPool"), ($name + "MaterialPool") };
+	
+    string $dir = getWizIconsDirectory();
+    setAttr -type "string" ($asset + ".iconName") ($dir + "wizCraftIcon1.png");
+
+    for ($i=0;$i<`size $componentPoolAttr`;$i++){
+        if (`attributeExists $componentPoolAttr[$i] $asset` == 0){
+            addAttr -ln $componentPoolAttr[$i] -dt "string" $asset;
+        } 
+		
+    }
+	/*
+	if (`attributeExists "structureComponentPool" $asset` == 0){
+		addAttr -ln "structureComponentPool" -dt "string" $asset;
+	} 
+	*/
+	
+	if (`attributeExists "featureTypeName" $asset` == 0){
+		addAttr -h -ln "featureTypeName" -dt "string" $asset;		
+	}
+	setAttr ($asset + ".featureTypeName") -type "string" $name;
+
+	return $asset;
+
+}
+
+//@ WIZ CRAFT CREATE TEXTURE LAYER ASSET
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-fa string] [-fb linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-fa, -fb
+	
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName("-fa aString -fb anotherString");
+	
+	</code>
+*********************************************************************/
+global proc wizCraftCreateTextureLayerAsset( string $flags )
+{
+	string $obj, $type;
+	string $name = "TextureLayer";
+	string $sel[];
+	int $edit;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+			
+			case "-nm" : case "-name" :
+			$name = $tok[($i + 1)];
+			break ;
+			
+			case "-typ" : case "-type" :
+			$type = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+		}
+	}
+	string $asset;
+	string $dc[] = `ls -type dagContainer -sl`;
+	if ($edit == 1 || `size $dc` > 0){
+		$asset = $dc[0];
+	} else {
+		$asset = `container -n $name -type dagContainer -ind "inputs" -includeHierarchyBelow -includeShapes -includeTransform`;
+	
+	}
+	
+	setAttr -type "string" ($asset + ".rmbCommand") "assetWiz";
+	if (`attributeExists "wizAssetType" $asset` == 0){
+		addWizAssetTypeAttributeToSelectedAsset($asset, "textureLayerAsset");
+	}	
+	
+	string $colTex[] = { "color", "transparency", "ambientColor", "incandescence", "specularColor", "reflectedColor" };
+	string $valTex[] = { "bumpMapping", "diffuse", "reflectivity" };
+	string $layTexPrefix = "layer_";
+	stringArrayAddPrefix($colTex, $layTexPrefix);
+	stringArrayAddPrefix($valTex, $layTexPrefix);
+
+	string $colAlpha[] = $colTex;
+	$colAlpha = stringArrayAddPrefix($colAlpha, "alpha_");
+	
+	for ($i=0;$i<`size $colTex`;$i++){
+		wizAddColorAttribute(("-obj " + $asset + " -n " + $colTex[$i]));
+		wizAddColorAttribute(("-obj " + $asset + " -n " + $colAlpha[$i] + " -v"));
+		
+	}
+	
+	for ($i=0;$i<`size $valTex`;$i++){
+		wizAddColorAttribute(("-obj " + $asset + " -n " + $valTex[$i] + " -v"));
+	}
+	
+}
+
+//@ ADD TEXTURE LAYER TO OBJECT
+//====================================================================
+/*****************************************************************//**
+	Layers the textures connected to a textureLayerAsset onto an
+	objects textures.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	none.
+	
+	<b>Flags</b><br>
+	-textureLayer(-tl) <br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-channel(-ch) <br>
+	-set <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	addTextureLayerToObject("-tl textureLayerAsset1 -sl");
+	
+	</code>
+*********************************************************************/
+global proc addTextureLayerToObject( string $flags )
+{
+	string $obj, $type;
+	string $tl;
+	string $tex[];
+	string $sel[];
+	string $ch;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-tl" :  case "-textureLayer" :
+			$tl = $tok[($i + 1)];
+			wizlog ("	[#] Texture Layer Asset : " + $tl);
+			break ;
+			
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			$sel[0] = $obj;
+			wizlog ("	[#] Object : " + $sel[0]);
+			break ;
+			
+			case "-set" :
+			string $set = $tok[($i + 1)];
+			//$sel = `sets -q $set`;
+			select -r $set;
+			// convert to faces in case we don't have a face selection
+			ConvertSelectionToFaces;			
+			$sel = `ls -fl -sl`;
+			wizlog ((niceArrayList("	[#] Faces [#] ", $sel)));
+			break ;
+				
+			case "-typ" : case "-type" :
+			$type = wizFlagString($tok, $i);
+			wizlog ("	[#] Type : " + $type);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$tex = `ls -tex -sl`;			
+			string $lssl[] = `ls -fl -sl`;
+			$sel = stringArrayRemove($tex, $lssl);
+			wizlog ((niceArrayList("	[#] Selected [#] ", $sel)));
+			break ;			
+			
+			case "-ch" : case "-channel" :
+			$ch = $tok[($i + 1)];
+			wizlog ("	[#] Channel : " + $ch);
+			break ;
+			
+		}
+	}
+			
+	select -r $sel;
+	
+	string $ud[];
+	string $tlAttr[];
+	string $tlAlAttr[];
+	if (`size $ch` == 0){
+		// list the user defined attributes
+		$ud = `listAttr -ud $tl`;
+		for ($i=0;$i<`size $ud`;$i++){
+			// channels are prefixed with "layer_"
+			if (startsWith($ud[$i], "layer_") == 1){
+				$tlAttr[`size $tlAttr`] = $ud[$i];
+			}	
+
+			if (startsWith($ud[$i], "alpha_") == 1){
+				$tlAlAttr[`size $tlAlAttr`] = $ud[$i];
+			}	
+		}
+		
+	}
+	// remove the prefix to get the channel name
+	//stringArrayRemovePrefix($tlAttr, "layer_");
+	wizlog ((niceArrayList("	[#] Channels [#]", $tlAttr)));
+	
+	for ($i=0;$i<`size $tlAttr`;$i++){
+		select -r $sel;
+		string $con[] = `listConnections ($tl + "." + $tlAttr[$i])`;
+		if (`size $con` > 0){	
+				
+			string $layChannel = substitute("layer_", $tlAttr[$i], "");
+			string $layTexComm = ("-obj " + $sel[0] + " -tex " + $con[0] + " -ch " + $layChannel);
+			
+			if (`attributeExists ("alpha_layer_" + $layChannel) $tl` == 1){
+				string $acon[] = `listConnections ($tl + ".alpha_layer_" + $layChannel)`;
+				wizlog ((niceArrayList(("[#] Connections To : " + "alpha_layer_" + $layChannel + " [#]"), $acon)));
+				
+				if (`size $acon` > 0){
+					wizlog ("	[#] Using Alpha Texture : " + $acon[0]);
+					$layTexComm = $layTexComm + (" -a " + $acon[0]);
+				}
+			
+			}
+			
+			wizlog ("	[*] layerTextureOntoSelectedObject(\"" + $layTexComm + "\");");
+			layerTextureOntoSelectedObject($layTexComm);
+			
+		}
+		
+	}
+	
+
+}
+
+global proc rmbAddTextureLayerToObject( string $object )
+{
+/*
+	wizlog ("[@] rmbLayerTextureOntoSelectedObject");
+	string $sel[] = `ls -sl`;
+	string $dc[] = `ls -type dagContainer -sl`;
+	string $objs[] = stringArrayRemove($dc, $sel); 
+	wizlog ("	[#] Object : " + $objs[0]);
+	layerTextureOntoSelectedObject("-obj " + $objs[0]);
+*/
+
+	wizlog ("[@] rmbAddTextureLayerToObject");
+	string $con[] = `ls -con -sl`;
+	string $lssl[] = `ls -sl`;
+	string $sel[] = stringArrayRemove($con, $lssl);
+	wizlog ("	[#] TextureLayer : " + $con[0]);
+	wizlog ("	[#] Object : " + $sel[0]);
+	//addTextureLayerToObject("-tl " + $con[0] + " -sl");
+	addTextureLayerToObject("-tl " + $con[0] + " -obj " + $sel[0]);
+
+}
+
+//@ CREATE WIZ CRAFT ASSET
+//====================================================================
+global proc createWizCraftComponentAsset()
+{
+    string $n = "wizCraftComponent";
+    string $asset = `container -n $n -type dagContainer -ind "inputs" -includeHierarchyBelow -includeShapes -includeTransform`;
+	addWizAssetTypeAttributeToSelectedAsset($asset, "wizCraftComponentAsset");
+
+	
+    setAttr -type "string" ($asset + ".rmbCommand") "assetWiz";
+  
+    string $comTypes[] = getWizCraftComponentTypes();
+    string $enum[];
+	for ($i=0;$i<`size $comTypes`;$i++){
+		$enum[$i] = makeNiceAttributeName($comTypes[$i]);
+		$enum[$i] = $enum[$i] + "=" + $i + ":";
+	}
+	if (`attributeExists "wizCraftComponentType" $asset` == 0){
+		addAttr -ln "wizCraftComponentType" -nn "componentType" -at "enum" -en (stringArrayToString($enum, "")) $asset;
+		setAttr ($asset + "." + "wizCraftComponentType") 1;
+	} else {
+		setAttr ($asset + "." + "wizCraftComponentType") 1;
+	}
+	string $dir = getWizIconsDirectory();
+	setAttr -type "string" ($asset + ".iconName") ($dir + "wizCraftIcon1.png");
+	
+}
+
+//@ GET WIZ CRAFT POOL NAMES
+//====================================================================
+/*****************************************************************//**
+*	Returns a list of pool names for wizCraft.
+*	More information.
+*	USAGE : 
+*
+*********************************************************************/
+global proc string[] getWizCraftPoolNames()
+{
+
+    string $componentPoolAttr[] = { 
+    "structureComponentPool", "nHairFieldPool"
+    };
+    return $componentPoolAttr;
+    
+}
+
+
+global proc string[] getWizCraftAssetPoolNames()
+{
+	string $sel[] = `ls -typ dagContainer -sl`;
+	if (`size $sel` == 0){ return {""};}
+	string $pools[] = `listAttr -ud -string "*Pool" $sel[0]`;
+	//string $pools[];
+	return $pools;
+
+}
+
+//@ GET WIZ CRAFT BUILD SET NAMES
+//====================================================================
+/*****************************************************************//**
+*	Returns a list of build set names for wizCraft.
+*	More information.
+*	USAGE : 
+*
+*********************************************************************/
+global proc string[] getWizCraftBuildSetNames()
+{
+	string $sets[] = { 
+    "roofBuildSet", "overhangBuildSet", "windowBuildSet"
+    };
+    return $sets;
+
+}
+
+//@ GET WIZ CRAFT COMPONENT TYPES
+//====================================================================
+/*****************************************************************//**
+*	Returns a list of component types for wizCraft.
+*	More information.
+*	USAGE : 
+*
+*********************************************************************/
+global proc string[] getWizCraftComponentTypes()
+{
+    string $comTypes[] = { 
+    "structureComponent", "generalComponent",
+    "cBldrComponent", "lBldrComponent"
+    };
+    return $comTypes;
+    
+}
+
+global proc rmbSetCurrentWizCraftAsset( string $object )
+{
+	
+}
+//@ RMB ADD FILES TO REFERENCE COMPONENT POOL
+//====================================================================
+global proc rmbAddFilesToReferenceComponentPool( string $object )
+{
+    string $asset[] = `ls -typ dagContainer -sl`;
+    print ("Add Files To Reference Component Pool : " + $object + "\n");
+    string $files[] = wizGetMultipleFiles();
+	addToWizComponentPool($files, $asset[0], $object);
+    
+}
+
+//@ ADD FILES TO REFERENCE COMPONENT POOL
+//====================================================================
+global proc addFilesToReferenceComponentPool( string $sel[], string $poolName )
+{
+	string $asset[] = `ls -typ dagContainer -sl`;
+	if (`size $asset` == 0){
+		warning ("WIZ| addFilesToReferenceComponentPool : No WizAsset Selected\n");
+		return ;
+	}
+	
+	addToWizComponentPool($sel, $asset[0], $poolName);
+}
+
+//@ RMB ADD SELECTED TO REFERENCE COMPONENT POOL
+//====================================================================
+global proc rmbAddSelectedObjectsToComponentPool( string $object )
+{
+	//Get the asset we want to add the pool too
+    string $asset[] = `ls -typ dagContainer -sl`;
+    string $wca[] = lsWizAssetOfType($asset, "-typ wizCraftAsset");
+    
+	//Get the rest of the selection
+    string $sel[] = `ls -sl`;	
+	//Remove the wizCraftAsset so it's not added to itself	
+    string $addSel[] = stringArrayRemove($wca, $sel);
+
+    addToWizComponentPool($addSel, $asset[0], $object);
+	
+}
+
+//@ ADD TO WIZ COMPONENT POOL
+//====================================================================
+global proc addToWizComponentPool( string $sel[], string $asset, string $poolName )
+{
+	if (`attributeExists $poolName $asset` == 0){
+		warning ("WIZ| addToWizComponentPool : " + $asset + " : Does Not Have Attribute : " + $poolName + "\n");
+		return ;
+	}
+	string $curPool = `getAttr ($asset + "." + $poolName)`;
+    string $poolSel[] = tokenizeString($curPool, " ");
+    appendStringArray($poolSel, $sel, `size $sel`);
+    string $add[] = stringArrayRemoveDuplicates($poolSel);
+	
+    setAttr ($asset + "." + $poolName) -typ "string" (stringArrayToString($add, " "));
+	
+}
+
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         REFERENCE POOL ASSET
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+
+//@ CREATE REFERENCE POOL ASSET
+//====================================================================
+/*****************************************************************//**
+	Creates a reference pool asset that can be used to reference random
+	files.
+	<hr>
+	<b>Synopsis</b><br>
+	createReferencePoolAsset [-ref string] [-name string] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string the new asset
+	
+	<b>Flags</b><br>
+	-reference(-ref) <br>
+	-name(-nm) <br>
+	-selected(-sl) <br>
+	-edit(-e) <br>
+	
+	<hr>
+	<b>Related</b><br>
+	wizCraftCreateTextureLayerAsset(),
+	
+	<b>Examples</b><br>
+	<code>
+	createReferencePoolAsset("-sl");
+	
+	</code>
+*********************************************************************/
+global proc createReferencePoolAsset( string $flags )
+{
+	string $ref[];
+	string $name = "ReferencePool";
+	string $sel[];
+	int $edit, $ada;
+	string $asset;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-ref" : case "-reference" :
+			$ref = wizFlagArray($tok, $i);
+			break ;
+			
+			case "-nm" : case "-name" :
+			$name = $tok[($i + 1)];
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			$ref = `ls -typ reference $sel`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+			case "-ada" : case "-addDirectoryAttributes" :
+			$ada = 1;
+			break ;
+			
+			case "-ass" : case "-asset" :
+			$asset = $tok[($i + 1)];
+			break ;
+			
+			
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+		$ref = `ls -typ reference $sel`;
+	}
+	
+	if ($edit == 0){
+		$asset = `container -n $name -type dagContainer -ind "inputs" -includeHierarchyBelow -includeShapes -includeTransform`;
+	}
+		
+	setAttr -type "string" ($asset + ".rmbCommand") "assetWiz";
+	addWizAssetTypeAttributeToSelectedAsset($asset, "referencePoolAsset");	
+	
+	if (`attributeExists "referencePool" $asset` == 0){	
+		addAttr -ln "referencePool" -dt "string" $asset;	
+		setAttr -type "string" ($asset + ".referencePool") (stringArrayToString($ref, " "));
+	} else {
+		setAttr -type "string" ($asset + ".referencePool") (stringArrayToString($ref, " "));
+	}
+
+	if (`attributeExists "replacement" $asset` == 0){	
+		addAttr -ln "replacement" -at bool $asset;	
+	} 	
+	setAttr ($asset + ".replacement") 0;
+	
+	if (`attributeExists "onlyOne" $asset` == 0){	
+		addAttr -ln "onlyOne" -at bool $asset;	
+	} 
+	setAttr ($asset + ".onlyOne") 0;
+	
+	if (`attributeExists "allowMultipleCopies" $asset` == 0){	
+		addAttr -ln "allowMultipleCopies" -at bool $asset;	
+	} 
+	setAttr ($asset + ".allowMultipleCopies") 0;
+	
+	if (`attributeExists "useAsReferenceTransform" $asset` == 0){	
+		addAttr -ln "useAsReferenceTransform" -at bool $asset;	
+	} 
+	setAttr ($asset + ".useAsReferenceTransform") 0;
+
+	if (`attributeExists "refPoolDirectory" $asset` == 0){	
+		//addAttr -dt "string" -ln "refPoolDirectory" -uaf $asset;	
+		addAttr -dt "string" -ln "refPoolDirectory" $asset;	
+	} 
+		
+	if (`attributeExists "refPoolExtension" $asset` == 0){	
+		addAttr -dt "string" -ln "refPoolExtension" $asset;	
+		setAttr -type "string" ($asset + ".refPoolExtension") "mb";
+	} 
+	
+	if (`attributeExists "refPoolSearchSubDirectories" $asset` == 0){	
+		addAttr -at bool -ln "refPoolSearchSubDirectories" $asset;	
+		//setAttr ($asset + ".refPoolSearchSubDirectories") 0;
+	} 
+	
+	if (`size $asset` == 0){
+		$asset = $sel[0];
+	}	
+
+	
+	
+	if ($ada){
+		int $pi = 0;
+		while (true ){
+			string $refPoolDirName = "refPoolDirectory" + $pi;
+			string $refPoolExtName = "refPoolExtension" + $pi;
+			if (`attributeExists $refPoolDirName $asset` == 0){
+				//addAttr -dt "string" -ln $refPoolDirName -uaf $asset;	
+				addAttr -dt "string" -ln $refPoolDirName $asset;	
+				//setAttr -type "string" ($obj + ".refPoolDir") $file;	
+				addAttr -dt "string" -ln $refPoolExtName $asset;	
+				setAttr -type "string" ($asset + "." + $refPoolExtName) "mb";	
+				break ;
+			}
+			
+			$pi++;
+			
+		}
+	}
+
+	
+}
+
+//@ RMB ADD SELECTED FILES TO REFERENCE POOL
+//====================================================================
+global proc rmbAddSelectedFilesToReferencePool( string $object )
+{
+    string $sel[] = `ls -typ dagContainer -sl`;
+    if (`size $sel` == 0){
+        wizLog (" [!] No Reference Pool Selected\n");
+        return;
+    }
+    string $ass = $sel[0];
+    /*
+    int $mi[] = `getAttr -mi ($ass + ".referencePool")`;
+    int $newMi;
+    if (`size $mi` >0){
+        $newMi = $mi[(`size $mi` - 1)] + 1;    
+    } else {
+        $newMi = 0;
+    }
+	*/
+	string $curRef = `getAttr ($ass + ".referencePool")`;
+    string $addFiles[] = wizGetMultipleFiles();
+	string $cR[] = tokenizeString($curRef, " ");
+	appendStringArray($addFiles, $cR, `size $cR`);
+	stringArrayRemoveDuplicates($addFiles);
+
+	setAttr ($ass + ".referencePool") -type "string" (stringArrayToString($addFiles, " "));
+
+}
+
+//@ RMB ADD SELECTED FILES TO REFERENCE POOL
+//====================================================================
+global proc rmbAddDirectoryToReferencePool( string $object )
+{
+    string $sel[] = `ls -typ dagContainer -sl`;
+    if (`size $sel` == 0){
+        wizLog (" [!] No Reference Pool Selected\n");
+        return;
+    }
+    string $rp = $sel[0];
+
+	addDirectoryToReferencePoolAsset("-prmt -sl");
+
+}
+
+global proc addDirectoryToReferencePoolAsset( string $flags )
+{
+	string $addDir, $rp;
+	string $sel[];
+	int $edit;
+	int $prmt;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-dir" : case "-directory" :
+			$addDir = $tok[($i + 1)];
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -typ dagContainer -sl`;
+			$rp = $sel[0];
+			break ;			
+			
+			case "-prmt" : case "-promt" :
+			$prmt = 1;
+			break ;
+		}
+	}
+
+	
+	if ($prmt){
+		$addDir = wizGetDirectory();
+	}
+	
+	//_________________________________________
+	// Directory Of Files
+	// set the string of refPoolDirectory to a directory;
+	string $refDir = `getAttr ($rp + ".refPoolDirectory")`;
+	if (`size $refDir` > 0){
+		setAttr ($rp + ".refPoolDirectory") -type "string" $addDir;
+		return ;
+	}	
+	// if the directory is already filled, look for other directory spaces
+	int $pi = 0;
+	while (true ){
+		string $refPoolDirName = "refPoolDirectory" + $pi;
+		if (`attributeExists $refPoolDirName $rp` == 0){
+			if ($pi == 0){
+				setAttr ($rp + ".refPoolDirectory") -type "string" $addDir;
+				break ;
+			}
+			break ;
+		}
+		$refDir = `getAttr ($rp + "." + $refPoolDirName)`;
+		if (`size $refDir` == 0){
+			setAttr ($rp + ".refPoolDirectory") -type "string" $addDir;
+			return ;		
+		}
+	
+		$pi++;
+		
+	}	
+	
+
+}
+
+
+//@ RMB ADD SELECTED REFERENCES TO REFERENCE POOL
+//====================================================================
+global proc rmbAddSelectedReferencesToReferencePool( string $object )
+{
+    string $sel[] = `ls -typ dagContainer -sl`;
+    if (`size $sel` == 0){
+        wizLog (" [!] No Reference Pool Selected\n");
+        return;
+    }
+    string $ass = $sel[0];
+    /*
+    int $mi[] = `getAttr -mi ($ass + ".referencePool")`;
+    int $newMi;
+    if (`size $mi` >0){
+        $newMi = $mi[(`size $mi` - 1)] + 1;    
+    } else {
+        $newMi = 0;
+    }
+	*/
+	
+	string $addRef[] = `ls -typ reference -sl`;
+	string $curRef = `getAttr ($ass + ".referencePool")`;
+	string $cR[] = tokenizeString($curRef, " ");
+	appendStringArray($addRef, $cR, `size $cR`);
+	stringArrayRemoveDuplicates($addRef);
+
+	setAttr ($ass + ".referencePool") -type "string" (stringArrayToString($addRef, " "));
+	
+}
+
+//@ LOAD REFERENCE POOL REFERENCE
+//====================================================================
+/*****************************************************************//**
+	Loads references from a reference pool asset.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	Use -all to load all references in reference pool. <br>
+	Use the -ref flag to specify a reference to load. <br>
+	If the -all flag or -ref flags are not used then a random reference is loaded. <br>
+	
+	<b>Return value</b><br>
+	string[] the references loaded.
+	
+	<b>Flags</b><br>
+	-referencePool(-rp) <br>
+	-selected(-sl) <br>
+	-reference(-ref) <br>
+	-all(-a) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	wizReferenceFile(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $ref[] = loadReferencePoolReference("-sl -all");
+	string $ref[] = loadReferencePoolReference("-sl -rand");
+	</code>
+*********************************************************************/
+global proc string[] loadReferencePoolReference( string $flags )
+{
+	string $ref[];
+	string $rp;
+	string $sel[];
+	int $all;
+	int $re;
+	int $random;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-rp" : case "-referencePool" :
+			$rp = $tok[($i + 1)];
+			break ;
+			
+			case "-ref" : case "-reference" :
+			$ref[`size $ref`] = $tok[($i + 1)];
+			break ;
+				
+			case "-a" : case "-all" :
+			$all = 1;
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			$rp = $sel[0];
+			$re = `getAttr ($rp + ".replacement")`;
+			break ;			
+			
+			case "-re" : case "-replacement" :
+			$re = 1;
+			break ;
+			
+			case "-rand" : case "-random" :
+			$random = 1;
+			break ;
+		}
+	}
+
+	//_________________________________________
+	// Get a list of possible references
+	if (`size $ref` == 0){
+		//_________________________________________
+		// Individual Files
+		// get the reference names from reference pool attribute
+		string $curRef = `getAttr ($rp + ".referencePool")`;
+		if (`size $curRef` > 0){
+			$ref = tokenizeString($curRef, " ");
+		}
+		
+		//_________________________________________
+		// Directory Of Files
+		// get the names of references from refPoolDirectory
+		string $refDir = `getAttr ($rp + ".refPoolDirectory")`;
+		string $refDirExt = `getAttr ($rp + ".refPoolExtension")`;
+		int $subFolders = `getAttr ($rp + ".refPoolSearchSubDirectories")`;
+		
+		string $ext[] = tokenizeString($refDirExt, " ");
+		if (`size $refDir` > 0){
+			for ($i=0;$i<`size $ext`;$i++){		
+				string $refDirFiles[];
+				if ($subFolders){
+					$refDirFiles = wizGetAllFilesOfTypeInAllSubfoldersOfDirectory($refDir, $ext[$i]);
+				} else {
+					$refDirFiles = getAllFilesOfTypeInDirectory($refDir, $ext[$i]);
+				}
+				appendStringArray($ref, $refDirFiles, `size $refDirFiles`);		
+			}
+		}	
+		// get any files from additional refPoolDirectories
+		int $pi = 0;
+		while (true ){
+			string $refPoolDirName = "refPoolDirectory" + $pi;
+			string $refPoolExtName = "refPoolExtension" + $pi;			
+			if (`attributeExists $refPoolDirName $rp` == 0){
+				break ;
+			}
+			$refDir = `getAttr ($rp + "." + $refPoolDirName)`;
+			$refDirExt = `getAttr ($rp + "." + $refPoolExtName)`;
+			$ext = tokenizeString($refDirExt, " ");
+			
+			if (`size $refDir` > 0){
+				for ($i=0;$i<`size $ext`;$i++){
+					string $refDirFiles[];					
+					if ($subFolders){
+						$refDirFiles = wizGetAllFilesOfTypeInAllSubfoldersOfDirectory($refDir, $ext[$i]);
+					} else {
+						$refDirFiles = getAllFilesOfTypeInDirectory($refDir, $ext[$i]);
+					}
+					appendStringArray($ref, $refDirFiles, `size $refDirFiles`);
+				}
+			}		
+			$pi++ ;
+			
+		}		
+		
+	}
+	
+	//_________________________________________
+	// Reference the chosen file
+	string $return[];
+	if ($all){
+		for ($i=0;$i<`size $ref`;$i++){		
+			if (`objExists $ref[$i]`){
+				string $r = `referenceQuery -f $ref[$i]`;	
+				int $il = `referenceQuery -il $ref[$i]`;
+				if ($il == 0){
+					$return[`size $return`] = `file -lr $r`;
+				}
+			} else {
+				$return[`size $return`] = wizReferenceFile($ref[$i]);
+			}
+			
+		}
+		
+	} else {
+		int $ranRef = randInt(0, (`size $ref` - 1));
+		if (`objExists $ref[$ranRef]`){
+			int $il = `referenceQuery -il $ref[$i]`;
+			if ($il == 0){
+				$return[`size $return`] = `file -lr $ref[$ranRef]`;
+			}
+		} else {
+			$return[`size $return`] = wizReferenceFile($ref[$ranRef]);
+		}
+		
+	}
+
+	return $return;
+	
+}
+
+global proc rmbLoadReferencePoolReference( string $object )
+{
+	loadReferencePoolReference("-sl");
+
+}
+
+
+
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         IMPORT POOL ASSET
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+
+//@ CREATE IMPORT POOL ASSET
+//====================================================================
+/*****************************************************************//**
+	Creates a import pool asset that can be used to import random
+	files.
+	<hr>
+	<b>Synopsis</b><br>
+	createImportPoolAsset [-ref string] [-name string] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string the new asset
+	
+	<b>Flags</b><br>
+	-import(-ref) <br>
+	-name(-nm) <br>
+	-selected(-sl) <br>
+	-edit(-e) <br>
+	
+	<hr>
+	<b>Related</b><br>
+	wizCraftCreateTextureLayerAsset(),
+	
+	<b>Examples</b><br>
+	<code>
+	createImportPoolAsset("-sl");
+	
+	</code>
+*********************************************************************/
+global proc createImportPoolAsset( string $flags )
+{
+	string $imp[];
+	string $name = "ImportPool";
+	string $sel[];
+	int $edit, $ada;
+	string $asset;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-imp" : case "-import" :
+			$imp = wizFlagArray($tok, $i);
+			break ;
+			
+			case "-nm" : case "-name" :
+			$name = $tok[($i + 1)];
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			$imp = `ls -typ import $sel`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+			case "-ada" : case "-addDirectoryAttributes" :
+			$ada = 1;
+			break ;
+			
+			case "-ass" : case "-asset" :
+			$asset = $tok[($i + 1)];
+			break ;
+			
+			
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+		$imp = `ls -typ import $sel`;
+	}
+	
+	if ($edit == 0){
+		$asset = `container -n $name -type dagContainer -ind "inputs" -includeHierarchyBelow -includeShapes -includeTransform`;
+	}
+		
+	setAttr -type "string" ($asset + ".rmbCommand") "assetWiz";
+	addWizAssetTypeAttributeToSelectedAsset($asset, "importPoolAsset");	
+	
+	if (`attributeExists "importPool" $asset` == 0){	
+		addAttr -ln "importPool" -dt "string" $asset;	
+		setAttr -type "string" ($asset + ".importPool") (stringArrayToString($imp, " "));
+	} else {
+		setAttr -type "string" ($asset + ".importPool") (stringArrayToString($imp, " "));
+	}
+
+	if (`attributeExists "replacement" $asset` == 0){	
+		addAttr -ln "replacement" -at bool $asset;	
+	} 	
+	setAttr ($asset + ".replacement") 0;
+	
+	if (`attributeExists "onlyOne" $asset` == 0){	
+		addAttr -ln "onlyOne" -at bool $asset;	
+	} 
+	setAttr ($asset + ".onlyOne") 0;
+	
+	if (`attributeExists "allowMultipleCopies" $asset` == 0){	
+		addAttr -ln "allowMultipleCopies" -at bool $asset;	
+	} 
+	setAttr ($asset + ".allowMultipleCopies") 0;
+	
+	if (`attributeExists "preImportSelection" $asset` == 0){	
+		addAttr -ln "preImportSelection" -dt "string" $asset;	
+	} 
+	//setAttr ($asset + ".preImportSelection") 0;
+
+	if (`attributeExists "impPoolDirectory" $asset` == 0){	
+		//addAttr -dt "string" -ln "impPoolDirectory" -uaf $asset;	
+		addAttr -dt "string" -ln "impPoolDirectory" $asset;	
+	} 
+		
+	if (`attributeExists "impPoolExtension" $asset` == 0){	
+		addAttr -dt "string" -ln "impPoolExtension" $asset;	
+		setAttr -type "string" ($asset + ".impPoolExtension") "mb";
+	} 
+	
+	if (`attributeExists "impPoolSearchSubDirectories" $asset` == 0){	
+		addAttr -at bool -ln "impPoolSearchSubDirectories" $asset;	
+		//setAttr ($asset + ".refPoolSearchSubDirectories") 0;
+	} 
+	
+	if (`size $asset` == 0){
+		$asset = $sel[0];
+	}	
+
+	
+	
+	if ($ada){
+		int $pi = 0;
+		while (true ){
+			string $impPoolDirName = "impPoolDirectory" + $pi;
+			string $impPoolExtName = "impPoolExtension" + $pi;
+			if (`attributeExists $impPoolDirName $asset` == 0){
+				addAttr -dt "string" -ln $impPoolDirName $asset;	
+				addAttr -dt "string" -ln $impPoolExtName $asset;	
+				setAttr -type "string" ($asset + "." + $impPoolExtName) "mb";	
+				break ;
+			}
+			
+			$pi++;
+			
+		}
+	}
+
+	
+}
+
+//@ RMB ADD SELECTED FILES TO IMPORT POOL
+//====================================================================
+global proc rmbAddSelectedFilesToImportPool( string $object )
+{
+    string $sel[] = `ls -typ dagContainer -sl`;
+    if (`size $sel` == 0){
+        wizLog (" [!] No Import Pool Selected\n");
+        return;
+    }
+    string $ass = $sel[0];
+   
+	string $curImp = `getAttr ($ass + ".importPool")`;
+    string $addFiles[] = wizGetMultipleFiles();
+	string $cR[] = tokenizeString($curImp, " ");
+	appendStringArray($addFiles, $cR, `size $cR`);
+	stringArrayRemoveDuplicates($addFiles);
+
+	setAttr ($ass + ".importPool") -type "string" (stringArrayToString($addFiles, " "));
+
+}
+
+//@ RMB ADD SELECTED FILES TO IMPORT POOL
+//====================================================================
+global proc rmbAddDirectoryToImportPool( string $object )
+{
+    string $sel[] = `ls -typ dagContainer -sl`;
+    if (`size $sel` == 0){
+        wizLog (" [!] No Import Pool Selected\n");
+        return;
+    }
+    string $rp = $sel[0];
+
+	addDirectoryToImportPoolAsset("-prmt -sl");
+
+}
+
+global proc addDirectoryToImportPoolAsset( string $flags )
+{
+	string $addDir, $rp;
+	string $sel[];
+	int $edit;
+	int $prmt;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-dir" : case "-directory" :
+			$addDir = $tok[($i + 1)];
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -typ dagContainer -sl`;
+			$rp = $sel[0];
+			break ;			
+			
+			case "-prmt" : case "-promt" :
+			$prmt = 1;
+			break ;
+		}
+	}
+
+	
+	if ($prmt){
+		$addDir = wizGetDirectory();
+	}
+	
+	//_________________________________________
+	// Directory Of Files
+	// set the string of impPoolDirectory to a directory;
+	string $impDir = `getAttr ($rp + ".impPoolDirectory")`;
+	if (`size $impDir` > 0){
+		setAttr ($rp + ".impPoolDirectory") -type "string" $addDir;
+		return ;
+	}	
+	// if the directory is already filled, look for other directory spaces
+	int $pi = 0;
+	while (true ){
+		string $impPoolDirName = "impPoolDirectory" + $pi;
+		if (`attributeExists $impPoolDirName $rp` == 0){
+			if ($pi == 0){
+				setAttr ($rp + ".impPoolDirectory") -type "string" $addDir;
+				break ;
+			}
+			break ;
+		}
+		$impDir = `getAttr ($rp + "." + $impPoolDirName)`;
+		if (`size $impDir` == 0){
+			setAttr ($rp + ".impPoolDirectory") -type "string" $addDir;
+			return ;		
+		}
+	
+		$pi++;
+		
+	}	
+	
+
+}
+
+//@ LOAD IMPORT POOL IMPORT
+//====================================================================
+/*****************************************************************//**
+	Loads imports from a import pool asset.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	Use -all to load all imports in import pool. <br>
+	Use the -ref flag to specify a import to load. <br>
+	If the -all flag or -ref flags are not used then a random import is loaded. <br>
+	
+	<b>Return value</b><br>
+	string[] the imports loaded.
+	
+	<b>Flags</b><br>
+	-importPool(-rp) <br>
+	-selected(-sl) <br>
+	-import(-ref) <br>
+	-all(-a) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	wizImportFile(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $imp[] = loadImportPoolImport("-sl -all");
+	string $imp[] = loadImportPoolImport("-sl -rand");
+	</code>
+*********************************************************************/
+global proc string[] loadImportPoolImport( string $flags )
+{
+	string $imp[];
+	string $rp;
+	string $sel[];
+	int $all;
+	int $re;
+	int $random;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-ip" : case "-importPool" :
+			$rp = $tok[($i + 1)];
+			break ;
+			
+			case "-im" : case "-import" :
+			$imp[`size $imp`] = $tok[($i + 1)];
+			break ;
+				
+			case "-a" : case "-all" :
+			$all = 1;
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			$rp = $sel[0];
+			$re = `getAttr ($rp + ".replacement")`;
+			break ;			
+			
+			case "-re" : case "-replacement" :
+			$re = 1;
+			break ;
+			
+			case "-rand" : case "-random" :
+			$random = 1;
+			break ;
+		}
+	}
+	
+	string $preSel = `getAttr ($sel[0] + ".preImportSelection")`;
+	if (`size $preSel` > 0){
+		string $preSelObj[] = `ls -r true $preSel`;
+		if (`size $preSelObj` > 0){
+			select -r $preSelObj;
+		}
+		
+	}
+
+	//_________________________________________
+	// Get a list of possible imports
+	if (`size $imp` == 0){
+		//_________________________________________
+		// Individual Files
+		// get the import names from import pool attribute
+		string $curRef = `getAttr ($rp + ".importPool")`;
+		if (`size $curRef` > 0){
+			$imp = tokenizeString($curRef, " ");
+		}
+		
+		//_________________________________________
+		// Directory Of Files
+		// get the names of imports from impPoolDirectory
+		string $impDir = `getAttr ($rp + ".impPoolDirectory")`;
+		string $impDirExt = `getAttr ($rp + ".impPoolExtension")`;
+		int $subFolders = `getAttr ($rp + ".impPoolSearchSubDirectories")`;
+		
+		string $ext[] = tokenizeString($impDirExt, " ");
+		if (`size $impDir` > 0){
+			for ($i=0;$i<`size $ext`;$i++){		
+				string $impDirFiles[];
+				if ($subFolders){
+					$impDirFiles = wizGetAllFilesOfTypeInAllSubfoldersOfDirectory($impDir, $ext[$i]);
+				} else {
+					$impDirFiles = getAllFilesOfTypeInDirectory($impDir, $ext[$i]);
+				}
+				appendStringArray($imp, $impDirFiles, `size $impDirFiles`);		
+			}
+		}	
+		// get any files from additional refPoolDirectories
+		int $pi = 0;
+		while (true ){
+			string $impPoolDirName = "impPoolDirectory" + $pi;
+			string $impPoolExtName = "impPoolExtension" + $pi;			
+			if (`attributeExists $impPoolDirName $rp` == 0){
+				break ;
+			}
+			$impDir = `getAttr ($rp + "." + $impPoolDirName)`;
+			$impDirExt = `getAttr ($rp + "." + $impPoolExtName)`;
+			$ext = tokenizeString($impDirExt, " ");
+			
+			if (`size $impDir` > 0){
+				for ($i=0;$i<`size $ext`;$i++){
+					string $impDirFiles[];					
+					if ($subFolders){
+						$impDirFiles = wizGetAllFilesOfTypeInAllSubfoldersOfDirectory($impDir, $ext[$i]);
+					} else {
+						$impDirFiles = getAllFilesOfTypeInDirectory($impDir, $ext[$i]);
+					}
+					appendStringArray($imp, $impDirFiles, `size $impDirFiles`);
+				}
+			}		
+			$pi++ ;
+			
+		}		
+		
+	}
+	
+	//_________________________________________
+	// Import the chosen file
+	string $return[];
+	if ($all){
+		for ($i=0;$i<`size $imp`;$i++){		
+				$return[`size $return`] = `file -f -i $imp[$i]`;			
+		}
+		
+	} else {
+		int $ranRef = randInt(0, (`size $imp` - 1));
+		$return[`size $return`] = `file -f -i $imp[$ranRef]`;
+		
+	}
+
+	return $return;
+	
+}
+
+global proc rmbLoadImportPoolImport( string $object )
+{
+	loadImportPoolImport("-sl");
+
+}
+
+global proc wizCraftImportAllImportPools()
+{
+	string $ip[] = lsWizAssetOfType(`ls`, "-typ importPoolAsset");
+	for ($i=0;$i<`size $ip`;$i++){
+		select -r $ip[$i];
+		loadImportPoolImport("-sl");
+	}
+	
+}
+
+
+//@ WIZ CRAFT CREATE MATERIAL POOL ASSET
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-fa string] [-fb linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-fa, -fb
+	
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName("-fa aString -fb anotherString");
+	
+	</code>
+*********************************************************************/
+global proc wizCraftCreateMaterialPoolAsset( string $flags )
+{
+	string $obj, $type;
+	string $name = "MaterialPool";
+	string $sel[];
+	int $edit;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+			
+			case "-nm" : case "-name" :
+			$name = $tok[($i + 1)];
+			break ;
+			
+			case "-typ" : case "-type" :
+			$type = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+		}
+	}
+	string $asset;
+	string $dc[] = `ls -type dagContainer -sl`;
+	if ($edit == 1 || `size $dc` > 0){
+		$asset = $dc[0];
+	} else {
+		$asset = `container -n $name -type dagContainer -ind "inputs" -includeHierarchyBelow -includeShapes -includeTransform`;
+	
+	}
+	
+	setAttr -type "string" ($asset + ".rmbCommand") "assetWiz";
+	if (`attributeExists "wizAssetType" $asset` == 0){
+		addWizAssetTypeAttributeToSelectedAsset($asset, "materialPoolAsset");
+	}	
+
+	
+	
+}
+

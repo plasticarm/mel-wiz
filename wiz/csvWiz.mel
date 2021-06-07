@@ -1,0 +1,371 @@
+global proc csvWiz()
+{
+	
+}
+
+//GET DATA
+//============================================================================================
+//GET CSV DATA BY LINE
+//===============================================================
+global proc string[] getCSVDataByLine( string $file )
+{
+	string $dbl = "-dmi GetCSVDataByLineDebugMenuItem -t CSV Data"; string $dbm = "add"; int $dbc = 1;
+	if ($file == ""){ wizlog ("WIZ| [!] getCSVDataByLine: No File Selected\n"); return {""};}
+	
+	$fileId = `fopen $file "r"`;
+	string $data[];
+	int $lineCount = 0;
+	int $colCount;
+	int $blankLineCount;
+	//int $qablc = `intFieldGrp -q -v1 csvFormattingOptions_quitAtBlankLineCount_intFieldGrp`;
+	int $lcc;
+	int $lineCheckCount = 1000;
+	while ( !`feof $fileId` ){
+		
+		if ($lineCount == $lcc){
+			wizlog ("...Reading Line " + $lineCount);
+			$lcc = $lcc + $lineCheckCount;
+		}
+		string $nextLine = `fgetline $fileId`;
+		if ($nextLine == ""){ 
+			$blankLineCount++;
+			/*
+			if ($blankLineCount == $qablc){
+				wizlog ("	[!] Blank Line Limit Reached. Ending File Read At Line : " + $lineCount + ". [!]");
+				break ;
+			}
+			*/
+			continue;
+		}
+		
+		string $tok[];
+		
+		//_________________________________________
+		// Are we using commas or just spaces		
+		if (`checkBox -q -v csvFormattingNoCommasCheckBox`){
+			$tok = tokenizeString($nextLine, " ");
+		} else {
+			//replace commas with comma space so we don't end up skipping cells
+			$nextLine = substituteAllString($nextLine, ",", ", ");
+		
+			$tok = tokenizeString($nextLine, ",");		
+		}
+		
+		//_________________________________________
+		// Remove Spaces?
+		if (`checkBox -q -v csvFormatting_removeSpaces_checkBox`){
+			$nextLine = substituteAllString($nextLine, " ", "");
+		} 
+		
+		$colCount = `size $tok`;
+		
+		debugList($dbl, { (" - Column Count: " + $colCount) }, $dbc, $dbm);
+		
+		//_________________________________________
+		// Ignore the first line?
+		if (`checkBox -q -v csvFormattingIgnoreFirstLineCheckBox` == 1 && $lineCount == 0){
+			//continue;
+		} else {
+			//debugList($dbl,{ (" - Line " + $lineCount + " - Size: " + `size $tok`) }, $dbc, $dbm);
+			//debugList($dbl,{ (stringArrayToString($tok, ", ")) }, $dbc, $dbm);
+			appendStringArray($data,$tok,`size $tok`);
+			
+		}
+		$lineCount++;
+	}
+	fclose $fileId;
+	
+	if (`checkBox -q -v csvFormattingUseCSVColumnCountCheckBox`){
+		intFieldGrp -e -v1 $colCount csvFormattingOptionsTotalColumnsTextFieldGrp;	
+	}
+		
+	return $data;	
+}
+
+//FORMAT DATA
+//========================================================================================
+//FORMAT CSV DATA
+//===============================================================
+global proc string[] formatCSVData(string $data[])
+{
+	string $dbl = "-dmi FormatCSVDataDebugMenuItem -t Format CSV Data"; string $dbm = "add"; int $dbc = 1;
+	
+	string $getCol = `textFieldGrp -q -tx csvFormattingOptionsGetColumnsTextFieldGrp`;
+	int $col[];
+	int $totCol = `intFieldGrp -q -v1 csvFormattingOptionsTotalColumnsTextFieldGrp`;
+	
+	debugListString($dbl, (" - Total Columns: " + $totCol), $dbc, $dbm);
+	
+	if($getCol != ""){
+		string $colstring[];
+		/*
+		if (`checkBox -q -v csvFormattingNoCommasCheckBox`){
+			$tok = tokenizeString($getCol, " ");
+		} else {
+			
+			
+		
+		}*/
+		
+		$colstring = tokenizeString($getCol, ",");
+		/*
+		if(stringArrayContains("0", $colstring) == 0){
+			$colstring[`size $colstring`] = "0";	
+		}
+		*/
+		$col = stringArrayToIntArray($colstring);		
+	
+	} else {
+		for($i=0;$i<($totCol + 1);$i++){
+			$col[`size $col`] = $i;	
+		}
+	}
+	
+	if(`checkBox -q -v csvFormattingZeroBasedCheckBox` == 0){
+		$col = addToAllIntArray($col, -1);
+	}
+	
+	string $colString[] = intArrayToStringArray($col);	
+	debugListArray($dbl, " - Get Columns: ", $colString, $dbc, $dbm, "", 100);
+	
+	//Get rid of + and spaces
+	$data = substituteAllStringArray($data, "+", "");
+	$data = substituteAllStringArray($data, " ", "");
+	
+	
+	string $formatted[] = getColumnsOfStringArray($data, $col, $totCol);
+	
+	return $formatted;
+	
+}
+
+//FORMAT AND SAVE CSV FILE
+//==================================================================
+global proc string formatAndSaveCSVFile(string $source, string $dest)
+{
+	string $data[] = getCSVDataByLine($source);
+	string $formatted[] = formatCSVData($data);
+	int $totCol = getCSVColumnCount();
+	string $newFile = newCSVFile($dest, $formatted, $totCol);
+	return $newFile;
+	
+}
+
+global proc wizCSVFile( string $flags, string $data[] )
+{
+	string $obj, $filename;
+	string $name = "";
+	string $sel[];
+	int $edit, $create;
+	int $col = 1;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+			
+			case "-fn" : case "-fileName" :
+			$filename = $tok[($i + 1)];
+			break ;
+			
+			case "-p" : case "-prompt" :
+			$filename = wizGetAnyFile();
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+			case "-c" : case "-create" :
+			$create = 1;
+			break ;
+			
+			case "-col" : case "-columns" :
+			$col = int($tok[($i + 1)]);
+			break ;
+			
+		}
+	}	
+	
+	if ($create == 1){
+		string $newcsv = newCSVFile($filename, $data, $col);
+	
+	}
+	
+	
+}
+
+//GET AND PRINT CSV FILE
+//----------------------------------------------------
+global proc getAndPrintCSVFile(string $file)
+{
+	string $dbl = "-dmi GetAndPrintCSVFileDebugMenuItem -t Get And Print CSV File"; string $dbm = "add"; int $dbc = 1;
+	
+	string $data[] = getCSVDataByLine($file);	
+	debugListArray($dbl, " - Data: ", $data, $dbc, $dbm, "NEXT", 100);
+	
+	string $formatted[] = formatCSVData($data);
+	debugListArray($dbl, " - Formatted: ", $formatted, $dbc, $dbm, "NEXT", 100);
+		
+	int $totCol = getCSVColumnCount();	
+	debugList($dbl, { (" - Total CSV Columns: " + $totCol) }, $dbc, $dbm);
+	
+	print2dStringArray($formatted, $totCol, ", ");
+}
+
+//GET AND PRINT CSV FILE
+//----------------------------------------------------
+global proc getAndPrintFloatArrayCSVFile(string $file)
+{
+	string $dbl = "-dmi GetAndPrintCSVFileDebugMenuItem -t Get And Print CSV File"; string $dbm = "add"; int $dbc = 1;
+	
+	string $data[] = getCSVDataByLine($file);	
+	debugListArray($dbl, " - Data: ", $data, $dbc, $dbm, "NEXT", 10);
+	
+	string $formatted[] = formatCSVData($data);
+	debugListArray($dbl, " - Formatted: ", $formatted, $dbc, $dbm, "NEXT", 10);
+		
+	string $floatVar = "float $csvData[] = { ";
+	$floatVar = $floatVar + stringArrayToString($formatted, ", ") + " };\n";
+	
+	print($floatVar);
+	
+	
+}
+
+
+//GET CSV COLUMN COUNT
+//---------------------------------------------------
+global proc int getCSVColumnCount()
+{
+	int $totCol = 0;
+	string $getCol = `textFieldGrp -q -tx csvFormattingOptionsGetColumnsTextFieldGrp`;
+	
+	if($getCol != ""){
+		string $colstring[] = tokenizeString($getCol, ",");
+		$totCol = `size $colstring`;		
+	} else {
+		$totCol = `intFieldGrp -q -v1 csvFormattingOptionsTotalColumnsTextFieldGrp`;
+	}	
+	return $totCol;
+}
+
+//NEW CSV FILE
+//===========================================================================================
+global proc string newCSVFile(string $file, string $data[], int $endLine)
+{
+	if($file == ""){ print("WIZ| newCSVFile: No File Selected\n"); return "";}
+	
+	$fileId=`fopen $file "w"`;
+	int $colCount = 0;
+	string $line[];
+	for ($i=0;$i<`size $data`;$i++){
+		if($colCount == $endLine){
+			string $print = stringArrayToString($line, ", ");
+			fprint $fileId ($print + "," + "\n");
+			$colCount = 0;	
+			clear $line;
+		} 
+		
+		$colCount++;			
+		$line[`size $line`] = $data[$i];
+	}
+	
+	fclose $fileId;
+	return $file;		
+}
+
+//TOKENIZE
+//===========================================================================================
+
+//TOKENIZE CSV LINE
+//-------------------------------------------
+global proc string[] tokenizeCSVLine(string $line)
+{
+	debugML5("TokenizeCSVLine... " + "\n");
+	debugML5("		- InputString: " + $line + "\n");
+	//In case there are commas with nothing in between... insert white space
+	$line = substituteAllString($line, ",", ", ");
+	
+	//Then just do a string to String Array
+	string $array[] = stringToStringArray($line, ",");
+	
+	//We have to replace empty indexes with something
+	$array = replaceEmptyStringsWithString($array, "0");
+	
+	debugML5("		- Output StringArray: [" + `size $array` + "] : " + stringArrayToString($array, ",") + "\n");
+	
+	return $array;
+}
+
+//TOKENIZE CSV
+//-------------------------------------------
+global proc string[] tokenizeCSV(string $csv)
+{
+	//In case there are commas with nothing in between... insert white space
+	$csv = substituteAllString($csv, ",", ", ");
+	
+	//Then just do a string to String Array
+	string $array[] = stringToStringArray($csv, ",");
+	
+	//We have to replace empty indexes with something
+	$array = replaceEmptyStringsWithString($array, "0");
+	
+	return $array;
+}
+
+//CSV ARRAY LIST
+//========================================================================================
+//CREATE CSV ARRAY FROM ARRAY
+//------------------------------------
+global proc string[] createCSVArrayFromArray(string $array[])
+{
+	string $csv[];
+	for($i=0;$i<`size $array`;$i++){
+		$csv[`size $csv`] = $array[$i];
+		if($i < (`size $array` - 2)){
+			$csv[`size $csv`] = ", ";
+		}
+	}
+	return $csv;
+}
+
+//PRINT CSV ARRAY LIST
+//------------------------------------
+global proc printCSVArrayList(string $array[])
+{
+	string $print[] = createCSVArrayFromArray($array);
+	print(stringArrayToString($print,"") + "\n");
+}
+
+//WRITE STRING ARRAY TO CSV TEXT FILE
+//========================================================================================
+global proc writeStringArrayToCSVTextFile( string $arr[], string $file )
+{
+	string $write = stringArrayToString($arr, ",");
+	int $fileId=`fopen $file "w"`;
+	fprint $fileId ($write);
+	fclose $fileId;	
+	
+}
+
+//APPEND STRING ARRAY TO CSV TEXT FILE
+//========================================================================================
+global proc appendStringArrayToCSVTextFile( string $arr[], string $file )
+{
+	int $fileId =`fopen $file "r"`;
+	string $s = `fread $fileId $s`;
+	fclose $fileId;
+	
+	string $write = $s + "\n" + (stringArrayToString($arr, ","));
+	
+	$fileId=`fopen $file "w"`;
+	fprint $fileId ($write);
+	fclose $fileId;	
+	
+}

@@ -1,0 +1,186 @@
+
+//====================================================================
+//			GLOBAL VARS
+global string $WIZ_polySelectConstraintCommand;
+$WIZ_polySelConstraintCommand = "polySelectConstraint;";
+
+//====================================================================
+/*
+global proc setPolygonSelectionConstraintTags( string $tags )
+{
+    global string $WIZ_polySelectConstraintCommand;
+    string $c[];
+    string $tok[] = tokenizeString($tags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-m" : case "-mode" :
+			$c [`size $c] = $tok[($i + 1)];
+			break;
+			
+			case "-t" : case "-type" :
+			$c [`size $c] = $tok[($i + 1)];
+			break;
+            
+            case "-d" : case "-dist" :
+            $c [`size $c] = $tok[($i + 1)];
+			break;
+            
+            case "-o" : case "-orient" :
+            $c [`size $c] = $tok[($i + 1)];
+			break;
+            
+            case "-v" : case "-visibility" :
+            $c [`size $c] = $tok[($i + 1)];
+			break;
+            
+		}
+	}
+    
+    string $pscc = stringArrayToString($c, " ");
+    eval ($pscc);
+}
+*/
+
+//@ UPDATE POLYGON SELECTION CONSTRAINT
+//====================================================================
+global proc updatePolygonSelectionConstraint()
+{
+    string $curSel[] = `ls -sl`;
+    string $selString = `getAttr "PolySelectConstraintCtrl.selection"`;
+    string $sel[] = tokenizeString($selString, " ");
+    //Get settings from asset
+    string $pscc = "polySelectConstraint ";
+    int $m = `getAttr "PolySelectConstraintCtrl.constrain"`;
+    int $type = `getAttr "PolySelectConstraintCtrl.type"`;
+    int $d = `getAttr "PolySelectConstraintCtrl.distance"`;
+    int $o = `getAttr "PolySelectConstraintCtrl.orientation"`;
+    int $v = `getAttr "PolySelectConstraintCtrl.visibilityConstraint"`;
+    
+    string $typeString = "0x000";
+    switch($type){
+        case 1 :
+        $typeString = "0x0001";
+        break;
+        case 2 :
+        $typeString = "0x8000";
+        break;
+        case 3 :
+        $typeString = "0x0008";
+        break;
+        case 4 :
+        $typeString = "0x0010";
+        break;
+    }
+    
+    if ($m == 0){
+        $pscc = $pscc + "-m 0";
+        eval($pscc);
+        return;
+    }
+    
+    //Get values from asset
+    float $db[] = `getAttr "PolySelectConstraintCtrl.distBound"`;
+    float $dp[] = `getAttr "PolySelectConstraintCtrl.distPoint"`;
+    float $da[] = `getAttr "PolySelectConstraintCtrl.distAxis"`;
+    
+    float $ob[] = `getAttr "PolySelectConstraintCtrl.orientBound"`;
+    float $oa[] = `getAttr "PolySelectConstraintCtrl.orientAxis"`;
+
+    float $va = `getAttr "PolySelectConstraintCtrl.visibilityAngle"`;
+    float $vp[] = `getAttr "PolySelectConstraintCtrl.visibilityPoint"`;
+    
+    //Create command string
+    $pscc = ($pscc + "-m " + $m + " -t " + $typeString + " -d " + $d +
+    " -db " + $db[0] + " " + $db[1] + " -dp " + $dp[0] + " " + $dp[1] + " " + $dp[2] +
+    " -o " + $o + " -ob " + $ob[0] + " " + $ob[1] + 
+    " -oa " + $oa[0] + " " + $oa[1] + " " + $oa[2] + " " +
+    " -v " + $v + " -va " + $va +  
+    " -vp " + $vp[0] + " " + $vp[1] + " " + $vp[2] + " " + 
+    ";");
+    
+    select -r $sel;
+    print ($pscc + "\n");
+    catchQuiet(`eval($pscc)`);
+    
+    select -r $curSel;
+
+}
+
+//@ RUN POLY SELECT CONSTRAINT ASSET SCRIPT JOBS
+//====================================================================
+global proc runPolySelectConstraintAssetScriptJobs( string $object )
+{
+    string $ac[] = { "PolySelectConstraintCtrl.constrain",  "updatePolygonSelectionConstraint();",
+    "PolySelectConstraintCtrl.distance",  "updatePolygonSelectionConstraint();",
+    "PolySelectConstraintCtrl.orientation",  "updatePolygonSelectionConstraint();",
+    "PolySelectConstraintCtrl.visibilityConstraint",  "updatePolygonSelectionConstraint();",
+    "PolySelectConstraintCtrl.type",  "updatePolygonSelectionConstraint();",
+    "PolySelectConstraintCtrl.distBound",  "updatePolygonSelectionConstraint();",
+    "PolySelectConstraintCtrl.distPoint",  "updatePolygonSelectionConstraint();",
+    "PolySelectConstraintCtrl.distAxis",  "updatePolygonSelectionConstraint();",
+    "PolySelectConstraintCtrl.orientBound",  "updatePolygonSelectionConstraint();",
+    "PolySelectConstraintCtrl.orientAxis",  "updatePolygonSelectionConstraint();",
+    "PolySelectConstraintCtrl.visibilityAngle",  "updatePolygonSelectionConstraint();",
+    "PolySelectConstraintCtrl.visibilityPoint",  "updatePolygonSelectionConstraint();"
+    };
+    
+    for ($i=0;$i<`size $ac`;$i = $i + 2){
+        scriptJob -ac $ac[$i] $ac[($i + 1)];
+    }
+
+
+}
+
+global proc addPolySelectConstraintAssetAttributes()
+{
+    addAttr -ln "selection" -dt "string";
+    
+    addAttr -ln "constrain" -at "enum" -en ("none=0:nextSelection=1:currentAndNext=2:allAndNext=3:");
+    addAttr -ln "distance" -at "enum" -en ("off=0:point=1:axis=2:plane=3:");
+    addAttr -ln "orientation" -at "enum" -en ("off=0:orientation=1:distance=2:");
+    addAttr -ln "visibilityConstraint" -at "enum" -en ("off=0:on=1:");    
+    
+    addAttr -ln "type" -at "enum" -en ("none=0:vertex=1:edge=2:face=3:textureCoordinates=4:");
+    
+    addAttr -ln "distBound" -at double2;
+    addAttr -ln "distBoundMin" -nn "min" -at double -min 0.0 -max 100.0 -p "distBound";
+    addAttr -ln "distBoundMax" -nn "max" -at double -min 0.0 -max 100.0 -p "distBound";
+    
+    addAttr -ln "distPoint" -at double3;
+    addAttr -ln "distPointX" -nn "Px" -at double -smn -1000 -smx 1000 -p "distPoint";
+    addAttr -ln "distPointY" -nn "Py" -at double -smn -1000 -smx 1000 -p "distPoint";
+    addAttr -ln "distPointZ" -nn "Pz" -at double -smn -1000 -smx 1000 -p "distPoint";
+    
+    addAttr -ln "distAxis" -at double3;
+    addAttr -ln "distAxisX" -nn "Vx" -at double -smn -100 -smx 100 -p "distAxis";
+    addAttr -ln "distAxisY" -nn "Vy" -at double -smn -100 -smx 100 -p "distAxis";
+    addAttr -ln "distAxisZ" -nn "Vz" -at double -smn -100 -smx 100 -p "distAxis";
+    
+    addAttr -ln "orientBound" -at double2;
+    addAttr -ln "orientBoundMin" -nn "min" -at double -min 0.0 -max 360.0 -p "orientBound";
+    addAttr -ln "orientBoundMax" -nn "max" -at double -min 0.0 -max 360.0 -p "orientBound";
+    
+    addAttr -ln "orientAxis" -at double3;
+    addAttr -ln "orientAxisX" -nn "Vx" -at double -smn -100 -smx 100 -p "orientAxis";
+    addAttr -ln "orientAxisY" -nn "Vy" -at double -smn -100 -smx 100 -p "orientAxis";
+    addAttr -ln "orientAxisZ" -nn "Vz" -at double -smn -100 -smx 100 -p "orientAxis";
+    
+    addAttr -ln "visibilityAngle" -nn "angle" -at double -min 0.0 -max 360.0;
+    
+    addAttr -ln "visibilityPoint" -at double3;    
+    addAttr -ln "visibilityPointX" -nn "Px" -at double -smn -1000 -smx 1000 -p "visibilityPoint";
+    addAttr -ln "visibilityPointY" -nn "Py" -at double -smn -1000 -smx 1000 -p "visibilityPoint";
+    addAttr -ln "visibilityPointZ" -nn "Pz" -at double -smn -1000 -smx 1000 -p "visibilityPoint";
+    
+    
+    
+}
+
+//@ SET POLY SELECT CONSTRAINT ASSET SELECTION
+//====================================================================
+global proc setPolySelectConstraintAssetSelection( string $object )
+{
+    string $asset[] = `ls -typ dagContainer -sl`;
+    string $sel[] = `ls -ext dagContainer -sl`;
+    setAttr ($asset[0] + ".selection") -type "string" (stringArrayToString($sel, " "));
+}

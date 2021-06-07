@@ -1,0 +1,1663 @@
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//|||||||||||||||||||||||||:::WIZ:::||||||||||||||||||||||||||||||||||
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//                         WIZCRAFT
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+/*====================================================================
+Author: Glen Johnson
+Email: plasticarm@gmail.com
+Website: plasticarm.com / hrpictures.com
+----------------------------------------------------------
+Summary:
+
+Pools:
+	brush pool
+	texture pool 
+	nucleus field pool
+	
+
+Build Areas :
+    Roof Area
+    Overhang Area
+    Window Area
+    Entrance Area
+    Bridge Area
+    Spire Area
+    
+Shaders :
+    Roof
+    Overhang
+    
+    
+Roof Analysis
+    project uvs in y axis and make new uv set
+    select a single face and then convert selection to uv shell to get continous areas
+    
+Analysis using textures
+
+	- Create nHairs on object for each type of surface area : roof, overhang, windows, ect.
+	- Create snow texture
+	- Use convertSolidTx to output texture map1
+	- Use settings : uMin = -1 uMax = 2 vMin = -1 vMax = 2 : all other options should be off. except extend seam color
+	- Use tex map on hair baldness
+	
+nHair Method Outline :
+	- Create new us sets for areas
+	- Make uv set current set
+	- Creat nHair system on grid : the hair system will only build on faces that have uvs
+	- Use transforms from hair follicles to place objects : Z is up
+	
+createHair
+
+	1: 10 = uGrid Count
+	2: 10 = vGrid Count
+	3: 10 = numCvs
+	4: 0 = restCurve
+	5: 0 = passiveFill
+	6: 0 = edgeBounded
+	7: 0 = equalize
+	8: 10 = hairLength
+	9: 0 = randomization
+	10: 1 = paintEffects 2 = nurbsCurve 3 = paintEffects and nurbsCurve
+	11: 2 = static 1 = dynamic
+	12: 1 = grid 2 = onSelectedFaces
+
+
+global proc createHair(int $uCount, int $vCount, int $numCvs, int $restCurves, int $passiveFill, int $edgeBounded, int $equalize, float $length, float $randomization, int $outputMode, int $simulationType, int $hairCreateType)
+{
+
+paintHairTool 1;
+hairCurvePaint hairPaintContext;
+toolPropertyWindow1 ("");
+artUserPaintValues hairPaintContext;
+toolPropertyShow;
+changeToolIcon;
+updateHSPlaceMenu false;
+autoUpdateAttrEd;
+
+
+wizCraft name system
+	liveWizCraftAsset
+	
+	structureType
+	
+		featureType
+			roof
+			overhang
+			windows 
+			
+			componentType
+				structuralSupport
+				antenna
+				
+			placementMethod
+				grid(regular)
+				random 
+				
+			
+	
+		
+
+====================================================================*/
+
+//====================================================================
+//			GLOBAL VARS
+global string $WIZCRAFT_objNN;
+$WIZCRAFT_objNN = "wizCraft";
+
+// These are all of the different feature types that can be refered to
+global string $WIZCRAFT_featureTypes[];
+$WIZCRAFT_featureTypes = { "roof", "overhang", "windows" };
+
+global string $WIZCRAFT_roofComponentLocators[];
+global string $WIZCRAFT_overhangComponentLocators[];
+global string $WIZCRAFT_windowComponentLocators[];
+global string $WIZCRAFT_liveWizCraftAsset;
+global string $WIZCRAFT_roofSelectMap, $WIZCRAFT_overhangSelectMap, $WIZCRAFT_windowSelectMap;
+
+global string $WIZCRAFT_featureTypeLayouts[];
+global string $WIZCRAFT_componentPoolTypes[];
+$WIZCRAFT_componentPoolTypes = { "ComponentPool", "SurfaceTilePool", "MaterialPool", "ShaderPool", "TexturePool", "FieldPool",
+"ReferencePool" };
+
+global string $WIZCRAFT_setOrdering[];
+$WIZCRAFT_setOrdering = { "sequence", "random", "randomRepeater", "sequenceTail", "headSequenceTail", "headRandom", "randomTail", "headRandomTail" };
+	
+global string $WIZCRAFT_surfaceTilesRandFreqType[];
+$WIZCRAFT_surfaceTilesRandFreqType = { "everyStep", "u", "v", "random", "randomU", "randomV" };
+
+//====================================================================
+
+global proc wizCraftUI()
+{
+
+}
+
+//========================================================================================================
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//                     LAYOUTS
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//========================================================================================================
+
+//# WIZ CRAFT LAYOUT
+//====================================================================
+global proc wizCraftLayout(string $parent)
+{
+	string $layout = `columnLayout
+		-adjustableColumn true
+		-p $parent
+		wizCraft
+		`;
+	
+	wizCraftMainMenuBarLayout();
+	
+	randomizerControlLayout($layout);
+	
+	exportWizLayout($layout);
+	
+    wizCraftBuilderLayout($layout);    
+    
+	ramputationsMainLayout($layout);
+    
+	wizCraftMPVRProcessingLayout($layout);
+	
+    cBldrLayout($layout);
+	
+	lBldrLayout($layout);
+	
+	surfaceTileLayout($layout);
+	
+	//arrayBldrLayout($layout);
+	
+	wizCraftDupliPaintLayout($layout);
+	
+	randomizeXFormLayout($layout);
+		
+	wizCraftPolyProcessingLayout($layout);
+	
+	wizCraftPlanetaryTerrainLayout($layout);
+	
+	wizCraftPolySnowBuildupLayout($layout);
+	//wizFilePalletLayout("-p " + $layout + " -type frameLayout");
+	
+}
+
+//# WIZ CRAFT BUILD ANALYSIS LAYOUT
+//====================================================================
+global proc wizCraftBuilderLayout( string $parent )
+{
+    string $layout = `frameLayout
+		-l "Surface Builder"	
+		-ann "Build on mesh surfaces automatically with detected feature types."
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-p $parent
+        wizCraftBuildAnalysisFrameLayout
+		`;
+    
+    
+    //wizCraftMainMenuBarLayout();
+        
+    string $columnLayout = `columnLayout
+			-adj true
+			//-columnOffset "both" 10
+			//-p $parent
+			wizCraftBuildAnalysisMainColumnLayout
+			`;
+				
+	   //-------------------------------------------------------
+	   //########################<TAB>##########################
+	   string $wizCraftTabLayout = `tabLayout
+			-ann ""
+			-scrollable false
+			//-childResizable false
+			-imageVisible true
+			-tabsVisible true
+			-p $layout
+			wizCraftMainTabLayout
+			`;
+		
+			//wizCraftAnalysisLayout($wizCraftTabLayout);			
+					
+			wizCraftSBldrLayout($wizCraftTabLayout);
+			
+			wizCraftBuildSettingsLayout($wizCraftTabLayout);
+						
+			//wizCraftLogLayout($wizCraftTabLayout);
+			
+			wizCraftHelpLayout($wizCraftTabLayout);
+			
+			
+		
+		//-------------------------------------------------------
+	   //########################<END TAB>#######################
+	   
+		string $bottomButtonsColumnLayout = `columnLayout
+			-adj true
+			-p $columnLayout
+			wizCraftBottomButtonsColumnLayout
+			`;
+			
+			 iconTextButton
+				-l "Analyze"
+				-image "wiz/analysisIcon1.png"
+				-style "iconAndTextHorizontal"
+				-c ("doBuildAnalysisOnSelectedObjects(`ls -sl`);")
+				;
+				
+			iconTextButton
+				-l "Build"
+				-image "wiz/buildIcon1.png"
+				-style "iconAndTextHorizontal"
+				-c ("wizCraftDoBuild();")
+				;
+				
+		//<END>		
+        
+    tabLayout
+		-e
+		//-tl "wizCraftAnalysisColumnLayout" "Analysis"
+		//-tl "wizCraftAnalysisLogColumnLayout" "Log"
+		-tl "wizCraftSBldrColumnLayout" "sBldr"
+		-tl "wizCraftBuildSettingsColumnLayout" "Build Settings"
+		-tl "wizCraftHelpColumnLayout" "Help"
+		$wizCraftTabLayout
+		;
+		
+}
+
+
+//# WIZ CRAFT SBLDR LAYOUT
+//====================================================================
+global proc wizCraftSBldrLayout( string $parent )
+{
+	global string $WIZCRAFT_featureTypeLayouts[];
+	clear ($WIZCRAFT_featureTypeLayouts);
+	string $columnLayout = `columnLayout 
+        -p $parent
+        wizCraftSBldrColumnLayout
+        `;
+    
+	string $mbl = `menuBarLayout`;
+	
+
+		
+		menu -l "Add";
+			menuItem -l "Add All Feature Types To wizCraftAsset" -c ("createWizCraftAsset(\"-aft all\");");
+			
+			global string $WIZCRAFT_featureTypes[];
+			for ($i=0;$i<`size $WIZCRAFT_featureTypes`;$i++){
+				//wizCraftSBldrSurfaceFeatureLayout("wizCraftSBldrColumnLayout", $WIZCRAFT_featureTypes[$i]);
+				menuItem -l ($WIZCRAFT_featureTypes[$i] + " Preset") -c ("wizCraftSBldrSurfaceFeatureLayout(\"wizCraftSBldrColumnLayout\", \"" + $WIZCRAFT_featureTypes[$i] + "\");");
+				//frameLayout -e -cll true ("wizCraft_" + $WIZCRAFT_featureTypes[$i] + "FrameLayout");
+			}			
+		
+		setParent -menu ..;
+		
+	string $ft = "surfaceFeature";  
+	
+	string $nsfbc = ("string $name = `textFieldButtonGrp -q -tx wizCraftNewSurfaceFeatureTextFieldButtonGrp`;"+"\n"
+	+"wizCraftSBldrSurfaceFeatureLayout(\"wizCraftSBldrColumnLayout\", $name);"+"\n"
+	+"global string $WIZCRAFT_featureTypes[];"+"\n"
+	+"$WIZCRAFT_featureTypes[`size $WIZCRAFT_featureTypes`] = $name;"+"\n"
+	);
+	
+	textFieldButtonGrp
+		-l "New Surface Feature"
+		-tx "surfaceFeature"
+		-bl "Add"
+		-bc $nsfbc 
+		wizCraftNewSurfaceFeatureTextFieldButtonGrp
+		;
+	
+
+	/*
+	// change a few default values
+	floatFieldGrp
+		-e
+		-v1 180.0
+		("wizCraft_overhangTextureRotation_floatFieldGrp")
+		;
+		
+	optionMenuGrp
+		-e
+		-sl 2
+		wizCraft_windowsTextureSelectionMethod_optionMenuGrp
+		;
+		*/
+		
+}		
+
+	
+//# WIZ CRAFT SBLDR SURFACE FEATURE LAYOUT	
+//====================================================================
+/*****************************************************************//**
+	This is a serializable layout for surface features
+	<hr>
+	<b>Synopsis</b><br>
+	Needs the name of a surface feature.
+
+	<hr>
+	<b>Related</b><br>
+	wizCraftSBldrLayout(),
+	
+	<b>Examples</b><br>
+	<code>
+	wizCraftSBldrSurfaceFeatureLayout($layout, "roof");
+	
+	</code>
+*********************************************************************/
+global proc wizCraftSBldrSurfaceFeatureLayout( string $parent, string $ft )
+{
+	string $layout = `frameLayout
+		-l ((capitalizeString($ft)) + " sBldr")	
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl false
+		-p $parent
+        ("wizCraft_" + $ft + "FrameLayout")
+		`;
+    
+	
+	string $columnLayout = `columnLayout 
+        -p ("wizCraft_" + $ft + "FrameLayout")
+        ("wizCraft_" + $ft + "ColumnLayout")
+        `;
+
+	string $menuBarLayout = `menuBarLayout 
+		("wizCraft_" + $ft + "_menuBarLayout")
+		`;
+		
+	wizCraftSBldrFeatureMenuItems($ft);
+	
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//	All controls for feature type analysis layout must be named and labeled corectly
+	//	-l "Some Attr Name"
+	//	("wizCraft_" + $ft[$i] + "SomeAttrName" + "_controlType")
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	text
+    	-l $ft
+    	-fn "boldLabelFont"
+    	-h 30
+    	-al "left"
+		("wizCraft_" + $ft + "FeatureName_text")
+    	;
+		
+	checkBox
+		-l "Analyze"
+		-v true
+		("wizCraft_" + $ft + "Analyze_checkBox")
+		;
+		
+	checkBox
+		-l "Split Into Shells"
+		-ann "Warning : This Is A Slow Process. Can Take A Log Time"
+		-v true
+		("wizCraft_" + $ft + "SplitIntoShells_checkBox")
+		;
+			
+	string $analysisMeth[] = { "selectMap", "selectConstraint" };
+	string $amomg = wizOptionMenuGrpMenuItems("Analysis Method", "wizCraft_" + $ft + "AnalysisMethod_optionMenuGrp", $analysisMeth);
+  		
+	string $texSelMeth[] = { "snow", "middleSnow", "ao", "none" };
+	string $tsmomg = wizOptionMenuGrpMenuItems("Texture Selection Method", "wizCraft_" + $ft + "TextureSelectionMethod_optionMenuGrp", $texSelMeth);
+		
+	floatFieldGrp
+		-l "Texture Rotation"
+		-nf 3
+		-v1 0.0
+		-v2 0.0
+		-v3 0.0
+		-pre 2
+		-cal 1 "left"
+		("wizCraft_" + $ft + "TextureRotation_floatFieldGrp")
+		;
+	
+	floatSliderGrp
+		-l "Max Angle"
+		-v 30.0
+		-min 0.1
+		-max 180.0
+		-pre 4
+		-f true
+		-cal 1 "left"
+		("wizCraft_" + $ft + "MaxAngle_floatSliderGrp")
+		;
+	 
+	floatSliderGrp
+		-l "Min Faces"
+		-ann "This is calculated as a percentage of actual dimensions of object."
+		-v 1
+		-min 0.0001
+		-pre 4
+		-f true
+		-cal 1 "left"
+		("wizCraft_" + $ft + "MinFaces_floatSliderGrp")
+		;
+						
+	checkBox
+		-l "Height Mask"
+		-v true
+		("wizCraft_" + $ft + "HeightMask_checkBox")
+		;
+		
+	string $minMaxHeight = (
+		"-l1 Min Height -l2 Max Height "
+		+"-min 0.01 -max 99999999.0 "
+		+"-fs1 wizCraft_" + $ft + "MinHeight_floatSliderGrp "
+		+"-fs2 wizCraft_" + $ft + "MaxHeight_floatSliderGrp "
+		+"-v1 10.0 -v2 100.0 "
+		+"-cw3 100 50 50 -adj 3 -f 1 "
+		+"wizCraft_" + $ft + "MinMaxHeight_minMaxFloatSliderGrp");
+		
+	wizMinMaxFloatSliders($minMaxHeight);
+	floatSliderGrp -e -ann "This is a percentage of the height of the object being analyzed" ("wizCraft_" + $ft + "MinHeight_floatSliderGrp");
+	floatSliderGrp -e -ann "This is a percentage of the height of the object being analyzed" ("wizCraft_" + $ft + "MaxHeight_floatSliderGrp");
+	
+	//string $csfmtbc = ("string $attrs[] = getWizCraftAttr(\"-sl -attr MaxAngle -attr MinFaces -attr MinHeight -attr MaxHeight -attr TextureRotation -attr TextureSelectionMethod -ft \"" + $ft + "\");");
+	//+"createMeshSelectionFromTextureOutput(\"-ma $
+	
+	checkBox
+		-l "Corner Mask"
+		-v true
+		("wizCraft_" + $ft + "CornerMask_checkBox")
+		;
+		
+	string $minMaxCornerAngle = (
+		"-l1 Min Corner Angle -l2 Max Corner Angle "
+		+"-min 0.01 -max 99999999.0 "
+		+"-fs1 wizCraft_" + $ft + "MinCornerAngle_floatSliderGrp "
+		+"-fs2 wizCraft_" + $ft + "MaxCornerAngle_floatSliderGrp "
+		+"-v1 15.0 -v2 360.0 "
+		+"-cw3 100 50 50 -adj 3 -f 1 "
+		+"wizCraft_" + $ft + "MinMaxCornerAngle_minMaxFloatSliderGrp");
+		
+	wizMinMaxFloatSliders($minMaxCornerAngle);	
+		
+	button
+		-l "Create Surface Feature Mask Texture"
+		-c ("doFeatureTypeAnalysis(\"-sl -ft " + $ft + " -fs\");")
+		;
+		
+	
+	wizSeparator(); 
+	
+	checkBox
+		-l "Flat"
+		-v false
+		("wizCraft_" + $ft + "Flat_checkBox")
+		;
+	  
+	floatSliderGrp
+		-l "Flat Margin"
+		-v 0.1  
+		-pre 4
+		-f true
+		-cal 1 "left"
+		("wizCraft_" + $ft + "FlatMargin_floatSliderGrp")
+		;
+	
+	button
+		-l ("Flatten " + (capitalizeString($ft)) + " Features")
+		-c ("doFeatureTypeAnalysis(\"-sl -ft " + $ft + " -fl\");")
+		;
+		
+		
+	wizSeparator(); 
+	
+	wizHeaderText("-c Area Perimeters");
+	
+	checkBox
+		-l "Area Perimeter Curves"
+		-v true
+		("wizCraft_" + $ft + "AreaPerimeterCurves_checkBox")
+		;
+			
+	button
+		-l ("Create " + (capitalizeString($ft)) + " Area Perimiter Curves")
+		-c ("doFeatureTypeAnalysis(\"-sl -ft " + $ft + " -apc\");")
+		;
+		
+	wizSeparator(); 
+
+	//_________________________________________
+	// Surface Tiles
+	
+	wizHeaderText("-c Surface Tiles");	
+	
+	checkBox
+		-l "Surface Tiles"
+		-v true
+		("wizCraft_" + $ft + "SurfaceTiles_checkBox")
+		;
+		
+	intSliderGrp
+		-l "U Tiles"
+		-cal 1 "left"
+		-f true
+		-min 1
+		-max 50
+		-fmn 1
+		-fmx 99999999
+		-v 3
+		("wizCraft_" + $ft + "SurfaceUTiles_intSliderGrp")
+		;
+		
+	intSliderGrp
+		-l "V Tiles"
+		-cal 1 "left"
+		-f true
+		-min 1
+		-max 50
+		-fmn 1
+		-fmx 99999999
+		-v 3
+		("wizCraft_" + $ft + "SurfaceVTiles_intSliderGrp")
+		;
+		
+	global string $WIZCRAFT_setOrdering[];	
+	string $stoomg = wizOptionMenuGrpMenuItems("Tile Order", "wizCraft_" + $ft + "SurfaceTileOrdering_optionMenuGrp", $WIZCRAFT_setOrdering);
+	
+	global string $WIZCRAFT_surfaceTilesRandFreqType[];
+	string $sftomg = wizOptionMenuGrpMenuItems("Tile Random Frequency", "wizCraft_" + $ft + "TileRandomFrequency_optionMenuGrp", $WIZCRAFT_surfaceTilesRandFreqType);
+		
+	button
+		-l ("Create " + (capitalizeString($ft)) + " Surface Tile Sets")
+		-ann ""
+		-c ("doFeatureTypeAnalysis(\"-sl -ft " + $ft + " -st\");")
+		;
+		
+	wizSeparator(); 
+	
+	//_________________________________________
+	// Hair Settings
+	
+	wizHeaderText("-c Hair Settings");
+	
+	
+	string $minMaxUObj = (
+		"-l1 Min U Objs -l2 Max U Objs "
+		+"-min 1 -max 999 "
+		+"-is1 wizCraft_" + $ft + "MinUObjs_intSliderGrp "
+		+"-is2 wizCraft_" + $ft + "MaxUObjs_intSliderGrp "
+		+"-v1 10 -v2 20 "
+		+"-cw3 100 50 50 -adj 3 -f 1 "
+		+"wizCraft_" + $ft + "MinMaxUObjs_intSliderGrp");
+		
+	wizMinMaxIntSliders($minMaxUObj);
+	
+	string $minMaxVObj = (
+		"-l1 Min V Objs -l2 Max V Objs "
+		+"-min 1 -max 999 "
+		+"-is1 wizCraft_" + $ft + "MinVObjs_intSliderGrp "
+		+"-is2 wizCraft_" + $ft + "MaxVObjs_intSliderGrp "
+		+"-v1 10 -v2 20 "
+		+"-cw3 100 50 50 -adj 3 -f 1 "
+		+"wizCraft_" + $ft + "MinMaxVObjs_intSliderGrp");
+		
+	wizMinMaxIntSliders($minMaxVObj);
+	
+	checkBox
+		-l "Dynamic Hairs"
+		-v true
+		("wizCraft_" + $ft + "DynamicHairs_checkBox")
+		;
+		
+	floatSliderGrp
+		-l "Hair Length"
+		-ann "This is a percent of the height of the object"
+		-v 50.0  
+		-pre 2
+		-f true
+		-cal 1 "left"
+		("wizCraft_" + $ft + "HairLength_floatSliderGrp")
+		;
+		
+	floatSliderGrp
+		-l "Hair Randomization"
+		-v 0.0000  
+		-min 0.0000
+		-max 1.0
+		-pre 4
+		-f true
+		-cal 1 "left"
+		("wizCraft_" + $ft + "HairRandomization_floatSliderGrp")
+		;
+		
+	checkBox
+		-l "Normal Align"
+		-v false
+		("wizCraft_" + $ft + "NormalAlign_checkBox");
+		;
+				
+	
+	button
+		-l "Create Surface Feature Hairs"
+		-c ("doFeatureTypeAnalysis(\"-sl -ft " + $ft + " -bl\");")
+		;
+		
+	wizSeparator(); 			
+	
+	wizHeaderText("-c Build Settings");
+	
+	checkBox
+		-l "Build"
+		-v true
+		("wizCraft_" + $ft + "Build_checkBox")
+		;
+		
+	checkBox
+		-l "Randomize Every Component"
+		-v false
+		("wizCraft_" + $ft + "RandomizeEveryComponent_checkBox")
+		;
+		
+	string $fitMeth[] = { "mustFit", "scaleToFit" };
+	string $fmomg = wizOptionMenuGrpMenuItems("Fitting Option", "wizCraft_" + $ft + "FittingOption_optionMenuGrp", $fitMeth);
+	optionMenuGrp -e -sl 1 $fmomg;
+	
+	
+	checkBox
+		-l "Straighten Hair Curves"
+		-v true
+		("wizCraft_" + $ft + "StraightenHairCurves_checkBox")
+		;
+		
+	checkBox
+		-l "Replace CBldr Curves"
+		-v false
+		("wizCraft_" + $ft + "ReplaceCBldrCurves_checkBox")
+		;
+		
+	button
+		-l "Replace cBldr Curves"
+		-c ("wizCraftReplacecBldrCurves();")
+		;
+		
+	checkBox
+		-l "Assign Surface Materials"
+		-v true
+		("wizCraft_" + $ft + "AssignSurfaceMaterials_checkBox")
+		;
+			
+	checkBox
+		-l "Call Build On Components"
+		-v false
+		("wizCraft_" + $ft + "CallBuildOnComponents_checkBox")
+		;
+		
+	button
+		-l "Call Build On Components"
+		-ann "wizCraft Structure Components must be selected"
+		-c ("callBuildOnObjects(`ls -sl`);")
+		;
+		
+	string $dupMeth[] = { "duplicate", "instance", "referenceCopy" };
+	string $dmomg = wizOptionMenuGrpMenuItems("Duplication Type", "wizCraft_" + $ft + "DuplicationType_optionMenuGrp", $dupMeth);
+	optionMenuGrp -e -sl 1 $dmomg;
+	
+	wizSeparator(); 
+	
+	button
+		-l ("Create " + (capitalizeString($ft)) + " sBldr Asset")
+		-c ("string $name = `text -q -l wizCraft_" + $ft + "FeatureName_text`; createSBldrAsset($name);")
+		;
+		
+	setParent ..;
+	
+}
+
+
+//# WIZ CRAFT BUILD SETTINGS LAYOUT
+//====================================================================
+global proc wizCraftBuildSettingsLayout( string $parent )
+{
+	
+	string $columnLayout = `columnLayout 
+        -p $parent
+        wizCraftBuildSettingsColumnLayout
+        `;
+	
+	string $ft[] = wizCraftMGMT("-featureTypes");  
+	
+	checkBox
+		-l "Auto Build Mode"
+		-v false
+		wizCraft_autoBuildMode_checkBox
+		;
+
+	checkBox
+        -l "Lower Poly Count For Analysis"
+        -v false
+        wizCraft_lowerPolyForAnalysis_checkBox
+        ;
+        
+    intSliderGrp
+    	-l "Low Target Poly Count"
+    	-v 5000
+    	-min 1
+    	-max 500000
+    	-f true
+    	-cal 1 "left"
+    	wizCraft_lowTargetPolyCount_intSliderGrp
+    	;
+		
+	checkBox
+		-l "Run Hair Simulation Before Build"
+		-v false
+		("wizCraft_runSimulationBeforeBuild_checkBox")
+		;
+		
+	floatSliderGrp
+		-l "Simulation Time"
+		-v 100.0
+		-pre 2
+		-min 0.0
+		-max 2000.0
+		-fmn 0.0
+		-fmx 9999999.999
+		-f true
+		-cal 1 "left"
+		-adj 3
+		("wizCraft_simulationTime_floatSliderGrp")
+		;
+		
+	button
+		-l "Replace cBldr Curves"
+		-c ("wizCraftReplacecBldrCurves();")
+		;
+		
+	button
+		-l "Call Build On Components"
+		-ann "wizCraft Structure Components must be selected"
+		-c ("callBuildOnObjects(`ls -sl`);")
+		;
+		
+	wizSeparator();
+	
+
+}
+
+
+
+//# WIZ CRAFT ANALYSIS LOG LAYOUT
+//====================================================================
+global proc wizCraftLogLayout( string $parent )
+{
+    global string $WIZ_logKey;
+    //-------------------------------------------------------
+	//|||||||||||||||||||||||<COLUMN>||||||||||||||||||||||||
+	int $w = 400;
+	int $h = 500;
+    // LOG
+    string $logTab = `columnLayout 
+        -p $parent
+        wizCraftAnalysisLogColumnLayout
+        `;
+
+    text 
+        -l "Recent Log"
+        -fn "smallPlainLabelFont"        
+        ;
+
+    string $ec = (
+	"string $eval = `scrollField -q -sl wizCraftAnalysis_scrollField`;"+"\n"
+	+"eval($eval);"+"\n"
+	);
+	
+    scrollField 
+        -text ""
+        -h 500 
+        -w $w
+        //-ww 1 
+        -ed 0 
+		-ec $ec
+		-ann $WIZ_logKey
+        -fn "smallPlainLabelFont"         
+        wizCraftAnalysis_scrollField
+        ;  
+		
+	string $pop = `popupMenu
+		-p "wizCraftAnalysis_scrollField"
+		`;
+		
+	//menu -l "Options";
+	
+		string $maxC = ("columnLayout -e -adj true -h 900 wizCraftAnalysisLogColumnLayout;");
+		menuItem -l "Maximize Scroll Field" -c $maxC;
+		
+		string $minC = ("columnLayout -e -adj false -w " + $w + " -h " + $h + " wizCraftAnalysisLogColumnLayout;");
+		menuItem -l "Reset Scroll Field" -c $minC;
+		menuItem -l "Clear Log" -c ("scrollField -cl wizCraftAnalysis_scrollField;");
+	
+	//setParent "wizCraftAnalysisLogOptionsPopUpMenu";
+
+/*
+    popupMenu 
+        -p wizCraftAnalysisLogField
+        ;
+        
+    menuItem 
+        -label "Refresh log" 
+        -c "scrollField -e -text $batchProcessLog batchProcessLogField"
+        ;
+*/
+    //setParent ..;
+	//|||||||||||||||||||||<END-COLUMN>||||||||||||||||||||||
+	//-------------------------------------------------------
+
+}
+
+//# WIZ CRAFT HELP LAYOUT
+//====================================================================
+global proc wizCraftHelpLayout( string $parent )
+{
+	string $layout = `columnLayout
+		//-adjustableColumn true
+		-p $parent
+		wizCraftHelpColumnLayout
+		`;
+
+	string $text[];
+	$t[0] = (
+	"Base Structures need to be formatted consistantly." + "\n"
+	+"The top of the structure needs to be on the right side" + "\n"
+	+"Of the uv layout area." + "\n"
+	);
+
+	for ($i=0;$i<`size $text`;$i++){
+		text -l $text[$i] -al "left";
+		
+	}
+	separator -height 10 -style "out";
+	setParent ..;
+}
+
+
+
+global proc wizCraftPolyProcessingLayout( string $parent )
+{
+	
+
+	string $layout = `frameLayout
+		-l "Poly Processing"	
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10				
+		-cll true
+		-cl true
+		-p $parent
+		`;
+			
+
+	wizCheckBox(
+		"- Scale "
+		+"-v 0 "
+		+"-n wizPolyProcess_scale_checkBox"
+		);
+		
+	wizFloatFieldGrp(
+		"-l Scale Factor "
+		+"-ann Scale By Amount "
+		+"-v 0.1 "
+		+"-n wizCraft_scaleFactor_floatFieldGrp"
+		);
+		
+	wizCheckBox(
+		"-l Cleanup "
+		+"-v 1 "
+		+"-n wizPolyProcess_cleanup_checkBox"
+		);
+		
+	wizCheckBox(
+		"-l Fix Normals "
+		+"-v 1 "
+		+"-n wizPolyProcess_fixNormals_checkBox"
+		);
+		
+	wizCheckBox(
+		"-l Poly Reduce "
+		+"-v 1 "
+		+"-n wizPolyProcess_polyReduce_checkBox"
+		);
+		
+	wizFloatFieldGrp(
+		"-l Reduce Percent "
+		+"-ann Reducing percent "
+		+"-v 80 "
+		+"-n wizCraft_polyProcessReductionPercent_floatFieldGrp"
+		);	
+		
+	wizCheckBox(
+		"-l Create UVs "
+		+"-v 1 "
+		+"-n wizPolyProcess_createUVs_checkBox"
+		);
+		
+	wizCheckBox(
+		"-l Center In World "
+		+"-v 1 "
+		+"-n wizPolyProcess_center_checkBox"
+		);
+		
+	
+	
+	button 
+		-l "Voxel Model Process"
+		-c ("wizProcessVoxelModel(\"-sl -wiz\");")
+		;
+	
+
+
+}
+
+
+global proc wizCraftPlanetaryTerrainLayout( string $parent )
+{
+	
+
+	string $layout = `frameLayout
+		-l "Planetary Terrain"	
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10				
+		-cll true
+		-cl true
+		-p $parent
+		`;
+		
+	wizCheckBox(
+		"-l Process Selected Object "
+		+"-ann Check This If You Only Want To Process The Currently Selected Object "
+		+"-v 0 "
+		+"-n wizPlanetaryTerrain_processSelected_checkBox"
+		);	
+		
+	string $tfg = wizTextFieldButtonGrp(
+		"-l Import Directory "
+		+"-tx c: "
+		+"-ann Some Helpful Annotation "
+		+"-bc ad "
+		+"-bl Select "
+		+"-n wizPlanetaryTerrain_importDirectory_textFieldButtonGrp");
+	
+	wizCheckBox(
+		"-l Process Sub-Directories "
+		+"-v 0 "
+		+"-n wizPlanetaryTerrain_processSubDirectories_checkBox"
+		);		
+	
+	
+	wizSeparator(); 
+	
+	wizCheckBox(
+		"-l Scale "
+		+"-v 0 "
+		+"-n wizPlanetaryTerrain_scale_checkBox"
+		);
+		
+	wizFloatFieldGrp(
+		"-l Scale Factor "
+		+"-ann Scale By Amount "
+		+"-v 0.1 "
+		+"-n wizPlanetaryTerrain_scaleFactor_floatFieldGrp"
+		);
+	
+	
+	wizCheckBox(
+		"-l Planetary Bend "
+		+"-v 1 "
+		+"-n wizPlanetaryTerrain_planetaryBend_checkBox"
+		);	
+	
+	wizSeparator(); 
+		
+	wizCheckBox(
+		"-l Cleanup "
+		+"-v 1 "
+		+"-n wizPlanetaryTerrain_cleanup_checkBox"
+		);
+	
+	wizCheckBox(
+		"-l Cleanup Twice "
+		+"-v 1 "
+		+"-n wizPlanetaryTerrain_cleanupTwice_checkBox"
+		);
+		
+	wizCheckBox(
+		"-l Fix Normals "
+		+"-v 1 "
+		+"-n wizPlanetaryTerrain_fixNormals_checkBox"
+		);
+		
+	wizFloatFieldGrp(
+		"-l Normal Angle "
+		+"-ann Unlock Normals and Set Normal Angle "
+		+"-v 180 "
+		+"-n wizPlanetaryTerrain_normalAngle_floatFieldGrp"
+		);	
+		
+	wizSeparator(); 
+	
+	wizCheckBox(
+		"-l Poly Reduce "
+		+"-v 1 "
+		+"-n wizPlanetaryTerrain_polyReduce_checkBox"
+		);
+		
+	wizFloatFieldGrp(
+		"-l Reduce Percent "
+		+"-ann Reducing percent "
+		+"-v 80 "
+		+"-n wizPlanetaryTerrain_polyProcessReductionPercent_floatFieldGrp"
+		);	
+		
+	wizSeparator(); 
+	
+	wizCheckBox(
+		"-l Create UVs "
+		+"-v 1 "
+		+"-n wizPlanetaryTerrain_createUVs_checkBox"
+		);
+		
+	wizCheckBox(
+		"-l Spherical Projection "
+		+"-ann Planar Y Projection Will Be Use If This Is Not Checked "
+		+"-v 0 "
+		+"-n wizPlanetaryTerrain_sphericalProjection_checkBox"
+		);
+
+	wizCheckBox(
+		"-l Unfold UVs "
+		+"-v 1 "
+		+"-n wizPlanetaryTerrain_unfoldUVs_checkBox"
+		);
+	
+	wizSeparator(); 
+	
+	wizCheckBox(
+		"-l Assign Default Shader "
+		+"-v 1 "
+		+"-n wizPlanetaryTerrain_assignDefaultShader_checkBox"
+		);	
+		
+	wizCheckBox(
+		"-l Center In World "
+		+"-v 1 "
+		+"-n wizPlanetaryTerrain_center_checkBox"
+		);
+		
+		/*
+	wizCheckBox(
+		"-l Unity World Space Format "
+		+"-ann Not Used "
+		+"-v 0 "
+		+"-n wizPlanetaryTerrain_unityWorldSpaceFormat_checkBox"
+		);
+		*/
+		
+	wizCheckBox(
+		"-l Unity LOD Export "
+		+"-v 0 "
+		+"-n wizPlanetaryTerrain_unityLODExport_checkBox"
+		);
+		
+	wizCheckBox(
+		"-l Reduce For LOD0 "
+		+"-v 1 "
+		+"-n wizPlanetaryTerrain_reduceLOD0_checkBox"
+		);	
+		
+	wizIntFieldGrp(
+		"-l LOD0 Count "
+		+"-ann Target Poly Count For LOD0 "
+		+"-v 500000 "
+		+"-n wizPlanetaryTerrain_highCount_intFieldGrp"
+		);
+		
+	wizIntFieldGrp(
+		"-l LOD1 Count "
+		+"-ann Target Poly Count For LOD1 "
+		+"-v 64000 "
+		+"-n wizPlanetaryTerrain_medCount_intFieldGrp"
+		);
+		
+	wizIntFieldGrp(
+		"-l LOD2 Count "
+		+"-ann Target Poly Count For LOD2 "
+		+"-v 15000 "
+		+"-n wizPlanetaryTerrain_lowCount_intFieldGrp"
+		);
+	
+	wizSeparator(); 
+	
+	wizCheckBox(
+		"-l Delete History "
+		+"-ann Delete History Should Be On Unless Testing "
+		+"-v 1 "
+		+"-n wizPlanetaryTerrain_deleteHistory_checkBox"
+		);	
+	
+	wizSeparator(); 
+		
+	wizCheckBox(
+		"-l Export FBX Files "
+		+"-v 1 "
+		+"-n wizPlanetaryTerrain_exportFBX_checkBox"
+		);	
+		
+	wizCheckBox(
+		"-l Use Same Directory From Import "
+		+"-v 1 "
+		+"-n wizPlanetaryTerrain_usdfi_checkBox"
+		);	
+		
+	string $tfg = wizTextFieldButtonGrp(
+		"-l Export Directory "
+		+"-tx c: "
+		+"-ann Some Helpful Annotation "
+		+"-bc ad "
+		+"-bl Select "
+		+"-n wizPlanetaryTerrain_exportDirectory_textFieldButtonGrp");
+	
+			
+	button 
+		-l "Process"
+		-c ("wizProcessPlanetaryTerrain(\"-wiz\");")
+		;
+	
+	wizSeparator(); 
+	
+	wizFloatFieldGrp(
+		"-l Distance Tolerance "
+		+"-ann Reducing percent "
+		+"-v 0.01 "
+		+"-n wizPlanetaryTerrain_edgeVertexDistanceTolerance_floatFieldGrp"
+		);	
+
+	button 
+		-l "Get Distance Between Vertices"
+		-c ("getDistanceBetweenVertices();")
+		;
+		
+	button 
+		-l "Fix Terrain Seams"
+		-c ("wizFixTerrainSeamCP(\"\");")
+		;
+		
+	button 
+		-l "Fix Terrain Seam First To Second Selection Only"
+		-ann "This will only snap the vertices of the first selected object to the second selected object. Not Both."
+		-c ("wizFixTerrainSeamCP(\"-fo\");")
+		;
+
+}
+
+//========================================================================================================
+//""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//                     MENUS
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+//========================================================================================================
+
+//# WIZ CRAFT MAIN MENU BAR LAYOUT
+//====================================================================
+global proc wizCraftMainMenuBarLayout()
+{
+    string $menuBarLayout = `menuBarLayout wizCraftMainMenuBarLayout`;
+    menu -l "Create" -to true;
+        menuItem -l "Create wizCraft Asset" -ann "Create a wizCraft asset which can build ontop of a surface based on various custom feature types." -c ("createWizCraftAsset(\"\");");
+		menuItem -l "Update wizCraft Asset" -c ("createWizCraftAsset(\"-e\");");
+		//menuItem -l "Create wizCraft Component Asset" -c ("createWizCraftComponentAsset();");
+		
+		menuItem -d true -dl "Reference Pool";		
+        menuItem -l "Create Reference Pool Asset" -ann "Create a generic asset for getting random referenes from various sources." -c ("createReferencePoolAsset(\"-sl\");");  
+		menuItem -l "Add Reference Pool Directory To Ref Pool Asset" -c ("createReferencePoolAsset(\"-e -sl -ada\");");  
+		
+		menuItem -d true -dl "Import Pool";		
+        menuItem -l "Create Import Pool Asset" -ann "Create a generic asset for getting random imports from various sources." -c ("createImportPoolAsset(\"-sl\");");  
+		menuItem -l "Add Import Pool Directory To Import Pool Asset" -c ("createImportPoolAsset(\"-e -sl -ada\");");  
+				
+		menuItem -d true -dl "Shading";	
+		menuItem -l "Create Texture Layer Asset" -c ("wizCraftCreateTextureLayerAsset(\"\");");
+		menuItem -l "Create Material Pool Set" -c ("wizCraftMaterialPool(\"-sl\");");
+		
+		menuItem -d true -dl "Surface Tile";	
+		menuItem -l "Create Surface Tile Asset" -c ("createWizCraftSurfaceTileAsset(\"-sl\");");
+		
+		menuItem -d true -dl "Other";
+		menuItem -l "Create Misc Asset" -c ("wizCreateMiscAsset(\"-sl\");");
+		menuItem -l "Set Driven Visibility Selector" -ann ("This adds a new attribute to the first selection and"
+		+"uses it to control visibility of the rest of selected objects. "
+		+"Works like a object toggle switch.\n"
+		+"If attribute already exists, this will rebuild the set driven keys to include all objects") -c ("wizSetDrivenVisibility(\"-sl -anp\");");
+		
+		menuItem -l "Set Driven Enabled Selector" -ann ("This adds a new attribute to the first selection and"
+		+"uses it to control the enabled state of the rest of selected objects. "
+		+"Works like a object toggle switch.\n"
+		+"If attribute already exists, this will rebuild the set driven keys to include all objects") -c ("wizSetDrivenSelection(\"-sl -anp -en\");");
+		
+		menuItem -l "Set Driven Texture Selector" -ann ("This adds a new attribute to the first selection and"
+		+"uses it to control the isVisible state of the rest of selected layeredTextures. "
+		+"Works like a object toggle switch.\n"
+		+"If attribute already exists, this will rebuild the set driven keys to include all objects") -c ("wizSetDrivenSelection(\"-sl -anp -lt\");");
+		
+		menuItem -l "Set Driven Frozen Selector" -ann ("This adds a new attribute to the first selection and"
+		+"uses it to control the frozen state of the rest of selected nodes. "
+		+"Works like a object toggle switch.\n"
+		+"If attribute already exists, this will rebuild the set driven keys to include all objects") -c ("wizSetDrivenSelection(\"-sl -anp -fro\");");
+		
+    menu -l "Build" -to true;
+        menuItem -l "wizCraft Build" -c ("wizCraftDoBuild();");
+		menuItem -d true -dl "Curves";	
+		menuItem -l "Create Area Perimeter Curves From Selection" -c ("wizCraftCreateAreaPerimeterCurves(\"-sl\");");
+		string $blocAnn = ("Select a group that contains a start# object, a mid#, and an end# object in hierarchy, "
+		+"then select any number of curves. \n"
+		+"This will duplicate the object on each curve and move the start and ends to the start and ends of the curve. "
+		+"Only works with straight lines currently.\n"
+		+"The object should be a group, not an asset.\n");
+        
+		menuItem -l "Build Line Objects On Curves" -ann $blocAnn -c ("wizDuplicateLineObjectOnCurves(\"-sl\");");
+		menuItem -l "Build Line Object Instances On Curves" -ann $blocAnn -c ("wizDuplicateLineObjectOnCurves(\"-sl -im\");");
+       
+		
+    menu -l "Analysis" -to true;
+		menuItem -l "Split Mesh Into Shells" -c ("wizCraftMaxAngleShellSelection(\"-sl -ma 10\");");
+        menuItem -l "Analyze Selected Object" -c ("doBuildAnalysisOnSelectedObjects(`ls -sl`);");
+		
+	menu -l "Textures";
+		menuItem -l "Create Corner Mask Texture" -c ("wizCreateCornerMaskTexture(\"-sl\");");
+			menuItem -ob true -c ("openCurrentOptionsLayout(\"wizCornerMaskTextureOptions\");");
+			
+		string $cvctic = ("int $sizeX = `intFieldGrp -q -v convertVertexColors_sizeX_intFieldGrp`;"+"\n"
+			+"int $sizeY = `intFieldGrp -q -v convertVertexColors_sizeY_intFieldGrp`;"+"\n"
+			+"convertVertexColorsToTextureMap(\"-fsx \" + $sizeX + \" -fsy \" + $sizeY + \" -fp\");"
+			);
+			
+		menuItem -l "Convert Vertex Colors To Image" -c $cvctic;
+			menuItem -ob true -c ("openCurrentOptionsLayout(\"convertVertexColorsToTextureMapOptions\");");
+		
+		menuItem -l "Snow Mask" -c ("createMeshSelectionFromTextureOutput(\"-sl -typ snow -tt snow\");");
+		
+		menuItem -l "Snow Sandwidch" -c ("wizCreateSnowSandwidch(\"-sl\");");
+		menuItem -l "Create Marching Tile Select Sets" -c ("wizCraftCreateMarchingTileSelectSets(\"-sl\");");
+			menuItem -ob true -c  ("openCurrentOptionsLayout(\"marchingTileSelectSetOptions\");");
+		
+		menuItem -l "Bake XGen PTex File" -c ("wizBakeXGenPTex(\"-sl -dp\");");
+		
+		menuItem -l "Convert Vertex Color Frame Range To Texture" -c ("");
+		
+	menu -l "Edit" -to true;
+		menuItem -sm true -l "Curves";
+			rebuildCurvesMenuItems();
+		setParent -menu ..;
+
+	menu -l "cBldr" -to true;
+		menuItem -sm true -l "Actions";
+			cBldrActionsMenuItems();
+		setParent -menu ..;
+		
+	menu -l "lBldr" -to true;	
+	
+	menu -l "Ramputations" -to true;
+		menuItem -sm true -l "Actions";
+			ramputationActionsMenuItems();
+		setParent -menu ..;
+		menuItem -sm true -l "Assets";
+			ramputationAssetsMenuItems();
+		setParent -menu ..;
+		menuItem -sm true -l "Ramps";
+			ramputationRampsMenuItems();
+		setParent -menu ..;
+		menuItem -sm true -l "Textures";
+			ramputationTexturesMenuItems();
+		setParent -menu ..;
+		
+	menu -l "Surface Tiles" -to true;
+		wizCraftSurfaceTilesMainMenuItems();
+		setParent -menu ..;
+		
+	menu -l "Processing" -to true;
+		menuItem -l "Process Voxel Model" -c ("wizProcessVoxelModel(\"-sl\");");
+		menuItem -l "Process Model For Unity" -c ("unityPolyPrep();");
+		menuItem -l "Process Model For Substance" -c ("substancePolyPrep();");
+		
+		menuItem -l "Process MasterpieceVR Model" -c ("prepMasterpieceVRMesh();");
+		menuItem -l "Process mpvr FBX Model" -c ("wizFixMPVRFBXFile();");
+		menuItem -l "Process Kitbash Obj Files In Directory" -c ("wizProcessKitbashObjFileInDirectory();");
+		menuItem -l "Process Obj Thumbnails Files In Directory" -c ("wizObjThumbnailsInDirectory();");
+		menuItem -l "Process Fbx Thumbnails Files In Directory" -c ("wizFbxThumbnailsInDirectory();");
+		menuItem -l "Select OcculdedFaces" -c ("wizSelectOccludedFaces();");
+		menuItem -l "Rename And Organize MPVR file" -c ("wizMPVRRenameAndOrganize();");
+		menuItem -l "Sort By Matching Geometry Into Groups" -c ("wizMPVRSortIntoMatchingGeometryGroups();");
+		setParent -menu ..;
+		
+}
+
+global proc wizCraftSBldrFeatureMenuItems( string $ft )
+{
+/*
+	menu -l "Create" -to true;
+		menuItem -l ("Create " + (capitalizeString($ft)) + " sBldr Asset" ) -c ("string $name = `text -q -l wizCraft_" + $ft + "FeatureName_text`; createSBldrAsset($name);");
+	*/
+	menu -l "Add" -to true;
+		menuItem -l ("Add " + (capitalizeString($ft)) + " To wizCraft Asset" ) -c ("string $aft = `text -q -l wizCraft_" + $ft + "FeatureName_text`; createWizCraftAsset(\"-aft " + $ft + "\");");
+	setParent -menu ..;
+	
+	menu -l "Analysis" -to true;
+		menuItem -l ("Do " + (capitalizeString($ft)) + " Analysis") -c ("doFeatureTypeAnalysis(\"-sl -bl -fs -ft " + $ft + "\");");
+	setParent -menu ..;	
+}
+
+global proc wizCraftDupliPaintLayout( string $parent )
+{
+	
+	string $frameLayout = `frameLayout
+		-l "DupliPaint"
+		-ann "Paint objects onto mesh surfaces with thumbnail previews."
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-p $parent
+        wizCraft_dupliPaint_frameLayout
+		`;
+	
+	string $fluidMenuBarLayout = `menuBarLayout
+		wizCraft_dupliPaint_menuBarLayout
+		`;
+		
+	fluidMenuItems($fluidMenuBarLayout);
+		
+	string $layout = `columnLayout
+		-adjustableColumn false
+		-w 512
+		-p $frameLayout
+		`;	
+	
+	string $sourceLayout = `frameLayout
+		-l "Source Objects"
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-p $layout
+        wizCraft_dupliPaintSourceObj_frameLayout
+		`;
+		
+	string $tsl = wizObjectSelectionTextScrollListLayout("-p " + $sourceLayout + " -l Source Objects -n wizCraft_dupliPaintSource");
+		
+	string $listSelCom = ("string $si[] = `textScrollList -q -si wizCraft_dupliPaintSource_textScrollList`;"+"\n"
+	+"if(`textFieldGrp -q -ex dupliPaintGeometryName`){"+"\n"
+	+"	textFieldGrp -e -tx $si[0] -fcc dupliPaintGeometryName;"+"\n"
+	+"}"+"\n"
+	);
+	
+	
+	string $bc = ("string $src[] = `textScrollList -q -si wizCraft_dupliPaintSource_textScrollList`;"+"\n"
+	+"select -r $src;"+"\n"
+	+"string $target = `textFieldButtonGrp -q -tx wizCraft_dupliPaintTarget_textFieldButtonGrp`;"+"\n"
+	+"if(`size $target` > 0){"+"\n"
+	+"	select -add $target;"+"\n"
+	+"}"+"\n"
+	+"ScriptPaintTool;"+"\n"
+	+"artUserPaintCtx -e -tsc \"wizCraftDupliPaint\" `currentCtx`;"+"\n"
+	+"artUserPaintToolScript 4;"+"\n"
+	+"wizCraftDupliPaint artUserPaintContext;"+"\n"
+	+"changeToolIcon;"+"\n"
+	+"dR_contextChanged;"+"\n"
+	+"currentCtx;"+"\n");
+	
+	
+	string $curlistSelCom = `textScrollList -q -sc wizCraft_dupliPaintSource_textScrollList`;
+	
+	textScrollList
+		-e
+		-dcc ($listSelCom)
+		wizCraft_dupliPaintSource_textScrollList
+		;
+	
+
+	string $colLayoutB = `columnLayout
+		//-adjustableColumn true
+		-p $frameLayout		
+		`;
+		
+	/*
+	textFieldButtonGrp
+		-l "Source"
+		-bl "Select"
+		-cal 1 "left"
+		-cw 1 40
+		-adj 2 
+		-cw 3 40
+		-bc ("assignObjectToTextFieldButtonGrp(\"wizCraft_dupliPaintSource_textFieldButtonGrp\");")
+		wizCraft_dupliPaintSource_textFieldButtonGrp
+		;
+	*/
+	
+	
+	textFieldButtonGrp
+		-l "Id Name"
+		-bl "Select"
+		-cal 1 "left"
+		-cw 1 40
+		-adj 2 
+		-cw 3 40
+		-bc ("assignObjectToTextFieldButtonGrp(\"wizCraft_dupliPaintIdentifyName_textFieldButtonGrp\");")
+		wizCraft_dupliPaintIdentifyName_textFieldButtonGrp
+		;
+		
+	textFieldButtonGrp
+		-l "Target"
+		-bl "Select"
+		-cal 1 "left"
+		-cw 1 40
+		-adj 2 
+		-cw 3 40
+		-bc ("assignObjectToTextFieldButtonGrp(\"wizCraft_dupliPaintTarget_textFieldButtonGrp\");")
+		wizCraft_dupliPaintTarget_textFieldButtonGrp
+		;
+
+	button
+		-l "Init DupliPaint"
+		-c $bc
+		;
+		
+	
+}
+
+
+global proc wizCraftPolySnowBuildupLayout( string $parent )
+{
+		string $frameLayout = `frameLayout
+		-l "Poly Snow Buildup"
+		-ann "Builds Up Snow On Surfaces."
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10				
+		-cll true
+		-cl true
+		-p $parent
+        wizCraft_polySnowBuildup_frameLayout
+		`;
+
+		wizFloatSliderGrp(
+		"-l Threshold "
+		+"-v 0.5 "
+		+"-n wizCraft_polySnowBuildupThreshold_floatSliderGrp"
+		);
+		
+		wizCheckBox(
+		"-l Detach Faces "
+		+"-v 1 "
+		+"-n wizCraft_polySnowBuildupDetachFaces_checkBox"
+		);
+		
+		wizCheckBox(
+		"-l Extrude Faces "
+		+"-v 1 "
+		+"-n wizCraft_polySnowBuildupExtrudeFaces_checkBox"
+		);
+		
+		wizIntSliderGrp(
+		"-l Extrude Iterations "
+		+"-v 1.0 "
+		+"-n wizCraft_polySnowBuildupExtrudeIterations_intSliderGrp"
+		);
+		
+		wizFloatSliderGrp(
+		"-l Extrude Distance "
+		+"-v 1.0 "
+		+"-n wizCraft_polySnowBuildupExtrudeDistance_floatSliderGrp"
+		);
+		
+		wizFloatSliderGrp(
+		"-l Extrude Offset "
+		+"-v 1.0 "
+		+"-n wizCraft_polySnowBuildupExtrudeOffset_floatSliderGrp"
+		);
+		
+		
+		button
+			-l "Build Up Snow"
+			-c ("wizPolySnowBuildup(\"-wiz\");")
+			;
+		
+}
+
+
+global proc wizCraftMPVRProcessingLayout( string $parent )
+{
+		string $frameLayout = `frameLayout
+		-l "MPVR Processing"
+		-ann "For Processing MPVR models."
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10				
+		-cll true
+		-cl true
+		-p $parent
+        wizCraft_mpvrProcessing_frameLayout
+		`;
+
+		
+		wizCheckBox(
+		"-l Combine Ribbons "
+		+"-v 0 "
+		+"-n wizCraft_mpvrProcessingCombineRibbons_checkBox"
+		);
+		
+		wizCheckBox(
+		"-l Normalize Ribbons "
+		+"-v 0 "
+		+"-n wizCraft_mpvrProcessingNormalizeRibbons_checkBox"
+		);
+		
+		wizCheckBox(
+		"-l Combine Matching Geometry "
+		+"-v 0 "
+		+"-n wizCraft_mpvrProcessingCombineMatchingGeometry_checkBox"
+		);
+		
+		wizCheckBox(
+		"-l Replace Duplicates With Instances "
+		+"-v 1 "
+		+"-n wizCraft_mpvrProcessingReplaceDuplicatesWithInstances_checkBox"
+		);
+		
+		/*
+		wizIntSliderGrp(
+		"-l Extrude Iterations "
+		+"-v 1.0 "
+		+"-n wizCraft_polySnowBuildupExtrudeIterations_intSliderGrp"
+		);
+		
+		wizFloatSliderGrp(
+		"-l Extrude Distance "
+		+"-v 1.0 "
+		+"-n wizCraft_polySnowBuildupExtrudeDistance_floatSliderGrp"
+		);
+		
+		*/
+		
+		button
+			-l "Rename And Oganize"
+			-c ("wizMPVRRenameAndOrganize();")
+			;
+		
+		button
+			-l "Process"
+			-c ("wizFixMPVRFBXFile(\"-\");")
+			;
+		
+		button
+			-l "Init Only"
+			-c ("wizFixMPVRFBXFile(\"-init\");")
+			;
+			
+		button
+			-l "Replace Duplicates With Instances"
+			-c ("wizMPVRReplaceDuplicatesWithInstances();")
+			;
+		
+		button
+			-l "Assign Shader To Each Selected Object"
+			-c ("wizAssignShaderToEachSelectedObject(\"-type blinn -rv\");")
+			;
+			
+		button
+			-l "Create Export Directory"
+			-c ("wizCraftGetFileOutputPaths(\"\");")
+			;
+			
+		button
+			-l "Export Selected"
+			-c ("wizFixMPVRFBXFile(\"-exs\");")
+			;	
+}

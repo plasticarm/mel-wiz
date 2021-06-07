@@ -1,0 +1,457 @@
+{
+    proc int mMayaInstaller_setPath(string $path, string $type)
+    {
+        global string $gCS_mMaya_userSetPath;
+        $gCS_mMaya_userSetPath = $path;
+        
+        int $result;
+        string $typeList[] = `file -q -typ $path`;
+        if (size($typeList) > 0 && $typeList[0] == "directory") {
+            
+            if (`window -ex projectViewerWindow`) {
+                pv_resetWorkspace;
+            }
+            
+            np_resetBrowserPrefs;
+            
+            $result = true;
+        } else {
+            string $msg = (uiRes("m_setProject.kInvalidPath"));
+            $msg = `format -s $path $msg`;
+            string $ok = (uiRes("m_setProject.kOk")); 
+            confirmDialog -message $msg 
+                -button $ok -defaultButton $ok -parent projectViewerWindow;
+            $result = false;
+        }
+        
+        return $result;
+    }
+    
+    
+    proc string mMayaInstaller_pathAngling()
+    {
+        global string $gCS_mMaya_userSetPath;
+        $gCS_mMaya_userSetPath = "";
+        fileBrowser("mMayaInstaller_setPath", "install path", "", 4);
+        return $gCS_mMaya_userSetPath;
+    }
+    
+    
+    proc mMayaInstaller_initInst(string $mMayaInstallPath)
+    {
+        string $choosenScriptPath = ($mMayaInstallPath + "mMaya/");// extra slash here to over-ride/augment any existing userSetup path append that occurs before folder exists (and python seems to sort of cash this)   
+        python("import sys; sys.path.append('" +$choosenScriptPath+ "')");
+        if(!`optionVar -ex mMaya_localPDBArchive`)
+        {
+            optionVar -sv mMaya_localPDBArchive ($choosenScriptPath+ "/PDB/");
+        }
+        
+        $response = `confirmDialog
+            -title "usersetup.mel addition"
+            -message ("Installation of mMaya requires that a line be appended to your userSetup.mel,\ndo you wish to have this done automatically, or do it yourself by hand?")
+            -button "add it for me"
+            -button "I'll add it myself thanks"
+        `;
+        if($response == "add it for me")
+        {
+            string $appendage = (python("import os; os.linesep")+ "python(\"import sys; sys.path.append('" +$choosenScriptPath+ "'); import mMaya; mMaya.init()\");" +python("import os; os.linesep"));
+            string $userSetupLoc = `whatIs userSetup`;
+            if($userSetupLoc == "Unknown")
+            {
+                int $fileId = `fopen (internalVar("-usd")+ "/userSetup.mel") "w"`;
+                if(!$fileId)
+                {
+                    confirmDialog
+                        -title "unable to write"
+                        -message ("Unable to write to scripts dir:\n" +internalVar("-usd")+ "\nAdmin (someone with write access) will need to create, and add 'python(\"import sys; sys.path.append('< mMaya scripts path >'); import mMaya; mMaya.init()\");' line to userSetup.mel.\nSee mMaya_install_readme.txt")
+                        -button "ok"
+                    ;
+                } else {
+                    fprint $fileId $appendage;
+                    fclose $fileId;
+                }
+            } else {
+                string $pathHead = match(".+: ", $userSetupLoc);
+                string $filePath = substitute($pathHead, $userSetupLoc, "");
+                int $fileId = `fopen $filePath "a"`;
+                if(!$fileId)
+                {
+                    confirmDialog
+                        -title "unable to write"
+                        -message ("Unable to append to userSetup.mel. Admin (someone with write access)\nwill need to add 'python(\"import sys; sys.path.append('< mMaya scripts path >'); import mMaya; mMaya.init()\");' line to it.\nSee mMaya_install_readme.txt")
+                        -button "ok"
+                    ;
+                } else {
+                    fclose $fileId;
+                    $appendage = encodeString($appendage);
+                    python(""
+                        +"userSet = open('" +$filePath+ "', 'r')\n"
+                        +"original = ''\n"
+                        +"for line in userSet:\n"
+                        +"    if not 'import mMaya; mMaya.init()' in line:\n"
+                        +"        original += line\n"
+                        +"original += \"" +$appendage+ "\"\n"
+                        +"userSet = open('" +$filePath+ "', 'w')\n"
+                        +"userSet.write(original)\n"
+                        +"userSet.close()\n"
+                    );
+                }
+            }
+        } else {
+            $response = `confirmDialog
+                -title "usersetup.mel addition"
+                -message ("Add: 'python(\"import sys; sys.path.append('< mMaya scripts path >'); import mMaya; mMaya.init()\");' to your userSetup.mel.\nSee mMaya_install_readme.txt")
+                -button "ok"
+            `;
+        }
+        
+        $response = `confirmDialog
+            -title "copy icons"
+            -message ("Installation of mMaya requires that icons be copied to your icons path,\ndo you wish to have this done automatically, or do it yourself by hand?")
+            -button "copy them for me"
+            -button "I'll do this myself thanks"
+        `;
+        if($response == "copy them for me")
+        {
+            string $iconPath = internalVar("-ubd");
+            $response = `confirmDialog
+                -title "copy to icon path"
+                -message ("copying icons to: " +$iconPath)
+                -button "proceed"
+                -button "I'll copy them to a different path"
+            `;
+            if($response == "proceed")
+            {
+                int $copied = python("import mMaya; mMaya.copyIcons()");
+                if(!$copied)
+                {
+                    confirmDialog
+                        -title "copy problem"
+                        -message "A problem was encountered during icon copying, this will need to be done by hand."
+                        -button "ok"
+                    ;
+                }
+            }
+        }
+        
+        if(!`runTimeCommand -q -ex ToggleMolEditor`)
+        {
+            runTimeCommand -default true
+                -annotation "Toggle the mMaya Molecule Editor on/off"
+                -category   ("Display")
+                -command	("toggleUIComponentVisibility \"mMaya Molecule Editor\"; updateMainWindowComponentState()")
+            ToggleMolEditor;
+        }
+        
+        int $hotkeyAlreadyBound;
+        $numberOfNameCommands = `assignCommand -query -numElements`;
+        for($index = 1; $index <= $numberOfNameCommands; $index++)
+        {
+            $cmd = `assignCommand -query -command $index`;
+            if($cmd == "ToggleMolEditor" && size(`assignCommand -query -keyArray $index`))
+            {
+                $hotkeyAlreadyBound = 1;
+            }
+        }
+        
+        /*
+        python("import mMaya; mMaya.init()");
+        if($hotkeyAlreadyBound)
+        {
+            confirmDialog
+                -title "install complete"
+                -message ("Installation of mMaya complete.\nYou may need to reboot Maya once if you done anything by hand, or icons aren't showing up.\n\nPress the Editor's mMaya banner for more info and tutes.\n")
+                -button "ok"
+            ;
+        } else {
+            confirmDialog
+                -title "install complete & hotkey assignment"
+                -message ("Installation of mMaya complete.\nYou may need to reboot Maya once if you done anything by hand, or icons aren't showing up.\n\nIt is recommended you bind a hotkey to the Molecular Editor, we find something like\nalt/option-ctrl-a to be good due to the Editor's similarity with the Attribute Editor (ctrl-a).\n\nPress the Editor's mMaya banner for more info and tutes.\n")
+                -button "ok"
+        */
+        
+        if($hotkeyAlreadyBound)
+        {
+            confirmDialog
+                -title "reboot"
+                -message ("Installation of mMaya complete, you will need to reboot Maya for all functionality to be present.\n\nPress the Editor's mMaya banner for more info and tutes.\n")
+                -button "ok"
+            ;
+        } else {
+            confirmDialog
+                -title "reboot & hotkey assignment"
+                -message ("Installation of mMaya complete, you will need to reboot Maya for all functionality to be present.\n\nIt is recommended you bind a hotkey to the Molecular Editor, we find something like\nalt/option-ctrl-a to be good due to the Editor's similarity with the Attribute Editor (ctrl-a).\nThe hotkey editor will be shown for you to make a choice, after which you need to reboot.\n\nPress the Editor's mMaya banner for more info and tutes.\n")
+                -button "ok"
+            ;
+            HotkeyPreferencesWindow;
+            textScrollList -e -si "Display" HotkeyEditorCategoryTextScrollList;
+            hotkeyEditorCategoryTextScrollListSelect;
+            textScrollList -e -si "ToggleMolEditor" HotkeyEditorCommandTextScrollList;
+            hotkeyEditorCommandTextScrollListSelect;
+        }
+        
+        global string $gShelfTopLevel;
+        int $activeShelfId = `shelfTabLayout -query -selectTabIndex $gShelfTopLevel`;
+        string $shelfNameLup = `optionVar -q ("shelfName" +$activeShelfId)`;
+        string $shelfButtons[] = `shelfLayout -query -ca $shelfNameLup`;
+        for($shelfButton in $shelfButtons)
+        {
+            string $btnCmd = `shelfButton -q -c $shelfButton`;
+            if(`gmatch $btnCmd "*mMayaRelease/install*"`)
+            {
+                evalDeferred("deleteUI " +$shelfButton);
+            }
+        }
+    }
+    
+    
+    global proc mMayaInstaller_archRet(string $verRet, string $instPath)
+    {
+        
+        global string $gCS_mMaya_unhappyDirCreatn, $gCS_mMaya_unhappyFileWrite, $gCS_mMaya_bungArchiveFile, $gCS_mMaya_failedPackageRetrieval;
+        $gCS_mMaya_unhappyDirCreatn = $gCS_mMaya_unhappyFileWrite = $gCS_mMaya_bungArchiveFile = $gCS_mMaya_failedPackageRetrieval = "";
+        
+        //********************************************************************
+	//			THIS IS WHERE PACKAGE IS UNZIPPED
+	//********************************************************************
+        python(""
+            +"import urllib, zipfile, os, StringIO, maya.cmds, maya.mel\n"
+            
+            +"class URLOp(urllib.FancyURLopener):\n"
+            +"  def setpasswd(self, user, passwd):\n"
+            +"      self.__user = user\n"
+            +"      self.__passwd = passwd\n"
+            +"  def prompt_user_passwd(self, host, realm):\n"
+            +"      return self.__user, self.__passwd\n"
+            
+            +"try:\n"
+            +"      urlOp = URLOp()\n"
+            +"      urlOp.setpasswd(\"mMayaUpdate\", \"mMaya\")\n"
+            +"      package_zip = zipfile.ZipFile(StringIO.StringIO(urlOp.open('http://www.molecularmovies.com/downloads/updates/mMaya_" +$verRet+ ".zip').read()), 'r')\n"
+            +"except:\n"
+            +"      maya.mel.eval('$gCS_mMaya_failedPackageRetrieval = \"failed\";')\n"
+            +"else:\n"
+            +"      maya.cmds.deleteUI('mMaya_downloadWin')\n"
+            +"      packageFiles = package_zip.namelist()\n"
+            +"      for file in packageFiles:\n"
+            +"          path = '/'.join(('" +$instPath+ "' +file).split('/')[:-1])\n"
+            +"          if not os.access(path, os.F_OK):\n"
+            +"              try:\n"
+            +"                  os.makedirs(path)\n"
+            +"              except:\n"
+            +"                  maya.mel.eval('$gCS_mMaya_unhappyDirCreatn = \"' +path+ '\";')\n"
+            +"                  break\n"
+            +"          if (path+ '/') == ('" +$instPath+ "' +file):\n"// 'file' is a dir
+            +"              continue\n"
+            +"          try:\n"
+            +"              writeOut = ('" +$instPath+ "' +file)\n"
+            +"              unzipped = open(writeOut, 'w')\n"
+            +"              try:\n"
+            +"                  unzipped.write(package_zip.read(file))\n"
+            +"              except:\n"
+            +"                  maya.mel.eval('$gCS_mMaya_bungArchiveFile = \"' +file+ '\";')\n"
+            +"                  break\n"
+            +"              unzipped.close()\n"
+            +"          except:\n"
+            +"              maya.mel.eval('$gCS_mMaya_unhappyFileWrite = \"' +writeOut+ '\";')\n"
+            +"              break\n"
+            +"      package_zip.close()\n"
+        );
+        
+        if(size($gCS_mMaya_failedPackageRetrieval))
+        {
+            confirmDialog
+                -title "network error"
+                -message "Ensure your internet connection is functional, and please try again. If problem persists, please contact us, mMaya@molecularmovies.com"
+                -button "OK"
+            ;
+            return;
+        }
+        if(size($gCS_mMaya_unhappyDirCreatn))
+        {
+            confirmDialog
+                -title "file access error"
+                -message ("Unable to create directory '" +$gCS_mMaya_unhappyDirCreatn+ "',\nyou'll need to provide write privelages to this path, and try installation again")
+                -button "OK"
+            ;
+            return;
+        }
+        if(size($gCS_mMaya_unhappyFileWrite))
+        {
+            confirmDialog
+                -title "file access error"
+                -message ("Unable to creat file '" +$gCS_mMaya_unhappyFileWrite+ "',\nyou'll need to provide write privelages to this path, and try installation again")
+                -button "OK"
+            ;
+            return;
+        }
+        if(size($gCS_mMaya_bungArchiveFile))
+        {
+            confirmDialog
+                -title "corrupt archive"
+                -message ("Appears that the mMaya package may have been corrupted during download (unable to extract " +$gCS_mMaya_bungArchiveFile+ "),\ntry installation again (it'll re-download package).")
+                -button "OK"
+            ;
+            return;
+        }
+        
+        python("import ftplib, uuid, cStringIO, time;\ntry:\n macAdd = uuid.getnode()\n try:\n  ftpObj = ftplib.FTP('molecularmovies.com', 'mMayaUseStats@molecularmovies.com', 'mMaya')\n  nullFile = cStringIO.StringIO('')\n  ftpObj.storbinary(('STOR ' + '/instMAC_' +str(macAdd)+ '_' +str(time.time())), nullFile)\n  nullFile.close()\n  ftpObj.quit()\n except:\n  pass\nexcept:\n pass\n");
+        
+        if(`window -ex mMaya_downloadWin`) deleteUI mMaya_downloadWin;
+        
+        mMayaInstaller_initInst($instPath);
+    }
+    
+    proc mMayaInstaller()
+    {
+        if(!`exists("nParticle")`)
+        {
+            confirmDialog
+                -title "mMaya requirement"
+                -message "mMaya requires nParticles to function, this system appears to not have access to them."
+                -button "ok"
+            ;
+            return;
+        }
+        
+        global string $gCS_mMaya_latestVer;
+        $gCS_mMaya_latestVer = "";
+        //********************************************************************
+        //			Put location of package here
+        //********************************************************************
+        python("import urllib; import maya.mel;\ntry:\n maya.mel.eval('$gCS_mMaya_latestVer = \\\"' +urllib.urlopen('https://drive.google.com/folderview?id=0B8JQVeAGofBIQldtWUQ0cUlURVE&usp=sharing').read()[:-1]+ '\\\"')\nexcept:\n pass");
+        if($gCS_mMaya_latestVer == "")
+        {
+            confirmDialog
+                -title "network error"
+                -message "Ensure your internet connection is functional, and please try again. If problem persists, please contact us, mMaya@molecularmovies.com"
+                -button "OK"
+            ;
+            return;
+        }
+        
+        string $newVersion = $gCS_mMaya_latestVer;
+        
+        //print $newVersion; print " $newVersion";
+        
+        string $userSD = `internalVar -usd`;
+        
+        if(`control -q -ex mMaya_stLnMolEdTogBtn`)
+        {
+            string $version = python("mMaya.version");
+            string $answer = `confirmDialog
+                -title "Existing mMaya installation"
+                -message ("\nAn existing mMaya installation is detected (" +$version+ ").\n\nReplaced it by " +$newVersion+ "?\nPDB archive will be retained.\n")
+                -button "OK"
+                -button "Cancel"
+            `;
+            if ($answer == "Cancel")
+            {
+                return;
+            }
+            
+            // clean up old locations
+            string $existingPath = python("mMaya.reportLoc()");
+            global string $gCS_mMaya_unhappyFileKill = "";
+            python(""
+            +"import os; import maya.mel; import maya.cmds\n"
+            +"mMayaExistingPath = mMaya.reportLoc()\n"
+            +"filesToKill = ('mMaya.py', 'mMaya.pyc', 'mMaya_install.mel', 'Acknowledgements.txt', 'COPYING.txt', 'mMaya_install_readme.txt', 'Citing_mMaya.txt')\n"
+            +"for file in filesToKill:\n"
+            +"    file = (mMayaExistingPath+ '/' +file)\n"
+            +"    if os.path.isfile(file):\n"
+            +"        try:\n"
+            +"          os.remove(file)\n"
+            +"        except:\n"
+            +"          maya.mel.eval('$gCS_mMaya_unhappyFileKill = \"' +file+ '\";')\n"
+            +"          break\n"
+            );
+            
+            if(size($gCS_mMaya_unhappyFileKill))
+            {
+                confirmDialog
+                    -title "file access error"
+                    -message ("Unable to delete old file ('" +$gCS_mMaya_unhappyFileKill+ "'),\nyou'll need to provide write privelages to this path/files.\n\nWhilst you're at it, make sure the install path is writabe too.\nAfter doing this, try again")
+                    -button "OK"
+                ;
+                return;
+            }
+        }
+        
+        string $answer = `confirmDialog
+            -title "installation path"
+            -message ("The recommended installation path is:\n\n" +$userSD+ "\n\nYou may install elsewhere however.\n")
+            -button "install there"
+            -button "install elsewhere"
+            -button "Cancel"
+        `;
+        
+        if ($answer == "Cancel")
+        {
+            return;
+        }
+        if ($answer == "install elsewhere")
+        {
+            string $userDefinedPath;
+            string $happyPath = "no";
+            while($happyPath == "no")
+            {
+                $userDefinedPath = mMayaInstaller_pathAngling();
+                if ($userDefinedPath == "")
+                {
+                    // canceled browse, cancel install - or
+                    $happyPath = `confirmDialog
+                        -title "use default?"
+                        -message ("abort install, or use default path?\n\n" +$userSD+ "\n")
+                        -button "abort"
+                        -button "use default"
+                    `;
+                    if($happyPath == "use default")
+                    {
+                        $userDefinedPath = $userSD;
+                        break;
+                    } else {
+                        return;
+                    }
+                }
+                
+                $happyPath = `confirmDialog
+                    -title "installation path"
+                    -message ("happy with this:\n\n" +$userDefinedPath+ "\n")
+                    -button "yes"
+                    -button "no"
+                `;
+            }
+            
+            $userSD = ($userDefinedPath+ "/");
+        }
+        
+        if(`window -exists mMaya_downloadWin`) deleteUI mMaya_downloadWin;
+        if(`windowPref -exists mMaya_downloadWin`) windowPref -remove mMaya_downloadWin;
+        window -title "downloading..." mMaya_downloadWin;
+        {
+            string $fL = formLayout();
+            string $tx = `text -label "retrieving mMaya installation package..." mMaya_downloadWin_feedbackTx`;
+            formLayout -e
+                -af $tx "top" 0
+                -af $tx "bottom" 0
+                -af $tx "left" 20
+                -af $tx "right" 20
+            $fL;
+            eval("showWindow()");
+        }
+        
+        evalDeferred("evalDeferred(\"mMayaInstaller_archRet(\\\"" +$newVersion+ "\\\", \\\"" +$userSD+ "\\\")\");");// deferred to allow window to get drawn on various platforms before download 'hang' effect
+    }
+    
+    mMayaInstaller();
+}
+
+//********************************************************************
+//			SCRIPT TO INSTALL VIA BROWSER
+//********************************************************************
+/* 
+
+python("import urllib, maya.mel, maya.cmds;\ntry:\n maya.mel.eval(urllib.urlopen( 'http://www.molecularmovies.com/downloads/mMayaRelease/installNub.mel').read())\nexcept:\n maya.cmds.confirmDialog(title = 'network error', message = 'Ensure your internet connection is functional, and please try again. If problem persists, please contact us, mMaya@molecularmovies.com', button = 'OK')")
+
+*/

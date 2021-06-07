@@ -1,0 +1,1715 @@
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//|||||||||||||||||||||||||:::WIZ:::||||||||||||||||||||||||||||||||||
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+/*====================================================================
+Author: Glen Johnson
+Email: plasticarm@gmail.com
+Website: plasticarm.com / hrpictures.com
+----------------------------------------------------------
+Summary:
+
+
+
+====================================================================*/
+
+global proc shadingWiz()
+{
+	
+}
+
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//////////////////////////////////////////////////////////////////////
+//			LAYOUTS
+//////////////////////////////////////////////////////////////////////
+//:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+//SHADING WIZ LAYOUT
+//================================================================
+global proc shadingWizLayout(string $parent)
+{
+	shadingWizMenuLayout();
+	
+	shaderModuleLayout($parent);
+
+	ramputationsMainLayout($parent);
+	
+	textureWizLayout($parent);
+	
+	colorWizLayout($parent);
+
+}
+
+//SHADER MODULE LAYOUT
+//---------------------------------
+global proc shaderModuleLayout(string $parent)
+{
+	string $layout = `frameLayout
+		-l "Shaders"
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true		
+		-parent $parent
+		`;
+	
+	shadingMenuLayout();
+		
+	layeredShaderLayout($layout);
+
+	setParent..;	
+
+}
+
+//LAYERED SHADERS
+//================================================================
+//LAYERED SHADERS LAYOUT
+//---------------------------------
+global proc layeredShaderLayout(string $parent)
+{
+	string $layout = `frameLayout
+		-l "Layered Shaders"	
+		-ann ""
+		-bv true
+		//-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $parent
+		`;	
+	
+	rearrangeLayeredShadersLayout($layout);
+	
+	button
+		-label "Add Selected Shaders To Layered Shader"
+		-ann ("1: Select multiple shaders to add to a single layered shader" + "\n" + "2: Select a single layered shader")
+		-c ("addSelectedShadersToLayeredShader(`ls -sl`)")
+		;
+		
+	button
+		-l "Create Layered Shader For Every Selected Shader"
+		-ann ("This creates a new layered shader for all selected shaders." + "\n" + "It then replaces the connections the original shader had to objects with the new layered shader")
+		-c ("createLayeredShaderForEverySelectedShader(`ls -sl`)")
+		;
+		
+	button
+		-label "Add Shader To All Selected Layered Shaders"
+		-ann ("1: Select a single shader to add to multiple layered shaders." + "\n" + "2: Select multiple layered shaders")
+		-c ("addShaderToAllSelectedLayeredShaders(`ls -sl`)")
+		;
+		
+			
+	setParent..;
+}
+
+//REARRANGE LAYERED SHADERS LAYOUT
+//---------------------------------
+global proc rearrangeLayeredShadersLayout(string $parent)
+{
+	string $layout = `frameLayout
+		-l "Rearrange Layered Shaders"	
+		-ann ""
+		-bv true
+		//-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $parent
+		`;
+			
+		textFieldButtonGrp
+			-l "New Order:"
+			-bl "Rearrange"
+			-text "2,1,0,"
+			-bc ("rearrangeAllSelectedLayeredShaders(`ls -sl`)")
+			rearrangeAllSelectedLayeredShaders
+			;
+			
+		setParent..;
+}
+
+//""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+//////////////////////////////////////////////////////////////////////
+//			MENUS
+//////////////////////////////////////////////////////////////////////
+//"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+//SHADING WIZ MENU LAYOUT
+//----------------------------
+global proc shadingWizMenuLayout()
+{
+	string $menuBarLayout = `menuBarLayout shadingWizMenu`;	
+	
+	shadingWizMenu();
+	textureWizMenu();
+
+}
+
+//SHADING MENU LAYOUT
+//----------------------------
+global proc shadingMenuLayout()
+{
+	string $menuBarLayout = `menuBarLayout shadingMenu`;
+	
+	shadingWizMenu();
+}
+
+//SHADING WIZ MENU
+//----------------------------
+global proc shadingWizMenu()
+{
+	shadingWizShadersMenu();	
+		
+	shadingWizLayeredShadersMenu();	
+		
+}
+
+//SHADING WIZ SHADERS MENU
+//-----------------------------
+global proc shadingWizShadersMenu()
+{
+	menu -label "Shaders" -to true;
+		shadingWizShadersMenuItems();
+	menu -label "Colors" -to true;		
+		colorWizAttributesMenuItems();
+}
+
+global proc shadingWizShadersMenuItems()
+{
+		
+	menuItem -sm true -l "New" -to true;
+		menuItem -l "Assign New Shader To Each Selected Object" -c ("assignShaderToEachSelectedObject(`ls -sl`)");
+			menuItem -ob true -c ("openCurrentOptionsLayout(\"assignShaderToEachSelectedObjectOptionsMenu\");");
+		menuItem -l "Displacement Shader" -c ("createNewDisplacementShader();");	
+		
+		
+	setParent -menu ..;	
+	
+	menuItem -sm true -l "Assign" -to true;
+		//menuItem -l "Assign Shader To Selection" -c ("wizAssignSelectedShaderToSelectedObjects(`ls -sl`);");
+		menuItem -l "Assign Shader To Selection" -c ("wizAssignMaterialToSelected(\"-sl\");");
+		menuItem -l "Replace Shader" -c ("replaceCurrentShaderWithSelectedShader(`ls -sl`);");
+		
+		menuItem -l "Assign First Selected Object's Shader To All Selected Objects" -ec true -c ("assignSelectedAShaderToAllSelected(`ls -sl`);");
+		menuItem -l "Auto Assign Material By Name";
+		
+	setParent -menu ..;
+	
+	menuItem -sm true -l "Mudbox" -to true;
+		menuItem -l "Get Objects With Non-Maya Shaders" -c ("getObjectsWithNonMayaShaders(`ls -sl`);");
+		menuItem -l "Disconnect All Reflected Color Textures" -c ("dissconnectAllReflectedColorTextures();");
+	setParent -menu ..;
+		
+		/*
+	menuItem -sm true -l "Transfer" -to true;	
+		menuItem -l "Transfer Maya Shader To MentalRay Fast Skin Shader" -c ("transferMayaShaderMapsToMentalRayFastSkinShader(`ls -sl`);");
+	setParent -menu ..;
+	*/
+	
+	menuItem -l "Global Shader Options" -c ("openCurrentOptionsLayout(\"globalShaderAttributesOptions\");");				
+		menuItem -ob true -c ("openCurrentOptionsLayout(\"globalShaderAttributesOptions\");");							
+
+	menuItem -l "Toggle Thumbnail Updating" -c ("wizToggleThumbnailUpdating();");
+	
+	menuItem -sm true -l "Solo" -to true;
+		menuItem -l "Solo Selected" -c ("wizSolo(\"-sl\");");
+		menuItem -l "Solo Color" -c ("wizSolo(\"-sl -oc\");");
+		menuItem -l "Solo Alpha" -c ("wizSolo(\"-sl -oa\");");
+		menuItem -l "Solo Last" -c ("wizSolo(\"-l\");");
+		menuItem -l "Un-Solo" -c ("wizSolo(\"-us\");");
+			
+	setParent -menu ..;
+	
+	menuItem -l "Delete Unused Nodes" -c ("wizDeleteUnusedNodes();");
+
+}
+
+//SHADING WIZ LAYERED SHADERS MENU
+//-------------------------------------
+global proc shadingWizLayeredShadersMenu()
+{
+	menu -l "Layered Shaders" -to true;
+		
+			menuItem  -l "Add Selected Shaders To Layered Shader"
+				-ann ("1: Select multiple shaders to add to a single layered shader" + "\n" + "2: Select a single layered shader")
+				-c ("addSelectedShadersToLayeredShader(`ls -sl`)")
+				
+				;
+				
+			menuItem  -l "Create Layered Shader For Every Selected Shader"
+				-ann ("This creates a new layered shader for all selected shaders." + "\n" + "It then replaces the connections the original shader had to objects with the new layered shader")
+				-c ("createLayeredShaderForEverySelectedShader(`ls -sl`)")
+				
+				;
+				
+			menuItem -l "Add Shader To All Selected Layered Shaders"
+				-ann ("1: Select a single shader to add to multiple layered shaders." + "\n" + "2: Select multiple layered shaders")
+				-c ("addShaderToAllSelectedLayeredShaders(`ls -sl`)")
+				;
+						
+		setParent -menu ..;
+}
+
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         LAYERED SHADERS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//REARRANGE
+//========================================
+
+//REARRANGE ALL SELECTED LAYERED SHADERS
+//---------------------------------------
+global proc rearrangeAllSelectedLayeredShaders(string $sel[])
+{
+	debugML1("		* Rearranging Selected Layered Shaders..." + stringArrayToString($sel, " ") + "\n");
+	for($i=0;$i<`size $sel`;$i++){
+		rearrangeSelectedLayeredShader($sel[$i]);
+	}
+}
+
+//REARRANGE SELECTED LAYERED SHADER
+//---------------------------------------
+global proc rearrangeSelectedLayeredShader(string $ls)
+{
+	
+	string $newOrderString = `textFieldButtonGrp -q -text rearrangeAllSelectedLayeredShaders`;
+	string $newOrderStringArray[];
+	tokenizeList($newOrderString, $newOrderStringArray);
+	//We must convert this to an int
+	int $nO[] = convertStringArrayToIntArray($newOrderStringArray);
+	
+	string $connected[] = getShadersConnectedToLayeredShader($ls);
+	debugML1("			* Rearranging Layered Shader: " + $ls + "\n" + "			- Shaders: " + "\n" + "				" + stringArrayToString($connected, "\n				") + "\n");
+	debugML1("			- New Order: " + intArrayToString($nO, " ") + "\n");
+	int $indices[] = `getAttr -mi ($ls + ".inputs")`;
+	int $i=0;
+	//Break all the connections
+	for($i=0;$i<`size $connected`;$i++){
+		removeMultiInstance -break true ($ls + ".inputs[" + $indices[$i] + "]");
+	}
+	
+	//Reconnect all shaders in the new order
+	for($i=0;$i<`size $connected`;$i++){
+		connectAttr -f ($connected[($nO[$i])] + ".outColor") ($ls + ".inputs[" + $i + "].color");
+		connectAttr -f ($connected[($nO[$i])] + ".outTransparency") ($ls + ".inputs[" + $i + "].transparency");
+		connectAttr -f ($connected[($nO[$i])] + ".outGlowColor") ($ls + ".inputs[" + $i + "].glowColor");
+	}
+
+}
+
+//ADD SHADER TO ALL SELECTED LAYERED SHADERS
+//-----------------------------------------------
+global proc addShaderToAllSelectedLayeredShaders(string $sel[])
+{
+	string $shader = $sel[0];
+	for($i=1;$i<`size $sel`;$i++){
+		int $indices[] = `getAttr -mi ($sel[$i] + ".inputs")`;
+		int $nextI = ($indices[(`size $indices` - 1)] + 1);
+		
+		connectAttr -f ($shader + ".outColor") ($sel[$i] + ".inputs[" + $nextI + "].color");
+		connectAttr -f ($shader + ".outTransparency") ($sel[$i] + ".inputs[" + $nextI + "].transparency");
+		connectAttr -f ($shader + ".outGlowColor") ($sel[$i] + ".inputs[" + $nextI + "].glowColor");
+	}
+}
+
+//ADD SELECTED SHADERS TO LAYERED SHADER
+//-----------------------------------------------
+global proc addSelectedShadersToLayeredShader(string $sel[])
+{
+	string $layeredShader = $sel[(`size $sel` - 1)];
+	for($i=0;$i<(`size $sel` - 1);$i++){
+		connectAttr -f ($sel[$i] + ".outColor") ($layeredShader + ".inputs[" + $i + "].color");
+		connectAttr -f ($sel[$i] + ".outTransparency") ($layeredShader + ".inputs[" + $i + "].transparency");
+		connectAttr -f ($sel[$i] + ".outGlowColor") ($layeredShader + ".inputs[" + $i + "].glowColor");
+	}
+}
+
+//CREATE LAYERED SHADERS
+//================================
+
+//CREATE LAYERED SHADER FOR EVERY SELECTED SHADER
+//-----------------------------------------------
+global proc createLayeredShaderForEverySelectedShader(string $sel[])
+{
+	for($i=0;$i<`size $sel`;$i++){
+		string $ls = createLayeredShader($sel[$i]);
+		connectAttr -f ($sel[$i] + ".outColor") ($ls + ".inputs[0].color");
+		connectAttr -f ($sel[$i] + ".outTransparency") ($ls + ".inputs[0].transparency");
+		connectAttr -f ($sel[$i] + ".outGlowColor") ($ls + ".inputs[0].glowColor");
+		
+		replaceCurrentShaderWithNewShader($sel[$i],$ls);
+	}
+}
+
+//CREATE LAYERED SHADER
+//-----------------------------------------------
+global proc string createLayeredShader(string $name)
+{
+	//string $lsName = $name + "LayeredShader";
+	//shadingNode -asShader layeredShader -n $lsName;
+		
+	string $lsName = $name + "LayeredShader";
+	string $ls = `shadingNode -asShader layeredShader -n $lsName`;
+	
+	string $lsSGName = $ls + "SG";
+	sets -renderable true -noSurfaceShader true -empty -name $lsSGName;
+	
+	connectAttr -f ($ls + ".outColor") ($lsSGName + ".surfaceShader");
+	
+	setAttr ($ls + ".inputs[0].color") -type "double3" 0.2 0.7 0.3;
+	setAttr ($ls + ".inputs[0].transparency") -type "double3" 0.2 0.2 0.2;
+	return $ls;
+
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         REPLACE SHADERS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+
+//REPLACE CURRENT SHADER WITH NEW SHADER
+//-----------------------------------------------
+global proc replaceCurrentShaderWithNewShader( string $curShader, string $newShader)
+{
+	string $sg[] = `listConnections -type shadingEngine $curShader`;
+	string $newSG[] = `listConnections -type shadingEngine $newShader`;
+	string $connected[] = `sets -q $sg[0]`;
+	if (`size $connected` == 0){
+		wizlog ("	[!] Shader : " + $curShader + " Is Not Assigned To Any Objects [!]");
+		return ;
+	}
+	debugML1("Shader: " + $curShader + " Connected: " + stringArrayToString($connected, " ") + "\n");
+	
+	selectAllInArray($connected);
+	
+	debugML1("NewShader: " + $newSG[0] + "\n");
+	
+	sets -e -forceElement $newSG[0];
+
+}
+
+//REPLACE CURRENT SHADER WITH SELECTED SHADER
+//-----------------------------------------------
+global proc replaceCurrentShaderWithSelectedShader( string $sel[] )
+{
+	string $curShader = $sel[0];
+	string $newShader = $sel[1];
+	string $sg[] = `listConnections -type shadingEngine $curShader`;
+	string $newSG[] = `listConnections -type shadingEngine $newShader`;
+	string $connected[] = `sets -q $sg[0]`;
+	
+	debugML1("Shader: " + $curShader + " Connected: " + stringArrayToString($connected, " ") + "\n");
+	
+	selectAllInArray($connected);
+	
+	debugML1("NewShader: " + $newSG[0] + "\n");
+	
+	sets -e -forceElement $newSG[0];
+
+}
+
+
+global proc wizAssignSelectedShaderToSelectedObjects( string $sel[] )
+{
+	string $curShader = $sel[0];
+	string $shader[] = `ls -mat -sl`;
+	if (`size $shader` == 0){
+		wizlog ("[!] No Shader Selected [!]");
+		return;	
+	}
+	string $sg[] = `listConnections -type shadingEngine $shader[0]`;
+	string $obj[] = stringArrayRemoveExact($shader, $sel);
+	if (`size $obj` == 0){
+		wizlog ("[!] No Objects Selected [!]");
+		return;
+	}
+	
+	debugML1("Connect Shader: " + $shader[0] + " Objects: " + stringArrayToString($obj, " ") + "\n");
+	
+	selectAllInArray($obj);
+		
+	sets -e -forceElement $shader[0];
+
+}
+
+
+//@ REPLACE MATERIAL CONNECTIONS WITH MATERIAL
+//====================================================================
+/*****************************************************************//**
+	Replaces any number of materials with another material.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = replaceMaterialConnectionsWithMaterial("-r lambert1 lambert2 -mat lambert3");
+	
+	</code>
+*********************************************************************/
+global proc replaceMaterialConnectionsWithMaterial( string $flags )
+{
+	string $mat;
+	string $sel[];
+	string $replace[];
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-mat" : case "-material" :
+			$mat = $tok[($i + 1)];
+			break ;
+				
+			case "-r" : case "-replace" :
+			$replace = wizFlagArray($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+						
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	if (`size $mat` == 0){
+		$mat = $sel[(`size $sel` - 1)];
+		stringArrayRemoveAtIndex((`size $sel` - 1), $sel);
+	}
+	if (`size $replace` == 0){
+		$replace = $sel;
+	}
+	
+	for ($i=0;$i<`size $replace`;$i++){
+		replaceCurrentShaderWithNewShader($replace[$i], $mat);	
+	}
+	
+
+
+}
+
+//ASSIGN SELECTED A SHADER TO ALL SELECTED
+//-----------------------------------------------
+global proc assignSelectedAShaderToAllSelected(string $sel[])
+{
+	string $dbl = "-dmi AssignSelectedAShaderToAllSelectedDebugMenuItem -t Assign Sel A Shader To All"; string $dbm = "add"; int $dbc = 1;
+	string $shader[] = getShadingGroupFromObj($sel[0]);
+	debugListArray($dbl, " - Selected: ", $sel, $dbc, $dbm, "", 100);
+	debugListString($dbl, (" - Selected Shader: " + $shader[0]), $dbc, $dbm);	
+	
+	select -r $sel;
+	select -add $shader[0];
+	sets -e -forceElement $shader[0];
+	
+	select -r $sel;
+	
+}
+
+//GET SHADERS CONNECT TO LAYERED SHADER
+//-----------------------------------------------
+global proc string[] getShadersConnectedToLayeredShader(string $ls)
+{
+	// Get all layeredShader nodes in this Scene.
+	//string $layeredShaders[] = `ls -type "layeredShader"`;
+	
+	// Get a list of all active '.inputs' array elements.
+	debugML2("			* Geting Shaders Connected To Layered Shader... " + "\n");
+	string $multiAttr[] = `listAttr -multi ( $ls + ".inputs" )`;
+	debugML2("				* MultiAttr: " + stringArrayToString($multiAttr, " ") + "\n");
+	string $connected[];
+	for($i=0;$i<`size $multiAttr`;$i++){
+		// Only concered with those ending with ".color".
+		if(`gmatch $multiAttr[$i] "*.color"` ){
+			// Found an active Color connection.
+			// The following retrieves the Material that feeds the
+			// Color for this layer.
+			string $con[] = `listConnections ( $ls + "." + $multiAttr[$i])`;
+			debugML2("				* Connected: " + stringArrayToString($connected, " ") + "\n");
+			// Extract the index for the connection.
+			string $tokens[];
+			tokenize $multiAttr[$i] "[]" $tokens;
+			appendStringArray($connected,$con,`size $con`);
+			//print ( "  Input " + $tokens[1] + " is connected to " + $connected[0] + ".\n" );
+		}
+	}
+	$connected = stringArrayRemoveDuplicates($connected);
+	
+	return $connected;	
+}
+
+//@ WIZ ASSIGN MATERIAL TO SELECTED
+//====================================================================
+/*****************************************************************//**
+	Assigns materials to objects.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	wizAssignMaterialToSelected("-mat lambert1 -sl");
+	
+	</code>
+*********************************************************************/
+global proc wizAssignMaterialToSelected( string $flags )
+{
+	string $obj, $mat;
+	string $mats[];
+	string $sg[];
+	string $sel[];
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-mat" : case "-material" :
+			$mat = $tok[($i + 1)];
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			$mats = `ls -mat $sel`;
+			wizlog (niceArrayList("[#] Materials Selected :", $mats));
+			$sel = stringArrayRemove($mats, $sel);
+			wizlog (niceArrayList("[#] Objects Selected :", $sel));
+			if (`size $mats` > 0){
+				$mat = $mats[0];	
+			}
+			break ;			
+
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	
+	if (`size $mat` == 0){
+		$mats = `ls -mat $sel`;
+		if (`size $mats` == 0){
+			$sg = `ls -type shadingEngine -sl`;
+			if (`size $sg` == 0){
+				wizlog ("	[!] No Material Selected [!]");
+				return ;
+			}
+		}
+		$mat = $mats[0];
+		
+	}
+	
+	if (`size $sg` == 0){
+		$sg = smartSelectObjectsOfType({ $mat }, "shadingEngine");
+	}
+	
+	// if there is no shading engine connected then make one.
+	if (`size $sg` == 0){
+		$sg[0] = `sets -renderable true -noSurfaceShader true -empty -name ($mat + "SG")`;
+		connectAttr -f ($mat + ".outColor") ($sg[0] + ".surfaceShader");		
+	}
+	
+	select -r $sel;
+	select -add $sg[0];
+	sets -e -forceElement $sg[0];
+
+}
+
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         SHADER AND MATERIAL RETRIEVAL
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//GET SHADERS
+//===============================================
+
+//@ GET SHADERS FROM SELECTED
+//====================================================================
+/*****************************************************************//**
+	Returns the shaders connected to the selected object
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-fa string] [-fb linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-fa, -fb
+	
+	<hr>
+	<b>Related</b><br>
+	getMaterialsFromSelected()
+	
+	<b>Examples</b><br>
+	<code>
+	string $shaders[] = getShadersFromSelected(`ls -sl`);
+	
+	</code>
+*********************************************************************/
+global proc string[] getShadersFromSelected(string $sel[])
+{
+	string $shapes[] = `ls -o -dag -s $sel`;
+	//string $shapes[] = ls("-sl", "-o", "-dag", "-s"); //What was this about? this was someone else's script
+	string $shadingEngines[] = listConnections("-type","shadingEngine", $shapes);
+	string $materials[] = ls("-mat", listConnections($shadingEngines));
+	$materials = `stringArrayRemoveDuplicates($materials)`;
+	return $materials;
+}
+
+//@ GET MATERIALS FROM SELECTED
+//====================================================================
+/*****************************************************************//**
+	Gets the materials connected to the selected objects
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-fa string] [-fb linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-fa, -fb
+	
+	<hr>
+	<b>Related</b><br>
+	getShadersFromSelected()
+	
+	<b>Examples</b><br>
+	<code>
+	string $materials[] = getMaterialsFromSelected(`ls -sl`);;
+	
+	</code>
+*********************************************************************/
+global proc string[] getMaterialsFromSelected(string $sel[])
+{
+	string $mat[] = getShadersFromSelected($sel);
+	return $mat;
+}
+
+//GET SINGLE SHADER FROM OBJ
+//-----------------------------------------------
+global proc string getSingleShaderFromObj(string $obj)
+{	
+	string $shadingEngines[] = listConnections("-type","shadingEngine", $obj);
+	string $materials[] = ls("-mat", listConnections($shadingEngines));
+	$materials = `stringArrayRemoveDuplicates($materials)`;
+	return $materials[0];
+}
+
+
+global proc string[] getShaderFromObj(string $obj)
+{	
+	select -r $obj;
+	string $shapes[] = ls("-sl", "-o", "-dag", "-s");	
+	string $shadingEngines[] = listConnections("-type","shadingEngine", $shapes);
+	string $materials[] = ls("-mat", listConnections($shadingEngines));
+	$materials = `stringArrayRemoveDuplicates($materials)`;
+	return $materials;
+
+}
+
+//GET SHADING GROUPS FROM OBJECT
+//-----------------------------------------------
+global proc string[] getShadingGroupsFromObject(string $obj)
+{
+	select -r $obj;
+	string $shapes[] = ls("-sl", "-o", "-dag", "-s");
+	string $shadingEngines[] = listConnections("-type","shadingEngine", $shapes);
+	$shadingEngines = `stringArrayRemoveDuplicates($shadingEngines)`;
+	return $shadingEngines;
+}
+
+global proc string[] getShadingGroupFromObj(string $obj)
+{	
+	select -r $obj;
+	string $shapes[] = ls("-sl", "-o", "-dag", "-s");	
+	string $shadingEngines[] = listConnections("-type","shadingEngine", $shapes);
+	$shadingEngines = `stringArrayRemoveDuplicates($shadingEngines)`;
+	return $shadingEngines;
+}
+
+//GET OBJECTS WITH MULTIPLE MATERIALS
+//-----------------------------------------------
+global proc string[] getObjectsWithMultipleMaterials(string $sel[])
+{	
+	//printProc("getObjectsWithMultipleMaterials");
+	int $debug = `menuItem -q -cb GetObjectsWithMultipleMaterialsDebugMenuItem`;
+	string $dbl = "Objects With Multiple Materials";
+	int $dbc = 1;
+	string $dbm = "add";
+	string $mm[];
+	
+	for($i=0;$i<`size $sel`;$i++){		
+		if(`isPolyGeometry($sel[$i])`== 0){ continue;}
+		
+		//Get the shaders(materials) from the object
+		string $shaders[] = getShaderFromObj($sel[$i]);
+		
+		 //Skip objects that only have one shader assigned
+		if(`size $shaders` <= 1){
+			continue;
+		}
+		if($debug){	
+			debugList($dbl, {(" * Multi-Material Object * ")}, $dbc, $dbm);
+			debugList($dbl, {$sel[$i]}, $dbc, $dbm);
+			debugList($dbl, {(" - Number Of Materials: " + `size $shaders`)}, $dbc, $dbm);
+			debugList($dbl, {("---------------------------------")}, $dbc, $dbm);
+		}
+		$mm[`size $mm`] = $sel[$i];	
+		
+	}
+	return $mm;	
+}
+
+
+//@ GET OBJECTS WITH NON MAYA SHADERS
+//=======================================================
+global proc string[] getObjectsWithNonMayaShaders(string $sel[])
+{
+	string $dbl = "-dmi GetObjectsWithNonMayaShadersMenuItem -t Non Maya Shader Objects"; string $dbm = "add"; int $dbc = 1;
+	
+	string $nonMayaShaders[];
+	for($i=0;$i<`size $sel`;$i++){
+		debugListString($dbl, (" - Select Object: " + $sel[$i]), $dbc, $dbm);
+		string $shaders[] = getShadersFromSelected({$sel[$i]});	
+		debugListArray($dbl, " - Shaders: ", $shaders, $dbc, $dbm, "[NEXT]", 0);
+		$shaders = removeObjectsThatDoNotExist($shaders);
+		
+		for($s=0;$s<`size $shaders`;$s++){
+			if(`size $shaders[$i]` == 0){ continue;}
+			if(isShaderMayaShader($shaders[$i]) == 0){
+				
+				$nonMayaShaders[`size $nonMayaShaders`] = $sel[$i];
+				debugListString($dbl, (" - Object: " + $sel[$i] + " : Has Non Maya Shader -"), $dbc, $dbm);
+				string $nodeType = `nodeType $shaders[$i]`;
+				debugListString($dbl, (" - Node Type: " + $nodeType), $dbc, $dbm);
+				debugList($dbl, {(tslDiv("[NEXT]"))}, $dbc, $dbm);
+				
+				break;
+			}
+		}
+	}
+	debugListArray($dbl, " - Non Maya Shader Objects: ", $nonMayaShaders, $dbc, $dbm, "", 0);
+	if(`size $nonMayaShaders` > 0){
+		select -r $nonMayaShaders;
+	}
+	return $nonMayaShaders;
+}
+
+//@ IS SHADER MAYA SHADER
+//=======================================================
+global proc int isShaderMayaShader(string $shader)
+{
+	print("IsShaderMayaShader: " + $shader + "\n");
+	if(`size $shader` == 0){ return 0;}
+	string $nodeType = `nodeType $shader`;
+	string $shaderTypes[] = {"lambert", "phong", "phongE", "blinn", "anisotropic", "layeredShader", "rampShader", "surfaceShader" };
+	for($i=0;$i<`size $shaderTypes`;$i++){
+		if($nodeType == $shaderTypes[$i]){
+				return 1;
+		}
+		
+	}
+	return 0;
+}
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			TEXTURE MAPS
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//====================================================================
+//GET TEXTURE MAP FROM OBJECT
+//========================================================
+global proc string[] getTextureMapFromObject( string $obj, string $type )
+{
+	switch($type){
+		case "color" :
+		break;
+		
+		
+	}
+	return {};
+}
+
+global proc string[] getNodesOfTypeConnectedToNode( string $type, string $node)
+{
+	listConnections -s on -d off $node;
+	return {};
+}
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			TRANSFER MAPS
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//====================================================================
+
+//TRANSFER MAPS TO NEW OBJECTS
+//-----------------------------------------------
+global proc transferMapsToNewObjects(string $source[], string $target[])
+{
+	
+	string $targetString[] = addQuotesToStringArray($target);
+	string $sourceString[] = addQuotesToStringArray($source);
+	//Get Settings From Menu
+	surfaceSampler -target $targetString -uvSet map1 
+	-searchOffset 0 -maxSearchDistance 1 -searchCage ""
+	-source $sourceString 
+	-superSampling 2 -filterType 0 -filterSize 3 -overscan 1 -searchMethod 0
+	-useGeometryNormals 1 -ignoreMirroredFaces 0 -flipU 0 -flipV 0
+	-mapOutput "diffuseRGB" -mapWidth 1024 -mapHeight 1024 -fileFormat "png" -filename "poop"
+	; 
+
+}
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			ASSIGN SHADERS
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//====================================================================
+
+//ASSIGN DEFAULT SHADER TO SELECTED
+//-----------------------------------------------
+global proc assignDefaultShaderToSelected(string $sel[])
+{
+	select -r $sel;
+	//Assign default shader
+	for($i=0;$i<`size $sel`;$i++){
+		sets -e -forceElement initialShadingGroup;	
+	}	
+}
+
+global proc assignDefaultShaderToAllAndRemoveAllUnusedNodes()
+{
+    string $sel[] = `ls -typ mesh -typ nurbsSurface`;
+	select -r $sel;
+	//Assign default shader
+	for ($i=0;$i<`size $sel`;$i++){
+		sets -e -forceElement initialShadingGroup;	
+	}	
+    
+    hyperShadePanelMenuCommand("hyperShadePanel1", "deleteUnusedNodes");
+}
+
+//ASSIGN NEW SHADER TO EACH SELECTED OBJECT
+//-----------------------------------------------
+global proc assignShaderToEachSelectedObject( string $sel[] )
+{
+	//openCurrentOptions("assignShaderToEachSelectedObjectOptionsMenu");
+	
+	string $shaderType = `optionMenuGrp -q -v newShaderTypePerSelectedObjectOptionMenuGrp`;
+	string $newMethod = `optionMenuGrp -q -v newShaderMethodPerSelectedObjectOptionMenuGrp`;
+	
+	for ($i=0;$i<`size $sel`;$i++){
+		string $name = $sel[$i] + (capitalizeString($shaderType));
+		string $shader[];
+		if ($newMethod == "copy current shader"){
+			$shader = wizCopyCurrentShader($sel[$i]);
+		} else {
+			$shader = wizCreateNewShader($name,$shaderType);
+		}
+		if (`size $shader` == 0){
+			continue;	
+		}
+		select -r $sel[$i];
+		select -add $shader[1];	
+		sets -e -forceElement $shader[1];
+	}
+
+}
+
+//@ WIZ AssignShaderToEachSelectedObjecy
+//====================================================================
+/*****************************************************************//**
+	Assigns a shader to each selected object and names it the same name as object.
+	<hr>
+	<b>Synopsis</b><br>
+	wizAssignShaderToEachSelectedObject [-type string] [-name string] [-cc] [-rv]<br>
+	
+	
+	<b>Return value</b><br>
+	none
+	
+	<b>Flags</b><br>
+	-type(-typ)<br>
+	-copyCurrent(-cc)<br>
+	-randomValue(-rv)<br>
+	-name(-n)<br>
+		
+	<hr>
+	<b>Related</b><br>
+	
+	
+	<b>Examples</b><br>
+	<code>
+	wizAssignShaderToEachSelectedObject("-typ blinn -rv");
+	
+	</code>
+*********************************************************************/
+global proc wizAssignShaderToEachSelectedObject( string $flags )
+{
+	string $sel[] = `ls -sl`;
+	
+	
+	int $copyCurrent = 0;
+	int $rv = 0;
+	//string $name = "MeshMaterial";
+	string $shaderType = "lambert";
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-n" : case "-name" :
+			$name = $tok[($i + 1)];
+			break ;
+			
+			case "-cc" : case "-copyCurrent" :
+			$copyCurrent = 1;
+			break ;
+			
+			case "-typ" : case "-type" :
+			$shaderType = $tok[($i + 1)];
+			break ;
+			
+			case "-rv" : case "-randomValue" :
+			$rv = 1;
+			break ;
+		}
+	} 
+	
+	for ($i=0;$i<`size $sel`;$i++){
+		string $name = $sel[$i] + (capitalizeString($shaderType));
+		string $shader[];
+		if ($copyCurrent){
+			$shader = wizCopyCurrentShader($sel[$i]);
+		} else {
+			$shader = wizCreateNewShader($name,$shaderType);
+		}
+		if (`size $shader` == 0){
+			continue;	
+		}
+		
+		if ($rv){
+			float $ranVal = rand(0.5, 0.0);		
+			setAttr ($shader[0] + ".color") -type double3 $ranVal $ranVal $ranVal ;
+		}
+		
+		select -r $sel[$i];
+		select -add $shader[1];	
+		sets -e -forceElement $shader[1];
+	}
+
+}
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			CREATE SHADERS
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//====================================================================
+
+//@ WIZ CREATE NEW SHADER
+//=======================================================
+/*****************************************************************//**
+*	Just provide a name and a type and this will return a new shader.
+*	string $shader[] = wizCreateNewShader("shaderName", "lambert");
+*	returns an array 0 = material name, 1 = sg name 
+*
+*********************************************************************/
+global proc string[] wizCreateNewShader( string $name, string $type)
+{
+	string $shader[];
+	string $newShader = `shadingNode -n $name -asShader $type`;
+	string $sgName = $newShader + "SG";
+	sets -renderable true -noSurfaceShader true -empty -name $sgName;
+	
+	connectAttr -f ($newShader + ".outColor") ($sgName + ".surfaceShader");
+	$shader[0] = $newShader;
+	$shader[1] = $sgName;
+	return $shader;
+
+}
+
+//@ WIZ COPY CURRENT SHADER
+//=======================================================
+global proc string[] wizCopyCurrentShader(string $obj)
+{
+
+	string $s[] = getShadersFromSelected({$obj});
+	if(catchQuiet(getAttr ($s[0] + ".outColor")) == 1){
+			int $warning = wizWarningDialog("Incompatibal Shader", ("The Shader Being Copied Is Not Compatible\n Do You Want To Create A New Shader For The Object -" + $obj + " ?"), "Yes", "No");
+			if($warning == 1){
+				string $newShaderName = $obj + "Shader";
+				string $newShaderDialog = `promptDialog -t "New Shader Type"
+					-m "Select A Shader Type And Name"
+					-ma "Left"	
+					-tx $newShaderName
+					-b "lambert"
+					-b "phong"
+					-b "phongE"
+					-b "blinn"
+					-b "Cancel"
+					-db "lambert"
+					-cb "Cancel"
+					`;
+					
+					if($newShaderDialog == "Cancel"){
+						return { "" };	
+					} else {
+						string $name = `promptDialog -q -tx`;
+						if($name == ""){
+							$name = $obj + (capitalizeString($newShaderDialog));
+						}
+						string $newShader[] = wizCreateNewShader($name,$newShaderDialog);
+						return $newShader;
+					}
+					
+			} else {
+				return { "" };	
+			}
+	}
+	select -r $s;
+	string $dup[] = `duplicate -upstreamNodes`;
+	
+	string $sg[];
+	for($i=0;$i<`size $dup`;$i++){
+		if(`checkBox -q -v newShaderTypePerSelectedObjectNameObjectShaderCheckBox`){
+			string $nodeType = `nodeType $dup[$i]`;
+			string $sName = ($obj + (capitalizeString($nodeType)));
+			string $dupShader = `rename $dup[$i] $sName`;
+			$dup[$i] = $dupShader;
+		}
+		string $sgName = $dup[$i] + "SG";
+		sets -renderable true -empty -name $sgName;
+		connectAttr -f ($dup[$i] + ".outColor") ($sgName + ".surfaceShader");
+		$sg[`size $sg`] = $sgName;
+	}
+	string $return[] = { $dup[0], $sg[0]};
+	return $return;
+}
+
+//@ WIZ COPY CURRENT SHADERS
+//=======================================================
+global proc string[] wizCopyCurrentShaders(string $obj)
+{
+
+	string $s[] = getShadersFromSelected({$obj});
+	select -r $s;
+	string $dup[] = `duplicate -upstreamNodes`;
+	string $sg[];
+	for($i=0;$i<`size $dup`;$i++){
+		string $sgName = $dup[$i] + "SG";
+		sets -renderable true -empty -name $sgName;
+		connectAttr -f ($dup[$i] + ".outColor") ($sgName + ".surfaceShader");
+		$sg[`size $sg`] = $sgName;
+	}
+	return $sg;
+}
+
+global proc setOverrideShapeColor(string $obj, int $col)
+{
+	string $shape[] = `listRelatives -s $obj`;	
+	setAttr ($shape[0] + ".overrideEnabled") 1;
+	setAttr ($shape[0] + ".overrideShading") 0;	
+	setAttr ($shape[0] + ".overrideColor") $col;
+	
+}
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			DISCONNECT ATTRIBUTES
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//====================================================================
+//DISCONNECT ALL REFLECTED COLOR TEXTURES
+//===============================================================
+global proc dissconnectAllReflectedColorTextures()
+{
+	string $mat[] = `ls -mat`;
+	for($i=0;$i<`size $mat`;$i++){
+		string $connected;
+		if (`attributeExists "reflectedColor" $mat[$i]` == 0){
+			continue;	
+		}
+		if(catchQuiet($connected = `connectionInfo -sfd ($mat[$i] + ".reflectedColor")`) == 0){	
+			$connected = `connectionInfo -sfd ($mat[$i] + ".reflectedColor")`;
+		}
+		if(`size $connected` == 0){
+			continue;	
+		}
+		disconnectAttr $connected ($mat[$i] + ".reflectedColor");
+		delete $connected;
+	}
+}
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			SET ATTRIBUTES
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//====================================================================
+//SET ATTRIBUTE ON ALL MATERIALS
+//================================================================
+global proc setColorAttributeOnAllMaterials(string $attr, float $col[])
+{
+	string $mat[] = `ls -mat`;	
+	for($i=0;$i<`size $mat`;$i++){
+		catchQuiet(`setAttr ($mat[$i] + ("." + $attr)) -type double3 $col[0] $col[1] $col[2]`);
+	}
+}
+
+//SET FLOAT ATTRIBUTE ON ALL MATERIALS
+//================================================================
+global proc setFloatAttributeOnAllMaterials(string $attr, float $val)
+{
+	string $mat[] = `ls -mat`;	
+	for($i=0;$i<`size $mat`;$i++){
+		
+		catchQuiet(`setAttr ($mat[$i] + ("." + $attr)) $val`);
+	}
+}
+
+//CREATE NEW DISPLACEMENT SHADER
+//================================================================
+global proc createNewDisplacementShader(){
+	string $sg[] = wizCreateNewShader("DisplacementShader", "lambert");
+	string $fileTexture = `shadingNode -asTexture file`;
+	string $dis = `shadingNode -asShader displacementShader`;
+	
+	connectAttr -f ($fileTexture + ".outAlpha") ($dis + ".displacement");
+	connectAttr -f ($dis + ".displacement") ($sg[1] + ".displacementShader");
+	
+}
+
+//@ CONSOLIDATE SHADERS WITH SAME PREFIX
+//=======================================================
+global proc consolidateShadersWithSamePrefix()
+{
+
+	
+	string $allShaders[] = `ls -mat`;
+	string $prefix[];
+	//string $mid[];
+	//string $suffix[];
+	string $matchShaders[];
+	for($i=0;$i<`size $allShaders`;$i++){
+		string $tok[] = tokenizeString($allShaders[$i], "_");
+		if(`size $tok` != 3){ continue; }
+		
+		$prefix[`size $prefix`] = $tok[0];
+		//$mid[$i] = $tok[1];
+		//$suffix[$i] = $tok[2];
+		$matchShaders[`size $matchShaders`] = $allShaders[$i];
+		
+	}
+	
+	$prefix = sort($prefix);
+	$matchShaders = sort($matchShaders);
+	string $pfx = $prefix[0];
+	string $uMat;
+	
+	for($i=1;$i<`size $prefix`;$i++){
+		if($prefix[$i] != $pfx){
+			
+		}
+	}
+		
+}
+
+//TRANSFER MAYA SHADER MAPS TO MENTAL RAY FAST SKIN SHADER
+//================================================================
+global proc transferMayaShaderMapsToMentalRayFastSkinShader( string $sel[] )
+{
+
+	string $color = `connectionInfo -sfd ($sel[0] + ".color")`;
+	string $inc = `connectionInfo -sfd ($sel[0] + ".incandescence")`;
+	string $bump = `connectionInfo -sfd ($sel[0] + ".normalCamera")`;
+	string $cos = `connectionInfo -sfd ($sel[0] + ".cosinePower")`;
+	string $spec = `connectionInfo -sfd ($sel[0] + ".specularColor")`;
+	string $ref = `connectionInfo -sfd ($sel[0] + ".reflectivity")`;
+	
+	if (`size $color` > 0){
+		connectAttr -force $color ($sel[1] + ".front_sss_color");
+	}
+	if (`size $bump` > 0){
+		connectAttr -force $bump ($sel[1] + ".normalCamera");
+	}
+	if (`size $cos` > 0){
+		connectAttr -force $cos ($sel[1] + ".primary_weight");
+	}
+
+}
+
+/*
+global proc copyInShapesToSelectedShadingSwitchNodes( string $sel[] )
+{
+
+	string $copyInShape[];
+	string $sel[] = `ls -sl`;
+	int $mi[] = `getAttr -mi ($sel[0] + ".input")`;
+	for($i=0;$i<`size $mi`;$i++){
+		$copyInShape[$i] = `listConnections ($sel[0] + ".input[0].inShape")`;
+		for($p=1;$p<`size $sel`;$p++){
+			connectAttr 
+		}
+		
+	}
+
+	for($i=1;$i<`size $sel`;$i++){
+		connectAttr |CharacterBaseGroup|SkinGroup|Left_FootMesh1|Left_FootMeshShape1.instObjGroups[0] ($sel[0] + ".input[4].inShape;
+	}
+	
+	
+	
+}
+
+*/
+
+/*
+string $sel[] = `ls -sl`;
+print ("Sel: " + $sel[0] + "\n");
+string $difTst = ("float $diff = `getAttr " + $sel[0] + ".diffuse`;");
+if (catchQuiet($difTst)){
+	print (" - Diffuse Is A Multi Attr\n");
+
+} else {
+	print (" - Diffuse Is OK\n");
+}
+
+
+*/
+
+//@ CLAMP ALL SHADER DIFFUSE TO DEFAULT
+//=======================================================
+global proc clampAllShaderDiffuseToDefault()
+{
+	//print ("WIZ| clampAllShaderDiffuseToDefault : " + "\n");
+	string $mat[] = `ls -type blinn -type phong -type lambert -type phongE -type anisotropic -type rampShader`;
+	for ($i=0;$i<`size $mat`;$i++){
+		if (`attributeExists "diffuse" $mat[$i]` == 0){
+			continue;
+		}
+		//print (" - Material : " + $mat[$i] + "\n");
+		float $dif = `getAttr ($mat[$i] + ".diffuse")`;
+		//print (" - Diffuse : " + $dif + "\n");
+		if ($dif > 0.8){
+			setAttr ($mat[$i] + ".diffuse") 0.8;
+		}
+	}
+	
+}
+
+global proc wizToggleThumbnailUpdating()
+{
+	int $enabled = `renderThumbnailUpdate -q`;
+	if ($enabled){
+		renderThumbnailUpdate false;
+		wizlog ("[THUMBNAIL UPDATING OFF]");
+	} else {
+		renderThumbnailUpdate true;
+		wizlog ("[THUMBNAIL UPDATING ON]");
+		
+	}
+	
+}
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			AUTO MATERIAL ASSIGNMENT
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//====================================================================
+
+//@ WIZ AUTO ASSIGN MATERIAL
+//=======================================================
+global proc wizAutoAssignMaterial( string $sel[], string $ass )
+{
+	if ($ass == "byName"){
+		string $mat[] = `ls -mat`;
+		$mat = getObjectNamesNoNamespaces($mat);
+		
+	}
+}
+
+/*
+global proc wizConvertShaderType()
+{
+	string $color[] = { "color", "diffuse", "DiffuseColor" };
+	string $transparency[] = { "transparency", "transparency", "Opacity" };
+	string $ambientColor[] = { "ambientColor", "ao_ambient", 
+}*/
+
+//@ WIZ SOLO
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName("-obj someObject -q -sl");
+	
+	</code>
+*********************************************************************/
+global proc wizSolo( string $flags )
+{
+	string $obj, $type;
+	string $sel[];
+	int $edit;
+	int $oc, $oa;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-typ" : case "-type" :
+			$type = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-us" : case "-unsolo" :
+			soloMaterial -unsolo;
+			return ;
+						
+			case "-oc" : case "-outColor" :
+			$oc = 1;
+			break ;
+			
+			case "-oa" : case "-outAlpha" :
+			$oc = 1;
+			break ;
+			
+			case "-l" : case "-last" :
+			soloMaterial -last;
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	if ($oc){
+		soloMaterial -node $sel[0] -attr "outColor";
+	} else if ($oa){
+		soloMaterial -node $sel[0] -attr "outAlpha";
+	} else {
+		soloMaterial -node $sel[0];
+	}
+
+}
+
+global proc rmbWizBuildThinLines( string $object )
+{
+	string $thinLines = wizBuildThinLines("-sl");
+}
+
+//@ WIZ BUILD THIN LINES
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName("-obj someObject -q -sl");
+	
+	</code>
+*********************************************************************/
+global proc string wizBuildThinLines( string $flags )
+{
+	string $obj, $type;
+	string $sel[];
+	int $edit;
+	string $lineShaderAsset;
+	string $pathCurves[];
+	string $tok[] = tokenizeString($flags, " ");
+	string $shader;
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-typ" : case "-type" :
+			$type = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			string $nc[] = smartSelectObjectsOfType(`ls -sl`, "-type nurbsCurve");
+			select -r $nc;
+			$pathCurves = `listTransforms -sl`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+    select -r $sel;
+	
+	//Get the container that is selected
+	string $con[] = `ls -con -sl`;
+	if (`size $con` == 0){
+		wizlog ("[!] A Wiz Thin Line Asset Must Be Selected [!]");
+		return "";
+	}
+	$lineShaderAsset = $con[0];
+	
+	int $uDiv = `getAttr ($lineShaderAsset + ".uDiv")`;	
+	int $vDiv = `getAttr ($lineShaderAsset + ".vDiv")`;
+	
+	int $exScale = `getAttr ($lineShaderAsset + ".extrusionScale")`;
+	int $exRot = `getAttr ($lineShaderAsset + ".extrusionRotation")`;
+	
+	int $et = `getAttr ($lineShaderAsset + ".extrudeType")`;
+	int $ucp = `getAttr ($lineShaderAsset + ".useComponentPivot")`;
+	int $upn = `getAttr ($lineShaderAsset + ".useProfileNormal")`;
+	int $fpt = `getAttr ($lineShaderAsset + ".fixedPath")`;
+	
+	
+	select -r $con[0];
+	
+		
+	//Select the contents so we can find materials inside container
+	SelectContainerContents;
+	
+	string $ncc[] = `ls -type nurbsCurve -sl`;
+	string $mat[] = `ls -mat -sl`;
+	$shader = $mat[0];
+	select -r $ncc;
+	string $profileCurves[] = `listTransforms "-v -sl"`;
+	
+	
+	if (`size $profileCurves` == 0){
+		wizlog ("[!] Couldn't Find Line Profile Curves [!]");
+		return "";
+	}
+	
+	
+	
+	//_________________________________________
+	// Do the extrusions
+	string $lineGroup[];
+	string $allExtrusions[];
+	string $returnGroup;
+	for ($i=0;$i<`size $pathCurves`;$i++){
+		string $pathExtrusion[];
+		for ($p=0;$p<`size $profileCurves`;$p++){
+			string $ext[] = `extrude -n ($pathCurves[$i] + "LineMesh") -ch true -rn false -po 1 -et $et -ucp $ucp -fpt $fpt -upn $upn -rotation $exRot -scale $exScale -rsp 1 $profileCurves[$p] $pathCurves[$i] `;	
+			$pathExtrusion[`size $pathExtrusion`] = $ext[0];
+			
+			//setAttr ($ext[1] + ".scale") $exScale;
+			//setAttr ($ext[1] + ".rotation") $exRot;
+			
+			string $mesh[] = smartSelectObjectsOfType($ext, "-type mesh");
+			setAttr ($mesh[0] + ".castsShadows") 0;
+			setAttr ($mesh[0] + ".receiveShadows") 0;
+			
+			connectAttr ($lineShaderAsset + ".extrusionScale") ($ext[1] + ".scale");
+			connectAttr ($lineShaderAsset + ".extrusionRotation") ($ext[1] + ".rotation");
+			connectAttr ($lineShaderAsset + ".extrudeType") ($ext[1] + ".extrudeType");
+			connectAttr ($lineShaderAsset + ".useComponentPivot") ($ext[1] + ".useComponentPivot");
+			connectAttr ($lineShaderAsset + ".useProfileNormal") ($ext[1] + ".useProfileNormal");
+			connectAttr ($lineShaderAsset + ".fixedPath") ($ext[1] + ".fixedPath");
+			
+			
+			$allExtrusions[`size $allExtrusions`] = $ext[0];
+		}
+		select -r $pathExtrusion;
+		$lineGroup[`size $lineGroup`] = `group -n ($pathCurves[$i] + "LineGroup")`;
+	}
+	wizlog ("[+] Finished Building : " + `size $lineGroup` + " Lines ");
+	select -r $lineGroup;
+	$returnGroup = `group -em -n ("LinesGroup")`;
+	
+	for ($i=0;$i<`size $lineGroup`;$i++){
+		parent $lineGroup[$i] $returnGroup;	
+	}
+	
+	//$returnGroup = `group -n ("LinesGroup")`; -s 
+	//parent $returnGroup;
+	
+	//_________________________________________
+	// Connect the shader to the extrusions
+	string $sg[] = listConnections("-type" ,"shadingEngine" , $shader);	
+	if (`size $sg` == 0){	
+		//string $shadingEngine = `shadingNode -n $name -asShader $type`;
+		string $sgName = $shader + "SG";
+		sets -renderable true -noSurfaceShader true -empty -name $sgName;	
+		connectAttr -f ($shader+ ".outColor") ($sgName + ".surfaceShader");
+		
+	}
+	
+	for ($i=0;$i<`size $allExtrusions`;$i++){
+		select -r $sg[0];
+		if (`objExists $allExtrusions[$i]` == 0){ 
+			wizlog ("[!] Could Not Find Object : " + $allExtrusions[$i] + " [!]");
+			continue ;
+		}
+		
+		select -add $allExtrusions[$i];			
+		sets -e -forceElement $sg[0];			
+	}
+	
+	return $returnGroup;
+}
+
+global proc wizDeleteUnusedNodes()
+{
+	HypershadeWindow;
+	hyperShadePanelBuildEditMenu hyperShadePanel1 hyperShadePanelMenuEditMenu;
+	hyperShadePanelMenuCommand("hyperShadePanel1", "deleteUnusedNodes");
+
+}
+
+
+
+global proc rmbPBRMaterialFindTextureFiles( string $object )
+{
+	string $lssl[] = `ls -sl`;
+	string $con[] = `ls -con -sl`;
+	
+	// Get all the different texture file nodes
+	string $colTexFile[] = `ls ("*ColorFile*") $con`;
+	string $normTexFile[] = `ls ("*NormalFile*") $con`;
+	string $specTexFile[] = `ls ("*SpecularFile*") $con`;
+	string $glossTexFile[] = `ls ("*GlossFile*") $con`;
+	string $aoTexFile[] = `ls ("*AOFile*") $con`;
+	string $curveTexFile[] = `ls ("*CurvatureFile*") $con`;
+	string $disTexFile[] = `ls ("*DisplacementFile*") $con`;
+	
+	//Prompt for directory
+	string $dir = wizGetDirectory();
+	//Get all the files in directory
+	string $files[] = wizGetFiles("-dir " + $dir);
+	
+	string $colTexFile[] = `ls ("*ColorFile*") $con`;
+	
+	
+	string $colorNames[] = { "color", "Color", "diffuse", "Diffuse", "col" };
+	string $normNames[] = { "normal", "nrm", "nmap", "normalMap", "NormalMap", "normals" };
+	string $specNames[] = { "specular", "spec", "Specular", "Spec" };
+	string $glossNames[] = { "gloss", "Gloss" };
+	string $aoNames[] = { "ao", "ambientOcclusion", "AmbientOcclusion", "AO" };
+	string $curveNames[] = { "curvature", "Curvature" };
+	string $dispNames[] = { "displacement", "disp", "Displacement", "Disp" };
+	
+	for ($i=0;$i<`size $files`;$i++){
+		string $tok[] = tokenizeString($files[$i], " ");
+		for ($n=0;$n<`size $colorNames`;$n++){
+			if ((stringArrayContains($colorNames[$n], $tok))){
+				
+			}
+		}
+		
+		
+	}
+	
+	
+}

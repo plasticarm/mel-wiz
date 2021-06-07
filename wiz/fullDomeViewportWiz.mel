@@ -1,0 +1,740 @@
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//|||||||||||||||||||||||||:::WIZ:::||||||||||||||||||||||||||||||||||
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+/*====================================================================
+Author: Glen Johnson
+Email: plasticarm@gmail.com
+Website: plasticarm.com / hrpictures.com
+----------------------------------------------------------
+Summary:
+
+ToDo:
+	make auto refresh stop refreshing if the user moves the camera in the middle of a refresh
+	add fov slider hud
+	
+
+====================================================================*/
+global string $WIZ_fullDomeViewportCamera;
+global string $WIZ_fullDomeViewportAsset;
+global string $WIZ_fullDomeViewportFileTextureDir;
+global int $WIZ_fullDomeViewportAutoRefresh;
+global int $WIZ_fdvCameraMoveAutoRefreshJobNum;
+$WIZ_fdvCameraMoveAutoRefreshJobNum = 0;
+
+global int $WIZ_fdvAutoRefreshEnabled;
+global int $WIZ_fdvRefreshing;
+$WIZ_fdvRefreshing = 0;
+global int $WIZ_fdvCancelRefreshing;
+$WIZ_fdvCancelRefreshing = 0;
+
+global string $WIZ_fullDomeViewportModelPanel;
+$WIZ_fullDomeViewportModelPanel = "WIZ_fullDomeViewportModelPanel";
+
+global string $WIZ_fullDomeViewportModelEditor;
+
+global proc fullDomeViewportWiz()
+{
+	fullDomeViewportModelEditorWindow();
+	wizInViewMessage("Use Command + Return To Update Full Dome Viewport", 20);
+	
+}
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			LAYOUT
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+
+//FULL DOME VIEWPORT LAYOUT
+//--------------------------------------------
+global proc fullDomeViewportLayout(string $parent)
+{
+	string $frameLayout = `frameLayout
+		-l "Full Dome Viewport"
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true		
+		-parent $parent
+		`;
+	
+	menuBarLayout;	
+	fullDomeViewportMenu();
+	
+	string $fdvdir = `optionVar -q WIZ_fullDomeViewportDir`;
+		
+	string $viewportImageDirectoryCommand = (
+	"assignFullDomeViewportImageDirectory();" + "\n"
+	+"string $dir = `textFieldButtonGrp -q -tx assignFullDomeViewportImageDirectoryTextFieldButtonGrp`;" + "\n"
+	+"optionVar -sv WIZ_fullDomeViewportFileTextureDir $dir;" + "\n"
+	+"setFullDomeViewportTexturePaths();" + "\n"
+	);
+	
+	textFieldButtonGrp
+		-ed true
+		-label "Viewport Image Directory"
+		-text $fdvdir
+		-ann ""
+		-cal 1 "center"
+		-buttonLabel "Select"
+		-bc ($viewportImageDirectoryCommand)
+		assignFullDomeViewportImageDirectoryTextFieldButtonGrp
+		;
+		
+	int $vSize;
+	if(`optionVar -ex WIZ_fdvSize` == 1){
+		$vSize = `optionVar -q WIZ_fdvSize`;
+	} else {
+		$vSize = 512;
+	}
+	
+	intSliderGrp
+		-l "Full Dome Viewport Size"
+		-f true
+		-v $vSize
+		-min 64
+		-max 4098
+		-cc ("int $v = `intSliderGrp -q -v fullDomeViewportSizeIntSliderGrp`; optionVar -iv WIZ_fdvSize $v;")
+		fullDomeViewportSizeIntSliderGrp
+		;
+		
+	button
+		-l "Open Full Dome Viewport Window"
+		-c ("fullDomeViewportWiz();")
+		;
+		
+	button
+		-l "Render Full Dome Viewport"
+		-c ("updateFullDomeViewport();")
+		;
+		
+	setParent..;
+}
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			WINDOW
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+
+global proc fullDomeViewportModelEditorWindow()
+{
+	global string $WIZ_fullDomeViewportModelPanel;
+	global string $WIZ_fullDomeViewportModelEditor;
+	global string $WIZ_fullDomeViewportCamera;
+	global string $WIZ_fullDomeViewportAsset;
+	
+	int $vSize = `intSliderGrp -q -v fullDomeViewportSizeIntSliderGrp`;
+	//Add the height of the file menu and tool bar.
+	int $h = $vSize + 40;
+	
+	string $cam = "FullDomeViewportCamera";
+	if(`objExists $cam` == 0){
+		error ("WIZ| No FullDomeViewportCamera Object Found. Please Load FullDomeViewportCamera\n");
+		//return;
+		
+	}
+	$WIZ_fullDomeViewportCamera = $cam;
+	$WIZ_fullDomeViewportAsset = "FullDomeViewport";
+	
+	
+	string $fdViewportWindow = "fullDomeViewportWindow";
+
+	if(`window -exists $fdViewportWindow`){
+		deleteUI $fdViewportWindow;
+	}
+	
+	string $winTitle = "Full Dome Viewport View";
+	
+	string $window = `window
+		-t $winTitle		
+		-w $vSize
+		-h $h
+		//-s true
+		-rtf true
+		$fdViewportWindow
+		`;
+		
+	menuBarLayout;
+	
+	fullDomeViewportMenu();
+	
+	fullDomeViewportModelPanel();
+			
+	showWindow $window;
+	
+	setFullDomeViewportModelEditorDefaults();
+
+}
+
+//FULL DOME VIEWPORT MODEL PANEL
+//=======================================================
+global proc fullDomeViewportModelPanel()
+{
+	global string $WIZ_fullDomeViewportModelPanel;
+	global string $WIZ_fullDomeViewportModelEditor;
+	int $vSize = `intSliderGrp -q -v fullDomeViewportSizeIntSliderGrp`;
+	//Add the height of the file menu and tool bar.
+	int $h = $vSize + 40;
+	
+	string $cam = "FullDomeViewportCamera";
+	
+	string $form = `formLayout
+		//-bgc 0 0 0
+		fdvForm
+		`;	
+	
+	string $pane = `paneLayout
+		-w $vSize
+		-h $h
+		fdvPaneLayout
+		`;
+
+	if (`modelPanel -ex $WIZ_fullDomeViewportModelPanel`){
+		print("WIZ| Warning : FullDomeViewport Model Panel Exists");
+		$WIZ_fullDomeViewportModelPanel = `modelPanel
+			-l "Full Dome Viewport"
+			-rp $WIZ_fullDomeViewportModelPanel		
+			-menuBarVisible true
+			-cam $cam
+			-parent $pane
+			`;		
+	} else {	
+		$WIZ_fullDomeViewportModelPanel = `modelPanel
+			-l "Full Dome Viewport"
+			-menuBarVisible true
+			-cam $cam
+			-parent $pane
+			$WIZ_fullDomeViewportModelPanel
+			`;		
+		
+	}
+	
+	setAttr ("FullDomeViewport.visibility") 1;
+	
+	$WIZ_fullDomeViewportModelEditor = `modelPanel -q -me $WIZ_fullDomeViewportModelPanel`;
+	
+	
+	setParent $form;
+}
+
+//FULL DOME VIEWPORT MENU
+//=======================================================
+global proc fullDomeViewportMenu()
+{
+	global int $WIZ_fullDomeViewportAutoRefresh;
+	string $autoRefreshCommand = ("global int $WIZ_fullDomeViewportAutoRefresh;" + "\n"
+	+"$WIZ_fullDomeViewportAutoRefresh = `menuItem -q -cb fullDomeViewportAutoRefreshMenuItem`;" + "\n"
+	+"if($WIZ_fullDomeViewportAutoRefresh){" + "\n"
+	+"	startFullDomeViewportAutoRefresh();" + "\n"
+	+"} else {" + "\n"
+	+"	stopFullDomeViewportAutoRefresh();" + "\n"
+	+"}" + "\n"
+	);
+	
+	menu -l "Update";
+		menuItem -l "Update Full Dome View" -c ("updateFullDomeViewport();");
+		menuItem -cb false -l "Auto Refresh Full Dome View" -c ($autoRefreshCommand) fullDomeViewportAutoRefreshMenuItem;
+		menuItem -l "Refresh Textures" -c ("refreshFullDomeViewportTextures();");
+		menuItem -l "Close FullDomeViewport" -c ("exitFullDomeViewport();");
+		
+	menu -l "Options";
+		menuItem -l "Set Source Camera" -c ("setFullDomeViewportSourceCamera(`ls -sl`);");
+
+		
+	menu -l "Show";
+		menuItem -l "Show Full Dome Preview" -c ("setFullDomePreviewVisible(true);");
+		menuItem -l "Hide Full Dome Preview" -c ("setFullDomePreviewVisible(false);");
+		menuItem -l "Show All Object Types" -c ("setFullDomeViewportObjectTypeVisible(0);");
+		menuItem -l "Show Renderable Objects Only" -c ("setFullDomeViewportObjectTypeVisible(1);");	
+		
+
+	menu -l "Planetarium Player";
+		menuItem -l "Open View In Planetarium Player" -c ("openFullDomeViewportInPlanetariumPlayer();");
+		
+	
+}
+
+//ASSIGN FULL DOME VIEWPORT IMAGE DIRECTORY
+//=======================================================
+global proc assignFullDomeViewportImageDirectory()
+{
+	string $sel[] = `fileDialog2 -fileMode 3 -dialogStyle 2 -okCaption "OK"`;
+	$sel[0] = $sel[0] + "/";
+	textFieldButtonGrp -edit -text $sel[0] assignFullDomeViewportImageDirectoryTextFieldButtonGrp;
+	optionVar -sv WIZ_fullDomeViewportDir $sel[0];
+	
+}
+
+//CREATE MEW FULL DOME VIEWPORT IMAGES
+//=======================================================
+global proc createNewFullDomeViewportImages()
+{
+	string $fdvDir = `optionVar -q WIZ_fullDomeViewportDir`;
+	string $ext = "jpg";
+	string $imagePrefix = "fdView";
+	string $fileNames[] = { "Front", "Back", "Left", "Right", "Up" };
+	
+	setAttr FullDomeViewportFrontCubemapFile.fileTextureName -type "string" ($fdvDir + $imagePrefix + "Front." + $ext);	
+	setAttr FullDomeViewportBackCubemapFile.fileTextureName -type "string" ($fdvDir + $imagePrefix + "Back." + $ext);	
+	setAttr FullDomeViewportLeftCubemapFile.fileTextureName -type "string" ($fdvDir + $imagePrefix + "Left." + $ext);	
+	setAttr FullDomeViewportRightCubemapFile.fileTextureName -type "string" ($fdvDir + $imagePrefix + "Right." + $ext);	
+	setAttr FullDomeViewportUpCubemapFile.fileTextureName -type "string" ($fdvDir + $imagePrefix + "Up." + $ext);	
+	
+
+}
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			FUNCTIONS
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+
+//UPDATE FULL DOME VIEWPORT
+//=======================================================
+global proc updateFullDomeViewport()
+{
+	
+	string $dbl = "-dmi UpdateFullDomeViewportMenuItem -t Update Full Dome Viewport"; string $dbm = "add"; int $dbc = 1;
+	
+
+	global int $WIZ_fdvRefreshing;
+	global int $WIZ_fdvCancelRefreshing;
+	/*
+	if($WIZ_fdvRefreshing == 1){
+		debugList($dbl, { (" - Cancel Update - ") }, $dbc, $dbm);
+		debugList($dbl, { ("====================") }, $dbc, $dbm);
+		
+		$WIZ_fdvCancelRefreshing = 1;
+		$WIZ_fdvRefreshing = 0;
+		
+		return;	
+		
+	}
+	$WIZ_fdvRefreshing = 1;
+	*/
+	
+	debugList($dbl, { (" - Update Full Dome Viewport - ") }, $dbc, $dbm);
+	
+	
+	
+	global string $WIZ_fullDomeViewportModelPanel;
+	//Set the focus to the fullDomeViewportModelPanel
+	setFocus $WIZ_fullDomeViewportModelPanel;
+	//Turn off isolate selection state
+	isolateSelect -state 0 $WIZ_fullDomeViewportModelPanel;
+	//Make camera orthographic
+	setAttr "FullDomeViewportCameraShape.orthographic" 0;
+	string $cam = "FullDomeViewportCamera";
+	if(`objExists $cam` == 0){
+		warning ("WIZ| updateFullDomeViewport : Cannot Find FullDomeViewportCamera : Cannot Continue\n");
+	}
+	
+	//Hide the preview mesh
+	//setAttr "FullDomeViewportCamera_parentConstraint1.target[0].targetOffsetTranslateZ" 0;
+	setAttr "FullDomeViewportCamera.translateZ" 0;
+	setAttr "FullDomeViewportPreviewMeshGroup.visibility" 0;
+
+	//Refresh view
+	refresh -f;
+	refreshAE;
+	
+	//Create file names
+	string $dir = `textFieldButtonGrp -q -tx assignFullDomeViewportImageDirectoryTextFieldButtonGrp`;
+	string $ext = "jpg";
+	string $imagePrefix = "fdView";
+	string $fileNames[] = { "Front", "Back", "Left", "Right", "Up", "Down"};
+	
+	//Rotate the camera around and render the viewport
+	//Also refresh the textures used in the cubemap
+	select -r FullDomeViewportCamera;
+	float $rot[];
+	for($i=0;$i<6;$i++){
+		
+		if($WIZ_fdvCancelRefreshing == 1){
+			//debugList($dbl, { (" - Update Interrupted - ") }, $dbc, $dbm);
+			//debugList($dbl, { ("=========================") }, $dbc, $dbm);
+			//print("WIZ| Full Dome Viewport - UPDATE - INTERUPTED\n");
+			$WIZ_fdvCancelRefreshing = 0;
+			resetFullDomeViewportCamera();
+			$WIZ_fdvRefreshing = 0;
+			return;	
+		}
+		
+		if($i == 0){
+			$rot = { 0 , 0 , 0 };
+		}
+		if($i == 1){	
+			$rot = { 0 , 180 , 0 };
+		}
+		if($i == 2){	
+			$rot = { 0 , 90 , 0 };
+		}
+		if($i == 3){
+			$rot = { 0 , -90 , 0 };
+		}
+		if($i == 4){
+			$rot = { 90 , 0 , 0 };
+		}
+		if($i == 5){
+			$rot = { -90 , 0 , 0 };			
+		}
+		
+		xform -os -ro $rot[0] $rot[1] $rot[2] ;		
+				
+		string $filename = $dir + $imagePrefix + $fileNames[$i] + "." + $ext;
+		refresh -f;
+		refreshAE;		
+
+		fullDomeViewportRefreshModelView();		
+		
+		int $done = renderFullDomeViewportToFile($filename, $ext);
+
+		refresh -f;
+		refreshAE;	
+		
+	}
+	
+	refreshFullDomeViewportTextures();
+	
+	//Reset
+	resetFullDomeViewportCamera();
+	//print("WIZ| Full Dome Viewport Refreshing COMPLETED\n");
+	$WIZ_fdvRefreshing = 0;
+	/*
+	debugList($dbl, { (" - COMPLETE - ") }, $dbc, $dbm);
+	debugList($dbl, { ("====================") }, $dbc, $dbm);
+	*/
+}
+
+global proc resetFullDomeViewportCamera()
+{
+	global string $WIZ_fullDomeViewportModelPanel;
+	string $cam = "FullDomeViewportCamera";
+	select -r $cam;
+	xform -os -ro 0 0 0 ;
+	
+	fullDomeViewportRefreshModelView();
+
+	//Set the camera to be orthographic and push it back so it doesn't obstruct other cam view
+	//Show the full dome preview mesh	
+	setAttr "FullDomeViewportPreviewMeshGroup.visibility" 1;	
+	setAttr "FullDomeViewportCamera.translateZ" 1;
+	setAttr "FullDomeViewportCameraShape.orthographic" 1;
+	setAttr "FullDomeViewportCameraShape.nearClipPlane" 0.01;
+	
+	select -r "FullDomeViewportPreviewMeshGroup";
+	
+	isolateSelect -state 1 $WIZ_fullDomeViewportModelPanel;
+	
+	select -cl;
+}
+
+//FULL DOME VIEWPORT REFRESH MODEL VIEW
+//=============================================================
+global proc fullDomeViewportRefreshModelView()
+{
+	global string $WIZ_fullDomeViewportModelPanel;
+	global string $WIZ_fullDomeViewportCamera;
+	//Set the focus to the fullDomeViewportModelPanel
+	setFocus $WIZ_fullDomeViewportModelPanel;
+
+	if(`modelPanel -ex $WIZ_fullDomeViewportModelPanel` == 0){
+		error ("WIZ| Full Dome Viewport Model Panel Not Found. Cannot Continue.\n");
+		
+	}	
+	modelPanel -e -cam $WIZ_fullDomeViewportCamera $WIZ_fullDomeViewportModelPanel;
+	refresh -f;
+	refreshAE;		
+	
+}
+
+//REFRESH FULL DOME VIEWPORT TEXTURES
+//=============================================================
+global proc refreshFullDomeViewportTextures()
+{
+	string $fileNames[] = { "Front", "Back", "Left", "Right", "Up", "Down"};
+	for($i=0;$i<`size $fileNames`;$i++){
+		//string $reloadCommand = ("AEfileTextureReloadCmd (\"FullDomeViewport" + $fileNames[$i] + "CubemapFile.fileTextureName\");");
+		//evalDeferred($reloadCommand);
+		
+		string $cmFileTexture = ("FullDomeViewport" + $fileNames[$i] + "CubemapFile");
+		wizRefreshFileTexture($cmFileTexture);
+	}
+	
+}
+
+//SET FULL DOME VIEWPORT TEXTURE PATHS
+//=============================================================
+global proc setFullDomeViewportTexturePaths()
+{
+	string $fileNames[] = { "Front", "Back", "Left", "Right", "Up", "Down"};
+	string $dir = `textFieldButtonGrp -q -tx assignFullDomeViewportImageDirectoryTextFieldButtonGrp`;
+	string $imagePrefix = "fdView";
+	string $ext = "jpg";
+	
+	for ($i=0;$i<`size $fileNames`;$i++){
+		string $cmFileTexture = ("FullDomeViewport" + $fileNames[$i] + "CubemapFile");
+		string $path = $dir + $imagePrefix + $fileNames[$i] + "." + $ext;
+		setAttr ($cmFileTexture + ".fileTextureName") -type "string" $path;
+		
+	}
+}
+
+//WIZ REFRESH FILE TEXTURE
+//========================================================
+global proc refreshFullDomeViewportFileTexture( string $ftName , string $path)
+{
+	//This phython command is far more reliable than the stupid AEfileTextureReloadCmd
+	string $filePath = `getAttr ($ftName + ".fileTextureName")`;
+	
+	string $pyCommand = (
+	"import maya.cmds as cmd" + "\n"
+	+"cmd.setAttr( \"" + $ftName + ".fileTextureName\", \"" + $path + "\", type=\"string\")" + "\n"
+	);
+	
+	catchQuiet (python ($pyCommand));
+	
+}
+
+global proc int renderFullDomeViewportToFile( string $file, string $fileType)
+{
+	global string $WIZ_fullDomeViewportModelPanel;
+	global string $WIZ_fullDomeViewportModelEditor;
+	//	+"view.refresh()" + "\n"
+	
+	string $pyCommand = (
+
+	"import maya.OpenMaya as api" + "\n"
+	+"import maya.OpenMayaUI as apiUI" + "\n"
+
+	+"view = apiUI.M3dView.active3dView()" + "\n"
+	+"image = api.MImage()" + "\n"
+	+"view.readColorBuffer(image, True)" + "\n"
+	+"image.writeToFile('" + $file + "', '" + $fileType + "')" + "\n"
+
+	);
+		
+	python ($pyCommand);
+	
+	return 1;
+	
+	
+	//+"view = apiUI.M3dView.active3dView()" + "\n"
+
+	//+"view = apiUI.M3dView.getM3dViewFromModelPanel(\"" + $WIZ_fullDomeViewportModelPanel + "\", view);" + "\n"
+	
+	/*
+	int $done = python ("renderViewportToImage($file, $fileType)");
+	return $done;
+	*/
+}
+
+global proc setFullDomePreviewVisible( int $state )
+{
+	global string $WIZ_fullDomeViewportModelPanel;
+		
+	select -r "FullDomeViewportPreviewMeshGroup";
+	isolateSelect -state $state $WIZ_fullDomeViewportModelPanel;
+	
+	setAttr "FullDomeViewportPreviewMeshGroup.visibility" $state;
+	setAttr "FullDomeViewportCameraShape.orthographic" $state;
+	select -cl;
+	
+}
+
+global proc setFullDomeViewportSourceCamera( string $sel[] )
+{
+	string $sourceCam = $sel[0];
+	string $con[] = `listConnections -t parentConstraint "FullDomeViewport"`;
+	delete $con;
+
+	select -r $sourceCam;
+	select -add "FullDomeViewport";
+	doCreateParentConstraintArgList 1 { "0","0","0","0","0","0","0","1","","1" };
+
+}
+
+global proc setFullDomeViewportModelEditorDefaults()
+{
+	global string $WIZ_fullDomeViewportModelPanel;
+	global string $WIZ_fullDomeViewportModelEditor;
+	$WIZ_fullDomeViewportModelEditor = `modelPanel -q -me WIZ_fullDomeViewportModelPanel`;
+	
+	modelEditor -e -da "smoothShaded" -dl "all" -dtx on $WIZ_fullDomeViewportModelEditor;
+	
+	//print("WIZ| fullDomeViewport : modelEditor : " + $WIZ_fullDomeViewportModelEditor + "\n");
+	
+	setFullDomeViewportObjectTypeVisible(1);
+	
+}
+
+global proc setFullDomeViewportObjectTypeVisible( int $num )
+{
+	global string $WIZ_fullDomeViewportModelPanel;
+	global string $WIZ_fullDomeViewportModelEditor;
+	//string $editor = `modelPanel -q -me WIZ_fullDomeViewportModelPanel`;
+	setFocus $WIZ_fullDomeViewportModelPanel;
+	
+	print("WIZ| fullDomeViewportModelPanel : " + $WIZ_fullDomeViewportModelPanel + " | editor : " + $WIZ_fullDomeViewportModelEditor + "\n");
+	
+	switch ($num){
+		case 0 :
+		modelEditor -e -alo on -pnl $WIZ_fullDomeViewportModelPanel $WIZ_fullDomeViewportModelEditor;
+		break;
+		
+		case 1 :
+		modelEditor -e -alo off -pnl $WIZ_fullDomeViewportModelPanel $WIZ_fullDomeViewportModelEditor;
+		modelEditor -e -pm true -ns true -sds true -fl true -str true -npa true -pnl $WIZ_fullDomeViewportModelPanel $WIZ_fullDomeViewportModelEditor;
+	
+		break;
+		
+		
+		
+	}
+	
+}
+
+
+
+global proc startFullDomeViewportAutoRefresh()
+{
+	string $script = (
+	"autoUpdateFullDomeViewport();"
+	);
+	global int $WIZ_fdvAutoRefreshEnabled;
+	$WIZ_fdvAutoRefreshEnabled = 1;
+	global string $WIZ_fullDomeViewportModelPanel;
+	global string $WIZ_fullDomeViewportCamera;
+	global string $WIZ_fullDomeViewportAsset;
+	global int $WIZ_fdvCameraMoveAutoRefreshJobNum;
+	
+	if ($WIZ_fdvCameraMoveAutoRefreshJobNum != 0){
+		return ;
+	}
+	
+	//$WIZ_fdvCameraMoveAutoRefreshJobNum = `scriptJob -ac ($WIZ_fullDomeViewportCamera + ".translate") $script`;
+	//$WIZ_fdvRotateAutoRefreshJobNum = `scriptJob -ac ($WIZ_fullDomeViewportCamera + ".rotate") $script`;
+	
+	//$WIZ_fdvCameraMoveAutoRefreshJobNum = `scriptJob -ac ($WIZ_fullDomeViewportAsset + ".fdvTranslate") -p $WIZ_fullDomeViewportModelPanel $script`;
+	//$WIZ_fdvRotateAutoRefreshJobNum = `scriptJob -ac ($WIZ_fullDomeViewportAsset + ".fdvRotate") -p $WIZ_fullDomeViewportModelPanel $script`;
+	
+	//Script job monitors a plusMinusAverage node that is connected to the translate and rotation of the camera
+	$WIZ_fdvCameraMoveAutoRefreshJobNum = `scriptJob -ac ("fdvCameraMovementPlusMinusAverage1.output3D") $script`;
+	
+	print("WIZ| Full Dome Viewport Auto Refresh Started\n");
+	
+}
+
+global proc stopFullDomeViewportAutoRefresh()
+{
+	global int $WIZ_fdvAutoRefreshEnabled;
+	$WIZ_fdvAutoRefreshEnabled = 0;
+	
+	global int $WIZ_fdvCameraMoveAutoRefreshJobNum;
+	
+	scriptJob -k $WIZ_fdvCameraMoveAutoRefreshJobNum;
+	
+	$WIZ_fdvCameraMoveAutoRefreshJobNum = 0;
+	
+	print("WIZ| Full Dome Viewport Auto Refresh Stopped\n");
+	
+	
+}
+
+global proc autoUpdateFullDomeViewport()
+{
+	global int $WIZ_fdvAutoRefreshEnabled;
+	if($WIZ_fdvAutoRefreshEnabled == 0){
+		return;
+	}
+	
+	global int $WIZ_fdvRefreshing;
+	global int $WIZ_fdvCancelRefreshing;
+	if($WIZ_fdvRefreshing == 1){
+		//print("WIZ| Full Dome Viewport Refreshing - INTERUPTED\n");
+		$WIZ_fdvCancelRefreshing = 1;
+		//$WIZ_fdvRefreshing = 0;
+		
+		return;	
+		
+	}
+	
+	$WIZ_fdvRefreshing = 1;
+	
+	//print("WIZ| Full Dome Viewport - UPDATING -\n");
+	
+	updateFullDomeViewport();
+	//evalDeferred ("updateFullDomeViewport();");
+}
+
+global proc exitFullDomeViewport()
+{
+	stopFullDomeViewportAutoRefresh();
+	string $fdViewportWindow = "fullDomeViewportWindow";
+	
+	if(`window -exists $fdViewportWindow`){
+		deleteUI $fdViewportWindow;
+	}
+	
+	setAttr ("FullDomeViewport.visibility") 0 ;
+	
+}
+
+global proc openFullDomeViewportInPlanetariumPlayer()
+{
+	global string $WIZ_fullDomeViewportFileTextureDir;
+	string $fdvPP = $WIZ_fullDomeViewportFileTextureDir + "fvdViewPP.jpg";
+	
+	renderFullDomeViewportToFile($fdvPP, "jpg");
+	
+	openImageInPlanetariumPlayer($fdvPP);
+	
+}
+
+/*
+import maya.OpenMaya as api
+import maya.OpenMayaUI as apiUI
+view = apiUI.M3dView.active3dView()
+image = api.MImage()
+status = view.readColorBuffer(image, True)
+print('ReadColorBuffer Status : ' + status)
+image.writeToFile('C:/Users/Glen/Documents/maya/projects/Assets/sourceimages/FullDomeViewport/fdViewLeft.jpg', 'jpg')
+print('Saving Viewport Image : C:/Users/Glen/Documents/maya/projects/Assets/sourceimages/FullDomeViewport/fdViewLeft.jpg')
+
+
+import maya.OpenMaya as api
+import maya.OpenMayaUI as apiUI
+view = apiUI.M3dView.active3dView()
+image = api.MImage()
+status = view.readColorBuffer(image, True)
+
+if status != MS::kSuccess
+    print("no good")
+                        
+image.writeToFile('C:/Users/Glen/Documents/maya/projects/Assets/sourceimages/FullDomeViewport/fdViewLeft.jpg', 'jpg')
+print('Saving Viewport Image : C:/Users/Glen/Documents/maya/projects/Assets/sourceimages/FullDomeViewport/fdViewLeft.jpg')
+
+
+import maya.OpenMaya as api
+import maya.OpenMayaUI as apiUI
+view = apiUI.M3dView.getM3dViewFromModelPanel("WIZ_fullDomeViewportModelPanel", view)
+
+
+*/
+
+/*
+global string $WIZ_fullDomeViewportModelPanel;
+string $editor = `modelPanel -q -me WIZ_fullDomeViewportModelPanel`;
+print("WIZ| fullDomeViewportModelPanel : " + $WIZ_fullDomeViewportModelPanel + " | editor : " + $editor + "\n");
+	
+modelEditor -e -av $editor;
+
+
+*/

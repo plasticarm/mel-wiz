@@ -1,0 +1,3542 @@
+//=================================
+// wiz v1.0 (09/2012)
+// by Glen Johnson
+// 
+// The script is freeware / donationware. Non-commercial redistribution is permitted as long as this header remains included and unmodified.
+// Your feedback is always appreciated - if you find the script useful or if you have questions, comments, suggestions, requests, 
+// bug-reports, if you created an updated version, to check for updates or to make a donation please contact me at:
+//
+// http://www.plasticarm.com / http://www.homerunpictures.com
+// 
+//==================================
+// INSTALLATION: Copy the script into your Maya script-directory and start it with the installWiz; command.
+//
+// COMPATIBILITY NOTE: Tested with Maya 2012
+//
+// DESCRIPTION: Wiz contains anything that has to do with the general functioning of the wiz ui.
+//
+// TODO: 
+/*
+Tabs: 
+	Wiz - Creation Wizard Stuff
+	+ Nodes - Selecting and Connecting nodes
+	Doctor - Auto fixing stuff, inspectorWiz
+	Rendering - Rendering stuff
+	+ Bookmarks - Bookmarks to files
+	Scripts - Script stuff
+
+
+*/
+
+//====================================================================
+//			GLOBAL VARS
+
+//SETTINGS
+global string $WIZ_wizSettings[];
+
+global string $WIZ_currentLogField;
+$WIZ_currentLogField = "wizLog_scrollField";
+
+//LAYOUTS
+global float $WIZ_mw = 10; //Margin Width
+global float $WIZ_mh = 10; //Margin Height
+global float $WIZ_li = 10; //Label Indent
+global int $WIZ_bv = 1; //Border Visible
+global int $WIZ_lv = 1; //Label Visible
+global string $WIZ_bs = "etchedIn";
+global int $WIZ_rs = 10; //Row Spacing
+
+//FEEDBACK
+global string $WIZ_printHeader = "WIZ|";
+global int $WIZ_printProc;
+global float $WIZ_procTime;
+global string $WIZ_currentProgressBar;
+global string $WIZ_wizProgressBar;
+global int $WIZ_wizProcCount;
+$WIZ_wizProcCount = 0;
+//OPTIONS VARS
+
+//SCRIPT JOBS
+global string $WIZ_scriptJobs[];
+
+//====================================================================
+
+global proc setWizAutoUpdate()
+{
+	int $autoUpdate = `menuItem -q -cb wizAutoUpdate_menuItem`;
+	optionVar -iv WIZ_autoUpdate $autoUpdate;
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         INSTALLATION
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//INSTALLING WIZ
+//========================================
+/*
+global proc installWiz()
+{
+	string $shelfScript = getWizShelfScript();
+	createWizShelfButton();
+	optionVar -sv WIZ_userType "wiz";	
+}
+*/
+
+global proc installWiz()
+{
+	global string $WIZ_wizScriptDir;
+	string $sel[] = `fileDialog2 -fileMode 3 -dialogStyle 2 -okCaption "OK"`;
+	$sel[0] = $sel[0] + "/";
+	
+	$WIZ_wizScriptDir = $sel[0];
+	
+	//Add option var of script dir
+	optionVar -sv WIZ_wizScriptDir $WIZ_wizScriptDir;
+	optionVar -sv WIZ_userType "wiz";
+	
+	createWizShelfButton();
+
+}
+
+global proc installLocalWiz()
+{
+	global string $WIZ_wizScriptDir;
+	
+	string $sel[] = `fileDialog2 -fileMode 3 -dialogStyle 2 -okCaption "OK"`;	
+	//Add slash
+	$sel[0] = $sel[0] + "/";
+	
+	
+	$WIZ_wizScriptDir = $sel[0];
+	
+	//Add option var of script dir
+	optionVar -sv WIZ_wizScriptDir $WIZ_wizScriptDir;
+	optionVar -sv WIZ_userType "non-wiz";
+	
+	createWizShelfButton();
+
+}
+
+//SHELF SCRIPT
+//-------------------------
+global proc string getWizShelfScript()
+{
+	global string $WIZ_wizScriptDir;
+	
+	string $shelfScript = ("source " + "\"" + $WIZ_wizScriptDir + "scriptWiz.mel" + "\"" + ";\n"
+	+"autoSourceWizScripts();\n"
+	+"wiz();\n"
+	);
+	//"
+	
+	/*
+	//shelf script
+	string $sas = $sel[0] + "scriptWiz.mel";	
+	string $shelfScript = (
+	"source " + "\"" + $sas + "\"" + ";\n"
+	+"autoSourceWizScripts();\n"
+	+"wiz();\n"
+	);
+	*/
+	return $shelfScript;
+}
+
+
+//SHELF BUTTON
+//=================================
+global proc createWizShelfButton()
+{
+	global string $WIZ_wizScriptDir;
+	
+	global string $gShelfTopLevel;
+	
+	string $script = getWizShelfScript();
+	
+	if(`shelfLayout -q -ex "Wiz"` == 0){
+		addNewShelfTab "Wiz";
+		shelfTabChange;
+	}
+	
+	//What does this do?
+
+	/*
+	if(`tabLayout -exists $gShelfTopLevel`){
+		string $currentShelf = `tabLayout -query -selectTab $gShelfTopLevel`;
+		setParent $currentShelf;		
+	}
+	*/
+	string $currentShelf = `tabLayout -query -selectTab $gShelfTopLevel`;
+	setParent $currentShelf;
+		
+	if(`shelfButton -q -ex "wizShelfButton"` == 1){
+		return;
+	}
+	
+	shelfButton 
+		-command $script
+		-label "wiz"
+		-annotation "WIZ"
+		-imageOverlayLabel "wiz"
+		-image1 "wiz/wizIcon1.png"
+		-style `shelfLayout -query -style $currentShelf`
+		-width `shelfLayout -query -cellWidth $currentShelf`
+		-height `shelfLayout -query -cellHeight $currentShelf`
+		wizShelfButton
+		;
+	
+	/* old
+	if (`tabLayout -exists $gShelfTopLevel`){
+		string $currentShelf = `tabLayout -query -selectTab $gShelfTopLevel`;
+		setParent $currentShelf;
+			
+		shelfButton 
+			-command $script
+			-label "wiz"
+			-annotation "WIZ"
+			-imageOverlayLabel "wiz"
+			-image1 "wiz/wizIcon1.png"
+			-style `shelfLayout -query -style $currentShelf`
+			-width `shelfLayout -query -cellWidth $currentShelf`
+			-height `shelfLayout -query -cellHeight $currentShelf`;
+	}
+	*/
+}
+
+//SCRIPT NODES
+global proc addWizScriptNodeToScene()
+{
+	string $script = getWizStartupScript();
+	deleteOldScriptNode("WizScriptNode");
+	string $nodeName = `scriptNode -st 1 -bs $script -n "WizScriptNode"`;
+}
+
+//STARTUP SCRIPT
+global proc string getWizStartupScript()
+{
+	string $scriptS;
+	string $quote = "\"";
+	string $slash = "\\";
+	string $quoteString = $quote + $slash + $quote + $quote;
+	string $scriptS = (
+	"string $scriptPath = \"\";\n"
+	+"string $wizType = `optionVar -q WIZ_userType`;\n"
+	+"if($wizType == \"non-wiz\"){\n"
+	+"	$scriptPath = `optionVar -q WIZ_wizScriptDir`;\n"	
+	+"	$scriptPath = " + $quoteString + " + $scriptPath + \"scriptWiz.mel\" + " + $quoteString + ";\n"
+	+"	string $evalCom = \"source \" + $scriptPath;\n"
+	+"	eval $evalCom;\n"
+	+"	autoSourceLocalScripts();\n"
+	+"} else if($wizType == \"wiz\"){\n"
+	+"	source scriptWiz.mel;\n"
+	+"	autoSourceSelectedScripts();\n"
+	+"}else if($wizType == \"\" || $wizType == 0){\n"
+	+"	$scriptPath = \"/Shared/projects/Scripts/\";\n"	
+	+"	optionVar -sv WIZ_userType \"non-wiz\";\n"
+	+"	optionVar -sv WIZ_wizScriptDir $scriptPath;\n"
+	+"	$scriptPath = " + $quoteString + " + $scriptPath + \"scriptWiz.mel\" + " + $quoteString + ";\n"
+	+"	string $evalCom = \"source \" + $scriptPath;\n"
+	+"	eval $evalCom;\n"
+	+"	autoSourceLocalScripts();\n"
+	+"}\n"
+	+"wiz();\n"
+	);
+	
+	//"
+	
+	return $scriptS;
+}
+
+//ADD WIZ TO WINDOW MENU
+//this does not work yet
+global proc addWizToWindowMenu()
+{
+	string $shelfScript = (
+	"source scriptWiz.mel;\n"
+	+"autoSourceSelectedScripts();\n"
+	+"wiz();\n"
+	);
+	global string $gMainWindowMenu;
+	menuItem
+		-p $gMainWindowMenu
+		-l "Wiz"
+		-ecr false
+		-c $shelfScript
+		wizMenuItem
+		;
+}
+
+//LOAD DEPENDANCY SCRIPTS
+//DOES NOT WORK
+global proc loadDependencyScripts()
+{
+	string $depScript[];
+	int $i;
+	if(`optionVar -ex WIZ_scriptName`){
+		$depScript = `optionVar -q WIZ_scriptName`;
+	} else {
+		scriptWiz();
+		$depScript = getListOfDefaultScriptsFromFile();		
+		for($i=0;$i<`size $depScript`;$i++){
+			optionVar -sva WIZ_scriptName $depScript[$i];
+		}
+	}
+	for($i=0;$i<`size $depScript`;$i++){
+		if($depScript[$i] != "wiz.mel"){
+			$depScript[$i] = basename($depScript[$i], ".mel");
+			string $execProc = $depScript[$i] + "()";
+			eval $execProc;
+		}
+	}
+}
+
+global proc sourceDependencyScripts()
+{
+	//source arrayWiz.mel;	
+}
+
+global proc copySharedScriptsToUserScriptsDir()
+{
+	if (`optionVar -q WIZ_userType` == "non-wiz"){
+	
+	}
+}
+
+global proc initWiz()
+{
+	global string $WIZ_currentOptionsLoaded;
+	$WIZ_currentOptionsLoaded = "";
+	defineWizTemplates();
+	
+}
+
+//========================================================================================================
+//[][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][]
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//                     WINDOWS
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//[][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][]
+//========================================================================================================
+
+//WIZ WINDOW
+//=======================================
+global proc wiz()
+{
+	print ("*****************************************************************************************" + "\n");
+	print ("**************************************  wiz  ********************************************" + "\n");
+	print ("*****************************************************************************************" + "\n");
+	
+	//loadDependencyScripts();
+	//copySharedScriptsToUserScriptsDir();
+	//sourceDependencyScripts();
+		
+	global string $wizVersion;
+	float $mayaVersion = `getApplicationVersionAsFloat` ;
+	
+	//Docked?
+	string $dock = "wizDock";
+	int $floatingState = 0;	
+	if(`optionVar -exists WIZ_wizFloatingState`){
+		$floatingState = `optionVar -q WIZ_wizFloatingState`;
+	} else{
+		optionVar -intValue WIZ_wizFloatingState $floatingState;
+	}
+	
+	if(`dockControl -exists $dock` == 1){ 
+		deleteUI $dock;
+	}
+	
+	global string $WIZ_window;
+	$WIZ_window = "wiz";//Global name for window
+	if(`window -exists $WIZ_window`){
+		//saveAllWizStates();
+		deleteUI $WIZ_window;
+	}
+	
+	string $wizTitle = "wiz";
+	
+	string $wizWindow = `window
+		-title $wizTitle
+		-widthHeight 500 900
+		-menuBar on
+		-menuBarVisible on
+		-minimizeButton on
+		-maximizeButton on
+		-sizeable on		
+		-resizeToFitChildren on
+		-titleBar on
+		-nestedDockingEnabled on
+		$WIZ_window
+		`;
+	
+	initWiz();	
+	wizWindowLayout();	
+	restoreWizState();
+	renameWiz();
+	//restoreAllWizSettings();
+	
+	dockControl
+		-l "Wiz"
+		-content $WIZ_window
+		-floating $floatingState
+		-floatChangeCommand "wizFloatStateSwitch"
+		-width 500
+		//-height 600
+		//-splitLayout "vertical"
+		-area "right"
+		-allowedArea "all"
+		-sizeable on
+		$dock
+		;
+		
+	if ($floatingState){
+		showWindow $WIZ_window;
+
+	}	
+	
+	//scriptJob -uiDeleted $WIZ_window ("wizSignOut()");	
+	initOptionMenus();
+	
+	runWizScriptJobs();
+	
+}
+
+//========================================================================================================
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//                     LAYOUTS
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//========================================================================================================
+
+global proc wizWindowLayout()
+{
+	//Wiz Menu Bar Layout
+	wizMenuBarLayout();		
+	//Wiz Main Tab Layout
+	wizMainTabLayout();	
+
+}
+
+global proc wizMainTabLayout()
+{
+	string $mainlayout = `frameLayout
+		-bv false
+		-cll false
+		-cl false
+		-lv false
+		-mh 0
+		-mw 0
+		wizMainLayout
+		`;
+		
+	//MAIN TAB LAYOUT
+	string $tabLayout = `tabLayout
+		-scrollable true
+		-childResizable true
+		-imageVisible true
+		-tabsVisible true
+		-p $mainlayout
+		wizTabLayout
+		`;
+		
+		//MAIN TOP TABS	
+		wizMainLayout($tabLayout);
+	
+		doctorWizLayout($tabLayout);
+	
+		renderingWizColumnLayout($tabLayout);
+	
+		scriptWizTabLayout($tabLayout);
+	
+		bookmarkWizLayout($tabLayout);
+		
+		//bookmarkWiz();
+		
+	tabLayout
+		-e
+		-tl "wizMainLayoutColumnLayout" "Wizard"
+		-tl "doctorWizTabLayout" "Doctor"
+		-tl "renderingWizColumnLayout" "Renderer"
+		-tl "scriptWizColumnLayout" "SkryptKeeper"
+		-tl "bookmarkWizMainLayout" "Bookmarks"
+		wizTabLayout
+		;
+		
+	//MAIN TABS
+	string $selectionlayout = `columnLayout
+		-adjustableColumn true
+		-p $mainlayout
+		wizSelectionColumnLayout
+		`;
+		
+		wizSelectionTabsLayout($selectionlayout);
+}
+
+//MAIN LAYOUT
+global proc wizMainLayout(string $parent)
+{
+	float $bgc[] = getWizColor("wizBGColor");
+	//Master Column Layout
+	string $layout = `columnLayout
+		-adjustableColumn true
+		-p $parent
+		wizMainLayoutColumnLayout
+		`;
+		
+		wizSectionTabsLayout($layout);
+	
+}
+
+//--------------------------------------------------------------------
+//////////////////////////////////////////////////////////////////////
+//			MAIN TAB LAYOUTS
+//////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------
+//MAIN WIZARD TABS
+//=============================
+global proc wizSectionTabsLayout(string $parent)
+{
+	global string $WIZ_sectionTabLayout;
+	//Section Tabs
+	$WIZ_sectionTabLayout = `tabLayout
+		-scrollable false
+		-childResizable false
+		-imageVisible true
+		-tabsVisible true
+		-p $parent
+		wizSectionTab
+		`;
+		
+	/*
+	if(`menuItem -q -cb modelingModuleToggle` == 1){
+		wizModelingLayout($WIZ_sectionTabLayout);
+	}	
+	*/
+	
+    wizCraftLayout($WIZ_sectionTabLayout);	
+    
+	wizModelingLayout($WIZ_sectionTabLayout);	
+	
+	wizPopulatorLayout($WIZ_sectionTabLayout);	
+	
+	wizDynamicsLayout($WIZ_sectionTabLayout);
+	
+	wizShadingLayout($WIZ_sectionTabLayout);
+	
+	wizRiggingLayout($WIZ_sectionTabLayout);
+	
+	wizAnimationLayout($WIZ_sectionTabLayout);	
+	//openModules();
+	//checkModules($masterLayout);
+}
+
+//MODELING
+global proc wizModelingLayout(string $parent)
+{
+	string $modelingColumnLayout = `columnLayout
+		-adjustableColumn true
+		-p $parent
+		Modeling
+		`;
+			
+	//Modeling
+	polyWizLayout($modelingColumnLayout);
+}
+
+//ANIMATION
+global proc wizAnimationLayout(string $parent)
+{
+	string $animationColumnLayout = `columnLayout
+		-adjustableColumn true
+		-p $parent
+		Animation
+		`;
+			
+	//Animation
+	animationModule($animationColumnLayout);
+	
+	//timeModule($animationColumnLayout);
+}
+
+//POPULATING
+global proc wizPopulatorLayout(string $parent)
+{
+	string $columnLayout = `columnLayout
+		-adjustableColumn true
+		-p $parent
+		Populator
+		`;
+			
+	populatorWizLayout($columnLayout);
+
+}
+
+
+//RIGGING
+global proc wizRiggingLayout(string $parent)
+{
+	string $columnLayout = `columnLayout
+		-adjustableColumn true
+		-p $parent
+		Rigging
+		`;
+			
+	//Rigging
+	riggingWizLayout($columnLayout);	
+	
+}
+
+//SHADING
+global proc wizShadingLayout(string $parent)
+{
+	string $shadingColumnLayout = `columnLayout
+		-adjustableColumn true
+		-p $parent
+		Shading
+		`;
+	
+	shadingWizLayout($shadingColumnLayout);
+
+}
+
+//--------------------------------------------------------------------
+//////////////////////////////////////////////////////////////////////
+//			BOTTOM TABS
+//////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------
+//BOTTOM TABS
+//===============================================================
+//TAB LAYOUT
+//----------------------------------------
+global proc wizSelectionTabsLayout(string $parent)
+{
+	string $tabLayout = `tabLayout
+		-ann "Double Click To Open Or Close"
+		-scrollable false
+		-childResizable false
+		-imageVisible true
+		-tabsVisible true
+		-dcc "autoExpandCollapseWizSelectionFrames"
+		-sc "selectWizSelectionTab"
+		-cc ("wizTabCC(\"wizSelectionTab\");")
+		-p $parent
+		wizSelectionTab
+		`;		
+	
+	wizSelectMasterLayout($tabLayout);	
+	
+	wizConnectMasterLayout($tabLayout);
+
+	wizCurrentOptionsLayout($tabLayout);
+	
+	debugWizLowerLayout($tabLayout);
+	
+}
+
+//SELECT
+//----------------------------------------
+global proc wizSelectMasterLayout(string $parent)
+{
+	string $selectMasterColumnLayout = `columnLayout
+		-ann "Select Master"
+		-adjustableColumn true
+		-p $parent
+		SelectMaster
+		`;	
+		
+	selectMasterLayout($selectMasterColumnLayout);
+	
+}
+
+//CONNECT
+//----------------------------------------
+global proc wizConnectMasterLayout(string $parent)
+{
+	string $connectMasterColumnLayout = `columnLayout
+		-ann "Attribute Master"
+		-adjustableColumn true
+		-p $parent
+		AttributeMaster
+		`;
+		
+	connectMasterLayout($connectMasterColumnLayout);
+}
+
+//CURRENT OPTIONS
+//----------------------------------------
+global proc wizCurrentOptionsLayout( string $parent)
+{
+	string $currentOptionsColumnLayout = `columnLayout
+		-ann "Current Options"
+		-adjustableColumn true
+		-p $parent
+		CurrentOptions
+		`;
+		
+	currentOptionsLayout($currentOptionsColumnLayout);
+}
+
+//DEBUG WIZ LOWER LAYOUT
+//----------------------------------------
+global proc debugWizLowerLayout( string $parent)
+{
+	string $currentOptionsColumnLayout = `columnLayout
+		-ann "Debug Wiz"
+		-adjustableColumn true
+		-p $parent
+		DebugWiz
+		`;
+		
+	debugWizColumnLayout($currentOptionsColumnLayout);
+
+}
+
+//--------------------------------------------------------------------
+//////////////////////////////////////////////////////////////////////
+//			OPENING TABS
+//////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------
+//AUTO EXPAND WIZ BOTTOM TABS
+//------------------------------------
+global proc autoExpandCollapseWizSelectionFrames()
+{
+	int $selTab = `tabLayout -q -sti wizSelectionTab`;
+	string $frameLayout;
+	if ($selTab == 1){	
+		$frameLayout = "selectorLayout_frameLayout";	
+	} else if($selTab == 2){
+		$frameLayout = "connectorLayout_frameLayout";
+	} else if($selTab == 3){
+		$frameLayout = "currentOptionsLayout_frameLayout";
+	} else if($selTab == 4){
+		$frameLayout = "debugWizColumnLayout";
+	}
+	int $cl = `frameLayout -q -cl $frameLayout`;
+	if ($cl == 1){
+		openSelectWiz();
+		openConnectWiz();
+		openWizCurrentOptions();
+		//frameLayout -e -cl false selectorLayout_frameLayout;
+		//frameLayout -e -cl false connectorLayout_frameLayout;
+		//frameLayout -e -cl false currentOptionsLayout_frameLayout;
+	} else {
+		//frameLayout -e -cl true selectorLayout_frameLayout;
+		//frameLayout -e -cl true connectorLayout_frameLayout;
+		//frameLayout -e -cl true currentOptionsLayout_frameLayout;
+		closeSelectWiz();
+		closeConnectWiz();
+		closeWizCurrentOptions();
+	}
+	tabLayout -e -sti $selTab wizSelectionTab;
+}
+
+//========================================================================================================
+//""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//                     MENUS
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+//========================================================================================================
+
+//TOP LEVEL MENUS
+//====================================================
+//MENU BAR LAYOUT
+//-------------------------
+global proc wizMenuBarLayout()
+{		
+	string $menuBarLayout = `menuBarLayout	Wizard`;	
+	wizFileMenu();
+	bookmarkWizProjectMenu();
+	wizTransformsMenu();
+	wizEvaluationsMenu();
+	wizScriptsMenu();
+	wizOrginizingMenu();
+	wizWorkflowMenu();
+	wizWizMenu();
+
+}
+
+//SCRIPTS MENU
+//-------------------------
+global proc wizScriptsMenu()
+{	
+	global int $WIZ_dm;
+	$WIZ_dm = getOptionVarInt("WIZ_dm", 1);
+	global int $WIZ_edm;
+	$WIZ_edm = getOptionVarInt("WIZ_edm", 0);
+	global int $WIZ_confirmStep;
+	$WIZ_confirmStep = getOptionVarInt("WIZ_confirmStep", 0);
+	global int $WIZ_detailConfirmStep;
+	$WIZ_detailConfirmStep = getOptionVarInt("WIZ_detailConfirmStep", 0);
+	
+	global int $WIZ_printProc;
+	$WIZ_printProc = getOptionVarInt("WIZ_printProc", 1);
+	
+	global int $WIZ_timeProc;
+	$WIZ_timeProc = getOptionVarInt("WIZ_timeProc", 1);
+	
+	global int $WIZ_dml1;
+	$WIZ_dml1 = getOptionVarInt("WIZ_dml1", 0);
+	global int $WIZ_dml2;
+	$WIZ_dml2 = getOptionVarInt("WIZ_dml2", 0);
+	global int $WIZ_dml3;
+	$WIZ_dml3 = getOptionVarInt("WIZ_dml3", 0);
+	global int $WIZ_dml4;
+	$WIZ_dml4 = getOptionVarInt("WIZ_dml4", 0);
+	global int $WIZ_dml5;
+	$WIZ_dml5 = getOptionVarInt("WIZ_dml5", 0);
+	
+	global int $WIZ_refreshStep;
+	$WIZ_refreshStep = getOptionVarInt("WIZ_refreshStep", 0);
+	global int $WIZ_pauseStep;
+	$WIZ_pauseStep = getOptionVarInt("WIZ_pauseStep", 0);
+	global int $WIZ_autoFocus;
+	$WIZ_autoFocus = getOptionVarInt("WIZ_autoFocus", 0);
+	
+	global int $WIZ_debugList;
+	$WIZ_debugList = getOptionVarInt("WIZ_debugList", 1);
+	
+	global int $WIZ_debugHud;
+	$WIZ_debugHud = getOptionVarInt("WIZ_debugHud", 1);
+	
+	global int $WIZ_debugFunctions;
+	$WIZ_debugFunctions = getOptionVarInt("WIZ_debugFunctions", 1);
+	
+	global int $WIZ_debugAll;
+	$WIZ_debugAll = getOptionVarInt("WIZ_debugAll", 1);
+	
+	global int $WIZ_wizLogging;
+	$WIZ_wizLogging = getOptionVarInt("WIZ_wizLogging", 1);
+	
+	menu -l "Scripts";	
+		menuItem -sm true -l "Feedback";		
+			menuItem -l "All Feedback" -cb false -c "toggleAllFeedback" toggleAllFeedback;
+			
+			menuItem -l "Refresh Step" -cb $WIZ_refreshStep -c "toggleRefreshStep"	toggleRefreshStep;
+				menuItem -ob true -c ("openCurrentOptionsLayout(\"refreshStepOptions\");");
+			
+			menuItem -sm true -l "Debug Messages";	
+				wizMenuItem("-l Wiz Log -cb true -c (\"toggleWizLog();\") -n toggleWizLogging_menuItem");
+				//menuItem -l "Wiz Log" -cb true -c ("toggleWizLog();") toggleWizLoggingMenuItem;
+				menuItem -l "Print Debug Messages" -cb false toggleDebugWizPrintMessagesMenuItem;
+				menuItem -l "All Debug Messages" -cb $WIZ_debugAll -c "toggleAllDebug" toggleAllDebugMenuItem;
+				menuItem -d true;
+				
+				menuItem -l "Debug Text Scroll Lists" -cb $WIZ_debugList -c "toggleDebugTSL" toggleDebugTSL;			
+				menuItem -l "Debug Functions" -cb $WIZ_debugFunctions -c "toggleDebugFunctions" toggleDebugFunctionsMenuItem;
+				menuItem -l "Debug Hud" -cb $WIZ_debugHud -c "toggleDebugHud" toggleDebugHud;
+				
+				menuItem -d true;
+				menuItem -l "Print Function Header" -cb $WIZ_printProc -c "togglePrintProc" togglePrintProc;
+				menuItem -l "Time Function" -cb $WIZ_timeProc -c "toggleTimeProc" toggleTimeProc;
+				menuItem -l "Detailed Messages"	-cb $WIZ_dm -c "toggleDetailedMessages" detailedMessagesToggle;
+				menuItem -l "Extra Detailed Messages" -cb $WIZ_edm -c "toggleExtraDetailedMessages"	extraDetailedMessagesToggle;
+				
+				menuItem -d true;
+				menuItem -l "Toggle All Debug Message Levels" -cb false -c "toggleAllDebugMessages"	debugMessagesLevelToggleAll;
+				menuItem -l "Debug Message Level 1"	-cb $WIZ_dml1 -c "toggleDebugMessagesLevel1" debugMessagesLevel1Toggle;
+				menuItem -l "Debug Message Level 2"	-cb $WIZ_dml2 -c "toggleDebugMessagesLevel2" debugMessagesLevel2Toggle;
+				menuItem -l "Debug Message Level 3"	-cb $WIZ_dml3 -c "toggleDebugMessagesLevel3" debugMessagesLevel3Toggle;
+				menuItem -l "Debug Message Level 4"	-cb $WIZ_dml4 -c "toggleDebugMessagesLevel4" debugMessagesLevel4Toggle;
+				menuItem -l "Debug Message Level 5"	-cb $WIZ_dml5 -c "toggleDebugMessagesLevel5" debugMessagesLevel5Toggle;
+				
+				setParent -menu ..;
+			
+			menuItem -d true;	
+					
+			menuItem -l "Confirm Step" -cb $WIZ_confirmStep	-c "toggleConfirmStep"	confirmStepToggle;
+			menuItem -l "Detail Confirm Step" -cb $WIZ_detailConfirmStep -c "toggleDetailConfirmStep" detailConfirmStepToggle;
+			menuItem -l "Pause Step" -cb $WIZ_pauseStep	-c "togglePauseStep" togglePauseStep;
+			
+			menuItem -d true;	
+			
+			menuItem -l "Auto Focus On Selected" -cb $WIZ_autoFocus	-c "toggleAutoFocus" toggleAutoFocus;
+	
+			setParent -menu ..;
+			
+		allScriptsMenu();
+	
+}
+
+//EVALUATIONS MENU
+//-------------------------
+global proc wizEvaluationsMenu()
+{	
+	menu -l "Evaluations" -to true;	
+		menuItem -sm true -l "Expressions";
+			menuItem -l "Enable Expressions" -c "enableExpressionEvaluations";
+			menuItem -l "Disable Expressions" -c "disableExpressionEvaluations";
+		setParent -menu ..;
+		
+		menuItem -sm true -l "Fluids";
+			//menuItem -l "Enable Expressions And Fluid Evaluations" -c ("enableExpressionsAndFluidEvaluations();");
+			//menuItem -l "Disable Expressions And Fluid Evaluations" -c ("disableExpressionsAndFluidEvaluations();");
+			//menuItem -l "Enable Fluid Evaluation" -cb 
+			//menuItem -l "Dynamics and Expressions Enabled"-cb true -c "toggleExpressionsAndFluidEvaluations" toggleExpressionsAndFluidEvaluations;		
+			//menuItem -l "Expressions Enabled" -cb true -c "toggleExpressionEvaluations"	toggleExpressionEvaluations;
+			menuItem -l "Enable Fluid Evaluations" -c ("enableFluidEvaluations();");
+			menuItem -l "Disable Fluid Evaluations" -c ("disableFluidEvaluations();");
+			
+		setParent -menu ..;
+		
+		menuItem -sm true -l "Nucleus";
+			menuItem -l "Enable All Nucleus Solvers" -c ("enableAllNucleusSolvers();");
+			menuItem -l "Disable All Nucleus Solvers" -c ("disableAllNucleusSolvers();");
+		setParent -menu ..;
+		
+		menuItem -sm true -l "Inputs";
+			menuItem -l "Enable All Inputs On Selected Geometry" -c ("enableAllInputsOnSelectedGeometry(`ls -typ mesh -typ nurbsSurface -sl`);");
+			menuItem -l "Disable All Inputs On Selected Geometry" -c ("disableAllInputsOnSelectedGeometry(`ls -typ mesh -typ nurbsSurface -sl`);");
+        setParent -menu ..;
+		
+		menuItem -sm true -l "Auto Disable Nodes";
+			menuItem -l "Add Has No Effect After Loaded Attribute" -c ("addNodeStateAfterLoadedAttr(\"-sl -st 1\");");			
+			menuItem -l "Add Blocking After Loaded Attribute" -c ("addNodeStateAfterLoadedAttr(\"-sl -st 2\");");
+			menuItem -l "Add Waiting-Normal After Loaded Attribute" -c ("addNodeStateAfterLoadedAttr(\"-sl -st 8\");");
+			menuItem -l "Add Waiting-Has No Effect After Loaded Attribute" -c ("addNodeStateAfterLoadedAttr(\"-sl -st 9\");");
+			menuItem -l "Add Waiting-Blocking After Loaded Attribute" -c ("addNodeStateAfterLoadedAttr(\"-sl -st 10\");");
+			menuItem -l "Activate Node State After Loaded Nodes" -c ("wizActivateNodeStateAfterLoadedObjects();");
+			menuItem -l "Deactivate Node State After Loaded Nodes" -c ("wizDeactivateNodeStateAfterLoadedObjects();");      
+		setParent -menu ..;
+		
+		menuItem -sm true -l "Script Jobs";
+			menuItem -l "Kill All Script Jobs" -c ("scriptJob -ka;");
+			menuItem -l "Enable Get Current Camera" -cb false toggleGetWizCurrentCameraEvalMenuItem;
+		setParent -menu ..;
+		
+		menuItem -l "Disable Cycle Check" -c ("cycleCheck -e off;");
+		menuItem -l "Enable Cycle Check" -c ("cycleCheck -e on;");				
+		
+		menuItem -l "Force Wait Cursor Off" -c ("forceWaitCursorOff();");
+		
+		menuItem -l "Freeze Selected" -c ("wizFreezeSelected(\"-sl -f\");");
+		menuItem -l "UnFreeze Selected" -c ("wizFreezeSelected(\"-sl -uf\");");
+		
+		menuItem -l "Play" -c ("wizPlay();");
+		
+}
+
+//EVALUATIONS MENU
+//-------------------------
+//** This is a menu of items that are used often and are convient to keep up top. */
+global proc wizWorkflowMenu()
+{	
+	menu -l "Workflow" -to true;	
+		wizSelectionViewMenu();	
+		wizDuplicationMenu();
+		wizClippingPlanesMenu();	
+		modelPanelVisibleObjectSetsMenu();
+		wizConstraintsMenu();
+		wizAttributeFunctionsMenu();
+		menuItem -l "Textures" -sm true -to true;
+			textureFileOutputPathMenuItems();
+			textureWizSelectionMenuItems();
+			textureUtilitiesMenuItems();
+			texturePoolMenuItems();
+			textureWizAttributesMenuItems();
+			textureWizConversionMenuItems();
+			textureWizProjectionsMenuItems();
+			textureWizBumpMenuItems();
+			textureWizLayeredTexturesMenuItems();
+		setParent -menu ..;
+		
+		menuItem -l "Shaders" -sm true -to true;		
+			shadingWizShadersMenuItems();
+		setParent -menu ..;
+		
+		menuItem -l "Render" -sm true -to true;
+			 renderWizCameraMenuItems();
+			 renderWizPresetsMenuItems();
+			 renderWizBatchRenderMenuItems();
+			 renderWizPlanetariumMenuItems();
+		setParent -menu ..;	 
+		
+		menuItem -sm true -l "Assets";
+			menuItem -l "Create Asset Icon" -c ("createWizAssetIcon(\"\");");
+				menuItem -ob true -c ("openCurrentOptionsLayout(\"wizAssetIconOptions\");");	
+			menuItem -l "Add Selected To Asset" -c 	("wizAddToAsset(\"-sl\");");
+				
+		setParent -menu ..;		
+}
+
+//WIZ MENU
+//-------------------------
+global proc wizWizMenu()
+{
+	menu -label "Wiz";	
+        menuItem -l "Button Soup" -c ("buttonSoupWindow();");
+		menuItem -l "Wiz Notes" -c ("openWizNotes();");
+		menuItem -l "Sign In" -c "wizSignIn";	
+		menuItem -l "Sign Out"	-c ("wizSignOut()");	
+		menuItem -l "Quit"	-c("wizQuit()");
+		
+		string $wizAutoUpdateMenuItem = wizMenuItemCheckBox("Auto Update", "setWizAutoUpdate", "wizAutoUpdate_menuItem");
+		menuItem -e -cb `optionVar -q WIZ_autoUpdate` $wizAutoUpdateMenuItem;
+		
+		int $updateDox = 1;
+		if (`optionVar -ex WIZ_updateDoxygenDocs`){
+			$updateDox = `optionVar -q WIZ_updateDoxygenDocs`;
+		}
+		string $doxCom = ("int $updateDoxygen = `menuItem -q -cb wizUpdateDoxygenDocs_menuItem`;optionVar -iv WIZ_updateDoxygenDocs $updateDoxygen;");
+		menuItem -l "Update Doxygen Docs" -cb $updateDox -c $doxCom wizUpdateDoxygenDocs_menuItem;
+		
+		menuItem -l "Update Wiz UI Save Data" -c ("updateWizUISaveData()");
+	
+		menuItem -l "Set Wiz Hotkeys" -c ("setWizHotkeys()");
+		
+		menuItem -sm true -l "Assets";
+			menuItem -l "Create Asset Icon" -c ("createWizAssetIcon(\"\");");
+				menuItem -ob true -c ("openCurrentOptionsLayout(\"wizAssetIconOptions\");");	
+				
+				
+		menuItem -l "Help" -c ("openWizHelp()");
+		
+		wizModulesMenu();
+}
+
+//ORGINAZATION MENU
+//-------------------------
+global proc wizOrginizingMenu()
+{
+	wizOrginazationMenu();
+}
+
+//MODULES MENU
+//-------------------------
+global proc wizModulesMenu()
+{		
+	global int $WIZ_openFluidModule;
+	$WIZ_openFluidModule = 1;
+	global int $WIZ_openTextureModule;
+	global string $WIZ_sectionTabLayout;
+	
+	menuItem -sm true -l "Modules";	
+		menuItem
+			-label "Modeling"
+			-cb false
+			//-c ("toggleModule(\"wizModelingLayout($WIZ_sectionTabLayout);\",\"modelingModuleToggle\")")
+			//-c "refreshWizWindow"
+			modelingModuleToggle
+			;
+			
+		menuItem 
+			-label "Fluids"
+			-cb $WIZ_openFluidModule
+			//-command ("openModule " + "fluidModule " + "," + $WIZ_openFluidModule)
+			openFluidModule
+			;
+	
+		menuItem -l "Rigging" -cb false;		
+		menuItem -l "Organization" -cb false;		
+		menuItem -l "Fixes"	-cb false;		
+		menuItem -l "Time" -cb false;	
+		menuItem -l "Rendering"	-cb false;		
+		menuItem -l "Textures"
+			-cb $WIZ_openTextureModule
+			//-command ("setModuleState " + "openTextureModule ")
+			openTextureModule
+			;
+			
+		setParent -menu ..;
+}
+
+//WIZ MENU
+//====================================
+global proc wizSelectionMenu()
+{
+	string $selectionMenu = `menu
+		-label "Selection"
+		//-p $parent
+		`;
+	
+	menuItem
+		-label "Select All Duplicate Reference Objects Of Same Name"
+		-command "selectAllDuplicateReferencesObjectsOfSameName"
+		-p $selectionMenu
+		;
+
+}
+
+global proc wizSignIn()
+{
+	//restoreAllWizSettings();
+	//getMayaDirFromGoogleDrive();
+
+}
+
+global proc wizSignOut()
+{
+	//backUpMayaDirToGoogleDrive();	
+	//debugML1("Wiz Sign Out: Save All Wiz States" + "\n");
+	saveAllWizStates();
+	//saveAllWizSettings();
+}
+
+global proc wizQuit()
+{
+	global string $WIZ_window;
+	debugML1("Quitting Wiz: Saving All Wiz Settings..." + "\n");
+	//saveAllWizStates();
+	saveAllWizSettings();
+	if(`window -exists $WIZ_window`){
+		deleteUI $WIZ_window;
+	}
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         COLORS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//@ GET WIZ COLOR
+//=======================================================
+/*=======================| USAGE |====================================	
+float $butCol[] = getWizColor("goButtonColor");
+button
+    -bgc $butCol[0] $butCol[1] $butCol[2]
+    ;
+====================================================================*/
+
+//COLORS
+//=========================
+global proc float[] getWizColor(string $colorName)
+{
+	float $colorValue[] = { 0,0,0};
+	switch($colorName){
+		case "doButtonColor": 
+		$colorValue = {0.49,0.824,0.275};
+		break;	
+		
+		case "goButtonColor": 
+		$colorValue = { 0.2210688144, 0.4509803951, 0.4107785523 };
+		break;	
+		
+		case "exportButtonColor": 
+		$colorValue = {1.00,0.467,0.016};
+		break;	
+		
+		case "warningButtonColor": 
+		$colorValue = {0.824,0.304,0.275};
+		break;	
+		
+		case "wizBGColor":
+		$colorValue = {0.258,0.281,0.291};
+		break;	
+		
+		case "optionButtonColor" :
+		$colorValue = { 0.120, 0.296, 0.367 };
+		break;	
+		
+		case "cancelButtonColor" :
+		$colorValue = { 0.98, 0.928, 0.012 };
+		break;
+		
+		case "helpButtonColor" :
+		$colorValue = { 0.0, 0.820813179, 1.0 };
+		break;
+		
+		case "defaultGrey" :
+		$colorValue = { 0.5, 0.5, 0.5 };
+		break;
+		
+		case "bookmarkDock" :
+		$colorValue = { 0.28, 0.62, 0.32 };
+		break;
+
+		
+	}
+	return $colorValue;
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         OPTION VARS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//OPTION VARS
+//======================================================================================
+//GET OPTION VAR INT
+//------------------------------------
+global proc int getOptionVarInt( string $optionVar, int $defaultValue)
+{
+	int $ov;
+	if (`optionVar -ex $optionVar`){
+		$ov = `optionVar -q $optionVar`;
+	} else {
+		optionVar -iv $optionVar $defaultValue;
+		$ov = `optionVar -q $optionVar`;
+	}
+	return $ov;
+}
+
+//PUT OPTION VAR INT
+//------------------------------------
+global proc putOptionVarInt( string $optionVar, int $value)
+{
+	optionVar -iv $optionVar $value;
+
+}
+
+
+//GET OPTION VAR STRING ARRAY
+//------------------------------------
+global proc string[] getOptionVarStringArray(string $optionVar)
+{
+	string $dbl = "-dmi GetPutOptionVarStringArrayDebugMenuItem -t Get Put Option Var String Array"; string $dbm = "add"; int $dbc = 1;
+	int $db = `menuItem -q -ex GetPutOptionVarStringArrayDebugMenuItem`;
+	
+	if ($db){
+		debugList($dbl, { (" * Get Option Var: " + $optionVar) }, $dbc, $dbm);
+	}
+	
+	string $ov[];	
+	if (`optionVar -as $optionVar` > 1){
+		$ov = `optionVar -q $optionVar`;
+		if($db){
+			debugList($dbl, { (" -Found Option Var: " + $optionVar + " Size: " + `size $ov`) }, $dbc, $dbm);
+			debugList($dbl, $ov, $dbc, $dbm);
+			//debugList($dbl, {(tslDiv(""))}, $dbc, $dbm);
+		}
+	}	
+	
+	return $ov;	
+}
+
+//GET STRING FROM OPTION VAR STRING ARRAY
+//------------------------------------------------
+global proc string getStringFromOptionVarStringArray(string $optionVar, string $name)
+{
+	string $return;	
+	string $opVarArr[] = getOptionVarStringArray($optionVar);
+	int $found = stringArrayFind($name, 0, $opVarArr);
+	if($found != -1){
+		$return = $opVarArr[($found + 1)];
+	}
+	return $return;
+}
+
+//GET INT FROM OPTION VAR STRING ARRAY
+//------------------------------------------------
+global proc int getIntFromOptionVarStringArray(string $optionVar, string $name)
+{
+	int $return;	
+	string $opVarArr[] = getOptionVarStringArray($optionVar);
+	int $found = stringArrayFind($name, 0, $opVarArr);
+	if($found != -1){
+		$return = catchQuiet(int($opVarArr[($found + 1)]));
+	}
+	return $return;
+}
+
+//GET FLOAT FROM OPTION VAR STRING ARRAY
+//------------------------------------------------
+global proc float getFloatFromOptionVarStringArray(string $optionVar, string $name)
+{
+	float $return;	
+	string $opVarArr[] = getOptionVarStringArray($optionVar);
+	int $found = stringArrayFind($name, 0, $opVarArr);
+	if($found != -1){
+		$return = catchQuiet(float($opVarArr[($found + 1)]));
+	}
+	return $return;
+}
+
+//WIZ VARS
+//===================================================
+//SET WIZ VAR
+//---------------------------
+global proc setWizVar(string $name, string $val)
+{
+	string $ov[] = putOptionVarStringArray("WIZ_wizVar", {$name, $val});
+}
+
+//GET WIZ FLOAT VAR
+//---------------------------
+global proc float getWizFloatVar(string $name)
+{
+	float $val = getFloatFromOptionVarStringArray("WIZ_wizVar", $name);
+	return $val;
+}
+
+//GET WIZ INT VAR
+//---------------------------
+global proc int getWizIntVar(string $name)
+{
+	int $val = getIntFromOptionVarStringArray("WIZ_wizVar", $name);
+	return $val;
+}
+
+//GET WIZ STRING VAR
+//---------------------------
+global proc string getWizStringVar(string $name)
+{
+	string $val = getStringFromOptionVarStringArray("WIZ_wizVar", $name);
+	return $val;
+}
+
+//GET WIZ STRING ARRAY VAR
+//---------------------------
+global proc string[] getWizStringArrayVar(string $name)
+{
+	string $ov[];
+	if(`optionVar -as $name` > 0){
+		$ov = `optionVar -q $name`;			
+	}
+	return $ov;
+}
+
+//APPEND WIZ STRING ARRAY VAR
+//---------------------------
+global proc string[] appendWizStringArrayVar(string $name, string $string)
+{
+	string $ov[];
+
+	optionVar -sva $name $string;			
+	$ov = `optionVar -q $name`;
+	
+	return $ov;
+}
+
+global proc putWizSettingsOptionVarIntoGlobalArray()
+{
+	global string $WIZ_wizSettings[];
+	if(`optionVar -ex WIZ_wizSettings` == 0){ return;}
+	$WIZ_wizSettings = `optionVar -q WIZ_wizSettings`;
+
+}
+
+global proc string getWizVar(string $name)
+{
+	global string $WIZ_wizSettings[];	
+	
+	int $nameIndex = stringArrayFind($name, 0, $WIZ_wizSettings);
+	if($nameIndex == -1){ return "";}
+	int $valIndex = $nameIndex + 1;
+	string $val = $WIZ_wizSettings[$valIndex];
+	
+	return $val;
+
+}
+
+global proc addPutWizVarsToChangeCommands()
+{
+	string $saveType[] = getWizUIPref("SaveUIType");
+	/*
+	string $wiztsl[] = `lsUI -typ textScrollList wiz`;
+	debugList("Wiz TSL", $wiztsl, 1, "replace");
+	string $tsl[] = `lsUI -typ textScrollList`;
+	debugList("All TSL", $tsl, 2, "replace");
+	*/
+}
+
+
+//SAVING AND RESTORING SETTINGS
+//======================================================================
+//GET WIZ UI ELEMENTS
+//=============================================
+global proc string[] getWizUIElements(string $request)
+{
+	string $return[];
+	
+	switch($request){
+		case "SelectMasterLists" : 
+		case "selectMasterLists" :
+		string $selectMasterLists[] = { "selectMasterListA", "selectMasterListB" };
+		//appendStringArray($return, $selectMasterLists, `size $selectMasterLists`);
+		return $selectMasterLists;
+		break;
+		
+		case "allDebugLists" :
+		case "AllDebugLists" :
+		//$return = getAllUIOfTypeBelowParent("debugWizColumnLayout", "textScrollList");
+		$return = getAllDebugWizTextScrollLists();
+		
+	}
+
+	return $return;
+}
+
+//SAVING STATES INDIVIDUALLY
+//====================================
+global proc saveWizState(string $type, string $valueType, string $target)
+{
+	//checkBox -l "checkBox" -v true aCheckBox;
+	
+	//Use this command to save a state of a wiz item
+	//saveWizState("checkBox", "-v", "aCheckBox");
+	
+	global string $WIZ_savedWizState[];
+	string $saveState[] = {$type,$valueType,$target,"|"};
+	//$WIZ_savedWizState = appendStringArray($WIZ_savedWizState,$saveState,`size $saveState`);
+	appendStringArray($WIZ_savedWizState, $saveState, `size $saveState`);
+	debugML5("SAVE WIZ STATE: " + $type + " -q " + $valueType + " " + $target + "\n");
+		
+}
+
+global proc saveAllWizStates()
+{
+	
+	global string $WIZ_savedWizState[];
+	debugML1("WIZ Saved States: " + "\n			" + stringArrayToString($WIZ_savedWizState, "\n			") + "\n");
+	string $wizState[];
+	for($i=0;$i<`size $WIZ_savedWizState`;$i++){
+		if($WIZ_savedWizState[$i] == "|"){
+			//Get the current value of what we want to save
+			string $eval = ($wizState[0] + " -q " + $wizState[1] + " " + $wizState[2] + ";");
+			string $saveVal = `eval($eval)`;
+			//debugML1("SAVE WIZ STATE: " + $type + " -q " + $valueType + " " + $target + " VALUE: " + $saveVal + "\n");
+			
+			//Create a command to restore the value
+			string $saveState = ($wizState[0] + " -edit " + $wizState[1] + " " + $saveVal + " " + $wizState[2] + ";");
+			debugML1("SAVE WIZ STATE: " + $saveState + "\n");
+			
+			//Save the command that will restore the value
+			optionVar -sva WIZ_savedWizState $saveState;
+			
+			clear $wizState;
+		} else {
+			$wizState[`size $wizState`] = $WIZ_savedWizState[$i];
+		}	
+	}
+
+}
+
+global proc restoreWizState()
+{
+	//print("Wiz Restore State Inactivated" + "\n");
+	return;
+	
+	if(`optionVar -ex WIZ_savedWizState` == false){
+		return;
+	}
+	string $restore[] = `optionVar -q WIZ_savedWizState`;
+	for($i=0;$i<`size $restore`;$i++){
+		debugML1("RESTORE WIZ STATE: " + $restore[$i] + "\n");		
+		eval($restore[$i]);
+	}
+	
+	//Clear WIZ_savedWizState when done
+	optionVar -ca WIZ_savedWizState;
+
+}
+
+//SAVE ALL SETTINGS
+//===========================
+global proc updateWizUISaveData()
+{
+	buildCSVOfUIElements();	
+}
+
+global proc buildCSVOfUIElements()
+{
+	printProc("buildCSVOfUIElements");	
+	string $allUIName[] = getAllLayoutsAndControlsInWindow("wiz");
+	string $uiNameType[] = getUINameTypeByMatch($allUIName);
+	
+	openDebugWiz();
+	
+	debugList("UI Name/Type", $uiNameType, 2, "replace");
+	
+	string $file = "wizUI.txt";
+	string $dir = `internalVar -userScriptDir`;
+	$file = $dir + $file;
+	
+	int $lineSize = 10;
+	
+	int $fileId = `fopen $file "w"`;
+	for($i=0;$i<`size $uiNameType`;$i++){
+		string $print = $uiNameType[$i];
+		if($i < (`size $uiNameType` - 1)){
+			$print = $print + ",";
+		}
+		fprint $fileId $print;
+		
+	}
+	fclose $fileId;
+	debugML1("Finished - buildCSVOfUIElements" + "\n");
+}
+
+global proc restoreAllWizSettings()
+{
+	if(`optionVar -ex WIZ_savedWizSettings` == 0){
+		return;
+	}
+	restoreWizSettings();
+	/*
+	string $restore = `optionVar -q WIZ_savedWizSettings`;
+	eval($restore);
+	*/
+}
+
+//RESTORE SETTINGS
+//=================================
+global proc restoreWizSettings()
+{
+	string $uiNameType[] = getAllUINameTypeFromFile();
+	
+	}
+	
+	global proc string getWizUIFile()
+	{
+	string $file = "wizUI.txt";
+	string $dir = `internalVar -userScriptDir`;
+	$file = $dir + $file;	
+	return $file;
+}
+
+//SAVE SETTINGS
+//=================================
+global proc saveAllWizSettings()
+{
+	print("WIZ| Saving Wiz Settings..." + "\n");
+	//Get all of the ui elements in the wiz window
+	string $allUIName[] = getAllLayoutsAndControlsInWindow("wiz");
+	
+	//Get the type of each ui element
+	//Method 1 - Put the type after the name of the element
+	//string $allUIType[] = getAllUITypeByName($allUIName);
+	
+	//Method 2 - Search through all possible types to determine type - this takes too long needs work
+	//NOT READY FOR USE!
+	//string $allUIType[] = getAllUITypeByMatch($allUIName);
+	
+	//Method3 - Get all names and types from file
+	string $uiNameType[] = getAllUINameTypeFromFile();
+	string $uiType[] = getColumnOfArray($uiNameType, 1, 2);
+	/*
+	//Make sure we know the type before using it
+	string $allKnownUIName[];
+	string $allKnownUIType[];
+	for($i=0;$i<`size $allUIType`;$i++){
+		if($allUIType[$i] != "Unknown"){
+			$allKnownUIName[`size $allKnownUIName`] = $allUIName[$i];
+			$allKnownUIType[`size $allKnownUIType`] = $allUIType[$i];
+		}
+	}
+	
+	
+	//Get the query tags associated with each type of element
+	string $allQ[] = getAllQueryStringsForUIType($allKnownUIType);
+	
+	for($i=0;$i<`size $allKnownUIType`;$i++){
+		debugML1("UI: " + $allKnownUIType[$i] + " -q " + $allQ[$i] + " " + $allKnownUIName[$i] + "\n");
+	}
+	debugML1("Size Type: " + `size $allKnownUIType` + " Q: " + `size $allQ` + " Name: " + `size $allKnownUIName` + "\n");
+	*/
+	
+	string $allQ[] = getAllQueryStringsForUIType($uiType);
+	//Save the edit settings to a string
+	string $allE[] = getEditStringsForAllUI($uiType,$allQ,$uiType);
+	string $wizSettings = stringArrayToString($allE, "\n");
+	debugML1("SAVE Settings: " + "\n			" + stringArrayToString($allE, "\n			") + "\n");
+	optionVar -sv WIZ_savedWizSettings $wizSettings;
+	print("WIZ| Saved Wiz Settings" + "\n");
+
+}
+
+global proc string[] getEditStringsForAllUI(string $type[], string $allQ[], string $name[])
+{
+	global string $tempVal;
+	string $editString[];
+	for($i=0;$i<`size $name`;$i++){
+		string $val[];
+		string $q[];
+		int $numTokens = `tokenize $allQ[$i] "|" $q`;
+		for($p=0;$p<`size $q`;$p++){
+			string $dataType = getQDataType($q[$p]);	
+			string $command = ($type[$i] + " -q " + $q[$p] + " " + $name[$i] + ";");
+			//See if the query command throws up an error before saving it
+			string $catch = "catchQuiet(`" + $command + "`);";
+			if(`eval($catch)` == 1){
+				continue;
+			}
+			string $value = `eval($command)`;
+			string $edit = ($type[$i] + " -edit " + $q[$p] + " " + $value + " " + $name[$i] + ";");
+			$editString[`size $editString`] = $edit;
+	
+		}
+	
+	}
+
+	return $editString;
+}
+
+global proc string[] getAllLayoutsAndControlsInWindow(string $window)
+{
+	//WARNING: BRUTE FORCE!	
+	//Get a list of all control layouts, and see which is a child of the specified window.
+	string $ui[] = `lsUI -l -ctl -cl -m -mi -cl -col`;
+	//Create a wildcard pattern used by the "gmatch" command.
+	string $pattern = $window + "*";
+	//Default empty string to denote that no matching layout was found.
+	string $layout = "";
+	string $uiElements[];
+	for($i=0;$i<`size $ui`;$i++){
+		// Compare the wildcard pattern against the name of this control.
+		if(`gmatch $ui[$i] $pattern`){
+			// Found it!
+			string $buffer[];
+			int $numTokens = `tokenize $ui[$i] "|" $buffer`;
+			$uiElements[`size $uiElements`] = $buffer[(`size $buffer` - 1)];
+	
+		}
+	}
+	$uiElements = sort($uiElements);
+	$uiElements = stringArrayRemoveDuplicates($uiElements);
+	
+	//debugML1("UI Elements: " + "\n			" + stringArrayToString($uiElements, "\n			- ") + "\n");
+	
+	return $uiElements;
+}
+
+//GET QUERY STRINGS
+global proc string[] getAllQueryStringsForUIType(string $allUIType[])
+{
+	string $allQ[];
+	for($i=0;$i<`size $allUIType`;$i++){
+		$allQ[`size $allQ`] = getQueryStringsForUIType($allUIType[$i]);
+	}
+	
+	return $allQ;
+}
+
+//GET UI TYPES
+//=====================================
+//METHOD 1 - BY NAME
+global proc string[] getAllUITypeByName(string $uiName[])
+{
+	string $allUIType[];
+	for($i=0;$i<`size $uiName`;$i++){
+		$allUIType[$i] = getUITypeByName($uiName[$i]);
+	}
+	return $allUIType;
+}
+
+//METHOD 2 - BY MATCH
+global proc string[] getAllUITypeByMatch(string $uiName[])
+{
+	string $allUIType[];
+	for($i=0;$i<`size $uiName`;$i++){
+		$allUIType[$i] = getUITypeOfObject($uiName[$i]);;
+	}
+	return $allUIType;
+}
+
+global proc string[] getAllWizUIOfType(string $type)
+{
+	string $all[] = getAllLayoutsAndControlsInWindow("wiz");
+	string $allType[] = `lsUI -typ $type`;
+	string $intersect = `stringArrayIntersector`;
+	stringArrayIntersector -edit -intersect $all $intersect;
+	stringArrayIntersector -edit -intersect $allType $intersect;
+	string $return[] = `stringArrayIntersector -query $intersect`;
+	return $return;
+}
+
+global proc string[] getUINameTypeByMatch(string $uiName[])
+{
+	string $uiNameType[];
+	for($i=0;$i<`size $uiName`;$i++){
+		string $type = getUITypeOfObject($uiName[$i]);
+		if($type == ""){ continue;}
+		$uiNameType[`size $uiNameType`] = $uiName[$i];
+		$uiNameType[`size $uiNameType`] = $type;
+	}
+	return $uiNameType;
+}
+
+
+global proc string getUITypeOfObject(string $obj)
+{
+	string $allTypes[] = getAllUITypes("save");
+	debugList("All Save UI Types", $allTypes, 1, "replace");
+	
+	string $type = "";
+	for($i=0;$i<`size $allTypes`;$i++){
+		
+		//Watch out for errors - I dont know why maya throws up errors - I claims it doesn't recognize all types
+		if(catchQuiet(`objectTypeUI -i $allTypes[$i] $obj`) == 1){
+			continue;
+		}
+		
+		if(`objectTypeUI -i $allTypes[$i] $obj` == 1){		
+			$type = $allTypes[$i];
+			//debugML2("Obj: " + $obj + " Is Type: " + $type + "\n");
+			return $type;
+		}
+	}
+	return $type;
+}
+
+global proc string[] getAllUITypes(string $returnList)
+{
+	
+	string $layouts[] = { "columnLayout", "dockControl", "flowLayout", "formLayout",
+	"frameLayout", "gridLayout", "layout", "menuBarLayout", "paneLayout", "rowColumnLayout",
+	"rowLayout", "scrollLayout", "shelfLayout", "shelfTabLayout", "tabLayout", "toolBar"};
+	
+	string $saveLayouts[] = { "frameLayout", "tabLayout"};
+	
+	string $controls[] = { "attrColorSliderGrp", "attrControlGrp", "attrFieldGrp", 
+	"attrFieldSliderGrp", "attrNavigationControlGrp", "button", "canvas", "channelBox", 
+	"checkBox", "checkBoxGrp", "cmdScrollFieldExecuter", "cmdScrollFieldReporter", "cmdShell", 
+	"colorIndexSliderGrp", "colorSliderButtonGrp", "colorSliderGrp", "commandLine", "componentBox", 
+	"control", "floatField", "floatFieldGrp", "floatScrollBar", "floatSlider", "floatSlider2", 
+	"floatSliderButtonGrp", "floatSliderGrp", "gradientControl", "gradientControlNoAttr", "helpLine", 
+	"hudButton", "hudSlider", "hudSliderButton", "iconTextButton", "iconTextCheckBox", 
+	"iconTextRadioButton", "iconTextRadioCollection", "iconiconTextScrollList", "iconTextStaticLabel", 
+	"image", "intField", "intFieldGrp", "intScrollBar", "intSlider", "intSliderGrp", "layerButton", 
+	"messageLine", "nameField", "nodeTreeLister", "palettePort", "picture", "progressBar", 
+	"radioButton", "radioButtonGrp", "radioCollection", "rangeControl", "scriptTable", "scrollField", 
+	"separator", "shelfButton", "soundControl", "swatchDisplayPort", "switchTable", "symbolButton", 
+	"symbolCheckBox", "text", "textField", "textFieldButtonGrp", "textFieldGrp", "textScrollList", 
+	"timeControl", "timePort", "toolButton", "toolCollection", "treeLister", "treeView"};
+	
+	string $saveControls[] = {   
+	"checkBox", "checkBoxGrp",  
+	"colorIndexSliderGrp", "colorSliderButtonGrp", "colorSliderGrp",
+	"floatField", "floatFieldGrp", "floatScrollBar", "floatSlider", "floatSlider2", 
+	"floatSliderButtonGrp", "floatSliderGrp", "gradientControl", "gradientControlNoAttr",
+	"hudButton", "hudSlider", "hudSliderButton", "iconTextButton", "iconTextCheckBox", 
+	"iconTextRadioButton", "iconTextRadioCollection", "iconTextScrollList", "iconTextStaticLabel", 
+	"intField", "intFieldGrp", "intScrollBar", "intSlider", "intSliderGrp", 
+	"nameField",
+	"radioButton", "radioButtonGrp", "radioCollection", "rangeControl", "scrollField", 
+	"soundControl",
+	"symbolCheckBox", "text", "textField", "textFieldButtonGrp", "textFieldGrp", "textScrollList"
+	};
+	
+	string $menus[] = { "artBuildPaintMenu", "attrEnumOptionMenu", "attrEnumOptionMenuGrp", 
+	"attributeMenu", "findMenuItem", "hotBox", "listMenuAnnotation", "menu", "menuEditor", 
+	"menuItem", "menuItemToShelf", "menuSet", "menuSetPref", "optionMenu", "optionMenuGrp", 
+	"popupMenu", "radioMenuItemCollection", "saveMenu" };
+	
+	string $saveMenus[] = {  
+	"menuItem", "optionMenu", "optionMenuGrp", 
+	"radioMenuItemCollection"};
+	 
+	string $allUI[];
+	if($returnList == "all"){
+		appendStringArray($allUI,$layouts,`size $layouts`);
+		appendStringArray($allUI,$controls,`size $controls`);
+		appendStringArray($allUI,$menus,`size $menus`);	
+	} else if($returnList == "save"){
+		appendStringArray($allUI,$saveLayouts,`size $saveLayouts`);
+		appendStringArray($allUI,$saveControls,`size $saveControls`);
+		appendStringArray($allUI,$saveMenus,`size $saveMenus`);
+	} else if($returnList == "saveControls"){
+		appendStringArray($allUI,$saveControls,`size $saveControls`);
+	} else if($returnList == "saveLayouts"){
+		appendStringArray($allUI,$saveLayouts,`size $saveLayouts`);
+	}
+	
+	return $allUI;
+}
+
+
+global proc string[] getCheckboxesUnderLayout(string $layout)
+{
+	string $child[] = `frameLayout -q -ca $layout`;
+	string $cb[] = `ls -typ "checkBox" $child`;
+	return $cb;
+}
+
+//STRING FUNCTIONS
+global proc string createCommaSeparatedString(string $input)
+{
+	string $tokenize[];
+	tokenizeList($input, $tokenize);
+	string $output;
+	for($i=0;$i<`size $tokenize`;$i++){
+		$output = $output + "," + $tokenize[$i];
+	}
+	return $output;
+}
+
+global proc string createStringFormattedStringArrayFromString(string $input)
+{
+	string $string[];
+	tokenizeList($input, $string);
+	string $quotes= "\"";//"
+	string $comma = ",";
+	string $endLine = "\"\n\"";
+	string $rs;
+	$rs = "{ ";
+	int $i;
+	for($i=0;$i<`size $string`;$i++){
+		$rs = $rs + $quotes + $string[$i] + $quotes;
+		if($i < (`size $string` - 1)){
+			$rs = $rs + $comma + " ";
+		}
+	}
+	$rs = $rs + "}";
+	return $rs;
+
+}
+
+global proc int[] getIndexOfSeparatorsInStringArray(string $string[])
+{
+	int $index[];
+	for($i=0;$i<`size $string`;$i++){
+		if($string[$i] == "|"){
+			$index[`size $index`] = $i;
+		}
+	}
+	return $index;
+}
+
+global proc string[] getAllUINameTypeFromFile()
+{
+	string $wizUIFile = getWizUIFile();	
+	string $uiNameType[] = readCSVFromFile($wizUIFile);
+	return $uiNameType;
+}
+
+global proc string[] readCSVFromFile(string $filename)
+{
+	
+	int $fileId =`fopen $filename "r"`;
+	string $s;
+	$s = `fread $fileId $s`;
+	fclose $fileId;
+	string $buffer[];
+	tokenize($s, ",", $buffer);
+	int $i;
+	for($i=0;$i<`size $buffer`;$i++){
+		$buffer[$i] = `strip $buffer[$i]`;
+	}
+	return $buffer;	
+
+}
+
+global proc refreshWizWindow()
+{
+	global string $WIZ_window;
+	//showWindow $WIZ_window;
+	//wizMainTabLayout();	
+	//wiz();
+}
+
+global proc string[] dragUILayout(string $dragControl, int $x, int $y, int $mods)
+{
+	
+	return { $dragControl };
+
+}
+
+
+global proc dropUILayout(string $drag, string $drop, string $msgs[], int $x, int $y, int $type)
+{
+	
+
+}
+
+//DRAG CALLBACK COMMANDS
+//=================================
+global proc string[] dragNewWindow(string $dragControl, int $x, int $y, int $mods)
+{
+	print ( "Drag from " + $dragControl + "\n" );
+	if($dragControl == "wiz|wizTabLayout|WizMain|masterLayout|cameraLayout"){
+		newWizWindowSection("cameraModule");
+	}
+	// The msg array returned from the drag callback must _not_ be empty,
+	// else the drop callback will not trigger.
+	//
+	return { $dragControl };
+
+}
+
+global proc dropNewWindow(string $drag, string $drop, string $msgs[], int $x, int $y, int $type)
+{
+
+	print ( "Drop on " + $drop + " from " + $msgs[0] + "\n" );
+	 
+	 /*
+	string $newWizWindow = "newWizWindow";//Global name for window
+		//global string $MY_customFileNamePrefix;
+		if (`window -exists $newWizWindow`)//Is my window there?
+			deleteUI $newWizWindow;
+		
+		//string $wizTitle = "Wiz :::::::: " + `date -format "MM/DD/YYYY hh:mm"`;
+		
+		window
+			-title $windowContent
+			-widthHeight 400 300
+			-menuBar on
+			-menuBarVisible on
+			-minimizeButton on
+			-maximizeButton on
+			-sizeable on		
+			-resizeToFitChildren on
+			-titleBar on
+			newWizWindow
+			;
+			
+		string $newFrameLayout = `frameLayout
+			newFrameLayout
+			`;
+			
+		eval($windowContent + "($newFrameLayout)");
+		
+		showWindow $newWizWindow;
+	*/
+}
+
+global proc newWizWindowSection(string $windowContent)
+{
+	print("WindowContent: " + $windowContent + "\n");
+	string $newWizWindow = "newWizWindow";//Global name for window
+	//global string $MY_customFileNamePrefix;
+	if (`window -exists $newWizWindow`)//Is my window there?
+		deleteUI $newWizWindow;
+	
+	//string $wizTitle = "Wiz :::::::: " + `date -format "MM/DD/YYYY hh:mm"`;
+	
+	window
+		-title $windowContent
+		-widthHeight 400 300
+		-menuBar on
+		-menuBarVisible on
+		-minimizeButton on
+		-maximizeButton on
+		-sizeable on		
+		-resizeToFitChildren on
+		-titleBar on
+		newWizWindow
+		;
+		
+	string $newFrameLayout = `frameLayout
+		newFrameLayout
+		`;
+	/*
+	string $quote = "\"";
+	string $bo = "(";
+	string $bc = ")";
+	string $arg = $bo + $quote + "newFrameLayout" + $quote + $bc;
+	string $es = `encodeString $arg`;
+	eval($windowContent + $es);
+	*/
+	cameraModule("newFrameLayout");
+	showWindow $newWizWindow;
+}
+
+global proc setWizHotkeys()
+{
+	string $moveIntoViewCommand = "moveSelectedIntoView();";
+	hotkey -k "0" -alt -name "MoveSelectedIntoView";
+	
+	string $createPresetCommand = "createTempNodePresetAndApplyToSelectedObjects();";
+	hotkey -k "p" -ctrl -name "CreatePresetAndApplyToSelected";
+	
+	
+	
+	string $inViewMessage = ("Move Selected Into View: (alt) + 0\n"
+	+"Deselect All: (ctrl) + \\\n"
+	);
+	
+	inViewMessage 
+		-smg $inViewMessage
+		-pos topLeft
+		-fade
+		;
+	
+}
+
+global proc wizFloatStateSwitch()
+{
+	if ( `optionVar -q WIZ_wizFloatingState` == 1 )
+		optionVar -intValue WIZ_wizFloatingState 0;
+	else
+		optionVar -intValue WIZ_wizFloatingState 1;
+}
+
+//OPEN NEW INSTANCE OF MAYA
+//--------------------------------
+global proc openNewInstanceOfMaya()
+{
+
+	system("open -n /Applications/Autodesk/maya2015/Maya.app");
+	/*
+	export MAYA_SET_PARENT_HINT=0
+	open -n /Applications/Autodesk/maya2015/Maya.app
+	*/
+	
+}
+
+//WIZ HELP
+//--------------------------------
+global proc openWizHelp()
+{
+	wizHelpWindow();
+	string $layoutA = "wizHelpLayout";
+	if(`layout -q -ex $layoutA`){
+		return;	
+	}
+	
+	string $layout = wizHelpContentLayout($layout, "Wiz");
+		
+	wizHelp($layout);
+}
+
+global proc wizHelp(string $parent)
+{
+
+	setParent $parent;	
+	
+	string $about = (
+	"Wiz can do many things. Here's some things it can do for you.\n"
+	);
+	
+	wizText($about);
+	separator -style "single";
+	
+	string $h1 = (
+	"Repeat Last Command On Lists Of Objects\n"
+	
+	);
+	wizText($h1);
+	separator -style "single";
+	
+	string $h2 = (
+	"Prepare Objects For Painting In Mudbox And Optimize UV Space\n"	
+	);
+	wizText($h2);
+	button -l "More Info" -c ("openPrepForPaintingHelp");
+	
+	separator -style "single";
+	
+	/*
+	string $uniteByMenuItems[] = { "all", "shader", "allGroups", "topDownGroup", "topDownGroupShader"}; 
+	wizOptionMenuGrpMenuItems("Unite By:", "", $uniteByMenuItems);	
+	string $uniteByAnn = (" - All: All selected objects will be united into one object." + "\n"
+	+ " - Shader: Objects will be united together based on shared materials." + "\n"
+	+ " - All Groups: Starting with lowest in heirarchy. Objects that share the same parent will be united." + "\n"
+	+ " - Top Down Group: Starting with highest in heirarchy. Objects that share the same parent will be united." + "\n"
+	+ " - Top Down Group Shader: Starting with highest in heirarchy. Objects that share the same parent will be united."
+	+ " Then objects that share the same materials will be united."
+	);			
+	wizText($uniteByAnn);
+	*/
+	
+	separator -style "single";
+	
+	starfieldWizHelp();
+	
+	separator -style "single";
+	
+	setParent..;
+}
+
+global proc openWizNotes()
+{
+	launch -web "https://docs.google.com/document/d/12Xa6aY1XymUgiY0Et6KUuZSq3fhGubeR_wvjEqeItNI/pub";
+}
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//				WORKFLOW
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+
+global proc wizClippingPlanesMenu()
+{
+	menuItem -sm true -l "Clipping Planes";		
+		menuItem -l "Micro (0.001 - 100)" -c ("wizClipPlanesSize(0);");
+		menuItem -l "Small (0.01 - 1,000)" -c ("wizClipPlanesSize(1);");
+		menuItem -l "Medium (0.1 - 100,000)" -c ("wizClipPlanesSize(2);");
+		menuItem -l "Large (1 - 100,000)" -c ("wizClipPlanesSize(3);");
+		menuItem -l "City (10 - 10,000,000)" -c ("wizClipPlanesSize(4);");
+		menuItem -l "Planet (100 - 100,000,000,000)" -c ("wizClipPlanesSize(5);");
+		menuItem -l "Huge Range (0.1 - 100,000,000)" -c ("wizClipPlanesSize(6);");
+	setParent -menu ..;
+}
+
+global proc modelPanelVisibleObjectSetsMenu()
+{
+	menuItem -sm true -l "Model Panel Sets" -to true;		
+		menuItem -l "All" -c ("setModelPanelVisibleObjectsSets(0);");
+		menuItem -l "Renderable Objects" -c ("setModelPanelVisibleObjectsSets(1);");
+		menuItem -l "Animation" -c ("setModelPanelVisibleObjectsSets(2);");
+		menuItem -l "Lighting" -c ("setModelPanelVisibleObjectsSets(3);");
+		menuItem -l "Camera Animation" -c ("setModelPanelVisibleObjectsSets(4);");
+		menuItem -sm true -l "Hair" -to true;
+			menuItem -l "Solo Follicles" -c ("setModelPanelVisibleObjectsSetsByName(\"soloFollicles\");");
+			menuItem -l "Solo Curves" -c ("setModelPanelVisibleObjectsSetsByName(\"soloCurves\");");
+			menuItem -l "Solo Strokes" -c ("setModelPanelVisibleObjectsSetsByName(\"soloStrokes\");");
+			menuItem -l "Solo Hair Objects" -c ("setModelPanelVisibleObjectsSetsByName(\"soloHairObjects\");");
+		setParent -menu ..;
+		menuItem -l "Toggle nParticles:instances" -c ("setModelPanelVisibleObjectsSets(5);");
+		menuItem -l "All Off" -c ("setModelPanelVisibleObjectsSets(6);");
+			
+		
+		
+	setParent -menu ..;
+		
+}
+
+//SET MODEL PANEL VISIBLE OBJECTS SETS
+//===========================================================
+global proc setModelPanelVisibleObjectsSets( int $set )
+{
+	string $mp[] = `getPanel -type modelPanel`;
+	string $flags;
+	switch($set){
+		//All
+		case 0 :
+		wizSetAllModelEditorObjects(1);			
+		return;
+		
+		//Renderable Objects
+		case 1 : 
+		wizSetAllModelEditorObjects(0);
+		$flags = " -pm true -ns true -sds true -fl true -str true -npa true ";
+		break;
+		
+		//Animation
+		case 2 : 
+		wizSetAllModelEditorObjects(1);
+		$flags = " -hs false -fo false -dy false -fl false ";
+		break;
+		
+		//Lighting
+		case 3 : 
+		wizSetAllModelEditorObjects(0);
+		$flags = "-lt true -pm true -ns true -sds true -fl true -str true -npa true ";
+		break;
+		
+		//Camera Animation
+		case 4 : 
+		wizSetAllModelEditorObjects(0);
+		$flags = "-ca true -pm true -ns true -sds true -fl true -str true -npa true ";
+		break;
+		
+		case 5 :
+		int $nPVis = `modelEditor -q -nParticles $mp[0]`;
+		if ($nPVis){
+			$flags = "-particleInstancers false -nParticles true ";			
+		} else {
+			$flags = "-particleInstancers true -nParticles false ";
+
+		}
+		
+		break;
+		
+		//Off
+		case 6 : 
+		wizSetAllModelEditorObjects(0);
+		return;
+	}
+
+	for($i=0;$i<`size $mp`;$i++){
+		//modelEditor -e -alo false $mp[$i];
+		string $eval = "modelEditor -e " + $flags + $mp[$i] + ";";		
+		eval($eval);
+	    
+	}
+
+}
+
+//SET MODEL PANEL VISIBLE OBJECTS SETS BY NAME
+//===========================================================
+global proc setModelPanelVisibleObjectsSetsByName( string $set )
+{
+	string $flags;
+	switch($set){
+		//FOLLICLES
+		case "soloFollicles" :
+		wizSetAllModelEditorObjects(0);
+		$flags = " -fo true ";		
+		break;
+		
+		//CURVES
+		case "soloCurves" : 
+		wizSetAllModelEditorObjects(0);
+		$flags = " -nc true ";
+		break;
+		
+		//STROKES
+		case "soloStrokes" : 
+		wizSetAllModelEditorObjects(0);
+		$flags = " -str true ";
+		break;
+		
+		//HAIR OBJECTS
+		case "soloHairObjects" : 
+		wizSetAllModelEditorObjects(0);
+		$flags = "-fo true -hs true -nc true -str true ";
+		break;
+		
+		
+	}
+	
+	string $mp[] = `getPanel -type modelPanel`;
+	for($i=0;$i<`size $mp`;$i++){
+		//modelEditor -e -alo false $mp[$i];
+		string $eval = "modelEditor -e " + $flags + $mp[$i] + ";";		
+		eval($eval);
+	    
+	}
+
+}
+
+global proc wizSetAllModelEditorObjects( int $state )
+{
+	string $mp[] = `getPanel -type modelPanel`;
+	for($i=0;$i<`size $mp`;$i++){
+		modelEditor -e -alo $state $mp[$i];	
+	}
+	
+}
+
+global proc wizSelectionViewMenu()
+{
+	menuItem -sm true -l "View" -to true;		
+		menuItem -l "Move Selected Into View [Control + f] " -c ("moveSelectedIntoView(`ls -sl`);");
+		menuItem -l "Deselect [Control + \\]" -c ("wizDeselect();");
+		menuItem -l "Toggle Isolate [Control + /]" -c ("toggleWizIsolateView();");
+		menuItem -l "Component Mode [Option + \\]" -c ("selectMode -co;");
+		
+	setParent -menu ..;	
+}
+
+global proc wizDuplicationMenu()
+{
+	menuItem -sm true -l "Duplicate" -to true;		
+		menuItem -l "Duplicate Into World [Control + Option + d]" -c ("duplicate -rr -renameChildren; parent -w `ls -sl`;");
+	setParent -menu ..;
+}
+
+global proc wizDeselect()
+{
+	global string $gSelect;
+	setToolTo $gSelect;
+	selectMode -co;
+	selectMode -object;
+	select -cl;	
+	
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         WIZ SMART FUNCTIONS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+global proc runWizScriptJobs()
+{
+	//scriptJob 
+	wizlog ("[@] runWizScriptJobs");
+	//scriptJob -e "PostSceneRead" "wizPostSceneReadActions";
+	
+}
+
+//@ WIZ SMART ADD
+//=================================================
+global proc wizSmartAdd()
+{
+	string $sel[] = `ls -sl`;
+	string $last = $sel[(`size $sel` - 1)];
+	
+	//stringArrayRemoveAtIndex(0, $sel);
+	string $opSel[];
+	for ($i=0;$i<(`size $sel` - 1);$i++){
+		$opSel[`size $opSel`] = $sel[$i];	
+	}
+	
+	print ("Last Selection : " + $last + "\n");
+	print ("Selection : " + stringArrayToString($opSel, ", ") + "\n");	
+	
+	string $nodeType = `nodeType $last`;		
+	
+	switch ($nodeType){
+		case "objectSet" :
+		sets -e -fe $last $opSel;
+		break;
+		
+		
+		
+	}	
+}
+
+//@ WIZ SMART SUBTRACT
+//=================================================
+global proc wizSmartSubtract()
+{
+	string $sel[] = `ls -sl`;
+	string $last = $sel[(`size $sel` - 1)];
+	
+	//stringArrayRemoveAtIndex(0, $sel);
+	string $opSel[];
+	for ($i=0;$i<(`size $sel` - 1);$i++){
+		$opSel[`size $opSel`] = $sel[$i];	
+	}
+	
+	print ("Last Selection : " + $last + "\n");
+	print ("Selection : " + stringArrayToString($opSel, ", ") + "\n");	
+	
+	string $nodeType = `nodeType $last`;
+	
+	switch ($nodeType){
+		case "objectSet" :		
+		sets -rm $last $opSel;
+		break;
+		
+		
+		
+	}
+}
+
+//@ WIZ COMBO DELETE
+//=================================================
+global proc wizComboDelete( string $sel[] )
+{
+	string $first = $sel[0];	
+	
+		//stringArrayRemoveAtIndex(0, $sel);
+	string $opSel[];
+	for ($i=1;$i<`size $sel`;$i++){
+		$opSel[`size $opSel`] = $sel[$i];	
+	}
+	
+	print ("First Selection : " + $first + "\n");
+	print ("Selection : " + stringArrayToString($opSel, ", ") + "\n");	
+	
+	string $nodeType = `nodeType $first`;		
+	
+	switch ($nodeType){
+		case "mesh" :		
+		string $compType = getComponentSelectionType($sel[0]);
+		if ($compType != ""){
+			deleteSelectedEdgesAndVertices($sel);
+		}
+		break;
+		
+		
+		
+	}
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         WIZ TAGS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//@ ADD WIZ TAG
+//====================================================================
+global proc addWizTag( string $tags )
+{
+	string $sel[] = `ls -sl`;
+	string $addTags[];
+	
+	string $tok[] = tokenizeString($tags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-polyReduce" :
+			$addTags[`size $addTags`] = "polyReduce";
+			break;
+			
+            case "-lowResCopy" :
+			$addTags[`size $addTags`] = "lowResCopy";
+			break;
+		}
+	}
+	for ($i=0;$i<`size $sel`;$i++){
+		addWizTagsToObject($sel[$i], $addTags);
+	}
+}
+
+//@ ADD WIZ TAGS TO OBJECT
+//====================================================================
+global proc addWizTagsToObject( string $obj, string $tags[] )
+{
+	if (`attributeExists "wizTags" $obj` == 0){
+		addAttr -ln "wizTags" -dt "string" $obj;
+	}
+	
+	string $tagString = `getAttr ($obj + ".wizTags")`;
+	string $tok[] = tokenizeString($tagString, " ");
+	$tags = stringArrayCatenate($tags, $tok);
+	$tags = stringArrayRemoveDuplicates($tags);
+	string $newTagString = stringArrayToString($tags, " ");
+	setAttr ($obj + ".wizTags") -type "string" $newTagString;
+	
+	
+}
+
+//@ GET OBJECTS WITH WIZ TAGS
+//====================================================================
+global proc string[] getObjectsWithWizTags( string $tags )
+{
+    string $sel[] = `ls -sl`;
+	string $addTags[];
+	
+    string $return[];
+    
+	string $tok[] = tokenizeString($tags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+            case "-sel" :
+            $sel = `ls -sl`;
+            break ;
+            
+            case "-all" :
+            $sel = `ls`;
+            break ;
+			
+		}
+	}
+    for ($i=0;$i<`size $tok`;$i++){
+        switch ($tok[$i]){
+              
+			case "-polyReduce" :
+			string $withtag[] = wizGetObjectsWithTag($sel, "polyReduce");
+            appendStringArray($return, $withtag, `size $withtag`);
+			break ;
+            
+            case "-lowResCopy" :
+			string $withtagB[] = wizGetObjectsWithTag($sel, "lowResCopy");
+            appendStringArray($return, $withtagB, `size $withtagB`);
+			break ;
+			
+		}
+    }
+
+    
+	return $return;
+}
+
+//@ WIZ GET OBJECTS WITH TAG
+//====================================================================
+global proc string[] wizGetObjectsWithTag( string $sel[], string $tag )
+{
+    string $return[];   
+    for ($i=0;$i<`size $sel`;$i++){
+        if (`attributeExists "wizTags" $sel[$i]`){
+            string $tagString = `getAttr ($sel[$i] + ".wizTags")`;
+            string $tok[] = tokenizeString($tagString, " ");
+            if (stringArrayContains($tag, $tok)){
+                $return[`size $return`] = $sel[$i];
+            }
+        }
+    }
+    $return = stringArrayRemoveDuplicates($return);
+    return $return;
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         FEEDBACK
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//FEEDBACK
+//=================================================================
+//TOGGLES
+//===================================
+//ALL FEEDBACK
+//------------------------
+global proc toggleAllFeedback()
+{
+	int $all = `menuItem -q -cb toggleAllFeedback`;	
+	
+	menuItem -edit -cb $all toggleAllDebugMenuItem;
+	menuItem -edit -cb $all confirmStepToggle;
+	menuItem -edit -cb $all detailConfirmStepToggle;
+	menuItem -edit -cb $all detailedMessagesToggle;
+	menuItem -edit -cb $all toggleRefreshStep;
+	menuItem -edit -cb $all togglePauseStep;
+	menuItem -edit -cb $all toggleAutoFocus;
+	
+	toggleAllDebug();
+	toggleConfirmStep();
+	toggleDetailConfirmStep();
+	toggleRefreshStep();
+	togglePauseStep();
+	toggleAutoFocus();
+
+}
+
+//TOGGLE WIZ LOG
+//------------------------
+global proc toggleWizLog()
+{
+	global int $WIZ_wizLogging;
+
+	$WIZ_wizLogging = `menuItem -q -cb toggleWizLoggingMenuItem`;
+	if ($WIZ_wizLogging){
+		print("Wiz Logging is ON" + "\n");	
+	} else {
+		print("Wiz Logging is OFF" + "\n"); 
+	}
+	putOptionVarInt("WIZ_wizLogging",$WIZ_wizLogging);
+}
+
+//ALL DEBUG
+//------------------------
+global proc toggleAllDebug()
+{
+	int $all = `menuItem -q -cb toggleAllDebugMenuItem`;	
+	
+	menuItem -edit -cb $all toggleDebugTSL;
+	menuItem -edit -cb $all toggleDebugFunctionsMenuItem;
+	menuItem -edit -cb $all togglePrintProc;
+	menuItem -edit -cb $all detailedMessagesToggle;
+	menuItem -edit -cb $all extraDetailedMessagesToggle;
+	menuItem -edit -cb $all debugMessagesLevelToggleAll;
+	menuItem -edit -cb $all toggleDebugHud;
+	
+	toggleDebugFunctions();
+	togglePrintProc();
+	toggleDetailedMessages();
+	toggleExtraDetailedMessages();
+	toggleAllDebugMessages();
+	toggleDebugTSL();
+	toggleDebugHud();
+	
+	putOptionVarInt("WIZ_debugAll",$all);
+}
+
+//CONFIRM STEP
+//------------------------
+global proc toggleConfirmStep()
+{
+	global int $WIZ_confirmStep;
+	$WIZ_confirmStep = `menuItem -q -cb confirmStepToggle`;
+	if($WIZ_confirmStep){
+		print("Confirm Step is ON" + "\n");	
+	} else {
+		print("Confirm Step is OFF" + "\n"); 
+	}
+	putOptionVarInt("WIZ_confirmStep",$WIZ_confirmStep);
+}
+
+global proc toggleDetailConfirmStep()
+{
+	global int $WIZ_detailConfirmStep;
+	$WIZ_detailConfirmStep = `menuItem -q -cb detailConfirmStepToggle`;
+	if($WIZ_detailConfirmStep){
+		print("Detail Confirm Step is ON" + "\n");
+	} else {
+		print("Detail Confirm Step is OFF" + "\n"); 
+	}
+	putOptionVarInt("WIZ_detailConfirmStep",$WIZ_detailConfirmStep);
+}
+
+//DETAILED MESSAGES
+//------------------------
+global proc toggleDetailedMessages()
+{
+	global int $WIZ_dm;
+	$WIZ_dm = `menuItem -q -cb detailedMessagesToggle`;
+	if($WIZ_dm){
+		print("Detailed Messages are ON" + "\n");
+	} else {
+		print("Detailed Messages are OFF" + "\n"); 
+	}
+	putOptionVarInt("WIZ_dm",$WIZ_dm);
+}
+
+global proc toggleExtraDetailedMessages()
+{
+	global int $WIZ_edm;
+	$WIZ_edm = `menuItem -q -cb extraDetailedMessagesToggle`;
+	if($WIZ_edm){
+		print("Extra Detailed Messages are ON" + "\n");
+	} else {
+		print("Extra Detailed Messages are OFF" + "\n"); 
+	}
+	putOptionVarInt("WIZ_edm",$WIZ_edm);
+}
+
+//PRINT PROC
+//------------------------
+global proc togglePrintProc()
+{
+	global int $WIZ_printProc;
+	$WIZ_printProc = `menuItem -q -cb togglePrintProc`;
+	if($WIZ_printProc){
+		print("Print Proc is ON" + "\n");
+	} else {
+		print("Print Proc is OFF" + "\n"); 
+	}
+	putOptionVarInt("WIZ_printProc",$WIZ_printProc);
+}
+
+//TIME PROC
+//------------------------
+global proc toggleTimeProc()
+{
+	global int $WIZ_timeProc;
+	$WIZ_timeProc = `menuItem -q -cb toggleTimeProc`;
+	if($WIZ_timeProc){
+		print("Time Proc is ON" + "\n");
+	} else {
+		print("Time Proc is OFF" + "\n"); 
+	}
+	putOptionVarInt("WIZ_timeProc",$WIZ_timeProc);
+}
+
+//DEBUG MESSAGES
+//------------------------
+global proc toggleAllDebugMessages()
+{
+	int $all = `menuItem -q -cb debugMessagesLevelToggleAll`;
+	menuItem -edit -cb $all debugMessagesLevel1Toggle;
+	menuItem -edit -cb $all debugMessagesLevel2Toggle;
+	menuItem -edit -cb $all debugMessagesLevel3Toggle;
+	menuItem -edit -cb $all debugMessagesLevel4Toggle;
+	menuItem -edit -cb $all debugMessagesLevel5Toggle;
+	
+	toggleDebugMessagesLevel1();
+	toggleDebugMessagesLevel2();
+	toggleDebugMessagesLevel3();
+	toggleDebugMessagesLevel4();
+	toggleDebugMessagesLevel5();
+
+}
+
+global proc toggleDebugMessagesLevel1()
+{
+	global int $WIZ_dml1;
+	$WIZ_dml1 = `menuItem -q -cb debugMessagesLevel1Toggle`;
+	if($WIZ_dml1){
+		print("Debug Messages Level 1 - ON" + "\n");
+	} else {
+		print("Debug Messages Level 1 - OFF" + "\n"); 
+	}
+	putOptionVarInt("WIZ_dml1",$WIZ_dml1);
+}
+
+global proc toggleDebugMessagesLevel2()
+{
+	global int $WIZ_dml2;
+	$WIZ_dml2 = `menuItem -q -cb debugMessagesLevel2Toggle`;
+	if($WIZ_dml2){
+		print("Debug Messages Level 2 - ON" + "\n");
+	} else {
+		print("Debug Messages Level 2 - OFF" + "\n"); 
+	}
+	putOptionVarInt("WIZ_dml2",$WIZ_dml2);
+}
+
+global proc toggleDebugMessagesLevel3()
+{
+	global int $WIZ_dml3;
+	$WIZ_dml3 = `menuItem -q -cb debugMessagesLevel3Toggle`;
+	if($WIZ_dml3){
+		print("Debug Messages Level 3 - ON" + "\n");
+	} else {
+		print("Debug Messages Level 3 - OFF" + "\n"); 
+	}
+	putOptionVarInt("WIZ_dml3",$WIZ_dml3);
+}
+
+global proc toggleDebugMessagesLevel4()
+{
+	global int $WIZ_dml4;
+	$WIZ_dml4 = `menuItem -q -cb debugMessagesLevel4Toggle`;
+	if($WIZ_dml4){
+		print("Debug Messages Level 4 - ON" + "\n");
+	} else {
+		print("Debug Messages Level 4 - OFF" + "\n"); 
+	}
+	putOptionVarInt("WIZ_dml4",$WIZ_dml4);
+}
+
+global proc toggleDebugMessagesLevel5()
+{
+	global int $WIZ_dml5;
+	$WIZ_dml5 = `menuItem -q -cb debugMessagesLevel5Toggle`;
+	if($WIZ_dml5){
+		print("Debug Messages Level 5 - ON" + "\n");
+	} else {
+		print("Debug Messages Level 5 - OFF" + "\n"); 
+	}
+	putOptionVarInt("WIZ_dml5",$WIZ_dml5);
+}
+
+//REFRESH STEP
+//------------------------
+global proc toggleRefreshStep()
+{
+	global int $WIZ_refreshStep;
+	$WIZ_refreshStep = `menuItem -q -cb toggleRefreshStep`;
+	if($WIZ_refreshStep){
+		print("Refresh Step - ON" + "\n");
+	} else {
+		print("Refresh Step - OFF" + "\n"); 
+	}	
+	putOptionVarInt("WIZ_refreshStep",$WIZ_refreshStep);
+}
+
+//PAUSE STEP
+//------------------------
+global proc togglePauseStep()
+{
+	global int $WIZ_pauseStep;
+	$WIZ_pauseStep = `menuItem -q -cb togglePauseStep`;
+	if($WIZ_pauseStep){
+		print("Pause Step - ON" + "\n");
+	} else {
+		print("Pause Step - OFF" + "\n"); 
+	}	
+	putOptionVarInt("WIZ_pauseStep",$WIZ_pauseStep);
+}
+
+//AUTO FOCUS
+//------------------------
+global proc toggleAutoFocus()
+{
+	global int $WIZ_autoFocus;
+	$WIZ_autoFocus = `menuItem -q -cb toggleAutoFocus`;
+	if($WIZ_autoFocus){
+		print("Auto Focus - ON" + "\n");
+	} else {
+		print("Auto Focus - OFF" + "\n"); 
+	}	
+	putOptionVarInt("WIZ_autoFocus",$WIZ_autoFocus);
+}
+
+//DEBUG LIST
+//------------------------
+global proc toggleDebugTSL()
+{
+	global int $WIZ_debugList;
+	$WIZ_debugList = `menuItem -q -cb toggleDebugTSL`;
+	if($WIZ_debugList){
+		print("Debug Text Scroll Lists - ON" + "\n");
+	} else {
+		print("Debug Text Scroll Lists - OFF" + "\n"); 
+	}	
+	putOptionVarInt("WIZ_debugList",$WIZ_debugList);
+}
+
+//DEBUG HUD
+//------------------------
+global proc toggleDebugHud()
+{
+	global int $WIZ_debugHud;
+	$WIZ_debugHud = `menuItem -q -cb toggleDebugHud`;
+	if($WIZ_debugHud){
+		print("Debug Hud - ON" + "\n");
+	} else {
+		print("Debug Hud - OFF" + "\n"); 
+		removeDebugHud();
+	}	
+	putOptionVarInt("WIZ_debugHud",$WIZ_debugHud);
+}
+
+//DEBUG FUNCTIONS
+//------------------------
+global proc toggleDebugFunctions()
+{
+	global int $WIZ_debugFunctions;
+	$WIZ_debugFunctions = `menuItem -q -cb toggleDebugFunctionsMenuItem`;
+	if($WIZ_debugFunctions){
+		print("Debug Functions - ON" + "\n");
+		turnAllDebugFunctionsOn();
+	} else {
+		print("Debug Functions - OFF" + "\n");
+		turnAllDebugFunctionsOff();
+	}	
+	putOptionVarInt("WIZ_debugFunctions",$WIZ_debugFunctions);
+}
+
+//AUTO FOCUS
+//=========================================
+global proc autoFocus(float $fit)
+{
+	global int $WIZ_autoFocus;
+	$WIZ_autoFocus = `menuItem -q -cb toggleAutoFocus`;
+	if($WIZ_autoFocus == 0){return;}	
+	viewFit -an true -f $fit;
+	refresh;
+	//refreshAE;
+	}
+	
+	global proc autoFocusOnSelected(string $sel[], float $fit)
+	{
+	selectAllObjectsInArray($sel);
+	global int $WIZ_autoFocus;
+	$WIZ_autoFocus = `menuItem -q -cb toggleAutoFocus`;
+	if($WIZ_autoFocus == 0){return;}	
+	viewFit -an true -f $fit;
+	refresh;
+	//refreshAE;
+}
+
+//CONFIRM STEP
+//============================================
+global proc pauseStep()
+{
+	global int $WIZ_pauseStep;
+	$WIZ_pauseStep = `menuItem -q -cb togglePauseStep`;
+	if($WIZ_pauseStep == 0){
+		return;
+	}	
+	refresh;
+	refreshAE;
+	string $confirm =`confirmDialog 
+		-t "Pause Step"
+		//-m $message
+		//-ma "center"	
+		-b "OK" 
+		//-b "Stop" 
+		-db "OK"
+		//-cb "Stop"
+		-p "wiz"
+		`;
+	/*	
+	if($confirm=="Yes"){
+		return 1;
+	}
+	*/
+}
+
+//REFRESH STEP
+//====================================
+global proc refreshStep()
+{
+	global int $WIZ_refreshStep;
+	if($WIZ_refreshStep == 0){
+		return;
+	}
+	refresh;
+	refreshAE;
+	float $pause = `floatSliderGrp -q -v refreshStepPauseFloatSliderGrp`;
+	if($pause > 0){
+		int $p = int(ceil($pause));
+		pause -sec $p;
+	}
+}
+
+global proc refreshStepPause(int $pause)
+{
+	global int $WIZ_refreshStep;
+	if($WIZ_refreshStep == 0){
+		return;
+	}
+	refresh;
+	refreshAE;
+
+	pause -sec $pause;
+
+}
+
+//@ CONFIRM STEP
+//====================================================================
+/*****************************************************************//**
+	Confirm step just brings up a dialog so you can choose to continue process or quit.
+	<hr>
+	<b>Synopsis</b><br>
+	confirmStep [string] <br>
+	Include a message.
+	
+	<b>Return value</b><br>
+	bool true if we should continue false if we should stop
+	
+	<b>Flags</b><br>
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	if (`confirmStep("someMessage")` == 0){ return; }
+	
+	</code>
+*********************************************************************/
+global proc int confirmStep(string $message)
+{
+	global int $WIZ_confirmStep;
+	$WIZ_confirmStep = `menuItem -q -cb confirmStepToggle`;
+	if ($WIZ_confirmStep == 0){
+		return 1;
+	}
+	refreshStep();
+	string $confirm =`confirmDialog 
+		-t "Confirm Step"
+		-m $message
+		-ma "center"	
+		-b "OK" 
+		-b "Stop" 
+		-db "OK"
+		-cb "Stop"
+		//-p "wiz"
+		`;
+		
+	if ($confirm=="OK"){
+		return 1;
+	} else if($confirm=="Stop"){
+		return 0;
+	} 	
+}
+
+global proc int detailConfirmStep(string $message)
+{
+	global int $WIZ_detailConfirmStep;
+	$WIZ_detailConfirmStep = `menuItem -q -cb detailConfirmStepToggle`;
+	if($WIZ_detailConfirmStep == 0){
+		return 1;
+	}
+	refreshStep();
+	
+	string $title = "Detail Confirm Step";
+	if(startsWith($message,"-t")){
+		//This doesn't work right yet...
+		string $tokT[];
+		string $tokM[];
+		int $numTokT = `tokenize $message "-t" $tokT`;
+		int $numTokM = `tokenize $message "-m" $tokM`;
+		$title = strip($tokT[0]);
+		$message = strip($tokM[1]);
+	}
+	
+	string $confirm =`confirmDialog 
+		-t $title
+		-m $message
+		-ma "left"	
+		-b "OK" 
+		-b "Stop" 
+		-db "OK"
+		-cb "Stop"
+		-p "wiz"
+		`;
+		
+	if($confirm=="OK"){
+		return 1;
+	} else if($confirm=="Stop"){
+		return 0;
+	} 	
+}
+
+//TURN OFF ALL DEBUGGING (WITH WARNING)
+//===========================================
+global proc int turnOffAllDebuggingConfirm(string $message, string $db, string $cb)
+{
+	/*	
+	string $t, $m, $db, $cb, $p, $ma;	
+	string $tok[] = tokenizeString($arg, " ");
+	for($i=0;$i<`size $tok`;$i++){
+		switch($tok[$i]){
+			case "-t" : case "-title" :
+			$t = $tok[$i + 1];
+			continue;		
+			case "-m" : case "-message" :
+			$m = $tok[$i + 1];		
+			continue;		
+			case "-db" : case "-defaultButton" :
+			$db = $tok[$i + 1];
+			continue;
+			case "-cb" : case "-cancelButton" :
+			$cb = $tok[$i + 1];
+			continue;
+			case "-p" : case "-parent" :
+			$p = $tok[$i + 1];
+			continue;
+			case "-ma" : case "-messageAlign" :
+			$ma = $tok[$i + 1];
+			continue;
+		}
+	}
+	*/
+	refreshStep();
+	
+	string $title = "Turning Off All Debugging";
+	string $confirm =`confirmDialog 
+		-t $title
+		-m $message
+		-ma "center"	
+		-b $db 
+		-b $cb 
+		-db $db
+		-cb $cb
+		-p "wiz"
+		`;
+		
+	if($confirm==$db){
+		menuItem -e -cb false toggleAllFeedback;
+		toggleAllFeedback();
+		return 1;
+	} else if($confirm==$cb){
+		return 0;
+	} 	
+}
+
+//PRINT OUTPUT
+//==================================
+global proc debugML1(string $message)
+{
+	global string $WIZ_printHeader;
+	global int $WIZ_dml1;
+	if($WIZ_dml1){
+		print($WIZ_printHeader + $message);
+	}
+}
+
+global proc debugML2(string $message)
+{
+	global string $WIZ_printHeader;
+	global int $WIZ_dml2;
+	if($WIZ_dml2){
+		print($WIZ_printHeader + $message);
+	}
+}
+
+global proc debugML3(string $message)
+{
+	global string $WIZ_printHeader;
+	global int $WIZ_dml3;
+	if($WIZ_dml3){
+		print($WIZ_printHeader + $message);
+	}
+}
+
+global proc debugML4(string $message)
+{
+	global string $WIZ_printHeader;
+	global int $WIZ_dml4;
+	if($WIZ_dml4){
+		print($WIZ_printHeader + $message);
+	}
+}
+
+global proc debugML5(string $message)
+{
+	global string $WIZ_printHeader;
+	global int $WIZ_dml5;
+	if($WIZ_dml5){
+		print($WIZ_printHeader + $message);
+	}
+}
+
+//PRINT PROC
+//-------------------------
+global proc printProc(string $name)
+{
+	global float $WIZ_procTime;
+	float $startTime;
+	float $totalTime = `timerX -startTime $startTime`;
+	float $displayTime = $totalTime;
+	if($totalTime > 0){
+		if($WIZ_procTime > 0){
+			float $elapsedTime = $totalTime - $WIZ_procTime;
+			$WIZ_procTime = $totalTime;
+			$displayTime = $elapsedTime;
+		}
+	}
+	global int $WIZ_printProc;
+	global string $WIZ_printProcHead;
+	global int $WIZ_debugList;
+	if($WIZ_printProc == 0){ return;}
+	//string $ppHead = createPrintProcLine($name, "Head");
+	
+	//if($WIZ_debugList == 1 && `frameLayout -ex debugWiz_frameLayout` == 1){
+		string $debugList = createDebugListProcLine($name);
+		$debugList = $debugList + " : " + $displayTime;
+		debugList("Proc", {$debugList}, 1, "add");
+	//} else {
+	//	print($ppHead);
+		//trace -where ($WIZ_printHeader + $title + "\n" + $WIZ_printHeader + $div + "\n");	
+	//}
+	
+	$startTime = `timerX`;
+}
+
+//TIME PROC
+//-------------------------
+global proc timeProc(string $name)
+{
+	
+	global float $WIZ_procTime;
+	float $startTime;
+	float $totalTime = `timerX -startTime $startTime`;
+	float $displayTime = $totalTime;
+	if($totalTime > 0){
+		if($WIZ_procTime > 0){
+			float $elapsedTime = $totalTime - $WIZ_procTime;
+			$WIZ_procTime = $totalTime;
+			$displayTime = $elapsedTime;
+		}
+	}
+	global int $WIZ_timeProc;
+	global string $WIZ_printProcHead;
+	global int $WIZ_debugList;
+	if($WIZ_timeProc == 0){ return;}
+
+	string $debugList = createDebugListProcLine($name);
+	$debugList = $debugList + " : " + $displayTime;
+	debugList("Proc Time", {$debugList}, 1, "add");
+	
+	$startTime = `timerX`;
+		
+	
+}
+
+//PRINT RETURN
+//-------------------------
+global proc printReturn(string $name, string $return)
+{
+	global string $WIZ_printHeader;
+	global int $WIZ_printProc;
+	if($WIZ_printProc == 0){ return;}
+	//global int $WIZ_printReturn;
+	//if($WIZ_printReturn == 0){ return;}
+	
+	string $ppEnd = createPrintProcLine($name, "End");
+	
+	print($WIZ_printHeader+ " RETURN| " + $return + "\n");
+	print($ppEnd);
+
+}
+
+//DEBUG LIST LINE
+//-------------------------
+global proc string createDebugListProcLine(string $name)
+{
+	global string $WIZ_printHeader;
+	string $whatIs;
+	if(catchQuiet(whatIs($name)) == 0){
+		$whatIs = whatIs($name);
+		$whatIs = basename($whatIs, ".mel");
+	}
+	string $headTitle = " : " + $name;
+	string $debugListLine = $whatIs + $headTitle;
+	return $debugListLine;
+
+}
+
+//PRINT PROC LINE
+//-------------------------
+global proc string createPrintProcLine(string $name, string $type)
+{
+	global string $WIZ_printHeader;
+	string $whatIs;
+	if(catchQuiet(whatIs($name)) == 0){
+		$whatIs = whatIs($name);
+		$whatIs = basename($whatIs, ".mel");
+	}
+	string $source = interToUI($whatIs);
+	$source = toupper($source);
+	string $headTitle = interToUI("- " + $name + " -");
+	$headTitle = toupper($headTitle);
+	string $endTitle = toupper($name);
+	
+	int $allTitle = (`size $source` + `size $headTitle`);
+	string $ppLine;
+	if($type == "Head"){
+		string $div = repeatString("-",($allTitle * 2));
+		string $space = repeatString(" ",($allTitle / 2));
+		$ppLine = $WIZ_printHeader + $source + $space + $headTitle + $space;
+		$ppLine = $ppLine + "\n" + $WIZ_printHeader + $div + "\n";
+	} else if($type == "End"){
+		string $endDiv = repeatString("=",($allTitle / 2));
+		//$ppLine = $WIZ_printHeader + $endDiv + "\n";
+		//$ppLine = $ppLine + $WIZ_printHeader + "END" + $space+  $title + $space + "\n";
+		$ppLine = $WIZ_printHeader + "END" + $endDiv + $endTitle + $endDiv + "\n";
+	}
+	return $ppLine;
+
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         WIZ MGMT
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//@ WIZ MGMT
+//====================================================================
+/*****************************************************************//**
+	wizMGMT can be used to create callbacks.
+	<hr>
+	<b>Synopsis</b><br>
+	wizMGMT [-q bool] [-qc string] [-c string] [-ex string] [-exall string] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] based on query flag
+	
+	<b>Flags</b><br>
+	-q, -qc, -c, -ex, -exall
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	wizMGMT("-qc nameOfCommandGroup -c print(\"You Did It!\"));
+	
+	</code>
+*********************************************************************/
+global proc string[] wizMGMT( string $flags , string $command )
+{
+	wizLog("[@] wizMGMT");
+	
+	global string $WIZ_mgmt[];
+	string $tok[] = tokenizeString($flags, " ");
+	string $evalCom;
+	string $return[];
+	string $qname;
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-q" : 			
+			$qname = $tok[($i + 1)];
+			wizLog("	[-] query : " + $qname);
+			break;
+			
+			case "-qc" : case "-queueCommand" :
+			$WIZ_mgmt[`size $WIZ_mgmt`] = $tok[($i + 1)];
+			$WIZ_mgmt[`size $WIZ_mgmt`] = $command;
+			wizLog("	[+] queueCommand : Name : " + $tok[($i + 1)] + "\n		[+] Command : " + $command + " [+]");
+			break;
+			
+			case "-c" : case "-command" :
+			$WIZ_mgmt[`size $WIZ_mgmt`] = $tok[($i + 1)];
+			wizLog("	[+] command : " + $tok[($i + 1)] + " [+]");
+			break;			
+					
+			case "-exall" : case "-executeAll" : case "-ex" :
+			int $count = stringArrayCount($tok[($i + 1)], $WIZ_mgmt);
+			int $index = 0;
+			string $remove[];
+			for ($p=0;$p<$count;$p++){
+				$index = stringArrayFind($tok[($i + 1)], $index, $WIZ_mgmt);
+				$remove[`size $remove`] = $WIZ_mgmt[($index + 1)];
+				eval($WIZ_mgmt[($index + 1)]);
+				$index++;
+				$return[`size $return`] = $WIZ_mgmt[($index + 1)];
+			}		
+			wizLog("	[*] Execute All Name : " + $tok[($i + 1)] + " [*]\n" + (niceArrayList(" Commands : ", $return)));			
+			$WIZ_mgmt = stringArrayRemove({$tok[($i + 1)]}, $WIZ_mgmt);
+			$WIZ_mgmt = stringArrayRemove($remove, $WIZ_mgmt);
+			break;
+				
+		}
+	}
+	if (`size $qname` > 0){
+		int $contains = stringArrayContains($qname, $WIZ_mgmt);
+		if ($contains == 1){
+			return {$qname};
+		}
+	}
+	return $return;
+	
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         WIZ LOG
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+global string $WIZ_logKey;
+$WIZ_logKey = (
+"- wizLog Key - \n"
++"============================\n"
++"[-] : A generic message \n"
++"[+] : Something was just added to the scene \n"
++"[!] : A problematic issue occured \n"
++"[#] : Something that should be monitored for accuracy \n"
++"[@] : A function was started \n"
++"[*] : The folling text is a command that was processed \n"
++"[:] : A name should be checked for issues \n"
+);
+	
+//@ WIZ LOG
+//====================================================================
+/*****************************************************************//**
+	This will log any text passed to the $WIZ_currentLogField.
+	<hr>
+	<b>Synopsis</b><br>
+	wizLog [-d] [-st string] <br>
+	To set the scroll field that the log is output to set - <br><b>
+	global string $WIZ_currentLog = "someProcScrollField"; </b><br>
+	Use the -date, -d tag to add the time and date to the log.
+	
+	Don't worry about putting \n at end of line. It's automatically added.
+	
+	<b>WIZ LOG KEY<\b><br>
+	[-] : A generic message <br>
+	[+] : Something was just added to the scene <br>
+	[!] : A problematic issue occured <br>
+	[#] : Something that should be monitored for accuracy <br>
+	[@] : A function was started <br>
+	[*] : The folling text is a command that was processed <br>
+	[:] : A name should be checked for issues <br>
+	
+	<b>Return value</b><br>
+	none.
+	
+	<b>Flags</b><br>
+	-date(-d )<br>
+	-warning(-w) <br>
+	-error(-e) <br>
+	-startTimer(-st) string name of timer <br>
+	-endTimer(-et) string name of timer <br>
+	-lapTime(-lap) <br>
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	wizLog("-d Some Command Was Started : ");
+	
+	</code>
+*********************************************************************/
+global proc wizLog( string $log )
+{
+	global int $WIZ_wizLogging;
+	global string $WIZ_currentDebugList;
+	if ($WIZ_wizLogging == 0){
+		return ;
+	}
+	
+	global string $WIZ_currentLogField;
+	int $print = 1;
+	int $warning = 0;
+	int $error = 0;
+	string $timerName;
+	float $lapTime;
+	if (`startsWith $log "[@]"`){
+		string $tok[] = tokenizeString($log, " ");
+		/*
+		switch ($tok[1]){
+			
+		
+		
+		}
+		*/
+		$WIZ_currentDebugList = ((capitalizeString($tok[1])) + "DebugMenuItem");
+		
+		
+	}
+	
+	if (`startsWith $log "-"`){
+		string $tok[] = tokenizeString($log, " ");
+		for ($i=0;$i<`size $tok`;$i++){
+			switch ($tok[$i]){
+				case "-d" : case "-date" :
+				string $date = ("[*] " + `date -format "MM/DD/YYYY hh:mm"` + " [*]");
+				$log = stringRemovePrefix($log, "-d ");
+				$log = ($date + "\n" + $log);
+				break ;
+			
+				case "-w" : case "-warning" :
+				$print = 0;
+				$warning = 1;
+				$log = stringRemovePrefix($log, $tok[$i]);
+				break ;
+				
+				case "-e" : case "-error" :
+				$print = 0;
+				$error = 1;
+				$log = stringRemovePrefix($log, $tok[$i]);
+				break;
+				
+				case "-st" : case "-startTimer" :
+				$timerName = $tok[($i + 1)];
+				$log = stringRemovePrefix($log, ("-st " + $timerName));				
+				if ((catchQuiet(`timer -s -n $timerName`)) == 1){					
+					$lapTime = `timer -e -n $timerName`;
+					wizLog("[!] Timer : " + $timerName + " Had To Be Stopped. It Was Requested To Be Started Again Before It Was Stopped [!]");
+					$log = $log + ("\n[END TIME] Timer : " + $timerName + " : " + $lapTime + "\n");
+					timer -s -n $timerName;
+				}
+				$log = $log + ("\n[START TIMER] Timer : " + $timerName + "\n");
+				break;
+				
+				case "-et" : case "-endTimer" :
+				$timerName = $tok[($i + 1)];
+				$lapTime = `timer -e -n $timerName`;
+				$log = stringRemovePrefix($log, ("-et " + $timerName));
+				$log = $log + ("\n[END TIME] Timer : " + $timerName + " : " + $lapTime + "\n");
+				break;
+				
+				case "-lap" : case "-lapTime" :
+				$timerName = $tok[($i + 1)];
+				$lapTime = `timer -lap -n $timerName`;
+				$log = stringRemovePrefix($log, ("-lap " + $timerName));
+				$log = $log + ("\n[LAP TIME] Timer : " + $timerName + " : " + $lapTime + "\n");
+				break;
+				
+				// these flags are for filtering out logs based on importance
+				case "-dbl1" :
+				if (`menuItem -q -cb debugMessagesLevel1Toggle`){
+					$log = stringRemovePrefix($log, ("-dbl1 "));
+				} else {
+					return ;
+				}
+				
+				case "-dbl2" :
+				if (`menuItem -q -cb debugMessagesLevel2Toggle`){
+					$log = stringRemovePrefix($log, ("-dbl2 "));
+				} else {
+					return ;
+				}
+				
+				case "-dbl3" :
+				if (`menuItem -q -cb debugMessagesLevel3Toggle`){
+					$log = stringRemovePrefix($log, ("-dbl3 "));
+				} else {
+					return ;
+				}
+				
+				case "-dbl4" :
+				if (`menuItem -q -cb debugMessagesLevel4Toggle`){
+					$log = stringRemovePrefix($log, ("-dbl4 "));
+				} else {
+					return ;
+				}
+				
+				case "-dbl5" :
+				if (`menuItem -q -cb debugMessagesLevel5Toggle`){
+					$log = stringRemovePrefix($log, ("-dbl5 "));
+				} else {
+					return ;
+				}
+				
+				case "-arr" : case "-array" :
+				
+				break ;
+				
+				
+			}
+		}
+		
+	
+	}
+	
+	
+
+	if ($print){
+		print ($log + "\n");
+	}
+	if ($warning){
+		warning ($log + "\n");
+	}
+	if ($error){
+		error ($log + "\n");
+	}
+	if ($WIZ_currentLogField == ""){
+		return ;
+	}
+	
+	if (`scrollField -ex $WIZ_currentLogField` == 0){
+		return ;
+	}
+	
+	
+	
+	scrollField
+		-e
+		-ip 0
+		-it ($log + "\n\n")
+		$WIZ_currentLogField
+		;
+	
+
+}
+
+//** Just an alias for wizLog. */
+global proc wizlog( string $log )
+{
+	wizLog($log);
+}
+
+
+global proc wizPostSceneReadActions()
+{
+	wizlog ("[@] wizPostSceneReadActions");
+	
+	//wizDisableNodesAfterLoaded();	
+	//identifyGetMyNamespaceNodes();
+	
+}
+
+global proc identifyGetMyNamespaceNodes()
+{
+	string $gmns[] = `ls -r true "GetMyNamespace"`;
+	
+
+}
+
+//@ WIZ LAYOUT PREF
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-fa string] [-fb linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-fa, -fb
+	
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName("-fa aString -fb anotherString");
+	
+	</code>
+*********************************************************************/
+/*
+global proc string[] wizLayoutPref( string $flags )
+{
+	int $query;
+	int $load;
+	int $save;
+	string $layout;
+	string $control;
+
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-q" : case "-query" :
+			$query = 1;
+			break
+			
+			case "-s" : case "-save" :
+			$save = 1;
+			break;
+			
+			case "-l" : case "-load" :
+			$load = 1;
+			break
+				
+			case "-lay" : case "-layout" :
+			$layout = $tok[($i + 1)];
+			break;
+
+			case "-ctrl" : case "-control" :
+			$control = $tok[($i + 1)];
+			break;
+			
+		}
+	}
+	
+	if ($layout){
+		
+	}
+	
+	return {""};
+
+}
+*/

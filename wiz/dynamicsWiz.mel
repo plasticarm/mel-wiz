@@ -1,0 +1,153 @@
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//|||||||||||||||||||||||||:::WIZ:::||||||||||||||||||||||||||||||||||
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//                         NAME WIZ
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+/*====================================================================
+Author: Glen Johnson
+Email: plasticarm@gmail.com
+Website: plasticarm.com / hrpictures.com
+----------------------------------------------------------
+Summary:
+
+
+
+====================================================================*/
+
+global proc dynamicsWiz()
+{
+
+}
+
+//========================================================================================================
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//                     LAYOUTS
+///////////////////                  /////////////////////////////////////////////////////////////////////
+
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//========================================================================================================
+//DYNAMICS
+global proc wizDynamicsLayout(string $parent)
+{
+	string $dynamicsColumnLayout = `columnLayout
+		-adjustableColumn true
+		-p $parent
+		Dynamics
+		`;
+		
+	nDynamicsWizMainMenuBarLayout();		
+
+	fluidModule($dynamicsColumnLayout);
+	
+	nParticleModule($dynamicsColumnLayout);
+	
+	hairWizLayout($dynamicsColumnLayout);
+	
+	clothWizLayout($dynamicsColumnLayout);
+	
+	cacheNHairLayout($dynamicsColumnLayout);
+	
+	nDynamicsMGMTLayout($dynamicsColumnLayout);
+	
+	wizBifrostFoamRenderSizeLayout($dynamicsColumnLayout);
+	
+}
+
+global proc nDynamicsMGMTLayout( string $parent )
+{
+	wizFrameLayout("-l nDynamics MGMT -p " + $parent + " -n dynamicsWiz_nDynamicsMGMT_frameLayout");
+	
+	nDynamicsWizMainMenuBarLayout();
+	
+	string $tsl = wizObjectSelectionTextScrollListLayout("-p dynamicsWiz_nDynamicsMGMT_frameLayout -l Nucleus Solvers -n dynamicsWiz_nSolvers_textScrollList");
+	
+}
+
+//========================================================================================================
+//""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//                     MENUS
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+//========================================================================================================
+
+global proc nDynamicsWizMainMenuBarLayout()
+{
+	string $menuBarLayout = `menuBarLayout`;
+	
+	nDynamicsWizMainMenu($menuBarLayout);
+		
+}
+
+global proc nDynamicsWizMainMenu( string $parent )
+{
+	//setParent $parent;
+	menu -l "nDynamics" -to true;	
+		menuItem -l "Get Nucleus Solvers From Objects" -c ("wizGetNSolverFromNObj(\"-sl\");");
+		menuItem -l "Turn On Nucleus Objeccts In Hierarchy" -c ("setEnabledDynamicsInHierarchy(`ls -sl`, 1)");	
+		menuItem -l "Turn Off Nucleus Objects In Hierarchy" -c ("setEnabledDynamicsInHierarchy(`ls -sl`, 0)");	
+		
+
+	menu -l "Cache" -to true;
+		menuItem -l "List All Cache Files" -c ("wizListAllCacheFiles();");
+		
+	setParent -menu ..;
+	
+}
+
+global proc string[] wizListAllCacheFiles()
+{
+	string $return[];
+	string $cache[] = `ls -type cacheFile`;
+	for ($i=0;$i<`size $cache`;$i++){
+		string $cachePath = `getAttr ($cache[$i] + ".cachePath")`;	
+		string $cacheName = `getAttr ($cache[$i] + ".cacheName")`;
+		$return[`size $return`] = $cachePath + "/" + $cacheName;
+		
+	}
+	$return = stringArrayRemoveDuplicates($return);
+	wizlog ((niceArrayList("[CACHE FILES]", $return)));
+	return $return;
+	
+}
+
+global proc wizBifrostFoamRenderSizeLayout( string $parent )
+{
+	wizFrameLayout("-l BifrostFoam -p " + $parent + " -n dynamicsWiz_bifrostFoam_frameLayout");
+
+	wizFloatFieldGrp(
+		"-l Foam Render Size "
+		+"-ann Sets the foam render size since maya is fucked up "
+		+"-v 0.025 "
+		+"-n dynamicsWiz_bifrostFoamRenderSize_floatFieldGrp"
+		);
+		
+		button
+			-l "Set Foam Render Size"
+			-c ("wizSetBifrostFoamRenderSize()")
+			;
+}
+
+global proc wizSetBifrostFoamRenderSize()
+{
+	
+	float $foamSize = `floatFieldGrp -q -v1 dynamicsWiz_bifrostFoamRenderSize_floatFieldGrp`;
+	
+	string $sel[] = `ls -sl`;
+	int $set;
+	for ($i=0;$i<`size $sel`;$i++){
+		if (`attributeExists "renderParticleSize" $sel[$i]` == 1){
+	
+			setAttr ($sel[0] + ".renderParticleSize") $foamSize;
+			$set = 1;
+			wizlog ("[SET FOAM RENDER SIZE]\nsetAttr " + $sel[$i] + ".renderParticleSize " + $foamSize + ";");
+		}
+	}
+	if ($set == 0){
+		wizlog ("[!] No Foam Shape Was Selected [!]");
+	}
+
+}

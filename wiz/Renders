@@ -1,0 +1,2 @@
+Render -r mr -art -s 2365 -e 2433 -b 1 -x 1920 -y 1080 -rl NHAndSSRL3 -proj /Shared3/projects/SolarSystem/ /Shared3/projects/SolarSystem/scenes/Animation/NewHorizonsTravel/NewHorizonsTimelineMaster1_flat4.ma
+Render -r mr -art -s 0 -e 2500 -b 1 -x 1920 -y 1080 -rl EarthAloneRL -proj /Shared3/projects/SolarSystem/ /Shared3/projects/SolarSystem/scenes/Animation/NewHorizonsTravel/NewHorizonsTimelineMaster1_flat4.ma

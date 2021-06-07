@@ -1,0 +1,3515 @@
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//|||||||||||||||||||||||||:::WIZ:::||||||||||||||||||||||||||||||||||
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//                         NAME WIZ
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+/*====================================================================
+Author: Glen Johnson
+Email: plasticarm@gmail.com
+Website: plasticarm.com / hrpictures.com
+----------------------------------------------------------
+Summary:
+
+
+Bookmark Catagory: WIZ_name_bookmarkWizCat
+					layout, layout, layout
+Bookmark SubCatagory: WIZ_name_bookmarkWizSubCat
+					layout, layout, layout
+Bookmark List: WIZ_nameBookmarkFiles
+					file, file, file
+
+====================================================================*/
+
+
+global string $WIZ_bookmarkWizMainCatagories[];
+$WIZ_bookmarkWizMainCatagories = { "workspace", "shaders", "models", "lights", "sets", "characters", "rigs", "dynamics", "cameras" };
+
+global string $WIZ_bookmarkWizSupportedFileTypes[];
+$WIZ_bookmarkWizSupportedFileTypes = { "mb", "ma", "fbx", "obj", "abc", "mi" };
+
+global proc bookmarkWiz()
+{
+	bookmarkWizWindow();
+}
+
+//========================================================================================================
+//[][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][]
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//                     WINDOWS
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//[][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][]
+//========================================================================================================
+
+//# BOOKMARK WIZ WINDOW
+//=======================================================
+global proc bookmarkWizWindow()
+{
+	//Docked?
+	string $dock = "bookmarkWizDock";
+	int $floatingState = 0;	
+	if (`optionVar -exists WIZ_bookmarkWizFloatingState`){
+		$floatingState = `optionVar -q WIZ_bookmarkWizFloatingState`;
+	} else{
+		optionVar -intValue WIZ_bookmarkWizFloatingState $floatingState;
+	}
+	
+	if (`dockControl -exists $dock` == 1){ 
+		deleteUI $dock;
+	}
+	
+	//Global name for window
+	global string $WIZ_bookmarkWizWindow;
+	$WIZ_bookmarkWizWindow = "bookmarkWizWindow";
+	//Delete window if it already exists
+	if (`window -exists $WIZ_bookmarkWizWindow`){
+		deleteUI $WIZ_bookmarkWizWindow;
+	}
+	//float $bgc[] = getWizColor("bookmarkDock");
+	string $window = `window
+		-title "Bookmark Wiz"
+		-widthHeight 500 900
+		-menuBar on
+		-menuBarVisible on
+		-minimizeButton on
+		-maximizeButton on
+		-sizeable on		
+		-resizeToFitChildren on
+		-titleBar on
+		//-bgc $bgc[0] $bgc[1] $bgc[2]
+		$WIZ_bookmarkWizWindow
+		`;
+	
+	bookmarkWizLayout($window);	
+	
+	string $floatStateSwitchCommand = (
+	"if ( `optionVar -q WIZ_bookmarkWizFloatingState` == 1 )"+"\n"
+	+"	optionVar -intValue WIZ_bookmarkWizFloatingState 0;"+"\n"
+	+"else"+"\n"
+	+"	optionVar -intValue WIZ_bookmarkWizFloatingState 1;"+"\n"
+	);
+		
+	
+	dockControl
+		-l "Bookmark Wiz"
+		-content $WIZ_bookmarkWizWindow
+		-floating $floatingState
+		-floatChangeCommand $floatStateSwitchCommand
+		-width 500
+		//-height 600
+		-area "right"
+		-allowedArea "left"
+		-allowedArea "right"
+		-sizeable on
+		-ebg true
+		//-bgc $bgc[0] $bgc[1] $bgc[2]
+		$dock
+		;
+		
+	if ($floatingState){
+		showWindow $WIZ_bookmarkWizWindow;
+
+	}	
+	
+}
+
+//========================================================================================================
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//                     LAYOUTS
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//========================================================================================================
+
+global proc bookmarkWizLayout( string $parent )
+{
+	//bookmarkWizFrameLayout($parent);
+	//bookmarkWizMenuBarLayout($parent);
+	bookmarkWizTabLayout($parent);
+	//bookmarkWizMain($parent);
+}
+
+/************ IMPORTANT **********************************************
+BOOKMARK WIZ FRAME LAYOUT is not in use. Use the tab layout version
+*********************************************************************/
+//@ BOOKMARK WIZ FRAME LAYOUT
+//=======================================================
+global proc bookmarkWizFrameLayout(string $parent)
+{
+	
+
+	string $layout = `columnLayout
+		-adjustableColumn true
+		-p $parent
+		bookmarkWizMainLayout
+		`;
+		
+	//bookmarkWizMenuBarLayout($parent);	
+	bookmarkWizMenuBarLayout($layout);
+	//setParent $layout;	
+
+	textScrollListBookmarksLayout("workspace");	
+	setParent $layout;	
+    
+	shaderBookmarksLayout($layout);
+	setParent $layout;
+	shadersBookmarkMainLayout($layout);
+	setParent $layout;
+    
+	textScrollListBookmarksLayout("lights");
+	setParent $layout;
+    
+	textScrollListBookmarksLayout("testEnvironments");
+	setParent $layout;
+	textScrollListBookmarksLayout("rigs");
+	setParent $layout;
+    textScrollListBookmarksLayout("camera");
+	setParent $layout;
+	
+	setParent..;
+}
+
+/*
+//BOOKMARK WIZ TAB LAYOUT
+//=======================================================
+global proc bookmarkWizTabLayout(string $parent)
+{
+
+	string $layout = `columnLayout
+		-adjustableColumn true
+		-p $parent
+		bookmarkWizMainLayout
+		`;
+	bookmarkWizMenuBarLayout($layout);	
+	//MAIN TAB LAYOUT
+	string $tabLayout = `tabLayout
+		-scrollable false
+		-childResizable false
+		-imageVisible true
+		-tabsVisible true
+		//-i "wiz/arrowMoveRightGreen1.png"
+		-p $layout
+		bookmarkWizTabLayout
+		`;
+	
+	
+	workspaceBookmarkMainLayout($tabLayout);
+	setParent $tabLayout;	
+	
+	shadersBookmarkMainLayout($tabLayout);
+	setParent $tabLayout;
+	
+	setsBookmarkMainLayout($tabLayout);
+	setParent $tabLayout;
+	
+	modelsBookmarkMainLayout($tabLayout);
+	setParent $tabLayout;
+	
+	charactersBookmarkMainLayout($tabLayout);
+	setParent $tabLayout;
+    	
+	lightingBookmarkMainLayout($tabLayout);
+	setParent $tabLayout;
+    
+    cameraBookmarkMainLayout($tabLayout);
+	setParent $tabLayout;	    
+    
+	dynamicsBookmarkMainLayout($tabLayout);
+	setParent $tabLayout;	
+    	
+    if (`optionVar -ex "WIZ_bookmarkWiz_mainCC"`){
+        loadCustomBookmarkWizCategoryLayouts();
+        setParent $tabLayout;
+    }
+    
+	tabLayout
+		-e
+		-tl "workspaceBookmarksMainColumnLayout" "Workspace"
+		-tl "cameraBookmarksMainColumnLayout" "Cameras"
+		-tl "shaderBookmarksMainColumnLayout" "Shaders"
+		-tl "lightingBookmarksMainColumnLayout" "Lighting"
+		-tl "setsBookmarksMainColumnLayout" "Sets"
+		-tl "modelsBookmarksMainColumnLayout" "Models"
+		-tl "charactersBookmarksMainColumnLayout" "Characters"
+		-tl "dynamicsBookmarksMainColumnLayout" "Dynamics"
+		bookmarkWizTabLayout
+		;	
+		
+	setParent..;
+}
+*/
+
+//BOOKMARK WIZ TAB LAYOUT
+//=======================================================
+global proc bookmarkWizTabLayout(string $parent)
+{
+    
+	string $layout = `columnLayout
+		-adjustableColumn true
+		-p $parent
+		bookmarkWizMainLayout
+		`;
+	bookmarkWizMenuBarLayout($layout);	
+	
+	//MAIN TAB LAYOUT
+	string $tabLayout = `tabLayout
+		-scrollable false
+		-childResizable false
+		-imageVisible true
+		-tabsVisible true
+		//-i "wiz/arrowMoveRightGreen1.png"
+		-p $layout
+		bookmarkWizTabLayout
+		`;
+		
+	workspaceBookmarkMainLayout($tabLayout);
+	setParent $tabLayout;	
+	
+	shadersBookmarkMainLayout($tabLayout);
+	setParent $tabLayout;
+	
+	setsBookmarkMainLayout($tabLayout);
+	setParent $tabLayout;
+	
+	modelsBookmarkMainLayout($tabLayout);
+	setParent $tabLayout;
+	
+	charactersBookmarkMainLayout($tabLayout);
+	setParent $tabLayout;
+    	
+	lightingBookmarkMainLayout($tabLayout);
+	setParent $tabLayout;
+    
+    cameraBookmarkMainLayout($tabLayout);
+	setParent $tabLayout;	    
+    
+	dynamicsBookmarkMainLayout($tabLayout);
+	setParent $tabLayout;	
+    	
+    if (`optionVar -ex "WIZ_bookmarkWiz_mainCC"`){
+        loadCustomBookmarkWizCategoryLayouts();
+        setParent $tabLayout;
+    }
+    
+	tabLayout
+		-e
+		-tl "workspaceBookmarksMainColumnLayout" "Workspace"
+		-tl "cameraBookmarksMainColumnLayout" "Cameras"
+		-tl "shaderBookmarksMainColumnLayout" "Shaders"
+		-tl "lightingBookmarksMainColumnLayout" "Lighting"
+		-tl "setsBookmarksMainColumnLayout" "Sets"
+		-tl "modelsBookmarksMainColumnLayout" "Models"
+		-tl "charactersBookmarksMainColumnLayout" "Characters"
+		-tl "dynamicsBookmarksMainColumnLayout" "Dynamics"
+		bookmarkWizTabLayout
+		;	
+		
+	setParent..;
+}
+
+//========================================================================================================
+//""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//                     MENUS
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+//========================================================================================================
+
+//BOOKMARK WIZ MENU BAR LAYOUT
+//=======================================================
+global proc bookmarkWizMenuBarLayout( string $parent )
+{
+	string $menuBarLayout = `menuBarLayout
+		bookmarkWizMenuBarLayout
+		`;
+		
+	bookmarkWizMainMenu($menuBarLayout);
+	
+	setParent..;
+}
+
+//BOOKMARK WIZ MAIN MENU
+//=======================================================
+global proc bookmarkWizMainMenu( string $parent)
+{
+	menu -l "Settings";
+		menuItem -l "Set Project Root" -c ("setWizProjectDirectory();");
+        menuItem -l "Double Click Action" bookmarkWizDoubleClickActionMenuItem;
+            radioMenuItemCollection;
+            menuItem -label "Reference" -radioButton on bookmarkWizDoubleClickReferenceMenuItem;
+            menuItem -label "Import" -radioButton off bookmarkWizDoubleClickImportMenuItem;
+            menuItem -label "Open" -radioButton off bookmarkWizDoubleClickOpenMenuItem;
+		
+		menuItem -cb true -l "Use Namespaces" bookmarkWizUseNamesspacesMenuItem;
+		
+	menu -l "Set Project" -to true;
+		bookmarkWizProjectDirectoryMenuItems();
+		
+	
+	menu -l "Catagories" -to true;
+		menuItem -l "Add Category" -c ("addBookmarkWizPrompt(\"main\");");
+
+		
+	setParent $parent;
+}
+
+//BOOKMARK WIZ CATAGORY MENU
+//=======================================================
+global proc bookmarkWizCategoryMenu( string $cat)
+{
+	string $listSelCom = ("string $listSel[] = `textScrollList -q -si " + $cat + "BookmarksTextScrollList`;"+"\n");
+	if (`menuBarLayout -ex ("bookmarkWiz" + $cat + "MenuBarLayout")` == 1){
+		return ;
+	}
+	menuBarLayout
+		("bookmarkWiz" + $cat + "MenuBarLayout")
+		;
+		
+	/*	
+	menu -l "List";
+		menuItem -l "Add Bookmark" -c 
+	*/
+	
+	/*
+	menu -l "Add-Remove";
+	
+		menuItem -l "Add List" -c ("bookmarkWizMGMT(\"-p " + $cat + " -sub\");");
+		menuItem -l "Add Sub-Catagory" -c ("bookmarkWizMGMT(\"-c " + $cat + " -asc\");");
+		*/
+		/*
+		menuItem -l "Add Sub-Category" -c ("addBookmarkWizPrompt(\"-p " + $cat + " -sub\");");
+		menuItem -l "Remove Sub-Category" -c ("removeBookmarkWizSubCatagory(\"" + $cat + "\");");
+		menuItem -l "Add Sub-Category List" -c ("addBookmarkWizPrompt(\"-p " + $cat + " -lst\");");
+		menuItem -l "Remove Sub-Category List" -c ("removeBookmarkWizSubCatagory(\"" + $cat + "\");");
+		*/
+		
+
+    setParent -menu..;
+    
+    menu -l "Commands";
+    	menuItem -sm true -l "Reference Commands";
+        
+        string $refCom[] = getBookmarkWizReferenceCommands($cat);
+        for ($i=0;$i<`size $refCom`;$i = $i + 3){
+            menuItem -cb false -l $refCom[$i] -c $refCom[($i + 1)] $refCom[($i + 2)];
+            
+        }
+        
+        
+        setParent -menu..;   
+		
+		menuItem -l "Quick Transforms" -c ("openCurrentOptionsLayout(\"wizQuickTransformsLayout\");");
+			menuItem -ob true -c ("openCurrentOptionsLayout(\"wizQuickTransformsLayout\");");
+	
+    setParent -menu..;
+    
+	menu -l "WizActions";
+/*
+		string $refPoolPmc = ("string $refPool[] = getWizCraftAssetPoolNames();"+"\n"
+		+"for ($i=0;$i<`size $refPool`;$i++){"+"\n"
+		+"	menuItem -l (\"Add Files To \" + (interToUI($refPool[$i]))) -c (\"" + $listSelCom + "\"addFilesToReferenceComponentPool($listSel, \"" + $refPool[$i] + ""\");\")"+"\n"
+		+"}"+"\n"		
+		+"setParent -menu..;"+"\n"
+		);	
+		*/
+		string $refPoolPmc = ("addWizCraftPoolMenuItems((\"bookmarkWiz" + $cat + "WizCraftPoolsMenuItem\"), \"" + $cat + "\");");
+		menuItem -sm true -l "wizCraft Pools" -pmc $refPoolPmc ("bookmarkWiz" + $cat + "WizCraftPoolsMenuItem");
+		/*
+			string $refPool[] = getWizCraftAssetPoolNames();
+			for ($i=0;$i<`size $refPool`;$i++){
+				menuItem -l ("Add Files To " + (interToUI($refPool[$i]))) -c ($listSelCom + "addFilesToReferenceComponentPool($listSel, \"" + $refPool[$i] + "\");");
+			}
+			
+		setParent -menu..;
+		*/
+		setParent -menu..;
+		
+		menuItem -l "Add Tag To Selected" -c ("wizAddTagToSelected(`ls -sl`, \"" + $cat + "\");");
+	
+		menuItem -l "Run Batch Process On List" -c ("wizBatchProcess(\"-tsl " + $cat + "\");");
+		menuItem -l "Run Batch Process On Selecte Files" -c ("wizBatchProcess(\"-tsl " + $cat + " -si\");");
+	
+	setParent -menu..;
+	
+	menu -l "File";
+	
+		menuItem -l "Rename File" -c ("bookmarkWizRenameFile(\"" + $cat + "\");");
+		
+	string $updateToLatestCommand = (
+	"string $si[] = `textScrollList -q -si " + $cat + "BookmarksTextScrollList`;"+"\n"
+	+"incrementSelectedBookmarkVersions($si);"
+	);
+	
+
+		menuItem -l "Update Selected To Latest Version" -c $updateToLatestCommand;
+	
+	setParent -menu..;
+	
+}
+
+
+global proc addWizCraftPoolMenuItems( string $parent, string $cat )
+{
+	wizlog ("menu -q -ex " + $parent);
+	
+	int $ni = `menu -q -ni $parent`;
+	if ($ni > 0){
+		menu -e -dai $parent;
+	}
+	string $listSelCom = ("string $listSel[] = `textScrollList -q -si " + $cat + "BookmarksTextScrollList`;"+"\n");
+	string $listSelDirCom = ("string $listSel[] = `textScrollList -q -si " + $cat + "BookmarksTextScrollList`;"+"\n"
+	+"string $listDir[] = wizSpliceFilePath($listSel[0], \"-dir\");"+"\n"	
+	);
+	
+	string $refPool[] = getWizCraftAssetPoolNames();
+	wizlog ("	[#] Ref Pool : " + stringArrayToString($refPool, " "));
+		for ($i=0;$i<`size $refPool`;$i++){
+			menuItem -l ("Add Files To " + (interToUI($refPool[$i]))) -c ($listSelCom + " addFilesToReferenceComponentPool($listSel, \"" + $refPool[$i] + "\");") -p $parent;
+			menuItem -l ("Add Directory To " + (interToUI($refPool[$i]))) -c ($listSelDirCom + " addDirectoryToReferencePoolAsset(\"-sl -dir \" + $listDir[0] + \" \");") -p $parent;
+		}
+		
+	//setParent -menu $parent;
+	//setParent -menu..;
+} 
+
+//# BOOKMARK WIZ MENU ITEMS
+//====================================================================
+global proc bookmarkWizMenuItems()
+{
+	menuItem -l "Set Project Root" -c ("setWizProjectDirectory();");
+	
+}
+
+//# BOOKMARK WIZ PROJECT MENU
+//====================================================================
+global proc bookmarkWizProjectMenu()
+{
+	menu -l "Project" -to true;
+		bookmarkWizProjectDirectoryMenuItems();
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         SUB CATEGORIES
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//BOOKMARK SUB CATAGORY LAYOUT
+//-------------------------------------------
+
+global proc string bookmarkSubCategoryLayout( string $parent , string $name, string $cat[] )
+{
+	string $layoutName = makeNiceUIName($name);
+	string $layout = `frameLayout
+		-l $name	
+		-ann ""
+		-bv true
+		-li 5
+		-lv true
+		-mw 5
+		-mh 5		
+		
+		-cll true
+		-cl true
+		-p $parent
+		($layoutName + "BookmarksSubCategoryFrameLayout")
+		`;
+	
+    bookmarkWizCategoryMenu($name);
+    
+	string $columnLayout = `columnLayout
+		-adj true
+		-p $layout
+		($layoutName + "BookmarksSubCategoryColumnLayout")
+		`;
+		
+	for ($i=0;$i<`size $cat`;$i++){
+		textScrollListBookmarksLayout($cat[$i]);
+		/*
+		if (`optionVar -ex ("WIZ_bookmarkWiz_" + $cat[$i] + "CC")`){
+			string $cc[] = getBookmarkOptionVarStringArray(("WIZ_bookmarkWiz_" + $name + "CC"));
+			for ($i=0;$i<`size $cc`;$i++){
+				textScrollListBookmarksLayout($cc[$i]);
+				setParent $columnLayout;	
+			}
+		}
+		*/
+    
+		setParent $columnLayout;	
+		
+		
+	}
+    
+
+    if (`optionVar -ex ("WIZ_bookmarkWiz_" + $name + "CC")`){
+        string $cc[] = getBookmarkOptionVarStringArray(("WIZ_bookmarkWiz_" + $name + "CC"));
+        for ($i=0;$i<`size $cc`;$i++){
+            textScrollListBookmarksLayout($cc[$i]);
+            setParent $columnLayout;	
+        }
+    }
+	
+	/*
+	if (`optionVar -ex ("WIZ_bookmarkWiz_" + $name + "CC")`){
+        string $cc[] = getBookmarkOptionVarStringArray(("WIZ_bookmarkWiz_" + $name + "CC"));
+        for ($i=0;$i<`size $cc`;$i++){
+            textScrollListBookmarksLayout($cc[$i]);
+            setParent $columnLayout;	
+        }
+    }
+*/
+    loadCustomBookmarkWizSubCategoryFrameLayouts($name);
+    
+	return $columnLayout;
+}
+
+//======================================================================================
+//WORKSPACE BOOKMARK MAIN LAYOUT
+//-------------------------------------------------
+global proc workspaceBookmarkMainLayout( string $parent)
+{
+	string $columnLayout = `columnLayout
+		-adj true
+		-p $parent
+		workspaceBookmarksMainColumnLayout		
+		`;
+	
+	string $name = "workspaceMain";
+	
+	/*
+    bookmarkWizCategoryMenu($name);
+	
+	
+	textScrollListBookmarksLayout("workspace");
+	setParent $columnLayout;
+	textScrollListBookmarksLayout("temp");
+	setParent $columnLayout;
+    
+    loadCustomBookmarkWizSubCategoryFrameLayouts($name);
+    setParent $columnLayout;
+	*/
+	wizFilePalletLayout("-n workspace -p " + $columnLayout + " -type frameLayout");
+		
+}
+
+//SHADERS BOOKMARK MAIN LAYOUT	
+//-------------------------------------------------
+global proc shadersBookmarkMainLayout( string $parent)
+{
+	string $name = "shadersMain";
+	
+	string $columnLayout = `columnLayout
+		-adj true
+		-p $parent
+		shaderBookmarksMainColumnLayout		
+		`;
+	
+	bookmarkWizCategoryMenu($name);
+    
+	string $shaderCategory[] = { "materials", "shaderNetworks", "terrainShaders", "architectureShaders", "characterShaders", "effectsShaders"
+	, "natureShaders", "sciFiShaders", "utilityShaders" };
+	
+	string $shaderNetworks[] = { "shaderNetworks" };
+	
+	string $materialShaders[] = { "metalShaders", "woodShaders", "glassShaders", "clothShaders", "plasticShaders", "rubberShaders",
+	"ceramicShaders", "organicShaders", "concreteShaders", "iceShaders", "liquidShaders"};
+	
+	string $terrainShaders[] = { "terrainShaders", "desertShaders", "jungleShaders", "rockyShaders", "polarShaders", "moonShaders", "planetShaders"};
+	
+	string $architectureShaders[] = { "wallShaders", "floorShaders", "ceilingShaders", "furnishingsShaders" };
+	
+	string $characterShaders[] = { "humanShaders", "clothingShaders", "animalShaders" };
+	
+	string $natureShaders[] = { "treeShaders", "waterShaders" };	
+	
+	string $sciFiShaders[] = { "spacecraftShaders" };
+	
+	string $effectsShaders[] = { "effectsShaders" };	
+	
+	string $utilityShaders[] = { "utilityShaders" };
+	
+	string $texturesLayout[] = { "rampsTextures", "noiseTextures", "fractalTextures", "rampPatterns", "techPatterns", "clothPatterns" };
+		
+	bookmarkSubCategoryLayout($columnLayout, "Shader Networks", $shaderNetworks);
+	bookmarkSubCategoryLayout($columnLayout, "Materials", $materialShaders);
+	bookmarkSubCategoryLayout($columnLayout, "Terrain", $terrainShaders);
+	
+	bookmarkSubCategoryLayout($columnLayout, "Architecture", $architectureShaders);
+	bookmarkSubCategoryLayout($columnLayout, "Characters", $characterShaders);
+	bookmarkSubCategoryLayout($columnLayout, "Nature", $natureShaders);
+	bookmarkSubCategoryLayout($columnLayout, "Sci-Fi", $sciFiShaders);
+	bookmarkSubCategoryLayout($columnLayout, "Effects", $effectsShaders);
+	bookmarkSubCategoryLayout($columnLayout, "Utilities", $utilityShaders);
+	
+	bookmarkSubCategoryLayout($columnLayout, "Textures", $texturesLayout);
+    
+	loadCustomBookmarkWizSubCategoryFrameLayouts($name);
+    setParent $columnLayout;
+    
+}
+
+
+//CAMERAS BOOKMARK MAIN LAYOUT
+//-------------------------------------------------
+global proc cameraBookmarkMainLayout( string $parent)
+{
+	string $name = "camerasMain";
+	string $columnLayout = `columnLayout
+		-adj true
+		-p $parent
+		cameraBookmarksMainColumnLayout
+		`;
+		
+    bookmarkWizCategoryMenu($name);
+    
+	textScrollListBookmarksLayout("fullDomeCameras");
+	setParent $columnLayout;
+    textScrollListBookmarksLayout("testCameras");
+	setParent $columnLayout;
+    textScrollListBookmarksLayout("animatedCameras");
+	setParent $columnLayout;
+	textScrollListBookmarksLayout("otherCameras");
+	setParent $columnLayout;
+    
+    loadCustomBookmarkWizSubCategoryFrameLayouts($name);
+    setParent $columnLayout;
+		
+}
+
+//CAMERAS BOOKMARK MAIN LAYOUT
+//-------------------------------------------------
+global proc modelsBookmarkMainLayout( string $parent)
+{
+	string $name = "modelsMain";
+	string $columnLayout = `columnLayout
+		-adj true
+		-p $parent
+		modelsBookmarksMainColumnLayout
+		`;
+	
+    bookmarkWizCategoryMenu($name);
+    
+	string $primitiveModels[] = { "primitives", "complexPrimitives", "shapes" };
+	
+	string $curveModels[] = { "curves" };
+	
+	
+	
+	string $wizCraftModels[] = { "wizCraftCtrlComponents", "rStctComponents", "lBldrComponents", "cBldrComponents", "baseShapes", "subBaseShapes" };    
+	
+    string $componentModels[] = { "assemblies", "structureComponents", "tileComponents", "mechanicalComponents", "barComponents", "jointComponents",
+    "wallComponents", "capComponents", "floorComponents", "ceilingComponets", "subPanelComponents", "boxComponents" };
+    
+    string $architecturalModels[] = { "buildingModels", "architecturalElementModels" };
+    
+    string $industrialModels[] = { "industrialStructureModels" };
+    
+    string $vehicleModels[] = { "carModels", "airplaneModels", "boatModels", "motorcycleModels", "bicycleModels", "spacecraftModels" };
+    
+	string $foliageModels[] = { "treeModels", "shrubModels", "grassModels", "flowerModels" };
+	
+	string $terrainModels[] = { "terrainModels", "rocksModels", "formationsModels"  };
+	
+	bookmarkSubCategoryLayout($columnLayout, "Primitives", $primitiveModels);
+	bookmarkSubCategoryLayout($columnLayout, "Curves", $curveModels);
+	bookmarkSubCategoryLayout($columnLayout, "WizCraft", $wizCraftModels);
+    bookmarkSubCategoryLayout($columnLayout, "Components", $componentModels);
+	bookmarkSubCategoryLayout($columnLayout, "Architectural", $architecturalModels);
+    bookmarkSubCategoryLayout($columnLayout, "Industrial", $industrialModels);
+    bookmarkSubCategoryLayout($columnLayout, "Vehicles", $vehicleModels);
+	
+	bookmarkSubCategoryLayout($columnLayout, "Foliage", $foliageModels);
+	bookmarkSubCategoryLayout($columnLayout, "Terrain", $terrainModels);
+    
+    setParent $columnLayout;
+	
+    loadCustomBookmarkWizSubCategoryFrameLayouts($name);
+	
+    setParent $columnLayout;
+    
+}
+
+
+//LIGHTS BOOKMARK MAIN LAYOUT
+//-------------------------------------------------
+global proc lightingBookmarkMainLayout( string $parent)
+{
+	string $name = "lightingMain";
+	string $columnLayout = `columnLayout
+		-adj true
+		-p $parent
+		lightingBookmarksMainColumnLayout
+		`;
+	
+    bookmarkWizCategoryMenu($name);
+    
+	textScrollListBookmarksLayout("interiorLights");
+	setParent $columnLayout;
+	textScrollListBookmarksLayout("exteriorLights");
+	setParent $columnLayout;
+	
+	loadCustomBookmarkWizSubCategoryFrameLayouts($name);
+    setParent $columnLayout;
+	
+}
+
+//CHARACTERS BOOKMARK MAIN LAYOUT
+//-------------------------------------------------
+global proc charactersBookmarkMainLayout( string $parent)
+{
+	string $name = "charactersMain";
+	string $columnLayout = `columnLayout
+		-adj true
+		-p $parent
+		charactersBookmarksMainColumnLayout
+		`;
+		
+	bookmarkWizCategoryMenu($name);
+	
+	textScrollListBookmarksLayout("rigs");
+	setParent $columnLayout;
+	textScrollListBookmarksLayout("hair");
+	setParent $columnLayout;
+	textScrollListBookmarksLayout("riggedCharacters");
+	setParent $columnLayout;	
+	textScrollListBookmarksLayout("characterModels");
+	setParent $columnLayout;
+	textScrollListBookmarksLayout("characterAnimation");
+	setParent $columnLayout;
+	
+	textScrollListBookmarksLayout("clothing");
+	setParent $columnLayout;
+	
+	loadCustomBookmarkWizSubCategoryFrameLayouts($name);
+    setParent $columnLayout;
+}
+
+//LIGHTS BOOKMARK MAIN LAYOUT
+//-------------------------------------------------
+global proc dynamicsBookmarkMainLayout( string $parent)
+{
+	string $name = "dynamicsMain";
+	string $columnLayout = `columnLayout
+		-adj true
+		-p $parent
+		dynamicsBookmarksMainColumnLayout
+		`;
+	
+	bookmarkWizCategoryMenu($name);
+	
+	textScrollListBookmarksLayout("fluids");
+	setParent $columnLayout;
+	textScrollListBookmarksLayout("nCloth");
+	setParent $columnLayout;
+	textScrollListBookmarksLayout("nHair");
+	setParent $columnLayout;
+	textScrollListBookmarksLayout("classicDynamics");
+	setParent $columnLayout;	
+	
+	loadCustomBookmarkWizSubCategoryFrameLayouts($name);
+    setParent $columnLayout;
+		
+}
+
+//SETS BOOKMARK MAIN LAYOUT
+//-------------------------------------------------
+global proc setsBookmarkMainLayout( string $parent)
+{
+	string $name = "setsMain";
+	string $columnLayout = `columnLayout
+		-adj true
+		-p $parent
+		setsBookmarksMainColumnLayout
+		`;
+	
+	bookmarkWizCategoryMenu($name);	
+	
+	textScrollListBookmarksLayout("testEnvironments");
+	setParent $columnLayout;
+	
+	textScrollListBookmarksLayout("interior");
+	setParent $columnLayout;
+	
+	loadCustomBookmarkWizSubCategoryFrameLayouts($name);
+    setParent $columnLayout;	
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         SAVE BOOKMARKS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//BOOKMARK WIZ SAVE BOOKMARKS TO FILE
+//=======================================================
+global proc bookmarkWizSaveBookmarksToFile()
+{
+	string $file = wizGetAnyFile();
+	
+}
+
+//BOOKMARK WIZ PROJECT DIRECTORY MENU ITEMS
+//=======================================================
+global proc bookmarkWizProjectDirectoryMenuItems()
+{
+	//Current Project
+	string $act = `workspace -q -act`;	
+	//print("Active Project : " + $act + "\n");
+	
+	//Get All Wiz Projects
+	string $wizProjectDir = `optionVar -q WIZ_wizProjectDirectory`;
+	string $wizProjects[] = getWizProjects();
+	
+	//Get All Default Projects
+	string $projects[] = `workspace -lw`;
+	
+	//print("WIZ| bookmarkWizMainMenu : Projects : " + stringArrayToString($wizProjects, " ") + "\n");
+		
+	/*
+	if (`menuItem -q -ex ("wiz" + $wizProjects[0] + "MenuItem")` || `menuItem -q -ex ("wiz" + $projects[0] + "MenuItem")`){
+		
+		//Edit MenuItems for all Wiz Projects
+		for ($i=0;$i<`size $wizProjects`;$i++){
+			string $proj = $wizProjectDir + $wizProjects[$i];
+			//$wizProjects[$i] = `capitalizeString $wizProjects[$i]`;
+			string $miName = ("wiz" + $wizProjects[$i] + "MenuItem");
+			//$miName = makeNiceMenuItemName($miName);
+			print ("MenuItem Name : " + $miName + "\n");
+			if($miName == "wizdsstoremenuitem"){ continue; }
+			
+			//print (" - Project : " + $proj + " Active Project : " + $act + "\n");
+			if ($proj == $act){
+				//menuItem -e -itl true -bld true -l (" - " + $wizProjects[$i]) $miName;
+				menuItem -edit -l (" - " + $wizProjects[$i]) $miName;
+			} else {
+				//menuItem -e -itl true -bld true -l ($wizProjects[$i]) $miName;
+				print("WIZ| wizStoreMenu Error : " + "-l " + $wizProjects[$i] + " name : " + $miName + "\n");
+				menuItem -edit -l ($wizProjects[$i]) $miName;
+			}
+			
+			
+		}
+		
+		//Edit MenuItems for all default projects
+		for ($i=0;$i<`size $projects`;$i++){
+			string $proj = $projects[$i];
+			//$projects[$i] = `capitalizeString $projects[$i]`;
+			
+			string $miName = ("wiz" + $projects[$i] + "MenuItem");
+			//$miName = makeNiceMenuItemName($miName);
+			print ("MenuItem Name : " + $miName + "\n");
+			
+			if($miName == "wizdsstoremenuitem"){ continue; }
+		
+			if ($proj == $act){
+				//menuItem -e -itl true -bld true -l (" - " + $projects[$i]) $miName;
+				menuItem -edit -l (" - " + $projects[$i]) $miName;
+			} else {
+				//menuItem -e -itl true -bld true -l ($projects[$i]) $miName;
+				menuItem -edit -l ($projects[$i]) $miName;
+			}
+		}
+		
+	} else {
+	*/	
+		//Add Menu Items For All Wiz Projects
+		string $c = ("workspace -o " + "\"" + $wizProjectDir);
+		//"
+		
+		for ($i=0;$i<`size $wizProjects`;$i++){
+			//$wizProjects[$i] = `capitalizeString $wizProjects[$i]`;
+			string $proj = $wizProjectDir + $wizProjects[$i];
+			string $miName = ("wiz" + $wizProjects[$i] + "MenuItem");
+			string $projCommand = ($c + $wizProjects[$i] + "\"; print(\" - Current Project : " + $wizProjects[$i] + "\\n\");");//"
+			string $mi = `menuItem -l $wizProjects[$i] -c ($projCommand) $miName`;//"
+			//$miName = makeNiceMenuItemName($miName);
+			//print ("MenuItem Name : " + $mi + "\n");
+			
+			if($miName == "wizdsstoremenuitem"){ continue; }			
+			/*
+			if($proj == $act){
+				//menuItem -e -itl true -bld true -l (" - " + $wizProjects[$i]) $mi;
+				menuItem -e -l (" - " + $wizProjects[$i]) $mi;
+				//print("Active Project : " + $act + "\n");
+			}			
+			*/
+		}
+		
+		//Add MenuItems for all default projects
+		for ($i=0;$i<`size $projects`;$i++){
+			string $proj = $projects[$i];
+			//$projects[$i] = `capitalizeString $projects[$i]`;
+			
+			string $miName = ("wiz" + $projects[$i] + "MenuItem");
+			//$miName = makeNiceMenuItemName($miName);
+			
+			if(`menuItem -q -ex $miName`){ continue;}
+			
+			string $projCommand = ("workspace -o \"" + $projects[$i] + "\"; print(\" - Current Project : " + $wizProjects[$i] + "\\n\");");
+			string $mi = `menuItem -l $projects[$i] -c $projCommand $miName`;
+			//print ("MenuItem Name : " + $mi + "\n");
+			
+			if($miName == "wizdsstoremenuitem"){ continue; }
+			/*
+			if ($proj == $act){
+				//menuItem -e -itl true -bld true -l (" - " + $projects[$i]) $mi;
+				menuItem -e -l (" - " + $projects[$i]) $mi;
+				//print("Active Project : " + $act + "\n");
+			}
+			*/
+		}
+	//}
+	
+	//print("WIZ| Active Project : " + $act + "\n");
+		
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         CUSTOM BOOKMARKS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//@ LOAD CUSTOM BOOKMARK WIZ CATAGORY LAYOUTS 
+//-------------------------------------------------------
+global proc loadCustomBookmarkWizCategoryLayouts()
+{
+	string $bookmarkCategory[] =  getBookmarkOptionVarStringArray("WIZ_bookmarkWiz_mainCC");
+	for ($i=0;$i<`size $bookmarkCategory`;$i++){
+		textScrollListBookmarksLayout($bookmarkCategory[$i]);
+        tabLayout
+            -e
+            -tl ($bookmarkCategory[$i] + "BookmarksMainColumnLayout") $bookmarkCategory[$i]
+            bookmarkWizTabLayout
+            ;
+	}
+  
+}
+
+//@ LOAD CUSTOM BOOKMARK WIZ SUB CATAGORY LAYOUTS 
+//-------------------------------------------------------
+global proc loadCustomBookmarkWizSubCategoryLayouts( string $name )
+{
+	string $bookmarkCategory[] =  getBookmarkOptionVarStringArray("WIZ_bookmarkWiz_" + $name + "CC");
+	for ($i=0;$i<`size $bookmarkCategory`;$i++){
+		textScrollListBookmarksLayout($bookmarkCategory[$i]);
+        tabLayout
+            -e
+            -tl ($bookmarkCategory[$i] + "BookmarksSubCategoryFrameLayout") $bookmarkCategory[$i]
+            bookmarkWizTabLayout
+            ;
+	}
+  
+}
+
+//@ LOAD CUSTOM BOOKMARK WIZ SUB CATAGORY FRAME LAYOUTS
+//-------------------------------------------------------
+global proc loadCustomBookmarkWizSubCategoryFrameLayouts( string $name )
+{
+	/*
+	string $bookmarkCategory[] =  getBookmarkOptionVarStringArray("WIZ_bookmarkWiz_" + $name + "CC");
+	for ($i=0;$i<`size $bookmarkCategory`;$i++){
+		textScrollListBookmarksLayout($bookmarkCategory[$i]);
+        setParent ..;
+	}  
+	*/
+	string $bookmarkCategory[] =  getBookmarkOptionVarStringArray("WIZ_bookmarkWiz_" + $name + "CC");
+	string $bookmarkCategory[] =  getBookmarkOptionVarStringArray("WIZ_bookmarkWiz_" + $name + "CC");
+}
+
+//ADD BOOKMARK WIZ CATAGORY LAYOUT
+//------------------------------------------------------------
+global proc addBookmarkWizCategoryLayout()
+{
+	string $bookmarkCategory[] =  getBookmarkOptionVarStringArray("WIZ_bookmarkWizCatagories");
+	string $catName = wizPromptDialog("Category Name", "Name Of Category: ", {"Create"}, "Create", "Cancel");
+	if ($catName == ""){
+		return;
+	}
+	$bookmarkCategory[`size $bookmarkCategory`] = $catName;
+	replaceOptionVarStringArray("WIZ_bookmarkWizCatagories",$bookmarkCategory);
+	
+	textScrollListBookmarksLayout($catName);
+	
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         BOOKMARK LAYOUT
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//TEXT SCROLL LIST BOOKMARKS LAYOUT
+//=============================================================
+/*=======================| USAGE |====================================	
+textScrollListBookmarksLayout("anyCategoryName");
+====================================================================*/
+global proc textScrollListBookmarksLayout( string $name )
+{
+	//This function uses the string $name to create unique layouts for each category of bookmarks.
+	//The $name must be unique.
+	string $l = (capitalizeString($name) + " Bookmarks");
+	
+	//A column layout is needed so that the frames don't get cut off
+	//-------------------------------------------------------
+	//|||||||||||||||||||||||<COLUMN>||||||||||||||||||||||||
+	if (`columnLayout -ex ($name + "BookmarksColumnLayout")` == 1){
+		return;
+	}
+	string $columnLayout = `columnLayout
+		-adj true
+		($name + "BookmarksColumnLayout")
+		`;		
+	
+	   
+	//-------------------------------------------------------
+	//[][][][][][][][][][][][]<FRAME>[][][][][][][][][][][][]
+    
+    // Wait till the user has clicked on the bookmarks tab before loading the bookmarks to save some overhead
+    string $pec = ("textScrollListBookmarksLayoutExpand(\"" + $name + "\");");
+    
+	/*
+	string $layout = `frameLayout
+		-l $l	
+		-ann ("Use The Add Button To Add A New Bookmark.\nDouble Click To Reference The File. " + $name + "BookmarksLayout")
+		-bv true
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+        -pec $pec
+		-cll true
+		-cl true
+		-p $columnLayout
+		($name + "BookmarksLayout")
+		`;
+
+     string $layout = `frameLayout
+		-l $l	
+		-ann ("Use The Add Button To Add A New Bookmark.\nDouble Click To Reference The File. " + $name + "BookmarksLayout")
+		-bv true
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+        -pec $pec
+		-cll true
+		-cl true
+		-p $columnLayout
+		($name + "BookmarksLayout")
+		`; 
+		*/
+		
+	string $layout = wizFrameLayout(
+		"-l " + $l
+		+" -ann Use The Add Button To Add A New Bookmark.\nDouble Click To Reference The File."
+		+" -pec " + $pec
+		+" -cl 1 "
+		+" -p " + $columnLayout
+		+" -n " + $name + "BookmarksLayout"
+		);
+		
+}
+        
+global proc textScrollListBookmarksLayoutExpand( string $name )
+{
+
+    string $columnLayout = ($name + "BookmarksColumnLayout");
+    string $layout = ($name + "BookmarksLayout");
+    string $parent = ($name + "BookmarksLayout");
+    setParent $parent;
+	
+    bookmarkWizCategoryMenu($name);
+	
+	//-------------------------------------------------------
+	//########################<TAB>##########################
+    
+    /*
+    string $tabVCC = ("if(`tabLayout -q -io " + $name + "BookmarksTabLayout` == 1){"+"\n"
+    +"  print(\"Tab Layout VCC : \\n\");"+"\n"
+    +"  textScrollListBookmarksLayout(\"" + $name + "\");}"+"\n");
+    */
+    string $tabLayout = ($name + "BookmarksTabLayout");
+	if (`tabLayout -ex $tabLayout` == 1){
+		return ;
+	}
+		$tabLayout = `tabLayout
+			-ann ""
+			-scrollable false
+			//-childResizable false
+			-imageVisible true
+			-tabsVisible false
+			-dcc "autoExpandCollapseWizSelectionFrames"
+			-sc "selectWizSelectionTab"
+			-cc ("wizTabCC(\"wizSelectionTab\");")
+
+			-p $layout
+			$tabLayout
+			`;
+		
+
+		
+		/*	
+        if (`tabLayout -q -io ($name + "BookmarksTabLayout")`){
+            return;
+        }
+		*/	
+		//-------------------------------------------------------
+		//|||||||||||||||||||||||<COLUMN>||||||||||||||||||||||||
+		string $fileBookmarksColumnLayout = ($name + "BookmarksFilesColumnLayout");
+		if (`columnLayout -ex $fileBookmarksColumnLayout` == 0){
+			$fileBookmarksColumnLayout = `columnLayout
+				-adjustableColumn true
+				-p $tabLayout
+				$fileBookmarksColumnLayout
+				`;
+			
+		}			
+			//bookmarkWizCategoryMenu($name);
+	
+	//--------------------------------------------------------------------
+	//////////////////////////////////////////////////////////////////////
+	//			BUTTON COMMANDS
+	//////////////////////////////////////////////////////////////////////
+	//--------------------------------------------------------------------		
+	//These are the main variable names for the optionVar and the textScrollList names
+	string $ovName = "WIZ_" + $name + "BookmarkFiles";
+	string $bookmarkFileList = $name + "BookmarksTextScrollList";
+	string $bookmarkAliasList = $name + "BookmarkAliasTextScrollList";
+	
+    string $ovDirName = "WIZ_" + $name + "BookmarkDirs";
+	string $bookmarkDirList = $name + "DirBookmarksTextScrollList";
+	string $bookmarkDirAliasList = $name + "DirBookmarkDirAliasTextScrollList";
+    
+	//print ("WIZ| textScrolllistBookmarksLayout : OptionVar : " + $ovName + " Bookmark File List: " + $bookmarkFileList + " Bookmark Alias List : " + $bookmarkAliasList + "\n");
+
+	//Add File Commands
+	//===============================
+	//$fileAddCommand and $curFileAddCommand both use $addCommand at the end of the command.
+	string $fileAliasVar = "$" + $name + "FileAlias";
+	string $aiVar = "$" + $name + "AI";
+	
+	string $addCommand = (
+	"addSelectedObjectsToTextScrollList($" + $name + "AddFiles, \"" + $bookmarkFileList + "\");"+"\n"
+	+"string $" + $name + "AllItems[] = `textScrollList -q -ai \"" + $bookmarkFileList + "\"`;"+"\n"
+	+"if(`size $" + $name + "AllItems` > 1){"+"\n"
+	+"	removeDuplicatesFromTextScrollList(\"" + $bookmarkFileList + "\");"+"\n"
+	+"}"+"\n"
+	+"string " + $aiVar + "[];"+"\n"
+	+"clear " + $aiVar + ";"+"\n"
+	+ $aiVar + " = `textScrollList -q -ai \"" + $bookmarkFileList + "\"`;"+"\n"
+	+"string " + $fileAliasVar + "[] ;"+"\n"
+	+"clear " + $fileAliasVar + ";"+"\n"
+    +"string " + $fileAliasVar + "Dir[];"+"\n"
+	+"for($i=0;$i<`size " + $aiVar + "`;$i++){"+"\n"
+	+"	" + $fileAliasVar + "[$i] = getFileNameNoPathNoExt(" + $aiVar + "[$i]);"+"\n"
+    +"  " + $fileAliasVar + "Dir[$i] = getDirectoryFromFullFilePath(" + $aiVar + "[$i]);"+"\n"
+	+"}"+"\n"
+	+"replaceTextScrollListWithSelectedObjects(" + $fileAliasVar + ", \"" + $bookmarkAliasList + "\");"+"\n"
+	+"overwriteTextScrollListOptionVar(\"" + $ovName + "\", \"" + $bookmarkFileList + "\");"+"\n"
+    +"replaceTextScrollListWithSelectedObjects(" + $fileAliasVar + "Dir, \"" + $bookmarkDirList + "\");"+"\n"
+    +"replaceTextScrollListWithSelectedObjects(" + $fileAliasVar + ", \"" + $bookmarkDirAliasList + "\");"+"\n"
+    
+	);
+    
+	// <ToDoWiz!> : Add Extra functionality - If a directory is chosen, then add all files in the directory.
+	//string $checkDirCommand = (
+	//"
+	string $fileAddCommand = ("string $" + $name + "AddFiles[] = wizGetMultipleFiles();"+"\n" + $addCommand);
+	
+	string $curFileAddCommand = ("string $" + $name + "SceneFile = `file -q -sn`;"+"\n" 
+	+"string $" + $name + "AddFiles[];"+"\n"
+	+"clear $" + $name + "AddFiles;"+"\n"
+	+"$" + $name + "AddFiles[0] = $" + $name + "SceneFile;"+"\n"
+	+ $addCommand);	
+	
+	//Select Command
+	//===============================
+	//print ("Add Current File Command : \n" + $curFileAddCommand + "\n\n");	
+	//print ("WIZ| TextScrollListBookmarkLayout : Add Command : \n\n" + $fileAddCommand + "\n\n");
+	
+	//If the file text scroll list is selected...
+	string $fileSc = (
+	"int $" + $name + "sii[] = `textScrollList -q -sii \"" + $bookmarkFileList + "\"`;"+"\n"
+	+"textScrollList -e -da \"" + $bookmarkAliasList + "\";"+"\n"
+	+"for($i=0;$i<`size $" + $name + "sii`;$i++){"+"\n"
+	+"	textScrollList -e -sii $" + $name + "sii[$i] \"" + $bookmarkAliasList + "\";"+"\n"
+    +"  textScrollList -e -sii $" + $name + "sii[$i] \"" + $bookmarkDirAliasList + "\";"+"\n"
+	+"}"+"\n"
+	
+	);
+	//print ("sc:"+$fileSc+"\n");
+	
+	//If the alias text scroll list is selected...
+	string $aliasSc = (
+	"int $" + $name + "asii[] = `textScrollList -q -sii \"" + $bookmarkAliasList + "\"`;"+"\n"
+	+"textScrollList -e -da \"" + $bookmarkFileList + "\";"+"\n"
+    +"updateBookmarkFileIconImage(\"" + $name + "\");"+"\n"
+	+"for($i=0;$i<`size $" + $name + "asii`;$i++){"+"\n"
+	+"	textScrollList -e -sii $" + $name + "asii[$i] \"" + $bookmarkFileList + "\";"+"\n"
+    +"	textScrollList -e -sii $" + $name + "asii[$i] \"" + $bookmarkDirAliasList + "\";"+"\n"
+	+"}"+"\n"
+	);
+	
+	//Double Click Command
+	//===============================
+	string $dcc = (
+	"string $" + $name + "Ref[] = `textScrollList -q -si \"" + $bookmarkFileList + "\"`;"+"\n"
+	+"wizDoBookmarkWizDoubleClickCommand($" + $name + "Ref[0], \"" + $name + "\");"
+	);
+	
+	//Delete Key Command
+	//===============================
+	string $dkc = (
+	"removeSelectedItemFromTextScrollList(\"" + $bookmarkFileList + "\");"+"\n"
+	+"removeSelectedItemFromTextScrollList(\"" + $bookmarkAliasList + "\");"+"\n"
+	+"overwriteTextScrollListOptionVar(\"" + $ovName + "\", \"" + $bookmarkFileList + "\");"
+	);
+	
+	//Clear Command
+	//===============================
+	string $clearCommand = (
+	"int $" + $name + "ok = wizWarningDialog(\"Ok To Delete?\", \"Delete All List Entries?\", \"OK\", \"Cancel\");"+"\n"
+	+"if($" + $name + "ok == 1){"+"\n"
+	+"	textScrollList -e -ra \"" + $bookmarkFileList + "\";"+"\n"
+	+"	textScrollList -e -ra \"" + $bookmarkAliasList + "\";"+"\n"
+	+"	optionVar -ca \"" + $ovName + "\";"+"\n"
+	+"}"+"\n"
+	);
+	
+	//Sort Command
+	//===============================
+	string $sortCommand = (
+	"sortTextScrollList(\"" + $bookmarkFileList + "\", \"az\");"+"\n"
+	+"sortTextScrollList(\"" + $bookmarkAliasList + "\", \"az\");"+"\n"
+	+"overwriteTextScrollListOptionVar(\"" + $ovName + "\", \"" + $bookmarkFileList + "\");"
+	);
+	
+	
+	//print ("Clear Command : \n" + $clearCommand + "\n\n");
+	
+	string $addFromDirectoryCommand = (
+	"string $si[] = `textScrollList -q -si \"" + $bookmarkAliasList + "\"`;"+"\n"
+	+"string $siFile[] = `textScrollList -q -si \"" + $bookmarkFileList + "\"`;"+"\n"
+	+"string $dirs[] = wizSpliceFilePath($siFile[0], \"-dir\");"+"\n"
+	+"string $" + $name + "AddFiles[] = wizGetFiles(\"-dir \" + $dirs[0] + \" -typ mb -typ ma -typ abc -typ fbx -typ obj\");"+"\n"
+	+ $addCommand );
+	
+	string $addFromDirectoryIndludeSubDirCommand = (
+	"string $si[] = `textScrollList -q -si \"" + $bookmarkAliasList + "\"`;"+"\n"
+	+"string $siFile[] = `textScrollList -q -si \"" + $bookmarkFileList + "\"`;"+"\n"
+	+"string $dirs[] = wizSpliceFilePath($siFile[0], \"-dir\");"+"\n"
+	+"string $" + $name + "AddFiles[] = wizGetFiles(\"-isd -dir \" + $dirs[0] + \" -typ mb -typ ma -typ abc -typ fbx -typ obj\");"+"\n"
+	+ $addCommand );
+	
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// <!ToDo!> add other file types support
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+
+	
+	//These are the buttons to add files to the bookmark lists
+			string $buttonRowA = `rowLayout
+				-nc 4
+				`;
+				
+			string $autoFindName = ($name + "BookmarksAutoFind_textFieldButtonGrp");
+			textFieldButtonGrp
+				-l ""
+				-tx ""
+				-cw 1 0
+				-cw 2 100
+				-cw 3 10
+				-tcc ("textScrollListAutoFind(\"" + $autoFindName + "\", \"" + $bookmarkAliasList + "\", \"autoFind\");")
+				-bl "Find"
+				-bc ("textScrollListAutoFind(\"" + $autoFindName + "\", \"" + $bookmarkAliasList + "\", \"find\");")
+				$autoFindName
+				;
+			
+				
+			float $bgc[] = getWizColor("goButtonColor");
+						
+			button
+				-l ("Add Bookmarks")
+				-ann ""
+				-bgc $bgc[0] $bgc[1] $bgc[2]
+				-c $fileAddCommand
+				;
+			
+			button
+				-l ("Add Current File")
+				-ann ""
+				-bgc $bgc[0] $bgc[1] $bgc[2]
+				-c $curFileAddCommand
+				;
+				
+            button
+				-l ("Add From Directory")
+				-ann ""
+				-bgc $bgc[0] $bgc[1] $bgc[2]
+				-c $addFromDirectoryCommand
+				;
+				
+				string $popup = `popupMenu -pmo true `;
+		
+			
+				menuItem -l "Add From Directory And Subdirectories" -c ($addFromDirectoryIndludeSubDirCommand);
+				
+				
+                
+			setParent $buttonRowA;
+			
+	//|||||||||||||||||||||<END-COLUMN>||||||||||||||||||||||
+	//-------------------------------------------------------
+	
+	//-------------------------------------------------------
+	//========================<ROW>==========================
+	
+	string $rowLayout = `rowLayout
+		-nc 3
+		-adj 1
+		-p $fileBookmarksColumnLayout
+		($name + "BookmarksRowLayout")
+		`;
+	
+		//The alias textScrollList
+		textScrollList	
+			-w 150
+			-h 256
+			-ann ("Alias List Name : " + $bookmarkAliasList + "\nFile List Name : " + $bookmarkFileList)
+			-ams true
+			-sc $aliasSc
+			-dcc $dcc
+			-dgc dragTextScrollListSelection
+			-dpc dropTextScrollListSelection
+			-dkc $dkc
+			$bookmarkAliasList
+			;
+		 		
+        string $rrefCom = ("int $replaceSii[] = `textScrollList -q -sii " + $bookmarkAliasList + "`;"+"\n"
+		+"textScrollList -e -sii $replaceSii[0] " + $bookmarkFileList + ";"+"\n"
+		+"string $replaceSi[] = `textScrollList -q -si " + $bookmarkFileList + "`;"+"\n"
+		+"wizReplaceAllSelectedReferences((\"-sl -rf \" + $replaceSi[0]));"+"\n"
+		);
+		
+		global string $WIZ_bookmarkWizSupportedFileTypes[];
+	
+		string $popup = `popupMenu -pmo true `;
+		
+			
+			menuItem -d true -dl "Other File Types";
+			
+/*
+		string $otherFilesPostMenuCommand = (
+		"menuItem -l \"Replace References\" -c " + $rrefCom	
+		+"string $si[] = `textScrollList -q -si " + $bookmarkFileList + "`;"+"\n"
+		+"string $siFilename = fromNativePath($si[0]);"+"\n"
+		+"string $altFiles[] = wizGetAlternateFileTypes(\"-fn\",$siFilename);"+"\n"
+		+"for ($i=0;$i<`size $altFiles`;$i++){"+"\n"
+		+"	string $splice[] = wizSpliceFilePath($altFiles[$i], \"-fn -ex\");"+"\n"	
+		+"	menuItem -d true -dl $splice[1];"+"\n"	
+		+"	menuItem -l (\"Reference \" + $splice[0] + \".\" + $splice[1]) -ann (\"File : \" + $altFiles[$i]) -c (\"bookmarkWizReferenceSelectedFiles({$altFiles[$i]}, \\\"" + $name + "\\\");\");"+"\n"
+		+"	menuItem -l (\"Import \" + $splice[0] + \".\" + $splice[1]) -ann (\"File : \" + $altFiles[$i]) -c (\"file -i $altFiles[$i];\");"+"\n"
+			
+		+"}"+"\n"
+
+		); 
+		*/
+		/*
+		string $otherFilesPostMenuCommand = (	
+		"string $si[] = `textScrollList -q -si " + $bookmarkFileList + "`;"+"\n"
+		+"string $siFilename = fromNativePath($si[0]);"+"\n"
+		+"string $altFiles[] = wizGetAlternateFileTypes(\"-fn\",$siFilename);"+"\n"
+		+"for ($i=0;$i<`size $altFiles`;$i++){"+"\n"
+		+"	string $splice[] = wizSpliceFilePath($altFiles[$i], \"-fn -ex\");"+"\n"	
+		+"	menuItem -d true -dl $splice[1];"+"\n"	
+		+"	menuItem -l (\"Reference \" + $splice[0] + \".\" + $splice[1]) -ann (\"File : \" + $altFiles[$i]) -c (\"bookmarkWizReferenceSelectedFiles({$altFiles[$i]}, \\\"" + $name + "\\\");\");"+"\n"
+		+"	menuItem -l (\"Import \" + $splice[0] + \".\" + $splice[1]) -ann (\"File : \" + $altFiles[$i]) -c (\"file -i $altFiles[$i];\");"+"\n"
+			
+		+"}"+"\n"
+
+		); 
+		*/
+		
+		string $openCommand = (
+			"string $openFile[] = `textScrollList -q -si \"" + $bookmarkFileList + "\"`;"+"\n"
+			+"if(catchQuiet(`file -o $openFile[0]`)){"+"\n"
+			+"	int $saveFile = wizSavePrompt();"+"\n"
+			+"	if($saveFile == 1){"+"\n"
+			+"		file -f -o $openFile[0];"+"\n"
+			+"	}"+"\n"
+			+"}"+"\n"
+			);
+			
+			menuItem -l "Open" -c $openCommand;
+			menuItem -l "Reference" -c ("string $ref[] = `textScrollList -q -si \"" + $bookmarkFileList + "\"`; bookmarkWizReferenceSelectedFiles($ref, \"" + $name + "\");");
+			menuItem -l "Import" -c ("string $ref[] = `textScrollList -q -si \"" + $bookmarkFileList + "\"`;for($i=0;$i<`size $ref`;$i++){ file -i $ref[$i];}");
+		
+			menuItem -d true -dl "Proxy";
+			menuItem -l "Open Render Proxy" -c ("bookmarkWizAltFileLoading(\"-ext ma -o -l " + $bookmarkFileList + "\");");			
+			menuItem -l "Reference Render Proxy" -c ("bookmarkWizAltFileLoading(\"-ext ma -r -l " + $bookmarkFileList + "\");");
+			menuItem -l "Import Render Proxy" -c ("bookmarkWizAltFileLoading(\"-ext ma -i -l " + $bookmarkFileList + "\");");
+			
+			menuItem -d true -dl "ABC";
+			menuItem -l "Open ABC" -c ("bookmarkWizAltFileLoading(\"-ext abc -o -l " + $bookmarkFileList + "\");");			
+			menuItem -l "Reference ABC" -c ("bookmarkWizAltFileLoading(\"-ext abc -r -l " + $bookmarkFileList + "\");");
+			menuItem -l "Import ABC" -c ("bookmarkWizAltFileLoading(\"-ext abc -i -l " + $bookmarkFileList + "\");");
+			
+			menuItem -d true -dl "FBX";
+			menuItem -l "Open FBX" -c ("bookmarkWizAltFileLoading(\"-ext fbx -o -l " + $bookmarkFileList + "\");");			
+			menuItem -l "Reference FBX" -c ("bookmarkWizAltFileLoading(\"-ext fbx -r -l " + $bookmarkFileList + "\");");
+			menuItem -l "Import FBX" -c ("bookmarkWizAltFileLoading(\"-ext fbx -i -l " + $bookmarkFileList + "\");");
+			
+			menuItem -d true -dl "Replace References";
+			menuItem -l "Replace References" -c $rrefCom;	
+			
+			menuItem -d true -dl "Scene Assembly";
+			menuItem -l "Create Assembly Definition" -c ("wizAssemblyDefinition(\"-cd -l " + $bookmarkFileList + "\");");
+			
+			menuItem -d true;
+			//menuItem -d true -dl "Delete";
+			string $openFileLocCom = ("int $sii[] = `textScrollList -q -sii \"" + $bookmarkFileList + "\"`;"+"\n"
+			+"textScrollList -e -sii $sii[0] \"" + $bookmarkDirList + "\";"+"\n"
+			+"string $siDir[] = `textScrollList -q -si \"" + $bookmarkDirList + "\"`;"+"\n"
+			+"string $siFile[] = `textScrollList -q -si \"" + $bookmarkFileList + "\"`;"+"\n"
+			+"wizLocateInExplorer($siDir[0]);"+"\n"
+			+"textScrollList -e -da \"" + $bookmarkDirList + "\";"+"\n"
+			);
+		
+			menuItem -l "Locate In Explorer" -c ($openFileLocCom);
+			menuItem -l "Delete File(s)" -c ("bookmarkWizDelete(\"-f -af -l " + $name + "\");");
+			
+		//popupMenu -e -pmc $otherFilesPostMenuCommand $popup;
+		
+			
+			
+        string $imageFrameLayout = `frameLayout
+            -w 256
+            -h 256
+            -bv true
+            
+            -lv false
+            -mh 0
+            -mw 0
+            -p ($name + "BookmarksRowLayout")
+            ($name + "BookmarkIconImageFrameLayout")
+            `;
+            
+            image
+                -w 256
+                -h 256
+				-ebg true
+				-bgc 0.0 0.0 0.0
+                -p $imageFrameLayout
+                ($name + "BookmarkIconImage")
+                ;
+				
+			string $imagePopup = `popupMenu -pmo true `;
+			
+			string $ipCom = ("string $si[] = `textScrollList -q -si \"" + $bookmarkFileList + "\"`;"
+			+"string $posterFile[] = wizGetAlternateFileTypes(\"-pst\", $si[0]);"+"\n"
+			+"if (`size $posterFile` > 0){"+"\n"
+			+"	wizImageViewWindow(\"-i \" + $posterFile[0]);"+"\n"
+			+"}"+"\n");
+			
+			menuItem -l "View Poster" -c $ipCom;	
+        
+            
+        //The file path textScrollList
+		textScrollList	
+			-h 256
+			-ams true
+			-sc $fileSc
+			-dcc $dcc
+			-dgc dragTextScrollListSelection
+			-dpc dropTextScrollListSelection
+			-dkc $dkc
+            -vis false           
+			$bookmarkFileList
+			;
+            
+		//Populate the textScrollLists with the saved optionVar values
+		string $bookmarkFiles[];
+		$bookmarkFiles = getBookmarkOptionVarStringArray($ovName);		
+		addSelectedObjectsToTextScrollList($bookmarkFiles, $bookmarkFileList);
+		string $arr[] ;
+        string $dirArr[];
+		for ($i=0;$i<`size $bookmarkFiles`;$i++){  
+			$arr[`size $arr`] = getFileNameNoPathNoExt($bookmarkFiles[$i]);
+            $dirArr[`size $dirArr`] = getDirectoryFromFullFilePath($bookmarkFiles[$i]);
+		}
+		addSelectedObjectsToTextScrollList($arr, $bookmarkAliasList);
+        
+        
+	setParent $rowLayout;	
+	//======================<END-ROW>========================
+	//-------------------------------------------------------
+	
+	//-------------------------------------------------------
+	//|||||||||||||||||||||||<COLUMN>||||||||||||||||||||||||
+	//These are the rest of the function buttons for referencing, opening and importing the files
+	string $colLayoutC = `columnLayout
+		-adj true
+		-p $fileBookmarksColumnLayout
+		($name + "BookmarksColC")
+		`;
+		
+		//-------------------------------------------------------
+		//========================<ROW>==========================
+		string $buttonRow = `rowLayout
+			-nc 6
+			-p $colLayoutC
+			`;
+			
+			
+			$bgc = getWizColor("optionButtonColor");
+	
+			//Open command : ("string $ref[] = `textScrollList -q -si \"" + $bookmarkFileList + "\"`; file -o $ref[0];")
+			
+			string $openCommand = (
+			"string $openFile[] = `textScrollList -q -si \"" + $bookmarkFileList + "\"`;"+"\n"
+			+"if(catchQuiet(`file -o $openFile[0]`)){"+"\n"
+			+"	int $saveFile = wizSavePrompt();"+"\n"
+			+"	if($saveFile == 1){"+"\n"
+			+"		file -f -o $openFile[0];"+"\n"
+			+"	}"+"\n"
+			+"}"+"\n"
+			);
+			
+			button
+				-l "Open File"
+				-bgc $bgc[0] $bgc[1] $bgc[2]
+				-c $openCommand
+				;
+				
+			button
+				-l "Reference File(s)"
+				-ann ""
+				-bgc $bgc[0] $bgc[1] $bgc[2]
+				-c ("string $ref[] = `textScrollList -q -si \"" + $bookmarkFileList + "\"`; bookmarkWizReferenceSelectedFiles($ref, \"" + $name + "\");")
+				;
+			
+			button
+				-l "Remove Reference"
+				-ann ""
+				-bgc $bgc[0] $bgc[1] $bgc[2]
+				-c ("string $ref[] = `textScrollList -q -si \"" + $bookmarkFileList + "\"`;for($i=0;$i<`size $ref`;$i++){ file -rr $ref[$i];}")
+				;
+						
+			button
+				-l "Import File(s)"
+				-bgc $bgc[0] $bgc[1] $bgc[2]
+				-c ("string $ref[] = `textScrollList -q -si \"" + $bookmarkFileList + "\"`;for($i=0;$i<`size $ref`;$i++){ file -i $ref[$i];}")
+				;
+				
+			$bgc = getWizColor("warningButtonColor");
+			
+                            
+			button
+				-l "Clear List"
+				-bgc $bgc[0] $bgc[1] $bgc[2]
+				-c $clearCommand
+				;
+				
+			button
+				-l "A-Z"
+				-c $sortCommand
+				;
+				
+		
+			setParent $buttonRow;
+			//======================<END-ROW>========================
+			//-------------------------------------------------------
+			
+			
+		/*	
+		//_________________________________________
+		// MI Proxy
+		
+		//-------------------------------------------------------
+		//========================<ROW>==========================
+		string $buttonRow = `rowLayout
+			-nc 3
+			-p $colLayoutC
+			`;
+			
+			
+			$bgc = getWizColor("optionButtonColor");
+	
+
+			string $openProxyCommand = (
+			"string $bmsi[] = `textScrollList -q -si \"" + $bookmarkFileList + "\"`;"+"\n"
+			+"string $siFilename = fromNativePath($bmsi[0]);"+"\n"
+			+"string $maProxy[] = wizGetAlternateFileTypes(\"-ext ma\", $siFilename);"+"\n"
+			+"if(catchQuiet(`file -o $maProxy[0]`)){"+"\n"
+			+"	int $saveFile = wizSavePrompt();"+"\n"
+			+"	if($saveFile == 1){"+"\n"
+			+"		file -f -o $maProxy[0];"+"\n"
+			+"	}"+"\n"
+			+"}"+"\n"
+			);
+			
+			button
+				-l "Open Proxy File"
+				-bgc $bgc[0] $bgc[1] $bgc[2]
+				-c $openProxyCommand
+				;
+			
+			string $refProxyCommand = (
+			"string $bmsi[] = `textScrollList -q -si \"" + $bookmarkFileList + "\"`;"+"\n"
+			+"string $siFilename = fromNativePath($bmsi[0]);"+"\n"
+			+"string $maProxy[] = wizGetAlternateFileTypes(\"-ext ma\", $siFilename);"+"\n"
+			+"if (`size $maProxy` != 0){"+"\n"
+			+"	bookmarkWizReferenceSelectedFiles({$maProxy[0]}, \"\");"+"\n"
+			+"}"+"\n"
+			);
+			
+			button
+				-l "Reference Proxy File"
+				-ann ""
+				-bgc $bgc[0] $bgc[1] $bgc[2]
+				-c $refProxyCommand
+				;
+				
+			string $importProxyCommand = (
+			"string $bmsi[] = `textScrollList -q -si \"" + $bookmarkFileList + "\"`;"+"\n"
+			+"string $siFilename = fromNativePath($bmsi[0]);"+"\n"
+			+"string $maProxy[] = wizGetAlternateFileTypes(\"-ext ma\", $siFilename);"+"\n"
+			+"if (`size $maProxy` != 0){"+"\n"
+			+"	file -i $maProxy[0];"+"\n"
+			+"}"+"\n"
+			);
+			
+			button
+				-l "Import Proxy File"
+				-ann ""
+				-bgc $bgc[0] $bgc[1] $bgc[2]
+				;
+					
+			setParent $buttonRow;
+			//======================<END-ROW>========================
+			//-------------------------------------------------------
+			
+		//_________________________________________
+		// ABC
+		
+		//-------------------------------------------------------
+		//========================<ROW>==========================
+			string $buttonRow = `rowLayout
+			-nc 3
+			-p $colLayoutC
+			`;
+						
+			$bgc = getWizColor("optionButtonColor");	
+
+			string $openABCCommand = (
+			"string $bmsi[] = `textScrollList -q -si \"" + $bookmarkFileList + "\"`;"+"\n"
+			+"string $siFilename = fromNativePath($bmsi[0]);"+"\n"
+			+"string $maProxy[] = wizGetAlternateFileTypes(\"-ext abc\", $siFilename);"+"\n"
+			+"if(catchQuiet(`file -o $maProxy[0]`)){"+"\n"
+			+"	int $saveFile = wizSavePrompt();"+"\n"
+			+"	if($saveFile == 1){"+"\n"
+			+"		file -f -o $maProxy[0];"+"\n"
+			+"	}"+"\n"
+			+"}"+"\n"
+			);
+			
+			button
+				-l "Open ABC File"
+				-bgc $bgc[0] $bgc[1] $bgc[2]
+				-c $openProxyCommand
+				;
+			
+			string $refProxyCommand = (
+			"string $bmsi[] = `textScrollList -q -si \"" + $bookmarkFileList + "\"`;"+"\n"
+			+"string $siFilename = fromNativePath($bmsi[0]);"+"\n"
+			+"string $abc[] = wizGetAlternateFileTypes(\"-ext abc\", $siFilename);"+"\n"
+			+"if (`size $abc` != 0){"+"\n"
+			+"	bookmarkWizReferenceSelectedFiles({$abc[0]}, \"\");"+"\n"
+			+"}"+"\n"
+			);
+			
+			button
+				-l "Reference ABC File"
+				-ann ""
+				-bgc $bgc[0] $bgc[1] $bgc[2]
+				-c $refProxyCommand
+				;
+				
+			string $importProxyCommand = (
+			"string $bmsi[] = `textScrollList -q -si \"" + $bookmarkFileList + "\"`;"+"\n"
+			+"string $siFilename = fromNativePath($bmsi[0]);"+"\n"
+			+"string $abc[] = wizGetAlternateFileTypes(\"-ext abc\", $siFilename);"+"\n"
+			+"if (`size $abc` != 0){"+"\n"
+			+"	file -i $abc[0];"+"\n"
+			+"}"+"\n"
+			);
+			
+			button
+				-l "Import ABC File"
+				-ann ""
+				-bgc $bgc[0] $bgc[1] $bgc[2]
+				;
+				
+			$bgc = getWizColor("warningButtonColor");
+						
+		
+			setParent $buttonRow;
+			//======================<END-ROW>========================
+			//-------------------------------------------------------
+			
+		//_________________________________________
+		// FBX
+		
+		//-------------------------------------------------------
+		//========================<ROW>==========================
+			string $buttonRow = `rowLayout
+			-nc 3
+			-p $colLayoutC
+			`;
+						
+			$bgc = getWizColor("optionButtonColor");	
+
+			string $openFBXCommand = (
+			"string $bmsi[] = `textScrollList -q -si \"" + $bookmarkFileList + "\"`;"+"\n"
+			+"string $siFilename = fromNativePath($bmsi[0]);"+"\n"
+			+"string $fbx[] = wizGetAlternateFileTypes(\"-ext fbx\", $siFilename);"+"\n"
+			+"if(catchQuiet(`file -o $fbx[0]`)){"+"\n"
+			+"	int $saveFile = wizSavePrompt();"+"\n"
+			+"	if($saveFile == 1){"+"\n"
+			+"		file -f -o $fbx[0];"+"\n"
+			+"	}"+"\n"
+			+"}"+"\n"
+			);
+			
+			button
+				-l "Open FBX File"
+				-bgc $bgc[0] $bgc[1] $bgc[2]
+				-c $openProxyCommand
+				;
+			
+			string $refFBXCommand = (
+			"string $bmsi[] = `textScrollList -q -si \"" + $bookmarkFileList + "\"`;"+"\n"
+			+"string $siFilename = fromNativePath($bmsi[0]);"+"\n"
+			+"string $fbx[] = wizGetAlternateFileTypes(\"-ext fbx\", $siFilename);"+"\n"
+			+"if (`size $fbx` != 0){"+"\n"
+			+"	bookmarkWizReferenceSelectedFiles({$fbx[0]}, \"\");"+"\n"
+			+"}"+"\n"
+			);
+			
+			button
+				-l "Reference FBX File"
+				-ann ""
+				-bgc $bgc[0] $bgc[1] $bgc[2]
+				-c $refProxyCommand
+				;
+				
+			string $importFBXCommand = (
+			"string $bmsi[] = `textScrollList -q -si \"" + $bookmarkFileList + "\"`;"+"\n"
+			+"string $siFilename = fromNativePath($bmsi[0]);"+"\n"
+			+"string $fbx[] = wizGetAlternateFileTypes(\"-ext fbx\", $siFilename);"+"\n"
+			+"if (`size $fbx` != 0){"+"\n"
+			+"	file -i $fbx[0];"+"\n"
+			+"}"+"\n"
+			);
+			
+			button
+				-l "Import FBX File"
+				-ann ""
+				-bgc $bgc[0] $bgc[1] $bgc[2]
+				;
+				
+			$bgc = getWizColor("warningButtonColor");
+						
+		
+			setParent $buttonRow;
+			//======================<END-ROW>========================
+			//-------------------------------------------------------
+			*/
+			
+	setParent $fileBookmarksColumnLayout;	
+	
+	//|||||||||||||||||||||<END-COLUMN>||||||||||||||||||||||
+	//-------------------------------------------------------
+	
+		
+	
+	//-------------------------------------------------------
+	//|||||||||||||||||||||||<COLUMN>||||||||||||||||||||||||
+	
+	
+	
+	
+		
+	string $dirBookmarksColumnLayout = `columnLayout
+		-adjustableColumn true
+		-p $tabLayout
+		($name + "BookmarksDirColumnLayout")
+		`;
+		
+	
+	
+	//--------------------------------------------------------------------
+	//////////////////////////////////////////////////////////////////////
+	//			BUTTON COMMANDS
+	//////////////////////////////////////////////////////////////////////
+	//--------------------------------------------------------------------		
+	//These are the main variable names for the optionVar and the textScrollList names
+	string $ovDirName = "WIZ_" + $name + "BookmarkDirs";
+	string $bookmarkDirList = $name + "DirBookmarksTextScrollList";
+	string $bookmarkDirAliasList = $name + "DirBookmarkDirAliasTextScrollList";
+	
+	//print ("WIZ| textScrolllistBookmarksLayout : OptionVar : " + $ovDirName + " Bookmark Dir List: " + $bookmarkDirList + " Bookmark Directory Alias List : " + $bookmarkDirAliasList + "\n");
+
+	//Add Dir Commands
+	//===============================
+	//$dirAddCommand and $curdirAddCommand both use $addDirCommand at the end of the command.
+	string $dirAliasVar = "$" + $name + "DirAlias";
+	string $aiVar = "$" + $name + "AI";
+	
+	string $addDirCommand = (
+	"addSelectedObjectsToTextScrollList($" + $name + "AddDir, \"" + $bookmarkDirList + "\");"+"\n"
+	+"string $" + $name + "AllItems[] = `textScrollList -q -ai \"" + $bookmarkDirList + "\"`;"+"\n"
+	+"if(`size $" + $name + "AllItems` > 1){"+"\n"
+	+"	removeDuplicatesFromTextScrollList(\"" + $bookmarkDirList + "\");"+"\n"
+	+"}"+"\n"
+	+"string " + $aiVar + "[];"+"\n"
+	+"clear " + $aiVar + ";"+"\n"
+	+ $aiVar + " = `textScrollList -q -ai \"" + $bookmarkDirList + "\"`;"+"\n"
+	+"string " + $dirAliasVar + "[] ;"+"\n"
+	+"clear " + $dirAliasVar + ";"+"\n"
+	+"for($i=0;$i<`size " + $aiVar + "`;$i++){"+"\n"
+	+"	" + $dirAliasVar + "[$i] = getDirNameNoPathNoExt(" + $aiVar + "[$i]);"+"\n"
+	+"}"+"\n"
+	+"replaceTextScrollListWithSelectedObjects(" + $dirAliasVar + ", \"" + $bookmarkDirAliasList + "\");"+"\n"
+	+"overwriteTextScrollListOptionVar(\"" + $ovDirName + "\", \"" + $bookmarkDirList + "\");"
+	);
+	// <ToDoWiz!> : Add Extra functionality - If a directory is chosen, then add all Dirs in the directory.
+	//string $checkDirCommand = (
+	//"
+	string $dirAddCommand = ("string $" + $name + "AddDirs[] = wizGetDirectory();"+"\n" + $addDirCommand);
+	
+	string $curDirAddCommand = ("string $" + $name + "SceneDir = `file -q -sn`;"+"\n" 
+	+"string $" + $name + "AddDirs[];"+"\n"
+	+"clear $" + $name + "AddDirs;"+"\n"
+	+"$" + $name + "AddDirs[0] = $" + $name + "SceneDir;"+"\n"
+	+ $dirAddCommand);	
+	
+	//Select Command
+	//===============================
+	//print ("Add Current Dir Command : \n" + $curdirAddCommand + "\n\n");	
+	//print ("WIZ| TextScrollListBookmarkLayout : Add Command : \n\n" + $dirAddCommand + "\n\n");
+	
+	//If the Dir text scroll list is selected...
+	string $dirSC = (
+	"int $" + $name + "sii[] = `textScrollList -q -sii \"" + $bookmarkDirList + "\"`;"+"\n"
+	+"textScrollList -e -da \"" + $bookmarkDirAliasList + "\";"+"\n"
+	+"for($i=0;$i<`size $" + $name + "sii`;$i++){"+"\n"
+	+"	textScrollList -e -sii $" + $name + "sii[$i] \"" + $bookmarkDirAliasList + "\";"+"\n"
+	+"}"+"\n"
+	
+	);
+	//print ("sc:"+$dirSC+"\n");
+	
+	//If the alias text scroll list is selected...
+	string $aliasSc = (
+	"int $" + $name + "asii[] = `textScrollList -q -sii \"" + $bookmarkDirAliasList + "\"`;"+"\n"
+	+"textScrollList -e -da \"" + $bookmarkDirList + "\";"+"\n"
+	+"for($i=0;$i<`size $" + $name + "asii`;$i++){"+"\n"
+	+"	textScrollList -e -sii $" + $name + "asii[$i] \"" + $bookmarkDirList + "\";"+"\n"
+	+"}"+"\n"
+	);
+	
+	//Double Click Command
+	//===============================
+	string $dcc = (
+	"string $" + $name + "Ref[] = `textScrollList -q -si \"" + $bookmarkDirList + "\"`;"+"\n"
+	+"wizReferenceDir($" + $name + "Ref[0]);"
+	);
+	
+	//Delete Key Command
+	//===============================
+	string $dkc = (
+	"removeSelectedItemFromTextScrollList(\"" + $bookmarkDirList + "\");"+"\n"
+	+"removeSelectedItemFromTextScrollList(\"" + $bookmarkDirAliasList + "\");"+"\n"
+	+"overwriteTextScrollListOptionVar(\"" + $ovDirName + "\", \"" + $bookmarkDirList + "\");"
+	);
+	
+	//Clear Command
+	//===============================
+	string $clearCommand = (
+	"int $" + $name + "ok = wizWarningDialog(\"Ok To Delete?\", \"Delete All List Entries?\", \"OK\", \"Cancel\");"+"\n"
+	+"if($" + $name + "ok == 1){"+"\n"
+	+"	textScrollList -e -ra \"" + $bookmarkDirList + "\";"+"\n"
+	+"	textScrollList -e -ra \"" + $bookmarkDirAliasList + "\";"+"\n"
+	+"	optionVar -ca \"" + $ovDirName + "\";"+"\n"
+	+"}"+"\n"
+	);
+	//print ("Clear Command : \n" + $clearCommand + "\n\n");
+	
+	
+	
+	//These are the buttons to add files to the bookmark lists
+			string $dirButtonRowA = `rowLayout
+				-nc 2
+				`;
+				
+
+			
+			button
+				-l ("Add All In Directory")
+				-ann ""
+				-bgc $bgc[0] $bgc[1] $bgc[2]
+				-c $dirAddCommand
+				;
+			/*
+			button
+				-l ("Add Current File")
+				-ann ""
+				-bgc $bgc[0] $bgc[1] $bgc[2]
+				-c $curDirAddCommand
+				;
+				*/
+			setParent $dirButtonRowA;
+		
+        
+	//|||||||||||||||||||||<END-COLUMN>||||||||||||||||||||||
+	//-------------------------------------------------------
+	
+	//-------------------------------------------------------
+	//========================<ROW>==========================
+	
+	string $dirRowLayout = `rowLayout
+		-nc 2
+		-adj 1
+		-p $dirBookmarksColumnLayout
+		($name + "DirBookmarksRowLayout")
+		`;
+        /*
+		//The alias textScrollList
+		textScrollList	
+			-w 150
+			-h 300
+			-ams true
+			-sc $aliasSc
+			-dcc $dcc
+			-dgc dragTextScrollListSelection
+			-dpc dropTextScrollListSelection
+			-dkc $dkc
+			$bookmarkDirAliasList
+			;
+		*/
+        
+        textScrollList	
+			-w 150
+			-h 300
+			-ams true
+			-sc $aliasSc
+			-dcc $dcc
+			-dgc dragTextScrollListSelection
+			-dpc dropTextScrollListSelection
+			-dkc $dkc
+			$bookmarkDirAliasList
+			;
+            
+		//The file path textScrollList
+		textScrollList	
+			-h 300
+			-ams true
+			-sc $fileSc
+			-dcc $dcc
+			-dgc dragTextScrollListSelection
+			-dpc dropTextScrollListSelection
+			-dkc $dkc
+			$bookmarkDirList
+			;
+		
+        addSelectedObjectsToTextScrollList($arr, $bookmarkDirAliasList);
+        addSelectedObjectsToTextScrollList($dirArr, $bookmarkDirList);
+       
+	setParent $dirRowLayout;	
+	//======================<END-ROW>========================
+	//-------------------------------------------------------
+	
+	//-------------------------------------------------------
+	//|||||||||||||||||||||||<COLUMN>||||||||||||||||||||||||
+	//These are the rest of the function buttons for referencing, opening and importing the files
+	string $dirColLayoutC = `columnLayout
+		-adj true
+		-p $dirBookmarksColumnLayout
+		($name + "DirBookmarksColC")
+		`;
+		
+		//-------------------------------------------------------
+		//========================<ROW>==========================
+		string $dirButtonRowC = `rowLayout
+			-nc 5
+			-p $dirColLayoutC
+			`;
+			
+			
+			$bgc = getWizColor("optionButtonColor");
+	
+			//Open command : ("string $ref[] = `textScrollList -q -si \"" + $bookmarkDirList + "\"`; file -o $ref[0];")
+			
+			string $openCommand = (
+            "string $dir[] = `textScrollList -q -si \"" + $bookmarkDirList + "\"`;"+"\n"
+            +"string $openFile[] = `fileDialog2 -fm 1 -dir $dir[0]`;"+"\n"
+			+"if(catchQuiet(`file -o $openFile[0]`)){"+"\n"
+			+"	int $saveFile = wizSavePrompt();"+"\n"
+			+"	if($saveFile == 1){"+"\n"
+			+"		file -f -o $openFile[0];"+"\n"
+			+"	}"+"\n"
+			+"}"+"\n"
+			);
+			
+			button
+				-l "Open From Directory"
+				-bgc $bgc[0] $bgc[1] $bgc[2]
+				-c $openCommand
+				;
+				
+			button
+				-l "Reference File(s) From Directory"
+				-ann ""
+				-bgc $bgc[0] $bgc[1] $bgc[2]
+				-c ("string $dir[] = `textScrollList -q -si \"" + $bookmarkDirList + "\"`;string $ref[] = `fileDialog2 -fm 4 -dir $dir[0]`;referenceSelectedFiles($ref);")
+				;
+			
+            /*
+			button
+				-l "Remove Reference"
+				-ann ""
+				-bgc $bgc[0] $bgc[1] $bgc[2]
+				-c ("string $ref[] = `textScrollList -q -si \"" + $bookmarkDirList + "\"`;for($i=0;$i<`size $ref`;$i++){ file -rr $ref[$i];}")
+				;
+			*/			
+			button
+				-l "Import File(s) From Directory"
+				-bgc $bgc[0] $bgc[1] $bgc[2]
+				-c ("string $imp[] = `textScrollList -q -si \"" + $bookmarkDirList + "\"`;string $impFiles[] = `fileDialog2 -fm 4 -dir $imp[0]`;for($i=0;$i<`size $impFiles`;$i++){ file -i $impFiles[$i];}")
+				;
+				
+			$bgc = getWizColor("warningButtonColor");
+			
+            /*
+			button
+				-l "Clear List"
+				-bgc $bgc[0] $bgc[1] $bgc[2]
+				-c $clearCommand
+				;
+				*/
+		
+			setParent $dirButtonRowC;
+			//======================<END-ROW>========================
+			//-------------------------------------------------------
+			
+		
+	
+    
+    
+	//|||||||||||||||||||||<END-COLUMN>||||||||||||||||||||||
+	//-------------------------------------------------------
+	
+	
+	
+	setParent $dirBookmarksColumnLayout;
+	
+	//load custom bookmarks
+	setParent $layout;
+	loadCustomBookmarkWizSubCategoryFrameLayouts($name);
+	setParent $columnLayout;
+	//######################<END-TAB>########################
+	//-------------------------------------------------------
+	
+	tabLayout
+		-e 
+		-tl $fileBookmarksColumnLayout "Files"
+		-tl $dirBookmarksColumnLayout "Directories"
+		$tabLayout
+		;
+	
+	
+}
+
+global proc transformLocatorLayout(string $parent)
+{
+	string $layout = wizStandardFrameLayout($parent, "Transform Bookmarks", "transformBookmarks_frameLayout");
+		button
+			-l "Create Transform Bookmark From Selected"
+			-c ("createTransformBookmarkLocatorFromSelected(`ls -typ transform -sl`)")
+			;
+			
+		setParent..;
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         REFERENCE COMMANDS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//@ GET BOOKMARK WIZ REFERENCE COMMANDS
+//====================================================================
+global proc string[] getBookmarkWizReferenceCommands( string $cat )
+{
+    string $commands[] = {
+    "Disable All Inputs On Geometry", "enableThenDisableAllInputsOnSelectedGeometry(`ls -typ mesh -typ nurbsSurface -sl`);", ($cat + "DisableInputsOnGeometryMenuItem"),
+	"Unload All Render Environment Assets", "unloadAllWizReferencedAssetsOfType(\"renderEnvAsset\");", ($cat + "UnloadAllRenderEnvAssetsMenuItem")
+	
+    };
+    /* Add This
+	 "Lower Poly Count From Inputs", "lowerPolyCountFromInputs(`ls -typ mesh -sl`, 5000);", , ($cat + "LowerPolyCountFromInputsMenuItem")
+    */
+    return $commands;
+}
+
+//@ EXECUTE BOOKMARK WIZ REFERENCE COMMANDS
+//====================================================================
+global proc executeBookmarkWizReferenceCommands( string $cat )
+{
+    string $refCom[] = getBookmarkWizReferenceCommands($cat);
+    for ($i=0;$i<`size $refCom`;$i=$i+3){
+        if (`menuItem -q -cb $refCom[($i + 2)]`){
+            eval ($refCom[($i + 1)]);
+        }
+    }
+}
+
+//@ BOOKMARK WIZ REFERENCE SELECTED FILES
+//====================================================================
+/*======================| SUMMARY |===================================
+    This references the file then runs commands specified in the
+    catagory layout to run when a file is imported.
+/*=======================| USAGE |====================================	
+
+====================================================================*/
+global proc bookmarkWizReferenceSelectedFiles( string $ref[] , string $cat )
+{
+	for ($i=0;$i<`size $ref`;$i++){
+		bookmarkWizReferenceFile($ref[$i], $cat);        
+	}
+}
+
+//WIZ REFERENCE FILE
+//=============================================================
+/*======================| SUMMARY |===================================
+    This references the specified file and returns the new nodes
+/*=======================| USAGE |====================================	
+
+====================================================================*/
+
+global proc string[] bookmarkWizReferenceFile( string $filepath , string $cat )
+{
+	string $ext = `fileExtension $filepath`;
+	string $addExt = ("." + `fileExtension $filepath`);
+	string $basename = basename($filepath, $addExt);
+	string $print = "WIZ| Reference File : ";
+    string $newNodes[];
+	int $useNamespaces = `menuItem -q -cb bookmarkWizUseNamesspacesMenuItem`;
+	if ($ext == "mb"){
+		if ($useNamespaces == 1){
+		//If you don't specify namespace it seems like it want to bring in all references no matter what the setting.
+			//1: `file -rnn -r -type "mayaBinary" -gl -mergeNamespacesOnClash false -pmt false -namespace $basename -options "v=0;" $filepath`;
+
+			//2: `file -r -type "mayaBinary" -pmt false -gl -shd "displayLayers" -shd "shadingNetworks" -shd "renderLayersByName" -mergeNamespacesOnClash false -options "v=0;" -rnn $filepath`;
+			//3: `file -r -type "mayaBinary" -pmt false -gl -mergeNamespacesOnClash false -options "v=0;" -rnn $filepath`;
+			
+			$newNodes = `file -r -type "mayaBinary" -pmt false -gl -mergeNamespacesOnClash false -namespace $basename -options "v=0;" -rnn $filepath`;
+		} else {
+			//1: `file -rnn -r -type "mayaBinary" -pmt false -options "v=0;" $filepath`;
+			//2: `file -r -type "mayaBinary" -pmt false -gl -shd "displayLayers" -shd "shadingNetworks" -shd "renderLayersByName" -options "v=0;" -rnn $filepath`;
+			//$newNodes = `file -rnn -r -type "mayaBinary" -pmt false -options "v=0;" $filepath`;
+			$newNodes = `file -r -type "mayaBinary" -pmt false -gl -mergeNamespacesOnClash false -namespace $basename -options "v=0;" -rnn $filepath`;
+		}
+        printNiceArrayList("Reference File New Nodes : ", $newNodes);
+       // string $ns = `referenceQuery -ns $newRef`;
+	} else {
+		if ($useNamespaces == 1){
+			$newNodes = `file -rnn -r -gl -mergeNamespacesOnClash false -pmt false -namespace $basename $filepath`;
+		} else {
+			$newNodes = `file -rnn -pmt false -r $filepath`;
+		}
+	}
+    
+    // Execute the reference commands
+    select -r $newNodes;
+    
+	if ($cat != ""){
+		executeBookmarkWizReferenceCommands($cat);
+    }
+    return $newNodes;
+}
+
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         OPTION VARS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//OVERWRITE TEXTSCROLLLIST OPTION VAR
+//------------------------------------
+global proc overwriteTextScrollListOptionVar( string $optionVarName, string $textScrollList )
+{
+	if (`optionVar -ex $optionVarName`){
+		optionVar -ca $optionVarName;
+	}
+	string $arr[] = `textScrollList -q -ai $textScrollList`;
+	for ($i=0;$i<`size $arr`;$i++){
+		optionVar -sva $optionVarName $arr[$i];
+	}
+}
+
+//REPLACE OPTION VAR STRING ARRAY
+//------------------------------------
+global proc replaceOptionVarStringArray( string $optionVarName, string $arr[] )
+{
+	if (`optionVar -ex $optionVarName`){
+		optionVar -ca $optionVarName;
+	}
+	for ($i=0;$i<`size $arr`;$i++){
+		optionVar -sva $optionVarName $arr[$i];
+	}
+	
+}
+
+//ADD TO BOOKMARK WIZ CATAGORY OPTION VAR
+//------------------------------------
+global proc addToBookmarkWizCategoryOptionVar( string $optionVarName, string $arr[] )
+{
+	for ($i=0;$i<`size $arr`;$i++){
+		optionVar -sva $optionVarName $arr[$i];
+	}
+	
+}
+
+//GET OPTION VAR STRING ARRAY
+//------------------------------------
+global proc string[] getBookmarkOptionVarStringArray( string $optionVar )
+{
+	string $ov[];	
+	if (`optionVar -as $optionVar` > 0){
+		$ov = `optionVar -q $optionVar`;	
+	}	
+	return $ov;	
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                        PROJECT DIRECTORIES
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//SET WIZ PROJECT DIRECTORY
+//------------------------------------
+global proc setWizProjectDirectory()
+{
+	string $dir = getDirectoryFileDialog();
+	
+	string $subFolder[] = `getFileList -folder $dir -filespec "*."`;
+
+	optionVar -sv WIZ_wizProjectDirectory $dir;
+	
+	bookmarkWizMainMenu("bookmarkWizMenuBarLayout");
+}
+
+//GET WIZ PROJECTS
+//------------------------------------
+global proc string[] getWizProjects()
+{
+	string $projectDir = `optionVar -q WIZ_wizProjectDirectory`;
+	//print ("WIZ| getWizProjects : Project Directory : " + $projectDir + "\n");
+	if($projectDir == ""){
+		//print ("WIZ| getWizProjects : The root project directory must be set.\n");
+		return {};
+	}
+	string $projects[] = `getFileList -fld $projectDir`;
+	//print("WIZ| getWizProjects : Projects : " + stringArrayToString($projects, " ") + "\n");
+	return $projects;
+	
+	
+}
+
+//@ INCREMENT SELECTED BOOKMARK VERSIONS
+//=======================================================
+global proc incrementSelectedBookmarkVersions( string $file[], string $tsl)
+{
+	for ($i=0;$i<`size $file`;$i++){
+		incrementSelectedBookmarkVersion($file[$i], $tsl);
+	}
+}
+
+//@ INCREMENT SELECTED BOOKMARK VERSION
+//=======================================================
+global proc incrementSelectedBookmarkVersion( string $file, string $tsl )
+{
+	int $latestVersion = getLatestFileVersionNumber($file);
+	
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         ICON IMAGES
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//@ UPDATE BOOKMARK FILE ICON IMAGE
+//=======================================================
+global proc updateBookmarkFileIconImage( string $bookmarkName )
+{
+    //print ("List Name : " + $bookmarkName + "\n");
+    //print ("string $si[] = `textScrollList -q -si \"" + $bookmarkName + "BookmarksTextScrollList\"`;\n");
+    //print ("Bookmark Name : " + $bookmarkName + "\n");
+    
+    string $si = getBookmarkSelectedItem($bookmarkName);
+    //print ("SI : " + $si + "\n");
+    
+    string $iconFile = getSceneIconFileFromFileName($si);
+   // string $filetest = toNativePath("C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/SciFi/Bases/Components/Panels/TechPanels1ICON.png");
+    
+    int $fileExists = `filetest -e $iconFile`;
+
+    if ($fileExists == 0){
+        string $iconDir = getWizIconsDirectory();
+		int $ranNullIcon = randInt(1, 4);
+        $iconFile = $iconDir + "SceneThumbnailPlaceholderIcon" + $ranNullIcon + ".png";
+        
+    }
+    //print ("Icon Image : " + $iconFile + "\n");
+    image
+        -e
+        -i $iconFile
+        ($bookmarkName + "BookmarkIconImage")
+        ;
+    
+}
+
+//@ GET BOOKMARK SELECTED ITEM
+//=======================================================
+global proc string getBookmarkSelectedItem( string $name )
+{
+
+    int $sii[] = `textScrollList -q -sii ($name + "BookmarkAliasTextScrollList")`; 
+    textScrollList -e -sii $sii[0] ($name + "BookmarksTextScrollList"); 
+    
+    string $file[] = `textScrollList -q -si ($name + "BookmarksTextScrollList")`; 
+    return $file[0];
+    
+}
+
+//@ GET SCENE ICON FILE FROM FILE NAME
+//=======================================================
+global proc string getSceneIconFileFromFileName( string $filename )
+{
+	global string $WIZ_sceneFileIconSuffix;
+	global string $WIZ_sceneFileRenderIconSuffix;
+	// print ("Icon Suffix : " + $WIZ_sceneFileIconSuffix + "\n");
+	string $filePathSplice[] = wizSpliceFilePath($filename, "-dir -fn");
+	
+	// string $fileNameNoExt = removeExtension($filename);
+	string $fileNameNoExt = $filePathSplice[0] + $filePathSplice[1];
+	 
+	wizlog("File Name No Ext : " + $fileNameNoExt + "\n");
+	
+	string $iconImageName;
+	int $renFile = `filetest -e ($fileNameNoExt + $WIZ_sceneFileRenderIconSuffix)`;
+	if ($renFile == 1){
+		$iconImageName = $fileNameNoExt + $WIZ_sceneFileRenderIconSuffix;
+	} else {
+		$iconImageName = $fileNameNoExt + $WIZ_sceneFileIconSuffix;
+	}
+	// print ("Icon Image : " + $iconImageName + "\n");
+	return $iconImageName;
+
+}
+
+//@ WIZ DO BOOKMARK WIZ DOUBLE CLICK COMMAND
+//=======================================================
+global proc wizDoBookmarkWizDoubleClickCommand( string $file, string $name )
+{
+    if (`menuItem -q -rb bookmarkWizDoubleClickReferenceMenuItem`){
+        bookmarkWizReferenceFile($file, $name);
+    } else if (`menuItem -q -rb bookmarkWizDoubleClickImportMenuItem`){        
+        file -i $file;
+    } else if (`menuItem -q -rb bookmarkWizDoubleClickOpenMenuItem`){
+        if (catchQuiet(`file -o $file`)){
+            int $save = wizSavePrompt();
+            if ($save == 0){ return; }
+        }
+        file -f -o $file;
+    }
+    
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                      ADD/REMOVE CATEGORIES
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//@ ADD BOOKMARK WIZ PROMPT
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-fa string] [-fb linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-fa, -fb
+	
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName("-fa aString -fb anotherString");
+	
+	</code>
+*********************************************************************/
+global proc addBookmarkWizPrompt( string $flags )
+{/*
+global proc addBookmarkWizPrompt( string $parent )
+{*/
+	string $parent;
+	string $newCategory, $newSubcategory, $newList;
+	string $t;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-p" : case "-parent" :
+			$parent = $tok[($i + 1)];
+			break;
+				
+			case "-cat" : case "-catagory" :
+			$newCategory = $tok[($i + 1)];
+			$t = "New Category";
+			$m = "Name of New Category";
+			break;
+			
+			case "-sub" : case "-subCatagory" :
+			$newSubcategory = $tok[($i + 1)];
+			$t = "New Sub Category";
+			$m = "Name of New Sub Category";
+			break;			
+			
+			case "-lst" : case "-bookmarkList" :
+			$newList = $tok[($i + 1)];
+			break;
+			
+		}
+	}
+	
+    int $someInt;
+	string $t = "New Bookmark Category";
+	string $m = "Name of New Category";
+    string $prompt = `promptDialog
+        -t $t
+        -m $m
+        -ma "left"
+        -b "OK"
+        -b "Cancel"
+        -db "OK"
+        -cb "Cancel"
+        `;
+        
+	if ($prompt == "Cancel"){
+		return;
+	} else {
+		string $newCategory = `promptDialog -q -tx`;
+		/*
+		addBookmarkWizCategory($newCategory, $parent);
+		*/
+		
+	}
+    
+}
+
+//@ ADD BOOKMARK WIZ CATAGORY
+//====================================================================
+global proc addBookmarkWizCategory( string $name, string $parent )
+{
+    string $categoryName = ("WIZ_bookmarkWiz_" + $parent + "CC");
+    
+    if (`optionVar -ex $categoryName`){
+        string $ov[] = `optionVar -q $categoryName`;
+        int $contains = stringArrayContains($name, $ov);
+            if ($contains == 1){
+                warning ("WIZ| addBookmarkWizCategory : Sorry that category already exists\n");
+                return;
+            }
+
+    }
+    // format the name in case the user entered in illegal stuff
+    $name = substituteAllString($name, " ", "");
+	$name = removeIllegalCharactersFromName($name);
+	$name = removeSpecialCharactersFromName($name);
+    // $name will now be the name that is used when loading and such
+    
+    addToBookmarkWizCategoryOptionVar($categoryName, { $name });
+    
+    //string $mainCat[] = { "workspaceMain", 
+   // if ($parent
+    setParent ($parent + "BookmarksColumnLayout");
+    textScrollListBookmarksLayout($name);
+    
+   // refreshBookmarkWiz();
+    
+}
+
+//@ REMOVE BOOKMARK WIZ SUB CATAGORY
+//====================================================================
+global proc removeBookmarkWizSubCatagory( string $name )
+{
+    //string $parentLayout = `columnLayout -q -p ($name + "BookmarksColumnLayout")`;
+    //string $tok[] = tokenizeString($parentLayout, "|");
+    string $categoryName = ("WIZ_bookmarkWiz_" + $name + "CC");
+   
+    string $ov[] = `optionVar -q $categoryName`;
+    
+    string $pt = "Delete Sub-Category";
+	string $mes = "Delete Sub-Category";
+
+	string $confirm = wizConfirmDialog($pt, $mes, $ov, $ov[0], "Cancel");
+    int $deleteIndex = stringArrayFind($confirm, 0, $ov);
+	if ($confirm == "Cancel"){
+		return;
+	} else {
+        if ($deleteIndex != -1){
+            optionVar -rfa $categoryName $deleteIndex;
+            print ("Deleted Sub Catagory : " + $ov[$deleteIndex] + "\n");
+        }
+	}
+    
+    
+}
+
+//@ REFRESH BOOKMARK WIZ
+//====================================================================
+global proc refreshBookmarkWiz()
+{
+/*############ PROBLEM ###############################################
+    this doesn't work
+#####################################################################*/
+/*
+    string $parent = `columnLayout -q -p bookmarkWizMainLayout`;
+    destroyLayout("bookmarkWizMainLayout");   
+   
+    bookmarkWizTabLayout($parent);
+    */
+}
+
+
+//@ BOOKMARK WIZ MGMT
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	When you add a subcategory add a namespace.
+	Add list to subCat
+	Each iteration down check if _namespace_namespace option 
+	WIZ_bookmarkWiz_catagory contains 
+	subcatagoryName
+	If WIZ_bookmarkWiz_catagory_subcataogyName exists
+	Then see if WIZ_bookmarkWiz_catagory_subcataogyName
+	If contents of option var start with wiz the step down another subCat. Otherwise it's a list
+	Option to add subCat or List
+
+	A main catagory consists of a tab layout
+	A sub-catagory consists of a frameLayout to contain the textScrollList layout
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName("-obj someObject -q -sl");
+	
+	</code>
+*********************************************************************/
+global proc string[] bookmarkWizMGMT( string $flags)
+{
+	string $cat; // name of catagory
+	string $subCat; // name of sub-catagory
+	string $catName, $subCatName; // option var names
+	string $subCats[]; // all sub-catagories under a catagory	
+	string $p; // parent layout
+	string $root;
+	string $sel[];
+	
+	int $q;
+	int $list;
+	int $add, $ac, $asc;
+	int $del, $dc, $dsc;
+	int $catLayout, $subCatLayout;
+	
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+		
+			case "-r" : case "-root" :
+			$root = $tok[($i + 1)];
+			$catLayout = 1;
+			break ;
+			
+			case "-cat" : case "-catagory" :
+			$cat = $tok[($i + 1)];
+			$catLayout = 1;
+			break ;
+				
+			case "-sc" : case "-subCatagory" :
+			$subCat = $tok[($i + 1)];
+			$catLayout = 1;
+			break ;
+			
+			case "-l" : case "-list" :
+			$list = 1;
+			$catLayout = 1;
+			break ;			
+			
+			case "-al" : case "-addList" :
+			$addList = 1;
+			break ;	
+			
+			case "-q" : case "-query" :
+			$q = 1;
+			break ;
+			
+			case "-a" : case "-add" :
+			$add = 1;			
+			break ;
+			
+			case "-d" : case "-delete" :
+			$del = 1;
+			break ;
+			
+			case "-ac" : case "-addCatagory" :			
+			$ac = 1;
+			break ;
+			
+			case "-asc" : case "-addSubCatagory" :
+			$asc = 1;
+			$catLayout = 1;
+			break ;
+			
+			case "-dc" : case "-deleteCatagory" :			
+			$dc = 1;
+			break ;
+			
+			case "-dsc" : case "-deleteSubCatagory" :
+			$dsc = 1;
+			break ;			
+			
+			case "-cl" : case "-catagoryLayout" :
+			$catLayout = 1;
+			break ;
+			
+			case "-scl" : case "-subCatagoryLayout" :
+			$subCatLayout = 1;
+			break ;
+			
+			case "-p" : case "-parent" :
+			$p = $tok[($i + 1)];
+			break ;
+			
+		}
+	}
+
+	// optionVar -q WIZ_bookmarkWiz_mainCatagories
+		// return //  WIZ_bookmarkWiz_catName
+		
+	// optionVar -q WIZ_bookmarkWiz_catName_sc
+		// return //  WIZ_bookmarkWiz_catName_subCatName
+		
+	//optionVar -q WIZ_bookmarkWiz_catName
+		// return // bookmark list
+	
+		// optionVar -q WIZ_bookmarkWiz_catName_subCatName
+			// return //  bookmark list
+	
+	string $mainCat[];
+	global string $WIZ_bookmarkWizMainCatagories[];
+	$mainCat = `optionVar -q WIZ_bookmarkWiz_mainCatagories`;			
+	//$mainCat = $WIZ_bookmarkWizMainCatagories;
+		
+	if (`size $cat` > 0){
+		$catName = ("WIZ_" + $root + "_" + $cat);
+	
+		
+		//_________________________________________
+		// Add A Catagory
+		
+		if ($ac){
+			string $t = "New Bookmark Category";
+			string $m = "Name of New Category";
+			string $prompt = `promptDialog
+				-t $t
+				-m $m
+				-ma "left"
+				-b "OK"
+				-b "Cancel"
+				-db "OK"
+				-cb "Cancel"
+				`;
+				
+			if ($prompt == "Cancel"){
+				return { "" };
+			} else {
+				string $newCategory = `promptDialog -q -tx`;
+				// format the name in case the user entered in illegal stuff
+				$catName = substituteAllString($newCategory, " ", "");
+				$catName = removeIllegalCharactersFromName($catName);
+				$catName = removeSpecialCharactersFromName($catName);
+				$catName = ("WIZ_bookmarkWiz_" + $catName);
+			}		
+			int $contains = stringArrayContains($catName, $mainCat);
+			if ($contains == 1){
+				wizlog ("-w 	[!] Sorry that category already exists [!]");
+                return { "" };
+            }
+			
+			optionVar -sva WIZ_bookmarkWiz_mainCatagories $catName;
+			wizlog ("	[+] Added Catagory : " + $catName + " [+]");
+			
+		//_________________________________________
+		// Delete A Catagory
+		} else if ($dc){
+   
+			string $ov[] = `optionVar -q $mainCat`;
+			
+			string $pt = "Delete Category";
+			string $mes = "Delete Category";
+
+			string $confirm = wizConfirmDialog($pt, $mes, $ov, $ov[0], "Cancel");
+			int $deleteIndex = stringArrayFind($confirm, 0, $ov);
+			if ($confirm == "Cancel"){
+				return { "" };
+			} else {
+				if ($deleteIndex != -1){
+					optionVar -rfa WIZ_bookmarkWiz_mainCatagories $deleteIndex;
+					wizlog ("	[-] Deleted Catagory : " + $ov[$deleteIndex] + " [-]");
+				}
+			}		
+		
+		}
+		
+	}
+
+	/*
+	string $l[] = `optionVar -q ("WIZ_filePal_" + $root + "_" + $cat)`;
+	for ($i=0;$i<`size $l`;$i++){
+		string $tok[] = tokenizeString($l[$i], "_");
+		string $lp = stringArrayToString($
+		setParent ($tok[2] 
+	}
+	*/
+	
+	// Add main column and menu
+	if (`columnLayout -ex ("WIZ_" + $root + "_" + $cat + "_mainColumnLayout")` == 0){
+		string $columnLayout = `columnLayout
+			-adj true
+			("WIZ_" + $root + "_" + $cat + "_mainColumnLayout")		
+			`;
+	
+		if (`size $p` > 0){
+			columnLayout
+				-e
+				-p $p
+				("WIZ_" + $root + "_" + $cat + "_mainColumnLayout")		
+				;
+		}
+		bookmarkWizCategoryMenu($catName);
+	
+	}
+
+	for ($i=0;$i<`size $subCats`;$i++){
+		wizlog ("[+] Bookmark Wiz Sub-Catagory : " + $subCats[$i]);
+		
+		if ((startsWith($subCats[$i], "WIZ")) == 1){
+			// if the sub-catagory contains more subcatagories...
+			bookmarkWizMGMT("-sc " + ($cat + "_" + $subCats[$i]));
+		
+		} else {
+			textScrollListBookmarksLayout(($cat + "_" + $subCats[$i]));
+		
+		}
+		
+	}
+			
+
+
+
+	return { "" };
+}
+
+
+global proc bookmarkWizMain( string $parent )
+{
+	// Main Column Layout
+	string $layout = `columnLayout
+		-adjustableColumn true
+		-p $parent
+		bookmarkWizMainLayout
+		`;
+	
+	// Main Menu
+	bookmarkWizMenuBarLayout($layout);	
+	
+	// Main Tab Layout
+	string $tabLayout = `tabLayout
+		-scrollable false
+		-childResizable false
+		-imageVisible true
+		-tabsVisible true
+		-p $layout
+		bookmarkWizTabLayout
+		`;
+		
+	//_________________________________________
+	// Load All Catagories Sub-Catagories and Lists
+	global string $WIZ_bookmarkWizMainCatagories[];
+	
+	if (`optionVar -ex WIZ_bookmarkWiz_mainCatagories` == 0){
+		for ($i=0;$i<`size $WIZ_bookmarkWizMainCatagories`;$i++){
+			optionVar -sva WIZ_bookmarkWiz_mainCatagories $WIZ_bookmarkWizMainCatagories[$i];	
+		}
+		
+	}
+
+	for ($i=0;$i<`size $WIZ_bookmarkWizMainCatagories`;$i++){
+		bookmarkWizMGMT("-cat " + $WIZ_bookmarkWizMainCatagories[$i] + " -p bookmarkWizTabLayout");
+		
+		tabLayout
+			-e
+			-tl ($WIZ_bookmarkWizMainCatagories[$i] + "_bookmarks_mainColumnLayout") $WIZ_bookmarkWizMainCatagories[$i]
+			bookmarkWizTabLayout
+			;
+			
+		
+	}
+
+
+}
+
+global proc bookmarkWizRenameFile( string $name )
+{
+	
+
+}
+
+/*
+global proc string bookmarkWizCommand( string $flags )
+{
+	string $obj, $type;
+	string $sel[];
+	
+	//These are the main variable names for the optionVar and the textScrollList names
+	string $ovName = "WIZ_" + $name + "BookmarkFiles";
+	string $bookmarkFileList = $name + "BookmarksTextScrollList";
+	string $bookmarkAliasList = $name + "BookmarkAliasTextScrollList";
+	
+    string $ovDirName = "WIZ_" + $name + "BookmarkDirs";
+	string $bookmarkDirList = $name + "DirBookmarksTextScrollList";
+	string $bookmarkDirAliasList = $name + "DirBookmarkDirAliasTextScrollList";
+	
+	//Add File Commands
+	//===============================
+	//$fileAddCommand and $curFileAddCommand both use $addCommand at the end of the command.
+	string $fileAliasVar = "$" + $name + "FileAlias";
+	string $aiVar = "$" + $name + "AI";
+	
+	string $addCommand = (
+	"addSelectedObjectsToTextScrollList($" + $name + "AddFiles, \"" + $bookmarkFileList + "\");"+"\n"
+	+"string $" + $name + "AllItems[] = `textScrollList -q -ai \"" + $bookmarkFileList + "\"`;"+"\n"
+	+"if(`size $" + $name + "AllItems` > 1){"+"\n"
+	+"	removeDuplicatesFromTextScrollList(\"" + $bookmarkFileList + "\");"+"\n"
+	+"}"+"\n"
+	+"string " + $aiVar + "[];"+"\n"
+	+"clear " + $aiVar + ";"+"\n"
+	+ $aiVar + " = `textScrollList -q -ai \"" + $bookmarkFileList + "\"`;"+"\n"
+	+"string " + $fileAliasVar + "[] ;"+"\n"
+	+"clear " + $fileAliasVar + ";"+"\n"
+    +"string " + $fileAliasVar + "Dir[];"+"\n"
+	+"for($i=0;$i<`size " + $aiVar + "`;$i++){"+"\n"
+	+"	" + $fileAliasVar + "[$i] = getFileNameNoPathNoExt(" + $aiVar + "[$i]);"+"\n"
+    +"  " + $fileAliasVar + "Dir[$i] = getDirectoryFromFullFilePath(" + $aiVar + "[$i]);"+"\n"
+	+"}"+"\n"
+	+"replaceTextScrollListWithSelectedObjects(" + $fileAliasVar + ", \"" + $bookmarkAliasList + "\");"+"\n"
+	+"overwriteTextScrollListOptionVar(\"" + $ovName + "\", \"" + $bookmarkFileList + "\");"+"\n"
+    +"replaceTextScrollListWithSelectedObjects(" + $fileAliasVar + "Dir, \"" + $bookmarkDirList + "\");"+"\n"
+    +"replaceTextScrollListWithSelectedObjects(" + $fileAliasVar + ", \"" + $bookmarkDirAliasList + "\");"+"\n"
+    
+	);
+	
+	string $fileAddCommand = ("string $" + $name + "AddFiles[] = wizGetMultipleFiles();"+"\n" + $addCommand);
+	
+	string $curFileAddCommand = ("string $" + $name + "SceneFile = `file -q -sn`;"+"\n" 
+	+"string $" + $name + "AddFiles[];"+"\n"
+	+"clear $" + $name + "AddFiles;"+"\n"
+	+"$" + $name + "AddFiles[0] = $" + $name + "SceneFile;"+"\n"
+	+ $addCommand);	
+
+	
+	//If the file text scroll list is selected...
+	string $fileSc = (
+	"int $" + $name + "sii[] = `textScrollList -q -sii \"" + $bookmarkFileList + "\"`;"+"\n"
+	+"textScrollList -e -da \"" + $bookmarkAliasList + "\";"+"\n"
+	+"for($i=0;$i<`size $" + $name + "sii`;$i++){"+"\n"
+	+"	textScrollList -e -sii $" + $name + "sii[$i] \"" + $bookmarkAliasList + "\";"+"\n"
+    +"  textScrollList -e -sii $" + $name + "sii[$i] \"" + $bookmarkDirAliasList + "\";"+"\n"
+	+"}"+"\n"
+	
+	);
+	//print ("sc:"+$fileSc+"\n");
+	
+	//If the alias text scroll list is selected...
+	string $aliasSc = (
+	"int $" + $name + "asii[] = `textScrollList -q -sii \"" + $bookmarkAliasList + "\"`;"+"\n"
+	+"textScrollList -e -da \"" + $bookmarkFileList + "\";"+"\n"
+    +"updateBookmarkFileIconImage(\"" + $name + "\");"+"\n"
+	+"for($i=0;$i<`size $" + $name + "asii`;$i++){"+"\n"
+	+"	textScrollList -e -sii $" + $name + "asii[$i] \"" + $bookmarkFileList + "\";"+"\n"
+    +"	textScrollList -e -sii $" + $name + "asii[$i] \"" + $bookmarkDirAliasList + "\";"+"\n"
+	+"}"+"\n"
+	);
+	
+	
+	if ($ac){
+		return $addCommand;
+	}
+	
+	
+	//Double Click Command
+	//===============================
+	string $dcc = (
+	"string $" + $name + "Ref[] = `textScrollList -q -si \"" + $bookmarkFileList + "\"`;"+"\n"
+	+"wizDoBookmarkWizDoubleClickCommand($" + $name + "Ref[0], \"" + $name + "\");"
+	);
+	
+	//Delete Key Command
+	//===============================
+	string $dkc = (
+	"removeSelectedItemFromTextScrollList(\"" + $bookmarkFileList + "\");"+"\n"
+	+"removeSelectedItemFromTextScrollList(\"" + $bookmarkAliasList + "\");"+"\n"
+	+"overwriteTextScrollListOptionVar(\"" + $ovName + "\", \"" + $bookmarkFileList + "\");"
+	);
+	
+	//Clear Command
+	//===============================
+	string $clearCommand = (
+	"int $" + $name + "ok = wizWarningDialog(\"Ok To Delete?\", \"Delete All List Entries?\", \"OK\", \"Cancel\");"+"\n"
+	+"if($" + $name + "ok == 1){"+"\n"
+	+"	textScrollList -e -ra \"" + $bookmarkFileList + "\";"+"\n"
+	+"	textScrollList -e -ra \"" + $bookmarkAliasList + "\";"+"\n"
+	+"	optionVar -ca \"" + $ovName + "\";"+"\n"
+	+"}"+"\n"
+	);
+	
+	//Sort Command
+	//===============================
+	string $sortCommand = (
+	"sortTextScrollList(\"" + $bookmarkFileList + "\", \"az\");"+"\n"
+	+"sortTextScrollList(\"" + $bookmarkAliasList + "\", \"az\");"+"\n"
+	+"overwriteTextScrollListOptionVar(\"" + $ovName + "\", \"" + $bookmarkFileList + "\");"
+	);
+	
+	
+	//print ("Clear Command : \n" + $clearCommand + "\n\n");
+	
+	string $addFromDirectoryCommand = (
+	"string $si[] = `textScrollList -q -si \"" + $bookmarkAliasList + "\"`;"+"\n"
+	+"string $siFile[] = `textScrollList -q -si \"" + $bookmarkFileList + "\"`;"+"\n"
+	+"string $dirs[] = wizSpliceFilePath($siFile[0], \"-dir\");"+"\n"
+	+"string $" + $name + "AddFiles[] = getAllFilesOfTypeInDirectory($dirs[0], \"mb ma abc fbx obj\");"+"\n"
+	+ $addCommand );
+	
+	//Open Command
+	//===============================
+	string $openCommand = (
+			"string $openFile[] = `textScrollList -q -si \"" + $bookmarkFileList + "\"`;"+"\n"
+			+"if(catchQuiet(`file -o $openFile[0]`)){"+"\n"
+			+"	int $saveFile = wizSavePrompt();"+"\n"
+			+"	if($saveFile == 1){"+"\n"
+			+"		file -f -o $openFile[0];"+"\n"
+			+"	}"+"\n"
+			+"}"+"\n"
+			);
+		
+	int $ac, $acf, $sc, $dcc, $dkc, $cc, $sortc, $afdc;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-n" : case "-name" :
+			$name = $tok[($i + 1)];
+			break ;
+				
+			case "-typ" : case "-type" :
+			$type = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-add" : case "-addCommand" :
+			$ac = 1;
+			break ;
+			
+			case "-acf" : case "-addCurrentFile" :
+			$acf = 1;
+			break ;
+			
+			case "-sc" : case "-selectCommand" :
+			$sc = 1;
+			break ;
+			
+			case "-dcc" : case "-doubleClickCommand" :
+			$dcc = 1;
+			break ;
+			
+			case "-dkc" : case "-deleteKeyCommand" :
+			$dkc = 1;
+			break ;
+			
+			case "-cc" : case "-clearCommand" :
+			$cc = 1;
+			break ;
+			
+			case "-sortc" : case "-sortCommand" :
+			$sortc = 1;
+			break ;
+			
+			case "-afdc" : case "-addFromDirectoryCommand" :
+			$afdc = 1;
+			break ;
+			
+		}
+	}
+		
+}
+*/
+
+/*
+global proc string[] wizFilePallet( string $flags )
+{
+	string $cat; // name of catagory
+	string $subCat; // name of sub-catagory
+	string $catName, $subCatName; // option var names
+	string $subCats[]; // all sub-catagories under a catagory	
+	string $p; // parent layout
+	string $root;
+	string $sel[];
+	
+	int $q;
+	int $list;
+	int $add, $ac, $asc;
+	int $del, $dc, $dsc;
+	int $catLayout, $subCatLayout;
+	
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+		
+			case "-n" : case "-name" :
+			$name = $tok[($i + 1)];
+			break ;
+		
+			case "-r" : case "-root" :
+			$root = $tok[($i + 1)];
+			$catLayout = 1;
+			break ;
+			
+			case "-cat" : case "-catagory" :
+			$cat = $tok[($i + 1)];
+			$catLayout = 1;
+			break ;
+				
+			case "-sc" : case "-subCatagory" :
+			$subCat = $tok[($i + 1)];
+			$catLayout = 1;
+			break ;
+			
+			case "-l" : case "-list" :
+			$list = 1;
+			$catLayout = 1;
+			break ;			
+			
+			case "-al" : case "-addList" :
+			$addList = 1;
+			break ;	
+			
+			case "-q" : case "-query" :
+			$q = 1;
+			break ;
+			
+			case "-a" : case "-add" :
+			$add = 1;			
+			break ;
+			
+			case "-d" : case "-delete" :
+			$del = 1;
+			break ;
+			
+			case "-ac" : case "-addCatagory" :			
+			$ac = 1;
+			break ;
+			
+			case "-asc" : case "-addSubCatagory" :
+			$asc = 1;
+			$catLayout = 1;
+			break ;
+			
+			case "-dc" : case "-deleteCatagory" :			
+			$dc = 1;
+			break ;
+			
+			case "-dsc" : case "-deleteSubCatagory" :
+			$dsc = 1;
+			break ;			
+			
+			case "-cl" : case "-catagoryLayout" :
+			$catLayout = 1;
+			break ;
+			
+			case "-scl" : case "-subCatagoryLayout" :
+			$subCatLayout = 1;
+			break ;
+			
+			case "-p" : case "-parent" :
+			$p = $tok[($i + 1)];
+			break ;
+			
+		}
+	}
+
+		
+	if (`size $cat` > 0){
+		$catName = ("WIZ_filePallet_" + $name + "_" + $cat);
+		
+		//_________________________________________
+		// Add A Catagory
+		
+		if ($ac){
+			string $t = "New Bookmark Category";
+			string $m = "Name of New Category";
+			string $prompt = `promptDialog
+				-t $t
+				-m $m
+				-ma "left"
+				-b "OK"
+				-b "Cancel"
+				-db "OK"
+				-cb "Cancel"
+				`;
+				
+			if ($prompt == "Cancel"){
+				return { "" };
+			} else {
+				string $newCategory = `promptDialog -q -tx`;
+				// format the name in case the user entered in illegal stuff
+				$catName = substituteAllString($newCategory, " ", "");
+				$catName = removeIllegalCharactersFromName($catName);
+				$catName = removeSpecialCharactersFromName($catName);
+				$catName = ("WIZ_filePallet_" + $catName);
+			}		
+			int $contains = stringArrayContains($catName, $mainCat);
+			if ($contains == 1){
+				wizlog ("-w 	[!] Sorry that category already exists [!]");
+                return { "" };
+            }
+			
+			optionVar -sva ("WIZ_filePallet_" + $name) $catName;
+			wizlog ("	[+] Added Catagory : " + $catName + " [+]");
+			
+		//_________________________________________
+		// Delete A Catagory
+		} else if ($dc){
+   
+			string $ov[] = `optionVar -q $mainCat`;
+			
+			string $pt = "Delete Category";
+			string $mes = "Delete Category";
+
+			string $confirm = wizConfirmDialog($pt, $mes, $ov, $ov[0], "Cancel");
+			int $deleteIndex = stringArrayFind($confirm, 0, $ov);
+			if ($confirm == "Cancel"){
+				return { "" };
+			} else {
+				if ($deleteIndex != -1){
+					optionVar -rfa ("WIZ_filePallet_" + $name) $deleteIndex;
+					wizlog ("	[-] Deleted Catagory : " + $ov[$deleteIndex] + " [-]");
+				}
+			}		
+		
+		}
+		
+	}
+	
+	
+}
+*/
+
+
+global proc bookmarkWizAltFileLoading( string $flags )
+{
+	string $ext;
+	string $list;
+	int $import, $reference, $open;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-i" : case "-import" :
+			$import = 1;
+			break ;
+			
+			case "-r" : case "-reference" :
+			$reference = 1;
+			break ;
+				
+			case "-o" : case "-open" :
+			$open = 1;
+			break ;
+					
+			case "-ext" : case "-ext" :
+			$ext = $tok[($i + 1)];
+			break ;
+
+			case "-l" : case "-list" :
+			$list = $tok[($i + 1)];
+			break ;
+			
+		}
+	}
+	
+	
+	string $bmsi[] = `textScrollList -q -si $list`;
+	
+	for ($i=0;$i<`size $bmsi`;$i++){
+				
+
+		string $siFilename = fromNativePath($bmsi[$i]);
+		
+		if ($open){		
+			string $openFile[] = wizGetAlternateFileTypes(("-ext " + $ext), $siFilename);
+			if (`size $openFile` == 0){
+				wizlog ("-w [!] No " + $ext + " File Found [!]");
+			}
+			if (catchQuiet(`file -o $openFile[0]`)){
+				int $saveFile = wizSavePrompt();
+				if ($saveFile == 1){
+					file -f -o $openFile[0];
+				}
+			}
+
+		}
+		
+		if ($reference){
+			string $refFile[] = wizGetAlternateFileTypes(("-ext " + $ext), $siFilename);
+			if (`size $refFile` != 0){
+				bookmarkWizReferenceSelectedFiles({$refFile[0]}, "");
+			} else {
+				wizlog ("[!] No " + $ext + " File Found [!]");
+			}
+		}
+		
+		if ($import){
+			string $importFile[] = wizGetAlternateFileTypes(("-ext " + $ext), $siFilename);
+			if (`size $importFile` != 0){
+				file -i $importFile[0];
+			} else {
+				wizlog ("[!] No " + $ext + " File Found [!]");
+			}
+		}
+	
+	}
+
+}
+
+global proc bookmarkWizDelete( string $flags )
+{
+	global string $WIZ_subFileFolderSuffix;
+	string $filename[];
+	string $list;
+	int $af;
+	int $sii[];
+	string $associatedFiles[];
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-af" : case "-associatedFiles" :
+			$af = 1;
+			break ;
+				
+			case "-f" : case "-file" :
+			$filename[0] = $tok[($i + 1)];
+			break ;
+			
+			case "-l" : case "-list" :
+			$list = $tok[($i + 1)];
+			break ;		
+			
+		}
+	}
+	string $ovName = "WIZ_" + $list + "BookmarkFiles";
+	string $bookmarkFileList = $list + "BookmarksTextScrollList";
+	string $bookmarkAliasList = $list + "BookmarkAliasTextScrollList";
+	
+	if (`size $list` != 0){
+		$sii = `textScrollList -q -sii $bookmarkFileList`;
+		$filename = `textScrollList -q -si $bookmarkFileList`;	
+	}
+	
+	string $pt = "Delete Files";
+	string $mes = "Confirm Deletion Of : " + (`size $filename`) + " : Files";
+
+	string $confirm = wizConfirmDialog($pt, $mes, {"OK"}, "OK", "Cancel");
+	if ($confirm == "OK"){
+		
+	} else {
+		return;		
+	}
+
+	for ($i=0;$i<`size $filename`;$i++){
+
+		string $siFilename = fromNativePath($filename[$i]);	
+		
+		if (`filetest -e $filename[$i]` == 1){
+			int $delFileSuccess = `sysFile -delete $siFilename`;
+			if ($delFileSuccess == 0){
+				wizlog ("[!] Could Not Delete File : " + $siFilename);
+				
+			}else {
+				wizlog ("[-] Deleted File : " + $siFilename);
+			}
+			string $splice[] = wizSpliceFilePath($siFilename, "-dir -fn -ex");
+			sysFile -delete ($splice[0] + $splice[1] + "ICON.png");
+			sysFile -delete ($splice[0] + $splice[1] + "POSTER.png");
+			
+		}
+		
+		if ($af){
+			string $splice[] = wizSpliceFilePath($siFilename, "-dir -fn -ex");			
+			string $fileDir = $splice[0] + $splice[1] + $WIZ_subFileFolderSuffix + "/";
+			
+			
+			if (`filetest -e $fileDir` == 1){
+				wizlog ("[#] Associated File Directory Found : " + $fileDir);
+				string $assFiles[] = `getFileList -folder $fileDir`;
+				wizlog (niceArrayList("[ASSOCIATED FILES]", $assFiles));
+				
+				for ($f=0;$f<`size $assFiles`;$f++){
+					string $assFileName = ($fileDir + $assFiles[$f]);
+					int $delSuccess = `sysFile -delete $assFileName`;	
+					if ($delSuccess == 0){
+						wizlog ("[!] Could Not Delete File : " + $assFileName);
+					} else {
+						wizlog ("[-] Deleted File : " + $assFileName);
+					}
+				}
+				int $delFolderSuccess = `sysFile -red $fileDir`;
+				if ($delFolderSuccess == 0){
+					wizlog ("[!] Could Not Delete Folder : " + $fileDir);
+				} else {				
+					wizlog ("[-] Deleted Folder : " + $fileDir);
+				}
+			} else {
+				wizlog ("[!] No Associated File Directory Found [!] : " + $fileDir);
+			}
+		} 
+	
+	}
+	
+	//_________________________________________
+	// Delete From Bookmark Lists
+
+	removeSelectedItemFromTextScrollList($bookmarkFileList);
+	removeSelectedItemFromTextScrollList($bookmarkAliasList);
+	overwriteTextScrollListOptionVar($ovName, $bookmarkFileList);
+/*
+	int $nextSii = $sii[(`size $sii`)];
+	$nextSii = $nextSii + 1;
+	textScrollList -e -sii $nextSii $bookmarkAliasList;
+	*/
+}
+
+global proc wizImageViewWindow( string $flags )
+{
+	string $tok[] = tokenizeString($flags, " ");
+	string $image;
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-i" : case "-image" :
+			$image = $tok[($i + 1)];
+			break ;
+
+			
+		}
+	}
+	
+	string $window;
+	
+	if (`window -exists "wizImageViewWindow"` == 0){
+	
+		 $window = `window
+			-s true
+			-tb true
+			-title "Wiz Image View"
+			-rtf true
+			-tlc 0 0
+			wizImageViewWindow
+			`;
+			
+			paneLayout;
+			string $im = `image -image $image wizImageViewWindow_image`;
+			
+		showWindow $window;
+		
+		int $w = `image -q -w $im`;
+		int $h = `image -q -h $im`;
+		
+		window -e -h $h -w $w $window;
+	} else {
+		string $im = `image -e -image $image wizImageViewWindow_image`;
+		//int $w = `image -q -w $im`;
+		//int $h = `image -q -h $im`;
+		//window -e -h $h -w $w $window;
+		
+	}
+	
+	
+	
+}
+

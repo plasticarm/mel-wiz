@@ -1,0 +1,274 @@
+/*
+This will import all fbx files in a folder with names such as
+Mesh1.fbx
+Mesh2.fbx
+
+It will then bake textures from corresponding vertex painted objects in 
+3d coat file.
+Mesh1
+Mesh2
+
+Then it will export the mesh and textures to a specified folder.
+
+So... The source object, the paint object and the file name for the paint objects
+must all share the same exact name for this to work.
+
+Make sure there are no paint objects in the uv room and no retopo objects in retopo room.
+
+*/
+
+string exportFolder;
+int nfiles;
+int n = 0;
+string outFilename;
+string inFilename;
+void main(){
+	n = 0;
+	// Prompt for reduction percent
+	//AddTranslation("TextureSize", " Texture Size ");
+	//AddFloatSlider("TextureSize",0.0,99.999);
+	//ModalDialogOkCancel("","");
+	
+	
+	// Select Export Folder
+	ModalDialog("First Select Export Folder. Click OK to start."," ");
+	// prompt for export folder
+	FolderDialog(exportFolder);
+	print("ExportFolder : " + exportFolder + "\n");
+	
+	nfiles=0;
+	
+	// Make sure we switch to the UV Room
+	ToRoom("UV");
+	
+	if(ModalDialogOkCancel("Process All Files In Folder?"," ")){
+		if(ModalDialogOkCancel("Now Select A File In The Import Folder"," ")){
+			//This function will call void ForAnyFile(string &in FileName) for each file in user defined folder
+			ForEachFileInFolder("","*.fbx","BakeMaps");
+			//ModalDialog(formatInt(nfiles,'l')+" files processed."," ");
+		}
+	} else {
+		if (OpenDialog("*.fbx", inFilename)){
+			BakeMaps(inFilename);
+		}
+	}
+
+	
+	
+
+} 
+
+void BakeMaps(string &in FileName){
+		ToRoom("UV");
+		Step(1);		
+		// Import as paint object. Set texture width height to 8192	
+		SetFileForFileDialogs(FileName); 		
+		
+		SetModalDialogCallback("ModalDialogCallbackImportObjectForPerPixelPainting");
+		
+		cmd("$MERGEOBJ");
+		
+		// Remove Callbacks so things don't get screwy
+		RemoveModalDialogCallbacks();
+				
+		// Get the name of the volume we are working with from filename
+		string fn;
+		fn = GetFileName(FileName);
+		fn = RemoveExtension(fn);
+		
+		
+		// Merge into retopo room
+		SetModalDialogCallback("ModalDialogCallbackChangeUV");
+		ToRoom("Retopo");
+		//Step(1);
+		
+		cmd("$UseCurrMesh");
+		
+		//Step(1);
+		
+		RenameCurrentRetopoLayer(fn); 
+		Step(1);
+		
+		RemoveModalDialogCallbacks();
+		
+		bool doesExist = SetCurVolume(fn);
+		//If we can't find a volume with matching name then return
+		if (doesExist == false){
+			print ("Volume : " + fn + " Does Not Exist!\n");
+			//if(ModalDialogOkCancel(("Volume : " + fn + " Does Not Exist!")," ")){
+			//	return ;
+			//}
+		}
+		
+		// Make sure the volume is visisble
+		SetVolumeVisibility(true);
+		Step(1);
+		Step(1);
+		
+		//--------------------
+		// BAKE
+		//--------------------
+		SetModalDialogCallback("ModalDialogCallbackBakeWPerPixelPaintingWDisplacement");
+		
+		cmd("$MergeForDP_disp");
+		
+		// Remove Callbacks so things don't get screwy
+		RemoveModalDialogCallbacks();
+		
+		/*
+		if((ModalDialogOkCancel("Export?"," "))==false){
+			return ;
+		
+		}
+		*/
+		// Use the current volume name as filename 
+		//string outFilename; 
+		outFilename = GetCurVolume();  
+		
+		// Add the extension
+		outFilename += ".fbx";  
+		
+		// Add the dir to filename
+		outFilename = exportFolder + "/" + outFilename;
+		
+		SetFileForFileDialogs(outFilename); 
+		
+		//--------------------
+		// EXPORT
+		//--------------------
+		ToRoom("Paint");
+		Step(1);
+		SetModalDialogCallback("ModalDialogCallbackExportObjectsTextures");
+		cmd("$EXPORTOBJECT");/*Export Object and Textures*/
+		RemoveModalDialogCallbacks();
+		Step(1);
+		//--------------------
+		// Cleanup
+		//--------------------
+		// Select the paint layer with baked textures and delete
+
+		// Delete the retopo layer
+		SetModalDialogCallback("ModalDialogCallbackChangeUV");
+		
+		ToRoom("Retopo");
+		Step(1);
+		//SelectRetopoLayer(fn);
+		//cmd("$RtpGroupBtn1");
+		cmd("$[Page2]Clear");
+		Step(1);
+		// Delete the paint objects
+		SetModalDialogCallback("ModalDialogCallbackChangeUV");
+		ToRoom("UV");
+		Step(1);
+		
+		SetModalDialogCallback("ModalDialogCallbackDeleteObject");
+		cmd("$OneSubObject::&OneSubObject::DeleteElm[0]");	
+
+		SetModalDialogCallback("ModalDialogCallbackDeleteObject");
+		cmd("$OneSubObject::&OneSubObject::DeleteElm[0]");
+
+		RemoveModalDialogCallbacks();
+		
+		// Set Visiblity of mesh to off
+		SetModalDialogCallback("ModalDialogCallbackChangeUV");
+		ToRoom("Sculpt");
+		Step(1);
+		SetCurVolume(fn);
+		SetVolumeVisibility(false);
+		Step(1);
+		// Remove Callbacks so things don't get screwy
+		RemoveModalDialogCallbacks();
+		
+		print(("Finished Baking : " + fn + "\n"));
+
+		nfiles++;
+	
+}
+
+void ModalDialogCallbackImportObjectForPerPixelPainting(){
+
+	cmd("$COMBOBOX_TEXTURE_SIZE_X8192");	
+	cmd("$COMBOBOX_TEXTURE_SIZE_Y8192");
+	cmd("$DialogButton#1");/*press Ok*/ 
+
+	//cmd("$DialogButton#1");/*press Ok*/ 
+	//SubstituteInputText("2048");
+	
+	//cmd("$COMBOBOX_TEXTURE_SIZE_XCustomSize");	
+	//cmd("$COMBOBOX_TEXTURE_SIZE_YCustomSize");
+
+	//SetEditBoxValue("COMBOBOX_TEXTURE_SIZE_X","$COMBOBOX_TEXTURE_SIZE_XCustomSize");
+	//SetEditBoxValue("COMBOBOX_TEXTURE_SIZE_X","$COMBOBOX_TEXTURE_SIZE_X8192");
+	//SetEditBoxValue("COMBOBOX_TEXTURE_SIZE_Y","$COMBOBOX_TEXTURE_SIZE_YCustomSize");
+	//SetEditBoxValue("COMBOBOX_TEXTURE_SIZE_Y","$COMBOBOX_TEXTURE_SIZE_Y8192");
+	Step(1);
+	
+	/*
+	SubstituteInputText("2048");
+	cmd("$ImpUV2::CUSTOM_SIZE_X[0]");
+	apply();
+	Step(1);
+	
+	SubstituteInputText("2048");
+	cmd("$ImpUV2::CUSTOM_SIZE_Y[0]");
+	apply();	
+	Step(1);
+*/
+	//Step(100); //Rendering cycle
+	//if(n++>200)cmd("$DialogButton#1");/*press OK*/
+
+	//ShowFloatingMessage("Waiting...", 5);
+
+	
+
+}
+
+void ModalDialogCallbackBakeWPerPixelPaintingWDisplacement(){
+
+	// Change scan depth to 0.5
+	SubstituteInputText("0.5");
+	cmd("$BakeDepth::BakeScanDepthIn");
+	Step(1);
+	SubstituteInputText("0.5");
+	cmd("$BakeDepth::BakeScanDepthOut");
+	Step(1);
+	
+	cmd("$DialogButton#1");/*press Ok*/
+	
+	//Change texture size
+	cmd("$COMBOBOX_TEXTURE_SIZE_X8192");	
+	cmd("$COMBOBOX_TEXTURE_SIZE_Y8192");
+	Step(1);
+	cmd("$DialogButton#1");/*press Ok*/ 
+	
+}
+
+void ModalDialogCallbackExportObjectsTextures(){
+	// Set out file name
+	SetFileForFileDialogs(outFilename); 
+	
+	SubstituteInputText(outFilename);
+	cmd("$ExportOpt::ExportMeshName");
+	
+	// Set out texture preset
+	cmd("$COMBOBOX_Unity (Specular)");
+	Step(1);
+	// Don't Export the geometry
+	SetBoolField("$ExportOpt::ExportGeometry", false);
+	Step(1);
+	// Set source position option
+	SetBoolField("$ExportOpt::PickSourcePositions", true);
+	Step(1);
+	cmd("$DialogButton#1");/*press Ok*/ 
+	
+}
+
+void ModalDialogCallbackChangeUV(){
+	cmd("$DialogButton#1");/*press Ok*/
+}
+
+void ModalDialogCallbackDeleteObject()
+{
+	cmd("$DialogButton#1");/*press Ok*/ 
+
+}

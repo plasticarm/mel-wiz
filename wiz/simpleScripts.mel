@@ -1,0 +1,5 @@
+string $sel[] = `ls -sl`;
+for ($i=0;$i<`size $sel`;$i++){
+	string $s[] = `listRelatives -s $sel[$i]`;
+	setAttr -type "string" ($s[0] + ".miProxyFile") "";
+}

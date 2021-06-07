@@ -1,0 +1,4842 @@
+//Add function that transfers in connections or out connections from selA to selB
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//|||||||||||||||||||||||||:::WIZ:::||||||||||||||||||||||||||||||||||
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//                         NAME WIZ
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+/*====================================================================
+Author: Glen Johnson
+Email: plasticarm@gmail.com
+Website: plasticarm.com / hrpictures.com
+----------------------------------------------------------
+Summary:
+
+
+
+====================================================================*/
+//====================================================================
+//			GLOBAL VARS
+global string $WIZ_allOfTypeAttrMode;
+global string $WIZ_nodeStateAfterLoadedSetName;
+$WIZ_nodeStateAfterLoadedSetName = "wizNodeStateAfterLoadedSet";
+
+
+//====================================================================
+global proc attributeWiz()
+{
+
+}
+
+global proc openConnectWiz()
+{
+	//tabLayout -e -sti 2 wizSelectionTab;
+	frameLayout -e -cl false connectorLayout_frameLayout;	
+	updateConnectWizAttributeLists();
+}
+
+global proc refreshConnectWiz()
+{
+	updateConnectWizAttributeLists();
+}
+
+global proc closeConnectWiz()
+{
+	frameLayout -e -cl true connectorLayout_frameLayout;	
+}
+
+//LAYOUT
+//======================================================================================
+//ATTRIBUTE WIZ LAYOUT
+//----------------------------
+global proc attributeWizLayout(string $parent)
+{
+	string $attributesLayout = `frameLayout
+		-l "Attributes"	
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $parent		
+		`;
+		
+		attributeWizMenuLayout($attributesLayout);
+		connectAllAttributesLayout($attributesLayout);
+		//randomizeObjectAttributesLayout($attributesLayout);
+		
+
+}
+
+//CONNECT MASTER LAYOUT
+//----------------------------
+global proc connectMasterLayout(string $parent)
+{
+	string $sca = ("string $sel[] = `textScrollList -q -si connectMasterListA`;");
+	string $scb = ("string $sel[] = `textScrollList -q -si connectMasterListB`;");
+
+	string $updateWorkspaceCommand = "updateSetAttrWorkspace($sel);";
+	$sca = $sca + $updateWorkspaceCommand;
+	$scb = $scb + $updateWorkspaceCommand;
+	
+	string $layout = `frameLayout
+		-l "Connector"
+		-ann ""
+		-bv false
+		-la "center"
+		-li 10
+		-lv false
+		-mw 0
+		-mh 0		
+		
+		-cll true
+		-cl true
+		//-ec "listAttributesOfSelected"
+		-parent $parent
+		connectorLayout_frameLayout
+		`;
+	
+	listAttributeTypeMenu();
+
+		
+	string $rowColumnLayout = `rowColumnLayout
+		-numberOfColumns 2
+		-cw 1 250
+		-cw 2 250
+		-p $layout
+		`;				
+			
+		string $conAAnn = (
+		"[Right Click To Get Options For Randomizing Attributes]"+"\n"
+		+" - Add Randomization Attribute For Selected Attributes : Randomize the selected attributes on selected objects."+"\n"
+		+" - Add Randomization Attribute For All Of Type Attributes : Randomize all objects of type for selected attributes."+"\n"
+		);
+		
+		textFieldButtonGrp
+			-l ""
+			-tx ""
+			-cal 1 "left"
+			-cal 2 "left"
+			-cw 1 0
+			-cw 2 200
+			-cw 3 50
+			-cat 1 "left" 0
+			-tcc ("textScrollListAutoFind(\"connectMaster_autoFillAttrNameA_textFieldButtonGrp\", \"connectMasterListA\", \"autoFind\");")
+			-cc ("textScrollListAutoFind(\"connectMaster_autoFillAttrNameA_textFieldButtonGrp\", \"connectMasterListA\", \"find\");")
+			-bl "Find"
+			-bc ("textScrollListAutoFind(\"connectMaster_autoFillAttrNameA_textFieldButtonGrp\", \"connectMasterListA\", \"find\");")
+			connectMaster_autoFillAttrNameA_textFieldButtonGrp
+			;	
+		
+		textFieldButtonGrp
+			-l ""
+			-tx ""
+			-cal 1 "left"
+			-cal 2 "left"
+			-cw 1 0
+			-cw 2 200
+			-cw 3 50
+			-cat 1 "left" 0
+			-tcc ("textScrollListAutoFind(\"connectMaster_autoFillAttrNameB_textFieldButtonGrp\", \"connectMasterListB\", \"autoFind\");")
+			-cc ("textScrollListAutoFind(\"connectMaster_autoFillAttrNameB_textFieldButtonGrp\", \"connectMasterListB\", \"find\");")
+			-bl "Find"
+			-bc ("textScrollListAutoFind(\"connectMaster_autoFillAttrNameB_textFieldButtonGrp\", \"connectMasterListB\", \"find\");")
+			connectMaster_autoFillAttrNameB_textFieldButtonGrp
+			;	
+		
+		textScrollList
+			-h 200
+			-ams true
+			-ann $conAAnn
+			-dkc ("removeSelectedItemFromTextScrollList(\"connectMasterListA\");")	
+			-sc $sca
+			-p $rowColumnLayout
+			connectMasterListA		
+			;	
+		
+		
+		textScrollList
+			-h 200
+			-ams true
+			-dkc ("removeSelectedItemFromTextScrollList(\"connectMasterListB\");")
+			-sc $scb
+			-p $rowColumnLayout
+			connectMasterListB
+			;
+		
+	string $blayout = `frameLayout
+		-bv false
+		-li 0
+		-lv false
+		-mw 0
+		-mh 0	
+		-cll false
+		-cl false
+		//-ec "listAttributesOfSelected"
+		-p $layout
+		connectorLayoutButtons_frameLayout
+		`;
+	
+	
+	//_________________________________________
+	// Function Buttons
+	/*
+	string $connectLayout = `gridLayout
+		-nc 3
+		-nr 2
+		-cw 180
+		-ch 20
+		//-cal 1 "left"
+		//-cal 2 "center"
+		//-cal 3 "right"
+		
+		//-cr true
+		//-ag true
+		-p $blayout
+		connectMasterConnectButtonsGridLayout
+		`;
+
+		button
+			-l "Connect All"
+			-c ("connectMasterConnectAttributes(\"all\");")
+			;
+			
+		button
+			-l "Connect Selected"
+			-c ("connectMasterConnectAttributes(\"selected\");")
+			;	
+			
+		button
+			-l "Connect All Selected Obj A To All Obj B"
+			-ann "Warning : selectListA and selectListB much match is size to work correctly!"
+			-c ("connectMasterConnectAttributes(\"allAToAllBselected\");")
+			;
+			
+		button
+			-l "Connect Corresponding"
+			-c ("connectMasterConnectAttributes(\"corresponding\");")
+			;				
+
+			
+		button
+			-l "Disconnect All"
+			-c ("connectMasterDisconnectAttributes(\"all\");")
+			;	
+			
+
+		button
+			-l "Disconnect Selected"
+			-c ("connectMasterDisconnectAttributes(\"selected\");")
+			;	
+			
+	setParent $connectLayout;
+	*/
+	
+	//_________________________________________
+	// POP UP MENU A
+
+	popupMenu
+		-p "connectMasterListA"
+		;
+	
+	string $addRanAttrCommand = ("string $sel[] = forceGetSelectionList();"+"\n"
+		+"string $selAttr[] = `textScrollList -q -si connectMasterListA`;"+"\n"
+		+"for ($i=0;$i<`size $sel`;$i++){"+"\n"
+		+"	createRandomizationAttributesForSelected($sel[$i], $selAttr, \"\");"+"\n"	
+		+"}"+"\n"
+		);	
+	
+	string $addRanAttrAllIndicesCommand = ("string $sel[] = forceGetSelectionList();"+"\n"
+		+"string $selAttr[] = `textScrollList -q -si connectMasterListA`;"+"\n"
+		+"for ($i=0;$i<`size $sel`;$i++){"+"\n"
+		+"	createRandomizationAttributesForSelected($sel[$i], $selAttr, \"-ai\");"+"\n"	
+		+"}"+"\n"
+		);	
+		
+	string $addRanAttrOfTypeCommand = ("string $sel[] = forceGetSelectionList();"+"\n"
+		+"string $nodeType = `nodeType $sel[0]`;"+"\n"
+		+"string $allOfType[] = `lsType $nodeType`;"+"\n"
+		+"string $selAttr[] = `textScrollList -q -si connectMasterListA`;"+"\n"
+		+"for($i=0;$i<`size $allOfType`;$i++){"+"\n"
+		+"	createRandomizationAttributesForSelected($allOfType[$i], $selAttr, \"\");"+"\n"
+		+"}"+"\n"
+		);		
+
+	string $setMinRanAttrCom = ("string $sel[] = forceGetSelectionList();"+"\n"
+		+"string $selAttr[] = `textScrollList -q -si connectMasterListA`;"+"\n"
+		+"for ($i=0;$i<`size $sel`;$i++){"+"\n"
+		+	"for ($p=0;$p<`size $selAttr`;$p++){"+"\n"
+		+"		wizRandomazationAttributes(\"-smn -obj \" + $sel[$i] + \" -attr \" + $selAttr[$p]);"+"\n"	
+		+"	}"+"\n"
+		+"}"+"\n"
+		);
+		
+	string $setMaxRanAttrCom = ("string $sel[] = forceGetSelectionList();"+"\n"
+		+"string $selAttr[] = `textScrollList -q -si connectMasterListA`;"+"\n"
+		+"for ($i=0;$i<`size $sel`;$i++){"+"\n"
+		+	"for ($p=0;$p<`size $selAttr`;$p++){"+"\n"
+		+"		wizRandomazationAttributes(\"-smx -obj \" + $sel[$i] + \" -attr \" + $selAttr[$p]);"+"\n"	
+		+"	}"+"\n"
+		+"}"+"\n"
+		);
+		
+	string $setAllMinRanAttrCom = ("string $sel[] = forceGetSelectionList();"+"\n"
+		+"string $selAttr[] = `textScrollList -q -ai connectMasterListA`;"+"\n"
+		+"for ($i=0;$i<`size $sel`;$i++){"+"\n"
+		+	"for ($p=0;$p<`size $selAttr`;$p++){"+"\n"
+		+"		wizRandomazationAttributes(\"-smn -obj \" + $sel[$i] + \" -attr \" + $selAttr[$p]);"+"\n"	
+		+"	}"+"\n"
+		+"}"+"\n"
+		);
+		
+	string $setAllMaxRanAttrCom = ("string $sel[] = forceGetSelectionList();"+"\n"
+		+"string $selAttr[] = `textScrollList -q -ai connectMasterListA`;"+"\n"
+		+"for ($i=0;$i<`size $sel`;$i++){"+"\n"
+		+	"for ($p=0;$p<`size $selAttr`;$p++){"+"\n"
+		+"		wizRandomazationAttributes(\"-smx -obj \" + $sel[$i] + \" -attr \" + $selAttr[$p]);"+"\n"	
+		+"	}"+"\n"
+		+"}"+"\n"
+		);
+		
+	string $addRoundToCom = ("string $sel[] = forceGetSelectionList();"+"\n"
+		+"string $selAttr[] = `textScrollList -q -si connectMasterListA`;"+"\n"
+		+"for ($i=0;$i<`size $sel`;$i++){"+"\n"
+		+	"for ($p=0;$p<`size $selAttr`;$p++){"+"\n"
+		+"		wizRandomazationAttributes(\"-roundTo -obj \" + $sel[$i] + \" -attr \" + $selAttr[$p]);"+"\n"	
+		+"	}"+"\n"
+		+"}"+"\n"
+		);
+
+	string $addBiasCom = ("string $sel[] = forceGetSelectionList();"+"\n"
+		+"string $selAttr[] = `textScrollList -q -si connectMasterListA`;"+"\n"
+		+"for ($i=0;$i<`size $sel`;$i++){"+"\n"
+		+	"for ($p=0;$p<`size $selAttr`;$p++){"+"\n"
+		+"		wizRandomazationAttributes(\"-addBias -obj \" + $sel[$i] + \" -attr \" + $selAttr[$p]);"+"\n"	
+		+"	}"+"\n"
+		+"}"+"\n"
+		);			
+		
+	menuItem -d true -dl "Connections";
+	
+	menuItem -l "Connect All" -c ("connectMasterConnectAttributes(\"all\");");		
+	menuItem -l "Connect Selected" -c ("connectMasterConnectAttributes(\"selected\");");			
+	menuItem -l "Connect Corresponding"	-c ("connectMasterConnectAttributes(\"corresponding\");");	
+	menuItem -l "Connect A's To B's" -ann "Connects attributes in order in which they are selected." -c ("connectMasterConnectAttributes(\"allAToAllBselected\");");
+	
+	menuItem -d true -dl "Disconnect";
+	menuItem -l "Disconnect All" -c ("connectMasterDisconnectAttributes(\"all\");");	
+	menuItem -l "Disconnect Selected" -c ("connectMasterDisconnectAttributes(\"selected\");");	
+	
+	menuItem -d true -dl "Randomization";			
+	menuItem -l "Add Randomization Attribute For Selected Attributes" -c $addRanAttrCommand;
+		menuItem -ob true -c ("openCurrentOptionsLayout(\"addRandomizationAttributesOptions\");");			
+	menuItem -l "Add Randomization Attribute For All Of Type Attributes" -c $addRanAttrOfTypeCommand;
+		menuItem -ob true -c ("openCurrentOptionsLayout(\"addRandomizationAttributesOptions\");");		
+	
+	menuItem -l "Add Randomization Attribute For All Indices Of Multi Indice Attributes" -c $addRanAttrAllIndicesCommand;
+		menuItem -ob true -c ("openCurrentOptionsLayout(\"addRandomizationAttributesOptions\");");			
+	
+	
+	menuItem -l "Set Min Random Value" -c $setMinRanAttrCom;
+	menuItem -l "Set Max Random Value" -c $setMaxRanAttrCom;	
+	
+	menuItem -l "Set All Min Random Value" -c $setAllMinRanAttrCom;
+	menuItem -l "Set All Max Random Value" -c $setAllMaxRanAttrCom;
+	
+	menuItem -l "Add Round To Attribute" -ann "Add an attribute to set a value to round the random value to. e.g. 0.1 rounds 1.567 to 1.500" -c $addRoundToCom;	
+	menuItem -l "Add Bias Attribute" -ann "Add a bias attribute to bias the random number toward a value." -c $addBiasCom;	
+	
+	menuItem -l "Randomize" -c ("randomizeRandomizationAttributesOnSelectedObjects(`ls -sl`);");
+	
+	menuItem -d true -dl "Sets";
+	
+	menuItem -l "Attribute Set" -c ("wizAttributeSet(\"-sw -aw\");");
+	
+	menuItem -d true -dl "Set Driven Key";
+		menuItem -l "Key" -c ("wizSetDrivenKey(\"-wiz\");");	
+	
+	menuItem -d true -dl "Publish";
+		menuItem -l "Publish And Name" -c ("wizPublishAttribute(\"-wiz\");");
+	
+	setParent -menu..;
+
+	
+	//_________________________________________
+	// POP UP MENU B
+	
+	popupMenu
+		-p "connectMasterListB"
+		;
+	/*
+	string $ccAttrCom = (
+		"string $soObj[] = `textScrollList -q -ai selectMasterListB`;"+"\n"
+		+"string $toObj[] = `textScrollList -q -ai selectMasterListA`;"+"\n"
+		+"string $soAttr[] = `textScrollList -q -si connectMasterListB`;"+"\n"
+		+"wizlog ((niceArrayList(\"Selected Attributes : \", $soAttr)));"+"\n"
+		+"string $atNames[];"+"\n"
+		+"clear $atNames;"+"\n"
+		+"for ($p=0;$p<`size $soAttr`;$p++){"+"\n"
+		+"	$atNames[$i] = wizFieldPromptDialog(\"Control Attribute Name\", ($soAttr[$p] + \" Control Attribute Name : \"), \"OK\", \"Cancel\");"+"\n"
+		+"	$atNames[$i] = makeNiceAttributeName($atNames[$i]);"+"\n"
+		+"	wizlog (\"Control Attribute Name : \" + $atNames[$i]);"+"\n"
+		+"}"+"\n"
+		+"for ($i=0;$i<`size $soObj`;$i++){"+"\n"
+		+"	for ($p=0;$p<`size $soAttr`;$p++){"+"\n"
+		+"		wizCopyAttr(\"-cts -attr \" + $soAttr[$p] + \" -atn \" + $atNames[$p] + \" -so \" + $soObj[$i] + \" -to \" + $toObj[0]);"+"\n"	
+		+"	}"+"\n"
+		+"}"+"\n"
+		);	
+	*/
+	string $ccAttrCom = (
+		"string $soObj[] = `textScrollList -q -ai selectMasterListB`;"+"\n"
+		+"string $toObj[] = `textScrollList -q -ai selectMasterListA`;"+"\n"
+		+"string $soAttr[] = `textScrollList -q -si connectMasterListB`;"+"\n"
+		+"wizlog ((niceArrayList(\"Selected Attributes : \", $soAttr)));"+"\n"
+		+"string $atNames[];"+"\n"
+		+"$atNames[0] = wizFieldPromptDialog(\"Control Attribute Name\", ($soAttr[0] + \" Control Attribute Name : \"), \"OK\", \"Cancel\");"+"\n"
+		+"$atNames[0] = makeNiceAttributeName($atNames[0]);"+"\n"
+		+"wizlog (\"Control Attribute Name : \" + $atNames[0]);"+"\n"
+		+"for ($i=0;$i<`size $soObj`;$i++){"+"\n"
+		+"		wizCopyAttr(\"-cts -attr \" + $soAttr[0] + \" -atn \" + $atNames[0] + \" -so \" + $soObj[$i] + \" -to \" + $toObj[0]);"+"\n"	
+		+"}"+"\n"
+		);	
+		
+	string $ccAttrForEachCom = (
+		"string $soObj[] = `textScrollList -q -ai selectMasterListB`;"+"\n"
+		+"string $toObj[] = `textScrollList -q -ai selectMasterListA`;"+"\n"
+		+"string $soAttr[] = `textScrollList -q -si connectMasterListB`;"+"\n"
+		+"for ($i=0;$i<`size $soObj`;$i++){"+"\n"
+		+"	for ($p=0;$p<`size $soAttr`;$p++){"+"\n"
+		+"		wizCopyAttr(\"-cts -attr \" + $soAttr[$p] + \" -pre \" + $soObj[$i] + \" -so \" + $soObj[$i] + \" -to \" + $toObj[0]);"+"\n"	
+		+"	}"+"\n"
+		+"}"+"\n"
+		);	
+		
+	menuItem -d true -dl "Control Attribute";
+	
+	menuItem -l "Create Control Attribute" -c $ccAttrCom;	
+	menuItem -l "Create Control Attribute For Each Object" -c $ccAttrForEachCom;
+
+	menuItem -d true -dl "Connections";	
+	
+	menuItem -l "Connect All" -c ("connectMasterConnectAttributes(\"all\");");		
+	menuItem -l "Connect Selected" -c ("connectMasterConnectAttributes(\"selected\");");			
+	menuItem -l "Connect Corresponding"	-c ("connectMasterConnectAttributes(\"corresponding\");");	
+	menuItem -l "Connect A's To B's" -ann "Connects attributes in order in which they are selected." -c ("connectMasterConnectAttributes(\"allAToAllBselected\");");
+	
+	menuItem -d true -dl "Disconnect";
+	menuItem -l "Disconnect All" -c ("connectMasterDisconnectAttributes(\"all\");");	
+	menuItem -l "Disconnect Selected" -c ("connectMasterDisconnectAttributes(\"selected\");");	
+	
+	menuItem -d true -dl "Set Driven Key";
+		menuItem -l "Key" -c ("wizSetDrivenKey(\"-wiz\");");	
+	
+	
+	
+	setParent -menu..;
+	
+	
+	//_________________________________________
+	// Attribute Workspace
+	
+	columnLayout
+		-adj true
+		-p $layout
+		;
+		
+	attributeMathLayout($layout);
+	
+	attrWorkspaceLayout($layout);
+	
+	
+}
+
+
+
+//CONNECT ALL ATTRIBUTES LAYOUT
+//----------------------------------------------
+global proc connectAllAttributesLayout(string $parent)
+{
+	string $connectAllAttributes = `frameLayout
+		-l "Connect All Attributes"	
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-p $parent
+		`;
+	
+	textFieldButtonGrp
+		-ed true
+		-label "Source"
+		-text  ""
+		-ann ""
+		-cal 1 "center"
+		-buttonLabel "Select"
+		-bc "assignConnectSource"
+		getConnectSource;
+		
+	checkBox -l "Force Connection" -v true conAttrForceConnection;
+	
+	text -l "List Only (Can Check Multiple)";	
+		
+	checkBox -l "Ramps" -ann "-ra" -v false conAttrRampList;
+	checkBox -l "Scalar" -ann "-s" -v false conAttrScalarList;
+	checkBox -l "Array" -ann "-a" -v false conAttrArrayList;
+	checkBox -l "Visible" -ann "-v" -v false conAttrVisibleList;
+	checkBox -l "Connectable" -ann "-c" -v false conAttrConnectableList;
+	checkBox -l "Keyable" -ann "-k" -v false conAttrKeyableList;
+	checkBox -l "ChannelBox" -ann "-cb" -v false conAttrChannelBoxList;
+	checkBox -l "Multi" -ann "-m" -v false conAttrMultiList;
+	checkBox -l "Unlocked" -ann "-u" -v false conAttrUnlockedList;
+	
+	text
+		-l "Attributes to Connect"
+		;
+		
+	textScrollList
+		-w 80
+		-h 60
+		-ams true
+		-dkc "removeConnectAttribute"
+		getConnectAttribute;
+		
+	text
+		-l "Target Objects"
+		;
+		
+	textScrollList
+		-w 80
+		-h 60
+		-ams true
+		-dkc "removeConnectAttributeObject"
+		getConnectAttributeObjects;
+	
+	
+	string $connectTargetLayout = `rowLayout
+		-p $connectAllAttributes
+		-numberOfColumns 4			
+		`;
+	
+	button
+		-label "Assign Target Objects"
+		-ann ""
+		//-w 120
+		-command "assignConnectTargetObjects"
+		//-en false
+		-p $connectTargetLayout
+		assignConnectTargetObjects;
+		
+	button
+		-label "Clear Object List"
+		-ann ""
+		//- w 120
+		-command "clearConnectObjectList"
+		//-en false
+		-p $connectTargetLayout
+		clearConnectObjectList;
+		
+	button
+		-label "Connect Attributes"
+		-ann ""
+		//-w 120
+		-command "connectAllAttributes"
+		//-en false
+		-bgc 1.0 0.46 0.0
+		-p $connectTargetLayout
+		connectAllAttributes;	
+	
+	button
+		-label "Disconnect Attributes"
+		-ann ""
+		//-w 120
+		-command "disconnectAllAttributes"
+		//-en false
+		-bgc 1.0 0.46 0.0
+		-p $connectTargetLayout
+		disconnectAllAttributes;
+		
+	setParent..;
+	
+		
+	
+}
+
+
+//ATTR WORKSPACE LAYOUT
+//=============================================================
+global proc attrWorkspaceLayout( string $parent )
+{
+	
+	string $layout = `frameLayout
+		-l "Attr Workspace"	
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 0
+		-mh 0		
+		
+		-cll true
+		-cl true
+		-parent $parent		
+		attrWorkspace_frameLayout
+		`;	
+	
+	
+	string $rowLayout = `rowLayout
+		-numberOfColumns 3
+		-p $layout
+		`;	
+		
+	setParent..;
+	
+	attrWorkspaceTabLayout($layout);
+
+	
+}
+
+//ATTR WORKSPACE TAB LAYOUT
+//--------------------------------------------------
+global proc attrWorkspaceTabLayout(string $parent)
+{
+	string $tabLayout = `tabLayout
+		-scr false
+		-cr true
+		-iv true
+		-p $parent
+		attrWorkspaceTabLayout
+		`;
+	
+	setAttrWorkspaceLayout($tabLayout);
+	
+	compoundAttrWorkspaceLayout($tabLayout);
+	
+	globalAttributeWorkspaceLayout($tabLayout);
+	
+	tabLayout
+		-e
+		-tli 1 "Set Attr"
+		-tli 2 "Compound Attr"
+		-tli 3 "Global Attr"
+		attrWorkspaceTabLayout
+		;
+}
+
+//ATTR WORKSPACE LAYOUTS
+//==================================================
+//UPDATE SET ATTR WORKSPACE
+//----------------------------------------
+global proc updateSetAttrWorkspace(string $sel[])
+{
+	//Destroy any existing attribute controls
+	global string $WIZ_allOfTypeAttrMode;
+
+	string $curSetAttrLayout = "setAttrWorkspaceCurrentAttrColumnLayout";
+	if (`columnLayout -q -ex $curSetAttrLayout`){
+		deleteUI -lay $curSetAttrLayout;
+		
+	}
+	
+	string $curSetAttrLayout = `columnLayout
+		-adjustableColumn true
+		-p setAttrWorkspaceColumnLayout
+		$curSetAttrLayout
+		`;
+	
+	//Get the objects
+	string $selA[] = `textScrollList -q -ai selectMasterListA`;
+	string $selB[] = `textScrollList -q -ai selectMasterListB`;
+	
+	//Get the attributes
+	string $attrA[] = `textScrollList -q -si connectMasterListA`;
+	string $attrB[] = `textScrollList -q -si connectMasterListB`;
+	
+	//Combine them
+	string $objAttrA[] = combineStringArrays($selA, ".", $attrA);
+	string $objAttrB[] = combineStringArrays($selB, ".", $attrB);
+	
+	//Add the controls
+	addControlsForSelectedAttributes($objAttrA, $curSetAttrLayout);
+	addControlsForSelectedAttributes($objAttrB, $curSetAttrLayout);
+	
+}
+
+//SET ATTR WORKSPACE LAYOUT
+//--------------------------------------------------
+global proc setAttrWorkspaceLayout(string $parent)
+{
+	string $columnLayout = `columnLayout
+		-adjustableColumn true
+		-p $parent
+		setAttrWorkspaceColumnLayout
+		`;	
+	
+}
+
+//COMPOUND ATTR WORKSPACE LAYOUT
+//--------------------------------------------------
+global proc compoundAttrWorkspaceLayout( string $parent )
+{
+	string $columnLayout = `columnLayout
+		-adjustableColumn true
+		-p $parent
+		compoundAttrWorkspaceColumnLayout
+		`;
+		
+	setParent $parent;
+	string $attrControlGrp[];
+	
+	/*
+	
+	int $mi[] =	`getAttr -mi ($obj + "." + $attr)`;
+	int $miCount = `size $mi`; // the count of indices
+	
+	
+	for ($i=0;$i<`size $objAttr`;$i++){
+		string $objAttibute[] = tokenizeString($objAttr[$i], ".");
+		
+		string $controlName = removeIllegalCharactersFromName($objAttr[$i]);
+		$controlName = $controlName + "AttrControlGrp";
+
+		catchQuiet(`attrControlGrp -l $objAttr[$i] -a $objAttr[$i] $controlName`);
+
+		$attrControlGrp[`size $attrControlGrp`] = $controlName;
+	}
+	return $attrControlGrp;
+	*/
+}
+
+//Add this function to control selected attributes of selected nodes globally
+//===================================================================
+//*****************************************************************
+//===================================================================
+global proc globalAttributeWorkspaceLayout(string $parent)
+{
+	string $columnLayout = `columnLayout
+		-adjustableColumn true
+		-p $parent
+		globalAttrWorkspaceColumnLayout
+		`;
+	//attributeInfo -all -type blinn;	
+	//ls -nt
+	
+	//Create a new node of selected type
+	//Connect all other node's selected attributes in scene to the new "GlobalNodeController"
+}
+
+//CONNECT SOURCE OPTION MENU GRP
+//----------------------------------------
+global proc connectSourceOptionMenuGrp()
+{
+	string $selA[] = `textScrollList -q -ai selectMasterListA`;
+	
+	optionMenuGrp 
+		-l "Connect Source:"
+		-cal 1 "left"
+		-cal 2 "left"
+		connectSourceOptionMenuGrp
+		;
+		
+		for ($i=0;$i<`size $selA`;$i++){
+		
+			menuItem -label $selA[$i];	
+			
+		}
+}
+
+//MENUS
+//===================================================================================
+//ATTRIBUTE WIZ MENU LAYOUT
+//-------------------------------------
+global proc attributeWizMenuLayout(string $parent)
+{
+	string $menuBarLayout = `menuBarLayout
+	attributeWizMenuLayout
+	`;
+	
+	string $applyAttributePresetCommand = ("string $preset = `textFieldGrp -q -tx applyAttributePresetToSelectedNodesPresetNameTextFieldGrp`;"
+		+"applyAttributePresetToSelectedNodes(`ls -sl`,$name);");
+		
+	menu -l "Presets" -to true;
+		
+		menuItem -l "Create Temp Preset From Selected And Apply to Selected" -c "createTempNodePresetAndApplyToSelectedObjects";
+				
+		menuItem -l "Apply Attribute Preset To Selected Nodes" -c $applyAttributePresetCommand;
+			menuItem -ob true -c ("openCurrentOptionsLayout(\"applyAttributePresetToSelectedNodesOptions\");");
+
+	menu -l "Connect Nodes" -to true;
+		menuItem -l "New Remap Value Input" -c ("createRemapValueForSelectedAttributes(\"input\");");
+		menuItem -l "New Remap Value Output" -c ("createRemapValueForSelectedAttributes(\"output\");");
+		
+	
+		
+}
+
+//LIST ATTRIBUTE TYPE MENU
+//-------------------------------------
+global proc listAttributeTypeMenu()
+{
+	string $menuBarLayout = `menuBarLayout listAttriubteTypeMenu`;	
+	string $updateAttrListCommand = ("updateConnectWizAttributeLists();");
+	menu -label "Attribute Connections";
+
+	menuItem -cb false -l "Force Connections" conAttrForceConnection;
+	
+	menuItem -d true;
+
+	wizMenuItem(
+	"-cb 0 "
+	+"-l List Multi Indice Attributes "
+	+"-n attrWiz_listMultiIndiceAttributes_menuItem"
+	);
+	
+	
+	menuItem -sm true -l "List Only";
+		/*
+		menuItem -cb false -l "Matching Attributes" -c $updateAttrListCommand conAttrMatchingList;
+		menuItem -d true;
+		menuItem -cb false -l "Connectable" -ann "-c" -c $updateAttrListCommand conAttrConnectableList;
+		menuItem -cb false -l "Keyable" -ann "-k" -c $updateAttrListCommand conAttrKeyableList;
+		menuItem -cb false -l "ChannelBox" -ann "-cb" -c $updateAttrListCommand conAttrChannelBoxList;	
+		menuItem -cb false -l "Ramps" -ann "-ra" -c $updateAttrListCommand conAttrRampList;
+		menuItem -cb false -l "Scalar" -ann "-s" -c $updateAttrListCommand conAttrScalarList;
+		menuItem -cb false -l "Array" -ann "-a" -c $updateAttrListCommand conAttrArrayList;	
+		menuItem -cb false -l "Multi" -ann "-m" -c $updateAttrListCommand conAttrMultiList;
+		menuItem -cb false -l "Unlocked" -ann "-u" -c $updateAttrListCommand conAttrUnlockedList;
+		menuItem -cb true -l "Visible" -ann "-v" -c $updateAttrListCommand conAttrVisibleList;
+		*/
+		wizMenuItem("-cb 0 -l Matching Attributes -c " + $updateAttrListCommand + " -n conAttrMatchingList");
+		menuItem -d true;
+		
+		wizMenuItem("-cb 0 -l Connectable -c " + $updateAttrListCommand + " -n conAttrConnectableList");
+		wizMenuItem("-cb 0 -l Keyable -c " + $updateAttrListCommand + " -n conAttrKeyableList");
+		wizMenuItem("-cb 0 -l ChannelBox -c " + $updateAttrListCommand + " -n conAttrChannelBoxList");	
+		wizMenuItem("-cb 0 -l Ramps -c " + $updateAttrListCommand + " -n conAttrRampList");
+		wizMenuItem("-cb 0 -l Scalar -c " + $updateAttrListCommand + " -n conAttrScalarList");
+		wizMenuItem("-cb 0 -l Array -c " + $updateAttrListCommand + " -n conAttrArrayList");	
+		wizMenuItem("-cb 0 -l Multi -c " + $updateAttrListCommand + " -n conAttrMultiList");
+		wizMenuItem("-cb 0 -l Unlocked -c " + $updateAttrListCommand + " -n conAttrUnlockedList");
+		wizMenuItem("-cb 1 -l Visible -c " + $updateAttrListCommand + " -n conAttrVisibleList");
+		wizMenuItem("-cb 1 -l User Defined -c " + $updateAttrListCommand + " -n conAttrUserDefinedList");
+		wizMenuItem("-cb 1 -l Output -c " + $updateAttrListCommand + " -n conAttrOutputList");
+		wizMenuItem("-cb 1 -l Changed Since File Open -c " + $updateAttrListCommand + " -n conAttrChangedSinceFileOpenList");
+		
+		menuItem -e -ann "-c" conAttrConnectableList;
+		menuItem -e -ann "-k" conAttrKeyableList;
+		menuItem -e -ann "-cb" conAttrChannelBoxList;	
+		menuItem -e -ann "-ra" conAttrRampList;
+		menuItem -e -ann "-s" conAttrScalarList;
+		menuItem -e -ann "-a" conAttrArrayList;	
+		menuItem -e -ann "-m" conAttrMultiList;
+		menuItem -e -ann "-u" conAttrUnlockedList;
+		menuItem -e -ann "-v" conAttrVisibleList;
+		menuItem -e -ann "-ud" conAttrUserDefinedList;
+		menuItem -e -ann "-o" conAttrOutputList;
+		menuItem -e -ann "-cfo" conAttrChangedSinceFileOpenList;
+		
+		
+		
+	setParent -menu ..;
+	
+	listNodeTypeTextScrollList("connectMasterListA");
+	
+	menu -l "Presets";
+	
+		menuItem -l "Create Preset And Apply To Selected Objects" -c ("createTempNodePresetAndApplyToSelectedObjects();");
+
+		string $applyAttributePresetCommand = ("string $preset = `textFieldGrp -q -tx applyAttributePresetToSelectedNodesPresetNameTextFieldGrp`;"
+		+"applyAttributePresetToSelectedNodes(`ls -sl`,$name);");
+		
+		menuItem -l "Apply Attribute Preset To Selected Nodes" -c $applyAttributePresetCommand;
+			menuItem -ob true -c ("openCurrentOptionsLayout(\"applyAttributePresetToSelectedNodesOptions\");");
+
+	setParent -menu ..;
+	
+	menu -l "Functions";
+	
+	//menu -l "Connect Nodes" -to true;
+		menuItem -sm true -l "Connect Nodes" -to true;
+			menuItem -l "New Remap Value Input" -c ("createRemapValueForSelectedAttributes(\"input\");");
+			menuItem -l "New Remap Value Output" -c ("createRemapValueForSelectedAttributes(\"output\");");
+		setParent -menu ..;
+	
+		
+		string $addRanAttrCommand = ("string $sel[] = forceGetSelectionList();"+"\n"
+		+"string $selAttr[] = `textScrollList -q -si connectMasterListA`;"+"\n"
+		+"createRandomizationAttributesForSelected($sel[0], $selAttr);"+"\n"
+		);
+		
+		
+		menuItem -sm true -l "Randomize" -to true;
+			menuItem -l "Add Randomization Attribute For Selected Attributes" -c $addRanAttrCommand;
+			menuItem -l "Randomize" -c ("randomizeRandomizationAttributesOnSelectedObjects(`ls -sl`);");
+			
+		setParent -menu..;
+			
+	//menu -l "Functions";
+		menuItem -sm true -l "List A";
+		textScrollListPrintFunctionsMenuItems("connectMasterListA");
+	setParent -menu..;	
+		menuItem -sm true -l "List B";
+		textScrollListPrintFunctionsMenuItems("connectMasterListB");
+	setParent -menu..;	
+
+}
+
+
+global proc listNodeTypeTextScrollList( string $textScrollList )
+{
+	string $type = "Geometry";
+	string $c = (
+	"string $nodeTypes[] = `listNodeTypes " + $type + "`;"+"\n"
+	+"replaceTextScrollListWithSelectedObjects($nodeTypes, \"" + $textScrollList + "\");"+"\n"
+	+"global string $WIZ_allOfTypeAttrMode;"+"\n"
+	+"$WIZ_allOfTypeAttrMode = 1;"+"\n"
+	);
+	
+	
+	menuItem -sm true -l "List All Of Type" -to true;
+		$type = "Geometry";
+		menuItem -l "Geometry" -c $c;
+		
+		$type = "DrawDB";
+		menuItem -l "DrawDB" -c $c;
+	
+		$type = "Dynamics";
+		menuItem -l "Dynamics" -c $c;
+
+		$type = "Shaders";
+		menuItem -l "Shaders" -c $c;
+
+		$type = "Textures";
+		menuItem -l "Textures" -c $c;
+
+		$type = "Utilities";
+		menuItem -l "Utilities" -c $c;
+		
+		$type = "Lights";
+		menuItem -l "Lights" -c $c;
+
+		
+	setParent -menu..;
+
+
+}
+
+global proc wizAttributeFunctionsMenu()
+{
+	
+	string $applyAttributePresetCommand = ("string $preset = `textFieldGrp -q -tx applyAttributePresetToSelectedNodesPresetNameTextFieldGrp`;"
+		+"applyAttributePresetToSelectedNodes(`ls -sl`,$name);");
+		
+	menuItem -sm true -l "Attributes" -to true;
+		
+		menuItem -l "Create Temp Preset From Selected And Apply to Selected" -c "createTempNodePresetAndApplyToSelectedObjects";
+				
+		menuItem -l "Apply Attribute Preset To Selected Nodes" -c $applyAttributePresetCommand;
+			menuItem -ob true -c ("openCurrentOptionsLayout(\"applyAttributePresetToSelectedNodesOptions\");");
+			
+		menuItem -l "Node Cast Selected Objects (Swap A With B)" -c ("wizNodeCastSelected(`ls -sl`);");
+			menuItem -ob true -c ("openCurrentOptionsLayout(\"wizNodeCastOptions\");");
+			
+		menuItem -l "Parent Shape Node To Transform" -c ("parent -r -s;");
+		
+		menuItem -l "Delete All User Defined Attributes" -c ("deleteAllUserDefinedAttributes(`ls -sl`);");
+		
+		menuItem -l "Set Driven Visibility Selector" -ann ("This adds a new attribute to the first selection and"
+		+"uses it to control visibility of the rest of selected objects. "
+		+"Works like a object toggle switch.\n"
+		+"If attribute already exists, this will rebuild the set driven keys to include all objects") -c ("wizSetDrivenVisibility(\"-sl -anp\");");
+		
+		menuItem -l "Set Driven Enabled Selector" -ann ("This adds a new attribute to the first selection and"
+		+"uses it to control the enabled state of the rest of selected objects. "
+		+"Works like a object toggle switch.\n"
+		+"If attribute already exists, this will rebuild the set driven keys to include all objects") -c ("wizSetDrivenSelection(\"-sl -anp -en\");");
+		
+		
+		menuItem -l "Create Choice Selection" -c ("wizChoiceSelection(\"-sl\");");
+		menuItem -l "Add To Choice Selection" -c ("wizChoiceSelection(\"-sl -e\");");
+
+		//print (\"AEmentalrayRenderProxyUpdate \" + $mesh[$i] + \".miProxy ;\");
+		menuItem -l "Refresh Render Proxy" -c ("wizRefreshRenderProxyObject();");
+		
+		setParent -menu ..;	
+	
+	
+}
+
+//UPDATE CONNECT WIZ ATTRIBUTE LISTS
+//===========================================================
+global proc updateConnectWizAttributeLists()
+{
+	global string $WIZ_allOfTypeAttrMode;
+	if ($WIZ_allOfTypeAttrMode == 1){
+		listAttributesOfSelectedType();
+	} else {
+		listAttributesOfSelected();	
+	}
+}
+
+//LIST ATTRIBUTES OF SELECTED
+//===========================================================
+global proc listAttributesOfSelected()
+{
+	string $selA[] = `textScrollList -q -ai selectMasterListA`;
+	string $selB[] = `textScrollList -q -ai selectMasterListB`;
+	
+	if (`size $selA` > 0){
+		string $attrA[] = getAttrFromSelectedObjects($selA);
+		replaceTextScrollListWithSelectedObjects($attrA,"connectMasterListA");
+		listCompoundAttribuesOfSelected($selA);
+	}
+	if (`size $selB` > 0){
+		string $attrB[] = getAttrFromSelectedObjects($selB);
+		replaceTextScrollListWithSelectedObjects($attrB,"connectMasterListB");
+	} else {
+		string $attrA[] = getAttrFromSelectedObjects($selA);
+		replaceTextScrollListWithSelectedObjects($attrA,"connectMasterListB");
+	}
+	
+}
+
+//LIST ATTRIBUTES OF SELECTED
+//===========================================================
+global proc listAttributesOfSelectedType()
+{
+	string $si[] = `textScrollList -q -si connectMasterListA`;
+	
+	if (`size $si` > 0){
+		string $listAttr[] = `attributeInfo -all -t $si[0]`;
+		replaceTextScrollListWithSelectedObjects($listAttr,"connectMasterListB");
+	}
+
+	
+}
+
+//GET ATTR FROM SELECTED OBJECTS
+//-------------------------------------------------
+global proc string[] getAttrFromSelectedObjects(string $sel[])
+{
+	string $attr[];
+	for ($i=0;$i<`size $sel`;$i++){
+		string $selAttr[] = getAttributesOfSelectedTypeFromObject($sel[$i]);
+		appendStringArray($attr, $selAttr, `size $selAttr`);
+	}
+	$attr = stringArrayRemoveDuplicates($attr);
+	return $attr;
+}
+
+//GET ALL ATTRIBUTES FROM SELECTED
+//-------------------------------------------------
+global proc string[] getAllAttributesFromSelected(string $sel[])
+{
+	string $attr[];
+	for ($i=0;$i<`size $sel`;$i++){
+		string $selAttr[] = `listAttr $sel[$i]`;
+		appendStringArray($attr, $selAttr, `size $selAttr`);
+	}
+	$attr = stringArrayRemoveDuplicates($attr);
+	return $attr;	
+}
+
+//GET ATTRIBUTES OF SELECTED TYPE FROM OBJECT
+//-------------------------------------------------
+global proc string[] getAttributesOfSelectedTypeFromObject(string $obj)
+{
+	string $listAttrFlag = " ";
+	if (`menuItem -q -cb conAttrRampList` == true){
+		$listAttrFlag += (`checkBox -q -ann conAttrRampList` + " ");
+	}
+	if (`menuItem -q -cb conAttrScalarList` == true){
+		$listAttrFlag += (`checkBox -q -ann conAttrScalarList` + " ");
+	}	
+	if (`menuItem -q -cb conAttrArrayList` == true){
+		$listAttrFlag += (`checkBox -q -ann conAttrArrayList` + " ");
+	}	
+	if (`menuItem -q -cb conAttrVisibleList` == true){
+		$listAttrFlag += (`checkBox -q -ann conAttrVisibleList` + " ");
+	}
+	if (`menuItem -q -cb conAttrConnectableList` == true){
+		$listAttrFlag += (`checkBox -q -ann conAttrConnectableList` + " ");
+	}
+	if (`menuItem -q -cb conAttrKeyableList` == true){
+		$listAttrFlag += (`checkBox -q -ann conAttrKeyableList` + " ");
+	}
+	if (`menuItem -q -cb conAttrChannelBoxList` == true){
+		$listAttrFlag += (`checkBox -q -ann conAttrChannelBoxList` + " ");
+	}
+	if (`menuItem -q -cb conAttrMultiList` == true){
+		$listAttrFlag += (`checkBox -q -ann conAttrMultiList` + " ");
+	}
+	if (`menuItem -q -cb conAttrUnlockedList` == true){
+		$listAttrFlag += (`checkBox -q -ann conAttrUnlockedList` + " ");
+	}
+	
+	
+	
+	//string $attr[] = `listAttr -c -hd -u -k $sel[0]`; //Keyable -k seems to crash maya
+	string $attr[];
+	
+	global string $tempAttr[];
+	clear $tempAttr;
+	if (`endsWith $obj "]"`){
+		return {""};
+	}
+	string $listAttrCommand = "global string $tempAttr[];"
+	+"clear $tempAttr;"
+	+"$tempAttr = `listAttr -lf " + $listAttrFlag + $obj + "`;";
+	
+	print ("ListAttrCommand: " + $listAttrCommand + "\n");
+	eval ($listAttrCommand);
+	return $tempAttr;
+
+}
+
+//SET ATTRIBUTE WORKSPACE
+//================================================================================
+//ADD CONTROLS FOR SELECTED ATTRIBUTES
+//------------------------------------------
+global proc string[] addControlsForSelectedAttributes( string $objAttr[], string $parent )
+{
+	setParent $parent;
+	string $attrControlGrp[];
+	
+	
+	for ($i=0;$i<`size $objAttr`;$i++){
+		string $objAttibute[] = tokenizeString($objAttr[$i], ".");
+		
+		string $controlName = removeIllegalCharactersFromName($objAttr[$i]);
+		$controlName = $controlName + "AttrControlGrp";
+		/* FINISH THIS
+		string $cc = (
+		"string $ctrlObjs[] = `textScrollList -q -ai selectMasterListB`;"+"\n"
+		+"string $ctrlAttr = `attrControlGrp -q -a " + $controlName + "`;"+"\n"
+		+"for($i=0;$i<`size $ctrlObjs`;$i++){"+"\n"	
+		+"	setAttr ($ctrlObjs[$i] + \".\" + $ctrlAttr)
+		);
+			*/
+		
+		catchQuiet(`attrControlGrp -l $objAttr[$i] -a $objAttr[$i] $controlName`);
+/*
+		string $attrcg = `attrControlGrp
+			-l $objAttr[$i]
+			-a $objAttr[$i]
+			$controlName
+			`;
+			*/
+		/*
+		string $attrcg = `attrFieldSliderGrp
+			-l $objAttr[$i]
+			-at $objAttr[$i]
+			-cal 1 "left"
+			`;
+		*/
+		$attrControlGrp[`size $attrControlGrp`] = $controlName;
+	}
+	return $attrControlGrp;
+}
+
+//COMPOUND ATTRIBUTES
+//===================================================================
+//LIST COMPOUND ATTRIBUTES OF SELECTED
+//---------------------------------------------------
+global proc listCompoundAttribuesOfSelected(string $sel[])
+{
+	string $compound[] = getCompoundAttrFromSelected($sel);
+	
+	//replaceTextScrollListWithSelectedObjects($compound,"compoundAttrWorkspaceList");	
+}
+
+//GET COMPOUND ATTR FROM SELECTED
+//---------------------------------------------------
+global proc string[] getCompoundAttrFromSelected(string $sel[])
+{
+	string $compound[];
+	for($i=0;$i<`size $sel`;$i++){
+		string $selAttr[] = `listAttr $sel[$i]`;
+		string $compAttr[] = getCompoundAttr($sel[$i], $selAttr);
+		appendStringArray($compound, $compAttr, `size $compAttr`);
+	}
+	$compound = stringArrayRemoveDuplicates($compound);
+	return $compound;		
+}
+
+//GET COMPOUND ATTR
+//---------------------------------------------------
+global proc string[] getCompoundAttr( string $obj, string $attr[] )
+{
+	string $comp[];
+	for ($i=0;$i<`size $attr`;$i++){
+		if (catchQuiet(`attributeQuery -at -node $obj $attr[$i]`) == 1){
+			continue;	
+		}
+		if (`attributeQuery -at -node $obj $attr[$i]` == "compound"){
+			$comp[`size $comp`] = $attr[$i];	
+		}
+	}
+	return $comp;
+}
+
+//GET INDICES OF COMPOUND ATTRIBUTES ON SELECTED
+//---------------------------------------------------
+global proc string[] getIndicesOfCompoundAttributesOnSelected( string $sel[], string $attr[] )
+{
+	string $indices[];	
+	for ($i=0;$i<`size $sel`;$i++){
+		string $mi[] = getIndicesOfCompoundAttributes($sel[$i], $attr);
+		appendStringArray($indices, $mi, `size $mi`);
+	}	
+	//$indices = stringArrayRemoveDuplicates($indices);
+	return $indices;
+}
+
+//GET INDICES OF COMPOUND ATTRIBUTES
+//---------------------------------------------------
+global proc string[] getIndicesOfCompoundAttributes(string $sel, string $attr[])
+{
+	string $indices[];	
+	for($i=0;$i<`size $attr`;$i++){
+		string $mi[] = `getAttr -mi ($sel + "." + $attr[$i])`;
+		appendStringArray($indices, $mi, `size $mi`);
+	}	
+	return $indices;
+}
+
+//CONNECTING ATTRIBUTES
+//================================================================================
+//ASSIGN CONNECT SOURCE
+//--------------------------------------------------
+global proc assignConnectSource()
+{
+	string $listAttrFlag = " ";
+	if (`checkBox -q -v conAttrRampList` == true){
+		$listAttrFlag += (`checkBox -q -ann conAttrRampList` + " ");
+	}
+	if (`checkBox -q -v conAttrScalarList` == true){
+		$listAttrFlag += (`checkBox -q -ann conAttrScalarList` + " ");
+	}	
+	if (`checkBox -q -v conAttrArrayList` == true){
+		$listAttrFlag += (`checkBox -q -ann conAttrArrayList` + " ");
+	}	
+	if (`checkBox -q -v conAttrVisibleList` == true){
+		$listAttrFlag += (`checkBox -q -ann conAttrVisibleList` + " ");
+	}
+	if (`checkBox -q -v conAttrConnectableList` == true){
+		$listAttrFlag += (`checkBox -q -ann conAttrConnectableList` + " ");
+	}
+	if (`checkBox -q -v conAttrKeyableList` == true){
+		$listAttrFlag += (`checkBox -q -ann conAttrKeyableList` + " ");
+	}
+	if (`checkBox -q -v conAttrChannelBoxList` == true){
+		$listAttrFlag += (`checkBox -q -ann conAttrChannelBoxList` + " ");
+	}
+	if (`checkBox -q -v conAttrMultiList` == true){
+		$listAttrFlag += (`checkBox -q -ann conAttrMultiList` + " ");
+	}
+	if (`checkBox -q -v conAttrUnlockedList` == true){
+		$listAttrFlag += (`checkBox -q -ann conAttrUnlockedList` + " ");
+	}
+	string $sel[]=`ls -sl`;
+	//string $attr[] = `listAttr -c -hd -u -k $sel[0]`; //Keyable -k seems to crash maya
+	string $attr[];
+	
+	global string $tempAttr[];
+	clear $tempAttr;
+	string $listAttrCommand = "global string $tempAttr[]; $tempAttr = `listAttr -lf " + $listAttrFlag + $sel[0] + "`;";
+	
+	print("ListAttrCommand: " + $listAttrCommand + "\n");
+	eval ($listAttrCommand);
+	
+	appendStringArray($attr, $tempAttr, `size $tempAttr`);
+	print("Attr: " + "\n");
+	print $attr;
+	
+	if (`size $sel`==0){
+		error "Nothing is selected.";
+		return;
+	} else {
+		
+		textFieldButtonGrp 
+			-e
+			-text $sel[0]
+			getConnectSource;
+		
+		int $i;
+		textScrollList
+			-e
+			-ra
+			getConnectAttribute
+			;
+		$attr = `sort $attr`;
+		for ($i = 0; $i<`size $attr`; $i++){
+			textScrollList
+				-e
+				-append $attr[$i]
+				getConnectAttribute;
+		}		
+	}
+
+}
+
+//ASSIGN CONNECT TARGET OBJECTS
+//--------------------------------------------------
+global proc assignConnectTargetObjects()
+{
+	//string $sel[]=`ls -dag -leaf -s -sl`;
+	string $sel[]=`ls -sl`;
+	if(`size $sel`==0){
+		error "Nothing is selected.";
+	} else {
+		int $i;
+		for($i = 0; $i<`size $sel`; $i++){
+		textScrollList
+			-e
+			-append $sel[$i]
+			getConnectAttributeObjects;
+		}		
+	}
+}
+
+//CLEAR CONNECT OBJECT LIST
+//--------------------------------------------------
+global proc clearConnectObjectList()
+{
+	textScrollList
+		-e
+		-ra
+		getConnectAttributeObjects;
+}
+
+//CONNECT MASTER CONNECT ATTRIBUTES
+//--------------------------------------------------
+
+/*
+global proc connectMasterConnectAttributes()
+{
+	string $connect = `optionMenuGrp -q -v connectAttributesOptionMenuGrp`;	
+	debugML1("Connect: " + $connect + "\n");
+	if($connect == "Connect All"){
+		connectAllAttributesOnSelected();
+	} else if($connect == "Connect Selected"){
+		connectSelectedAttributesOnSelected();
+	}
+}
+*/
+
+global proc connectMasterConnectAttributes( string $connect )
+{
+
+	debugML1("Connect: " + $connect + "\n");
+	if ($connect == "all"){
+		connectAllAttributesOnSelected();
+	} else if ($connect == "selected"){
+		connectSelectedAttributesOnSelected("");
+	} else if ($connect == "corresponding"){
+		connectCorrespondingAttributesOnSelected();
+	} else if ($connect == "allAToAllBselected"){
+		connectSelectedAttributesOnSelected("-aabb");
+	}
+}
+
+//CONNECT MASTER DISCONNECT ATTRIBUTES
+//--------------------------------------------------
+global proc connectMasterDisconnectAttributes( string $disconnect )
+{
+	//string $disconnect = `optionMenuGrp -q -v disconnectAttributesOptionMenuGrp`;	
+	debugML1("Disconnect: " + $disconnect + "\n");
+	if ($disconnect == "all"){
+		disconnectAllAttributesOnSelected();
+	} else if($disconnect == "selected"){
+		disconnectSelectedAttributesOnSelected();
+		print("Disconnect Selected" + "\n");
+	}
+}
+
+//CONNECT MASTER COPY ATTRIBUTES
+//--------------------------------------------------
+global proc connectMasterCopyAttributes( string $copy )
+{
+	//string $copy = `optionMenuGrp -q -v copyAttributesOptionMenuGrp`;	
+	if ($copy == "Copy All"){
+	
+		print("This function isn't finished yet..." + "\n");
+	} else if($copy == "Copy Selected"){
+		copySelectedAttributesOnSelected();
+		print("This function isn't finished yet..." + "\n");
+		//print("This function isn't finished yet..." + "\n");
+	} else if ($copy == "corresponding"){
+		copyCorrespondingAttributesOnSelected();
+
+	}
+}
+
+//CONNECT ALL ATTRIBUTES ON SELECTED
+//--------------------------------------------------
+global proc connectAllAttributesOnSelected()
+{
+	string $sel[] = `textScrollList -q -ai selectMasterListA`;
+	string $selA = $sel[0];
+	//string $selA = `optionMenuGrp -q -v connectSourceOptionMenuGrp`;
+	string $selB[] = `textScrollList -q -ai selectMasterListB`;
+	
+	string $attrA[] = `textScrollList -q -ai connectMasterListA`;
+	string $attrB[] = `textScrollList -q -ai connectMasterListB`;
+	
+	//string $from[] = `textScrollList -q -si connectMasterListA`;
+	//string $to[] = `textScrollList -q -si connectMasterListB`;
+	
+	$forceConnection = `menuItem -q -cb conAttrForceConnection`;
+	int $con = 0;
+	int $fail = 0;
+		
+	int $i;
+	int $p;
+	//for($a=0;$a<`size $selA`;$a++){
+		for ($b=0;$b<`size $selB`;$b++){
+			for ($f=0; $f<`size $attrA`;$f++){
+				//debugML1("Connecting: " + $from + " Attributes To : " + $target[$i] + "\n");
+				debugML1("--------------------------------------------" + "\n");
+				int $con = 0;
+				int $fail = 0;
+					
+				if ($forceConnection){
+					if (catchQuiet(`connectAttr -f ($selA + "." + $attrA[$f]) ($selB[$b] + "." + $attrB[$f])`)){
+						debugML1("---------------Failed: " + $attrA[$f] + "\n");
+						$fail++;
+					} else {
+						debugML1(">>>>>>>>>>>>>>>Connected: " + $attrA[$f] + "\n");
+						$con++;
+	
+					}
+				} else {
+					if (catchQuiet(`connectAttr ($selA + "." + $attrA[$f]) ($selB[$b] + "." + $attrB[$f])`)){
+						debugML1("---------------Failed: " + $attrA[$f] + "\n");
+						$fail++;
+					} else {
+						debugML1(">>>>>>>>>>>>>>>Connected: " + $attrA[$f] + "\n");
+						$con++;
+					}
+				
+				}
+					
+				
+				debugML1("Connections: " + $con + " | Failures : " + $fail + "\n");
+				debugML1("--------------------------------------------" + "\n");
+			}
+	
+		}
+	//}
+}
+
+//CONNECT SELECTED ATTRIBUTES ON SELECTED
+//--------------------------------------------------
+global proc connectSelectedAttributesOnSelected( string $flags )
+{/*
+global proc connectSelectedAttributesOnSelected()
+{*/
+	
+	int $allAToAllB;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-aabb" : case "-allAallB" :
+			$allAToAllB = 1;
+			break;
+				
+			case "-abb" : 
+			$allAToAllB = 0;
+			break;
+					
+		}
+	}
+	
+	string $sel[] = `textScrollList -q -ai selectMasterListA`;
+	string $selA = $sel[0];
+	//string $selA = `optionMenuGrp -q -v connectSourceOptionMenuGrp`;
+	string $selB[] = `textScrollList -q -ai selectMasterListB`;
+	if (`size $selB` == 0){
+		
+		$selB = `textScrollList -q -ai selectMasterListA`;
+	}
+	
+	string $attrA[] = `textScrollList -q -si connectMasterListA`;
+	string $attrB[] = `textScrollList -q -si connectMasterListB`;
+	
+	$forceConnection = `menuItem -q -cb conAttrForceConnection`;
+	int $con = 0;
+	int $fail = 0;
+		
+	int $i;
+	int $p;
+	
+	/*
+	string $conCom[] ;
+	if ($allAToAllB){
+		for ($i=0;$i<`size $sel`;$i++){
+			$conCom[$i] = "connectAttr ";
+			if ($forceConnection){
+				$conCom[$i] = $conCom[$i] + "-f ";
+			}
+			$conCom[$i]	= $conCom[$i] + $sel[$i]);	
+		}
+		
+	} else {
+		for ($i=0;$i<`size $selB`;$i++){
+			$conCom[$i] = "connectAttr ";
+			if ($forceConnection){
+				$conCom[$i] = $conCom[$i] + "-f ";
+			}
+			$conCom[$i]	= $conCom[$i] + $selA);
+		}
+	}
+	for ($sb=0;$sb<`size $selB`;$sb++){
+		for ($b=0;$b<`size $attrB`;$b++){
+			for ($a=0; $a<`size $attrA`;$a++){
+				for ($i=0;$i<`size $conCom`;$i++){
+					$conCom[$i] = $conCom[$i] + "." + $attrA[$a] + ") (" + $selB[$sb] + "." + $attrB[$b])`	
+				}
+			}
+		}
+	}
+	*/
+	/*
+		connectAttr a1.attr1 b1.attr1
+		connectAttr a1.attr1 b1.attr2
+		connectAttr a2.attr1 b2.attr1
+		connectAttr a2.attr1 b2.attr2
+	
+	*/
+
+
+	for ($sb=0;$sb<`size $selB`;$sb++){
+		for ($b=0;$b<`size $attrB`;$b++){
+			for ($a=0; $a<`size $attrA`;$a++){
+				//debugML1("Connecting: " + $arom + " Attributes To : " + $target[$i] + "\n");
+				debugML1("--------------------------------------------" + "\n");
+				int $con = 0;
+				int $fail = 0;
+				// if all a to all b then connect as many objB  to objA
+				if ($allAToAllB){
+					if ($forceConnection){
+					if (catchQuiet(`connectAttr -f ($sel[$sb] + "." + $attrA[$a]) ($selB[$sb] + "." + $attrB[$b])`)){
+						debugML1("---------------Failed: " + $sel[$sb] + "." + $attrA[$a] + " To: " + $selB[$sb] + "." + $attrB[$b] + "\n");
+						$fail++;
+					} else {
+						debugML1(">>>>>>>>>>>>>>>Connected: " + $sel[$sb] + "." + $attrA[$a] + " To: " + $selB[$sb] + "." + $attrB[$b] + "\n");
+						$con++;
+	
+					}
+					} else {
+						if (catchQuiet(`connectAttr ($sel[$sb] + "." + $attrA[$a]) ($selB[$sb] + "." + $attrB[$a])`)){
+							debugML1("---------------Failed: " + $sel[$sb] + "." + $attrA[$a] + " To: " + $selB[$sb] + "." + $attrB[$b] + "\n");
+							$fail++;
+						} else {
+							debugML1(">>>>>>>>>>>>>>>Connected: " + $sel[$sb] + "." + $attrA[$a] + " To: " + $selB[$sb] + "." + $attrB[$b] + "\n");
+							$con++;
+						}
+					
+					}
+	
+				} else {
+					
+					if ($forceConnection){
+						if (catchQuiet(`connectAttr -f ($selA + "." + $attrA[$a]) ($selB[$sb] + "." + $attrB[$b])`)){
+							debugML1("---------------Failed: " + $selA + "." + $attrA[$a] + " To: " + $selB[$sb] + "." + $attrB[$b] + "\n");
+							$fail++;
+						} else {
+							debugML1(">>>>>>>>>>>>>>>Connected: " + $selA + "." + $attrA[$a] + " To: " + $selB[$sb] + "." + $attrB[$b] + "\n");
+							$con++;
+		
+						}
+					} else {
+						if (catchQuiet(`connectAttr ($selA + "." + $attrA[$a]) ($selB[$sb] + "." + $attrB[$a])`)){
+							debugML1("---------------Failed: " + $selA + "." + $attrA[$a] + " To: " + $selB[$sb] + "." + $attrB[$b] + "\n");
+							$fail++;
+						} else {
+							debugML1(">>>>>>>>>>>>>>>Connected: " + $selA + "." + $attrA[$a] + " To: " + $selB[$sb] + "." + $attrB[$b] + "\n");
+							$con++;
+						}
+					
+					}
+				
+				}
+					
+				
+				debugML1("Connections: " + $con + " | Failures : " + $fail + "\n");
+				debugML1("--------------------------------------------" + "\n");
+			}
+	
+		}
+	}
+	
+	
+}
+
+//@ CONNECT CORRESPONDING ATTRIBUTES ON SELECTED
+//--------------------------------------------------
+global proc connectCorrespondingAttributesOnSelected()
+{
+	string $sel[] = `textScrollList -q -ai selectMasterListA`;
+	string $selA = $sel[0];
+	//string $selA = `optionMenuGrp -q -v connectSourceOptionMenuGrp`;
+	string $selB[] = `textScrollList -q -ai selectMasterListB`;
+	if (`size $selB` == 0){
+		$selB = `textScrollList -q -ai selectMasterListA`;
+	}
+	
+	
+	string $attrA[] = `textScrollList -q -si connectMasterListA`;
+	//string $attrB[] = `textScrollList -q -ai connectMasterListB`;
+	
+	$forceConnection = `menuItem -q -cb conAttrForceConnection`;
+	int $con = 0;
+	int $fail = 0;
+		
+	int $i;
+	int $p;
+	for ($sb=0;$sb<`size $selB`;$sb++){
+		for ($a=0; $a<`size $attrA`;$a++){
+			//debugML1("Connecting: " + $arom + " Attributes To : " + $target[$i] + "\n");
+			debugML1("--------------------------------------------" + "\n");
+			int $con = 0;
+			int $fail = 0;
+			if ($forceConnection){
+					if (catchQuiet(`connectAttr -f ($selA + "." + $attrA[$a]) ($selB[$sb] + "." + $attrA[$a])`)){
+						debugML1("---------------Failed: " + $selA + "." + $attrA[$a] + " To: " + $selB[$sb] + "." + $attrA[$a] + "\n");
+						$fail++;
+					} else {
+						debugML1(">>>>>>>>>>>>>>>Connected: " + $selA + "." + $attrA[$a] + " To: " + $selB[$sb] + "." + $attrA[$a] + "\n");
+						$con++;		
+					}
+			} else {
+				if (catchQuiet(`connectAttr ($selA + "." + $attrA[$a]) ($selB[$sb] + "." + $attrA[$a])`)){
+					debugML1("---------------Failed: " + $selA + "." + $attrA[$a] + " To: " + $selB[$sb] + "." + $attrA[$a] + "\n");
+					$fail++;
+				} else {
+					debugML1(">>>>>>>>>>>>>>>Connected: " + $selA + "." + $attrA[$a] + " To: " + $selB[$sb] + "." + $attrA[$a] + "\n");
+					$con++;
+				}				
+				
+			}		
+			
+			debugML1("Connections: " + $con + " | Failures : " + $fail + "\n");
+			debugML1("--------------------------------------------" + "\n");
+		}
+	
+	}
+}
+	
+//CONNECT ALL ATTRIBUTES
+//-----------------------------------------------------------
+global proc connectAllAttributes()
+{
+	string $source = `textFieldButtonGrp -q -text getConnectSource`;
+	string $target[] = `textScrollList -q -ai getConnectAttributeObjects`;
+	string $attr[] = `textScrollList -q -ai getConnectAttribute`;
+	$forceConnection = `checkBox -q -v conAttrForceConnection`;
+	//string $attr[] = `listAttr -cb $source`;
+	//print $attr;
+	int $i;
+	int $p;
+	for ($i = 0; $i<`size $target`;$i++){
+		print("Connecting: " + $source + " Attributes To : " + $target[$i] + "\n");
+		print("--------------------------------------------" + "\n");
+		int $con = 0;
+		int $fail = 0;
+		for ($p = 0; $p<`size $attr`;$p++){	
+			if ($forceConnection){
+				if (catchQuiet(`connectAttr -f ($source + "." + $attr[$p]) ($target[$i] + "." + $attr[$p])`)){
+					print("---------------Failed: " + $attr[$p] + "\n");
+					$fail++;
+				} else {
+					print(">>>>>>>>>>>>>>>Connected: " + $attr[$p] + "\n");
+					$con++;
+					//connectAttr ($source + "." + $attr[$p]) ($target[$i] + "." + $attr[$p]);
+				}
+			} else {
+				if(catchQuiet(`connectAttr ($source + "." + $attr[$p]) ($target[$i] + "." + $attr[$p])`)){
+					print("---------------Failed: " + $attr[$p] + "\n");
+					$fail++;
+				} else {
+					print(">>>>>>>>>>>>>>>Connected: " + $attr[$p] + "\n");
+					$con++;
+				}
+			
+			}
+			
+		}
+		print("Connections: " + $con + " | Failures : " + $fail + "\n");
+		print("--------------------------------------------" + "\n");
+	}
+}
+
+//DISCONNECT ALL ATTRIBUTES
+//-----------------------------------------------------------
+global proc disconnectAllAttributes()
+{
+	string $source = `textFieldButtonGrp -q -text getConnectSource`;
+	string $target[] = `textScrollList -q -ai getConnectAttributeObjects`;
+	string $attr[] = `textScrollList -q -ai getConnectAttribute`;
+	//string $attr[] = `listAttr -cb $source`;
+	//print $attr;
+	int $i;
+	int $p;
+	for ($i = 0; $i<`size $target`;$i++){
+		print ("Connecting: " + $source + " Attributes To : " + $target[$i] + "\n");
+		print ("--------------------------------------------" + "\n");
+		int $con = 0;
+		int $fail = 0;
+		for ($p = 0; $p<`size $attr`;$p++){	
+			if (catchQuiet(`disconnectAttr ($source + "." + $attr[$p]) ($target[$i] + "." + $attr[$p])`)){
+				print("---------------Failed: " + $attr[$p] + "\n");
+				$fail++;
+			} else {
+				print(">>>>>>>>>>>>>>>Connected: " + $attr[$p] + "\n");
+				$con++;
+				//connectAttr ($source + "." + $attr[$p]) ($target[$i] + "." + $attr[$p]);
+			}
+			
+		}
+		print ("Connections: " + $con + " | Failures : " + $fail + "\n");
+		print ("--------------------------------------------" + "\n");
+	}
+}
+
+//COPY SELECTED ATTRIBUTES ON SELECTED
+//--------------------------------------------------
+global proc copySelectedAttributesOnSelected()
+{
+	string $sel[] = `textScrollList -q -ai selectMasterListA`;
+	string $selA = $sel[0];
+	//string $selA = `optionMenuGrp -q -v connectSourceOptionMenuGrp`;
+	string $selB[] = `textScrollList -q -ai selectMasterListB`;
+	if (`size $selB` == 0){
+		$selB = `textScrollList -q -ai selectMasterListA`;
+	}
+	
+	string $attrA[] = `textScrollList -q -si connectMasterListA`;
+	string $attrB[] = `textScrollList -q -si connectMasterListB`;
+	
+	$forceConnection = `menuItem -q -cb conAttrForceConnection`;
+	int $con = 0;
+	int $fail = 0;
+		
+	int $i;
+	int $p;
+	
+	for ($b=0;$b<`size $selB`;$b++){
+		for ($f=0; $f<`size $attrA`;$f++){
+			//debugML1("Connecting: " + $from + " Attributes To : " + $target[$i] + "\n");
+			debugML1("--------------------------------------------" + "\n");
+			
+			string $value = `getAttr ($selA + "." + $attrA[$f])`;
+			debugML1("Copy Attribute: " + $selA + "." + $attrA[$f] + " Value: " + $value + "\n");
+			
+			string $attrType = `getAttr ($selB[$b] + "." + $attrB[$f]) -typ`;
+			
+			catch(`setAttr ($selB[$b] + "." + $attrB[$f]) $value`);
+				
+			
+			//debugML1("Connections: " + $con + " | Failures : " + $fail + "\n");
+			debugML1("--------------------------------------------" + "\n");
+		}
+	
+	}
+
+}
+
+//@ COPY CORRESPONDING ATTRIBUTES ON SELECTED
+//--------------------------------------------------
+global proc copyCorrespondingAttributesOnSelected()
+{
+	string $sel[] = `textScrollList -q -ai selectMasterListA`;
+	string $selA = $sel[0];
+	//string $selA = `optionMenuGrp -q -v connectSourceOptionMenuGrp`;
+	string $selB[] = `textScrollList -q -ai selectMasterListB`;
+	if (`size $selB` == 0){
+		$selB = `textScrollList -q -ai selectMasterListA`;
+	}
+	
+	string $attrA[] = `textScrollList -q -si connectMasterListA`;
+	string $attrB[] = `textScrollList -q -si connectMasterListB`;
+	
+	$forceConnection = `menuItem -q -cb conAttrForceConnection`;
+	int $con = 0;
+	int $fail = 0;
+		
+	int $i;
+	int $p;
+	
+	for ($b=0;$b<`size $selB`;$b++){
+		for ($f=0; $f<`size $attrA`;$f++){
+			//debugML1("Connecting: " + $from + " Attributes To : " + $target[$i] + "\n");
+			debugML1("--------------------------------------------" + "\n");
+			
+			string $value = `getAttr ($selA + "." + $attrA[$f])`;
+			debugML1("Copy Attribute: " + $selA + "." + $attrA[$f] + " Value: " + $value + "\n");
+			
+			string $attrType = `getAttr ($selB[$b] + "." + $attrA[$f]) -typ`;
+			
+			catch(`setAttr ($selB[$b] + "." + $attrA[$f]) $value`);
+				
+			
+			//debugML1("Connections: " + $con + " | Failures : " + $fail + "\n");
+			debugML1("--------------------------------------------" + "\n");
+		}
+	
+	}
+
+}
+//DISCONNECT ALL ATTRIBUTES ON SELECTED
+//--------------------------------------------------
+global proc disconnectAllAttributesOnSelected()
+{
+	string $selA[] = `textScrollList -q -ai selectMasterListA`;
+	string $selB[] = `textScrollList -q -ai selectMasterListB`;
+	if (`size $selB` == 0){
+		$selB = `textScrollList -q -ai selectMasterListA`;
+	}
+	
+	for ($a=0;$a<`size $selA`;$a++){
+		string $connections[] = `listConnections -s true $selA[$a]`;
+		for ($b=0;$b<`size $selB`;$b++){
+			for ($c=0;$c<`size $connections`;$c++){
+				if ($selB[$b] == $connections[$c]){
+					string $disconnect[] = `listConnections -s true -d true -p true -c true $selA[$a]`;
+					for ($d=0;$d<`size $disconnect`;$d++){
+						disconnectAttr $disconnect[$d] $disconnect[$d + 1];
+						$d= $d+ 1;
+					}
+				}
+			}
+		}
+	}
+}
+
+//DISCONNECT SELECTED ATTRIBUTES ON SELECTED
+//--------------------------------------------------
+global proc disconnectSelectedAttributesOnSelected()
+{
+	string $selA[] = `textScrollList -q -ai selectMasterListA`;
+	string $selB[] = `textScrollList -q -ai selectMasterListB`;
+	if (`size $selB` == 0){
+		$selB = `textScrollList -q -ai selectMasterListA`;
+	}
+	
+	string $attrA[] = `textScrollList -q -si connectMasterListA`;
+	string $attrB[] = `textScrollList -q -si connectMasterListB`;
+	
+	if (`size $attrA` ==0 || $attrA[0] == ""){
+		breakConnectionsOfSelectedAttributesOnSelected($selB,$attrB);	
+		return;
+	}
+				
+	for ($a=0;$a<`size $attrA`;$a++){
+		for ($sb=0;$sb<`size $selB`;$sb++){		
+			for ($b=0;$b<`size $attrB`;$b++){			
+				int $isCon = `isConnected ($selA[0] + "." + $attrA[$a]) ($selB[$sb] + "." + $attrB[$b])`;
+				if ($isCon == 1){
+					disconnectAttr ($selA[0] + "." + $attrA[$a]) ($selB[$sb] + "." + $attrB[$b]);	
+				}
+			}
+		}
+	}
+}
+
+//BREAK CONNECTIONS OF SELECTED ATTRIBUTES ON SELECTED
+//-----------------------------------------------------------
+global proc breakConnectionsOfSelectedAttributesOnSelected(string $sel[], string $attr[])
+{
+	for($i=0;$i<`size $sel`;$i++){
+		for($a=0;$a<`size $attr`;$a++){
+			breakConnectionOfObjectAttribute($sel[$i],$attr[$a]);
+		}
+	}
+}
+
+//BREAK CONNECTIONS OF OBJECT ATTRIBUTE
+//-----------------------------------------------------------
+global proc breakConnectionOfObjectAttribute(string $obj, string $attr)
+{
+	string $con[] = `listConnections -d false -s true -p true ($obj + "." + $attr)`;
+	disconnectAttr $con[0] ($obj + "." + $attr);
+}
+
+
+//REMOVE CONNECT ATTRIBUTE OBJECT
+//-----------------------------------------------------------
+global proc removeConnectAttributeObject()
+{
+	string $remove[] = `textScrollList -q -si getConnectAttributeObjects`;
+	int $index[] = `textScrollList -q -sii getConnectAttributeObjects`;
+	int $i;
+	for ($i=0;$i<`size $remove`;$i++){
+		textScrollList
+				-e
+				-ri $remove[$i]
+				getConnectAttributeObjects
+				;
+	}
+}
+
+//REMOVE CONNECT ATTRIBUTE
+//-----------------------------------------------------------
+global proc removeConnectAttribute()
+{
+	string $remove[] = `textScrollList -q -si getConnectAttribute`;
+	int $i;
+	for ($i=0;$i<`size $remove`;$i++){
+		textScrollList
+				-e
+				-ri $remove[$i]
+				getConnectAttribute
+				;
+	}
+}
+
+//NODE PRESET
+//=============================================================================================
+//CREATE TEMP NODE PRESET AND APPLY TO SELECTED OBJECTS
+//---------------------------------------------------------------------
+global proc createTempNodePresetAndApplyToSelectedObjects()
+{
+	string $obj[] = `ls -sl`;
+	string $attrPresetName = "Temp";
+	string $newAttrPresetName = `saveAttrPreset $obj[0] $attrPresetName false`;
+	int $i;
+	for ($i=1;$i<`size $obj`;$i++){
+		if (catchQuiet(`applyAttrPreset $obj[$i] $newAttrPresetName 1`) == 1){
+			print ($obj[$i] + " is not compatible with preset. Skipping.\n");
+		} else {
+			wizlog ("	[#] Copied Attributes From : " + $obj[0] + " To : " + $obj[$i]);
+			
+		}
+	}
+}
+
+//SET ATTRIBUTES
+//===========================================================================================
+//SET ATTR ON ALL OBJECTS
+//-------------------------------------------------------------
+global proc setAttrOnAllObjects(string $obj[], string $attr, string $val)
+{
+	int $i;
+	for ($i=0;$i<`size $obj`;$i++){
+		if(`objExists $obj[$i]` == false){ continue;}
+		string $eval = "setAttr (" + "\"" + $obj[$i] + "\"" + "\"." + $attr + "\") " + $val;
+		catchQuiet(eval($eval));
+	}
+}
+
+//GET ATTRIBUTES
+//==========================================================================================
+//FORCE GET ATTRIBUTE STRING ARRAY
+//------------------------------------------------------------
+global proc string[] forceGetAttributeStringArray(string $objAttr)
+{
+	int $int;
+	int $intArr[];
+	float $float;	
+	float $floatArr[];
+	string $string;
+	string $stringArray[];
+	if(catchQuiet($int = `getAttr $objAttr`) == 0) return { (string($int)) };
+	if(catchQuiet($intArr = `getAttr $objAttr`) == 0) return (intArrayToStringArray($intArr));
+	if(catchQuiet($float = `getAttr $objAttr`) == 0) return { ( string($float)) };
+	if(catchQuiet($floatArr = `getAttr $objAttr`) == 0) return (floatArrayToStringArray($floatArr));
+	if(catchQuiet($string = `getAttr $objAttr`) == 0) return { ($string) };
+	if(catchQuiet($stringArr = `getAttr $objAttr`) == 0) return $stringArr;
+
+}
+
+
+
+//MULTI INDICES
+//====================================================================================
+//FIND EMPTY MULTI INDICE
+//---------------------------------------------------------
+global proc int findEmptyMultiIndiceIndex(int $indices[])
+{
+	int $ok = 0;
+	int $i = 0;
+	while($ok == 0){
+		if(intArrayContains($i, $indices) == 0){
+			$ok = 1;
+			return $i;
+		}
+		$i++;
+	}
+}
+
+
+//SET SPECIFIC ATTRIBUTES
+//=========================================================================
+//SET DOUBLE SIDED
+//-----------------------------------------------
+global proc setDoubleSided(string $sel[], int $state)
+{
+	$sel = getGeometryTransforms($sel);
+	for($i=0;$i<`size $sel`;$i++){
+		setAttr ($sel[$i] + ".doubleSided") $state;
+	}	
+	}
+	
+global proc toggleDoubleSided(string $sel[])
+{
+	
+	$sel = lsVisHi($sel);
+	for($i=0;$i<`size $sel`;$i++){
+		if(`getAttr ($sel[$i] + ".doubleSided")` == 0){
+			setDoubleSided({$sel[$i]}, 1);
+		} else {
+			setDoubleSided({$sel[$i]}, 0);
+		}
+	}	
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         NOTES
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//ADD NOTES TO OBJECT
+//========================================================================
+/* USAGE:
+	string $obj = $sel[0];
+	string $notes = ("WIZ| FOUND " + `size $tms` PROBLEMS TO SOLVE - " + (date) + "<br>");
+	addNotesToObject($obj,$notes);
+*/
+
+//@ ADD NOTES TO OBJECTS
+//====================================================================
+/*======================| SUMMARY |===================================
+	This will add notes to any object
+/*=======================| USAGE |====================================	
+	addNotesToObject(`ls -sl`, "anyText...");
+====================================================================*/
+
+global proc addNotesToObjects(string $sel[], string $notes)
+{
+	for($i=0;$i<`size $sel`;$i++){
+		addNotesToObject($sel[$i], $notes);
+	}
+}
+
+//ADD NOTE TO OBJECTS
+//================================================================
+global proc addNotesToObject(string $obj, string $notes)
+{
+	if($obj == ""){ return;}
+	print("Add Notes To: " + $obj + " Notes: " + $notes + "\n");
+	if(!`attributeQuery -n $obj -ex "notes"`){
+		addAttr -ln notes -dt "string" -h 1 $obj;	
+    	} 
+    	string $oldNotes = `getAttr ($obj + ".notes")`;
+    	string $newNotes;
+    	if(`size $oldNotes` > 0){
+    		$newNotes = $oldNotes + "<br>" + $notes;
+    	} else {
+    		$newNotes = $notes;
+    	}
+	setAttr ($obj + ".notes") -type "string" $newNotes;
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         ATTRIBUTE PRESETS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//APPLY ATTRIBUTE PRESET TO SELECTED NODES
+//================================================================================
+//APPLY ATTRIBUTE PRESET TO SELECTED NODES
+//-------------------------------------------------------
+global proc applyAttributePresetToSelectedNodes(string $sel[], string $preset)
+{
+	for($i=0;$i<`size $sel`;$i++){
+		applyAttributePresetToSelectedNode($sel[$i], $preset);
+	}
+}
+
+//APPLY ATTRIBUTE PRESET TO SELECTED NODE
+//-------------------------------------------------------
+global proc applyAttributePresetToSelectedNode(string $sel, string $preset)
+{
+	float $blend = `floatFieldGrp -q -v1 applyAttributePresetToSelectedNodesBlendFloatFieldGrp`;
+	applyAttrPreset $sel $preset $blend;
+}
+
+global proc setAttributeOnAllSelected(string $sel[])
+{
+	
+}
+
+/*
+global proc createObjAttributesFromGUILayoutChildren( string $obj, string $layout, string $tags )
+{
+    string $ca[] = `layout -q -ca $layout`;
+    for ($i=0;$i<`size $ca`;$i++){
+        string $tok[] = tokenizeString($ca[$i], "_");
+        switch($tok[(`size $tok` - 1)]){
+            case "checkBox"
+        }
+    
+    }
+
+}
+*/
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                  ADD ATTRIBUTES FROM GUI CONTROLS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//@ CREATE OBJ ATTRIBUTES FROM G U I OBJECTS
+//====================================================================
+/*****************************************************************//**
+	This will create attributes on an object for all controls in a gui layout.
+	<hr>
+	<b>Synopsis</b><br>
+	createObjAttributesFromGUIObjectsInLayout [-obj string] [-typ linear] <br>
+	$obj : The attributes will be added to the object specified.
+	$layout : The gui elements included will be any direct children of the specified layout.
+	The attributes will be named after the label of the gui control,
+	so the label must be named well. 
+	$tags : You can also pass tags for some options.
+	-pre "somePrefix" : A prefix will be added to the attribute names.
+	GUI Objects That Are Compatible :
+	*	checkBox			= -cb <br>
+	*	checkBoxGrp			= -cbg <br>
+	*	intField			= -if <br>
+	*	intFieldGrp			= -ifg <br>
+	*	intSlider			= -is <br>
+	*	intSliderGrp		= -isg <br>
+	*	textField			= -tf <br>
+	*	textFieldGrp		= -tfg <br>
+	*	textFieldButtonGrp	= -tfbg <br>
+	*	floatSlider			= -fs <br>
+	*	floatSliderGrp		= -fsg <br>
+	*	floatSliderButtonGrp	= -fsbg <br>
+	*	optionMenu			= -om <br>
+	*	optionMenuGrp		= -omg <br>
+	<br>
+	*	put name of object tag first <br>
+	*	createObjAttributesFromGUIObjects("-obj someObjName -isg some_intSliderGrp", "-pre somePrefix"); <br>
+	*	Use the -stringMessage(-sm) tag to create message attributes instead of string attributes
+	for string variables <br>
+	
+	<b>Return value</b><br>
+	none
+	
+	<b>Flags</b><br>
+	-prefix(-pre) <br>
+	-niceNameIsLabel(-nnl) <br>
+	-stringMessage(-sm) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	createObjAttributesFromGUIObjectsInLayout($someObj, $someLayout, "-sm");
+	
+	</code>
+*********************************************************************/
+global proc createObjAttributesFromGUIObjectsInLayout( string $obj, string $layout, string $flags )
+{
+	string $attrPrefix;
+	int $nnil; // nice name is label
+	int $sm;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-pre" : case "-prefix" :
+			// <!IMPORTANT!> Added space to end of prefix so makeNiceAttrName works correctly			
+			$attrPrefix = $tok[($i + 1)];
+			break ;
+			
+			///////////////////////////////////////////////////////////////////////////////////////////////////////////
+			//	On second thought... don't use nice names
+			//////////////////////////////////////////////////////////////////////////////////////////////////////////
+			
+			case "-nnl" : case "-niceNameIsLabel" :
+			$nnil = 1;
+			break ;
+			
+			case "-sm" : case "-stringMessages" :
+			$sm = 1;
+			break ;
+			
+		}
+	}
+	
+	// Get all the ui controls that are formatted like someName_intSliderGrp
+	string $allUI[] = getAllUIBelowParent($layout);
+    wizlog (niceArrayList("	[-] Add Attributes For UI Objects : ", $allUI));
+	
+	string $convertControls[];
+	for ($i=0;$i<`size $allUI`;$i++){
+		$convertControls[`size $convertControls`] = $allUI[$i];
+		//string $tok[] = tokenizeString($allUI[$i], "_");
+		
+		//if (`size $tok` > 1){
+		//	$convertControls[`size $convertControls`] = $allUI[$i];
+		//}
+	}
+	/*
+	for ($i=0;$i<`size $allUI`;$i++){
+		string $tok[] = tokenizeString($allUI[$i], "_");
+		if (`size $tok` > 1){
+			$convertControls[`size $convertControls`] = $allUI[$i];
+		}
+	}
+	*/
+	/*
+	if (`size $convertControls` == 0){
+		for ($i=0;$i<`size $allUI`;$i++){
+			$convertControls[`size $convertControls`] = forceGetControlType($allUI[$i]);	
+		}
+		
+	}
+	*/
+	string $obj;
+	string $cb[], $cgb[], $if[], $ifg[], $is[], $isg[], $tf[], $tfg[], $tfbg[], $fs[], $fsg[], $om[], $omg[];
+	string $l, $ln, $nn, $tx;
+	int $v, $min, $max, $fmn, $fmx;
+	
+	string $lns[], $nns[];
+	int $vs[];
+			
+	float $fv, $fmin, $fmax, $ffmn, $ffmx;
+
+	for ($i=0;$i<`size $convertControls`;$i++){
+		string $tok[] = tokenizeString($convertControls[$i], "_");
+		string $ctrlType; 
+		string $attrName; 
+		string $cAttrName;
+		if (`size $tok` > 1){
+			$ctrlType = $tok[(`size $tok` - 1)];
+			$attrName = $tok[(`size $tok` - 2)];
+		} else {
+			$ctrlType = forceGetControlType($convertControls[$i]);
+			$attrName = $convertControls[$i];
+		}
+		switch ($ctrlType){
+		
+		//_________________________________________		
+		//Check Box - Boolean
+		
+			case "checkBox" : 
+			$v = `checkBox -q -v $convertControls[$i]`;
+			$l = `checkBox -q -l $convertControls[$i]`;
+			
+			$ln = makeNiceAttributeName($attrName);
+			$ln = $attrPrefix + $ln;
+			$nn = makeNiceAttributeName($l);						
+			
+			if (`attributeExists $ln $obj` == 0){
+				wizlog ("	[+] Add Bool Attr : " + $ln + " Value : " + $v);
+				//addAttr -ln $ln -nn $nn -at bool $obj;
+				addAttr -ln $ln -at bool $obj;
+				setAttr -e -keyable true ($obj + "." + $ln);
+				setAttr ($obj + "." + $ln) $v;
+				wizlog ("addAttr -ln " + $ln + " -at bool " + $obj + ";");
+				wizlog ("setAttr -e -keyable true " + $obj + "." + $ln + ";");
+				wizlog ("setAttr " + $obj + "." + $ln + " " + $v + ";");
+			} else {
+				setAttr ($obj + "." + $ln) $v;
+			}
+			
+			
+			break ;
+			
+		//_________________________________________
+		//_checkBoxGrp - Booleans
+			
+			case "checkBoxGrp" : 
+			int $numCB = `checkBoxGrp -q -ncb $convertControls[$i]`;	
+			string $tokCC[] = tokenizeString($convertControls[$i], "_");
+			if (`size $tokCC` > 1){
+				$cAttrName = ($tokCC[(`size $tokCC` - 2)]);
+			} else {
+				$cAttrName = $convertControls[$i];
+			}
+			
+			for ($p=0;$p<$numCB;$p++){				
+				
+				string $vl = ("checkBoxGrp -q -l" + ($p + 1) + " " + $convertControls[$i] + ";");
+				int $vq = ("checkBoxGrp -q -v" + ($p + 1) + " " + $convertControls[$i] + ";");
+				$vs[$p] = eval($vq);
+				string $cbl = eval($vl);
+				
+				//$lns[$p] = makeNiceAttributeName($cbl);
+				$lns[$p] = makeNiceAttributeName($cAttrName + $p);				
+				$lns[$p] = $attrPrefix + $lns[$p];
+				if ($nnil){
+					$nns[$p] = makeNiceAttributeName($cbl);
+				} else {
+					$nns[$p] = makeNiceAttributeName($lns[$p]);
+				}
+				
+				if (`attributeExists $lns[$p] $obj` == 0){
+					//addAttr -ln $lns[$p] -nn $nns[$p] -at bool $obj;
+					addAttr -ln $lns[$p] -at bool $obj;
+					setAttr -e -keyable true ($obj + "." + $lns[$p]);
+					setAttr ($obj + "." + $lns[$p]) $vs[$p];
+				} else {
+					setAttr ($obj + "." + $lns[$p]) $vs[$p];
+				}
+				wizlog ("	[+] Add Bool Attr : " + $lns[$p] + " Value : " + $vs[$p]);
+			}	
+				
+			break ;
+			
+		//_________________________________________		
+		//_intSliderGrp - Int
+			
+			case "intSliderGrp" : 
+			$v = `intSliderGrp -q -v $convertControls[$i]`;
+			$min = `intSliderGrp -q -min $convertControls[$i]`;
+			$max = `intSliderGrp -q -max $convertControls[$i]`;
+			$fmn = `intSliderGrp -q -fmn $convertControls[$i]`;
+			$fmx = `intSliderGrp -q -fmx $convertControls[$i]`;
+			$l = `intSliderGrp -q -l $convertControls[$i]`;
+			
+			//$ln = makeNiceAttributeName($l);
+			$ln = makeNiceAttributeName($attrName);
+			$nn = makeNiceAttributeName($l);
+			$ln = $attrPrefix + $ln;
+
+			if (`attributeExists $ln $obj` == 0){
+				//addAttr -ln $ln -nn $nn -at long -dv $v $obj;
+				addAttr -ln $ln -at long -dv $v $obj;
+				setAttr -e -keyable true ($obj + "." + $ln);	
+				setAttr ($obj + "." + $ln) $v;
+			} else {
+				setAttr ($obj + "." + $ln) $v;
+			}
+			wizlog ("	[+] Add Int Attr : " + $ln + " Value : " + $v);
+			break ;
+			
+		//_________________________________________
+		//_intField - Int
+			
+			case "intField" : 
+			$v = `intField -q -v $convertControls[$i]`;
+			$min = `intField -q -min $convertControls[$i]`;
+			$max = `intField -q -max $convertControls[$i]`;
+			//$fmn = `intField -q -fmn $convertControls[$i]`;
+			//$fmx = `intField -q -fmx $convertControls[$i]`;
+			//$l = `intField -q -l $convertControls[$i]`;
+			
+			//$ln = makeNiceAttributeName($l);
+			$ln = makeNiceAttributeName($attrName);
+			$nn = makeNiceAttributeName($attrName);
+			$ln = $attrPrefix + $ln;
+
+			if (`attributeExists $ln $obj` == 0){
+				//addAttr -ln $ln -nn $nn -at long -dv $v $obj;
+				addAttr -ln $ln -at long -dv $v $obj;
+				setAttr -e -keyable true ($obj + "." + $ln);	
+				setAttr ($obj + "." + $ln) $v;
+			} else {
+				setAttr ($obj + "." + $ln) $v;
+			}
+			wizlog ("	[+] Add Int Attr : " + $ln + " Value : " + $v);
+			break ;
+			
+		//_________________________________________
+		//_intFieldGrp - Ints	
+		
+			case "intFieldGrp" : 
+			/*
+			int $numCB = `intFieldGrp -q -nf $convertControls[$i]`;
+			string $tokCC[] = tokenizeString($convertControls[$i], "_");
+			for ($p=0;$p<$numCB;$p++){			
+				
+				
+				string $vl = ("intFieldGrp -q -l" + ($p + 1) + " " + $convertControls[$i] + ";");
+				int $vq = ("intFieldGrp -q -v" + ($p + 1) + " " + $convertControls[$i] + ";");
+				$vs[$p] = eval($vq);
+				string $cbl = eval($vl);
+				
+				$lns[$p] = makeNiceAttributeName(($tokCC[(`size $tokCC` - 2)] + $p));
+				$lns[$p] = $attrPrefix + $lns[$p];
+				$nns[$p] = makeNiceAttributeName($cbl);
+				if (`attributeExists $lns[$p] $obj` == 0){
+					//addAttr -ln $lns[$p] -nn $nns[$p] -at bool $obj;
+					addAttr -ln $lns[$p] -at long $obj;
+					setAttr -e -keyable true ($obj + "." + $lns[$p]);
+					setAttr ($obj + "." + $lns[$p]) $vs[$p];
+				} else {
+					setAttr ($obj + "." + $lns[$p]) $vs[$p];
+				}
+				wizlog ("	[+] Add Int Attr : " + $lns[$p] + " Value : " + $vs[$p]);
+			}		
+			*/
+			int $iv[] = `intFieldGrp -q -v $convertControls[$i]`;
+			string $tokCC[] = tokenizeString($convertControls[$i], "_");
+			if (`size $tokCC` > 1){
+				$cAttrName = ($tokCC[(`size $tokCC` - 2)]);
+			} else {
+				$cAttrName = $convertControls[$i];
+			}
+			
+			$l = `intFieldGrp -q -l $convertControls[$i]`;
+			$ln = makeNiceAttributeName($cAttrName);
+			$ln = $attrPrefix + $ln;
+			
+			// if there is only 1 value
+			if (`size $iv` == 1){			
+				$iv = `intFieldGrp -q -v $convertControls[$i]`;
+				//$min = `intFieldGrp -q -min $convertControls[$i]`;
+				//$max = `intFieldGrp -q -max $convertControls[$i]`;
+				//$fmn = `intFieldGrp -q -fmn $convertControls[$i]`;
+				//$fmx = `intFieldGrp -q -fmx $convertControls[$i]`;
+				$l = `intFieldGrp -q -l $convertControls[$i]`;			
+				
+				$ln = makeNiceAttributeName($attrName);
+				$nn = makeNiceAttributeName($l);
+				$ln = $attrPrefix + $ln;
+		
+				if (`attributeExists $ln $obj` == 0){
+					addAttr -ln $ln -at long -dv $iv[0] $obj;
+					setAttr -e -keyable true ($obj + "." + $ln);	
+					setAttr ($obj + "." + $ln) $fv;
+				} else {
+					setAttr ($obj + "." + $ln) $fv;
+				}
+				wizlog ("	[+] Add Int Attr : " + $ln + " Value : " + $fv);
+				break ;	
+			
+			}
+			
+			// if there are multiple values
+			if (`attributeExists $ln $obj` == 0){
+				string $addAttrCom = "addAttr -ln " + $ln + " -at long" + `size $iv` + " " + $obj;
+				eval($addAttrCom);
+				wizlog ("	[+] Add intFieldGrp Attr : " + $ln + " : Num Children : " + (`size $iv`));
+				wizlog ($addAttrCom);
+			}
+			for ($p=0;$p<`size $iv`;$p++){	
+				string $cln = ($ln + $p);
+				if (`attributeExists $cln $obj` == 0){
+					wizlog ("addAttr -ln " + $cln + " -at long -p " + $ln + " " + $obj + ";");
+					addAttr -ln $cln -at long -p $ln $obj;
+					//setAttr -e -keyable true ($obj + "." + $cln);
+				}	
+			}
+			for ($p=0;$p<`size $iv`;$p++){	
+				string $cln = ($ln + $p);
+				if (`attributeExists $cln $obj`){
+					setAttr ($obj + "." + $cln) $iv[$p];
+				}
+			}			
+				
+				
+						
+			break ;
+			
+		//_________________________________________		
+		//_floatSliderGrp - Float
+		
+			case "floatSliderGrp" : 
+			$fv = `floatSliderGrp -q -v $convertControls[$i]`;
+			$fmin = `floatSliderGrp -q -min $convertControls[$i]`;
+			$fmax = `floatSliderGrp -q -max $convertControls[$i]`;
+			$ffmn = `floatSliderGrp -q -fmn $convertControls[$i]`;
+			$ffmx = `floatSliderGrp -q -fmx $convertControls[$i]`;
+			$l = `floatSliderGrp -q -l $convertControls[$i]`;			
+			
+			$ln = makeNiceAttributeName($attrName);
+			$nn = makeNiceAttributeName($l);
+			$ln = $attrPrefix + $ln;
+	
+			if (`attributeExists $ln $obj` == 0){
+				//addAttr -ln $ln -nn $nn -at double -dv $v $obj;
+				addAttr -ln $ln -at double -dv $v $obj;
+				setAttr -e -keyable true ($obj + "." + $ln);	
+				setAttr ($obj + "." + $ln) $fv;
+			} else {
+				setAttr ($obj + "." + $ln) $fv;
+			}
+			wizlog ("	[+] Add Float Attr : " + $ln + " Value : " + $fv);
+			break ;		
+			
+		//_________________________________________		
+		//_floatFieldGrp - Float
+		
+			case "floatFieldGrp" : 
+			//int $numCB = `floatFieldGrp -q -nf $convertControls[$i]`;
+			float $val[] = `floatFieldGrp -q -v $convertControls[$i]`;
+			string $tokCC[] = tokenizeString($convertControls[$i], "_");
+			if (`size $tokCC` > 1){
+				$cAttrName = ($tokCC[(`size $tokCC` - 2)]);
+			} else {
+				$cAttrName = $convertControls[$i];
+			}
+			
+			$l = `floatFieldGrp -q -l $convertControls[$i]`;
+			$ln = makeNiceAttributeName($cAttrName);
+			$ln = $attrPrefix + $ln;
+			
+			// if there is only 1 value
+			if (`size $val` == 1){			
+				$fv = `floatFieldGrp -q -v $convertControls[$i]`;
+				$fmin = `floatFieldGrp -q -min $convertControls[$i]`;
+				$fmax = `floatFieldGrp -q -max $convertControls[$i]`;
+				$ffmn = `floatFieldGrp -q -fmn $convertControls[$i]`;
+				$ffmx = `floatFieldGrp -q -fmx $convertControls[$i]`;
+				$l = `floatFieldGrp -q -l $convertControls[$i]`;			
+				
+				$ln = makeNiceAttributeName($attrName);
+				$nn = makeNiceAttributeName($l);
+				$ln = $attrPrefix + $ln;
+		
+				if (`attributeExists $ln $obj` == 0){
+					//addAttr -ln $ln -nn $nn -at double -dv $v $obj;
+					addAttr -ln $ln -at double -dv $v $obj;
+					setAttr -e -keyable true ($obj + "." + $ln);	
+					setAttr ($obj + "." + $ln) $fv;
+				} else {
+					setAttr ($obj + "." + $ln) $fv;
+				}
+				wizlog ("	[+] Add Float Attr : " + $ln + " Value : " + $fv);
+				break ;	
+			
+			}
+			
+			// if there are multiple values
+			if (`attributeExists $ln $obj` == 0){
+				//addAttr -ln $ln -at double3 $obj;
+				
+				string $addAttrCom = "addAttr -ln " + $ln + " -at double" + `size $val` + " " + $obj;
+				eval($addAttrCom);
+				wizlog ("	[+] Add floatFieldGrp Attr : " + $ln + " : Num Children : " + (`size $val`));
+				//wizlog ("addAttr -ln " + $ln + " -at double3 " + $obj + ";");
+				wizlog ($addAttrCom);
+			}
+			for ($p=0;$p<`size $val`;$p++){	
+				string $cln = ($ln + $p);
+				if (`attributeExists $cln $obj` == 0){
+					wizlog ("addAttr -ln " + $cln + " -at double -p " + $ln + " " + $obj + ";");
+					addAttr -ln $cln -at double -p $ln $obj;
+					//setAttr -e -keyable true ($obj + "." + $cln);
+				}	
+				//wizlog ("	[+] Add floatFieldGrp Attr : " + $cln + " Value : " + $val[$p]);
+			}
+			for ($p=0;$p<`size $val`;$p++){	
+				string $cln = ($ln + $p);
+				if (`attributeExists $cln $obj`){
+					setAttr ($obj + "." + $cln) $val[$p];
+				}
+			}			
+						
+			break ;
+			
+		//_________________________________________
+		// OptionMenuGrp - Enum
+		
+			case "optionMenuGrp" :
+			$l = `optionMenuGrp -q -l $convertControls[$i]`;
+			
+			//$ln = makeNiceAttributeName($l);
+			$ln = makeNiceAttributeName($attrName);
+			$nn = makeNiceAttributeName($l);			
+			$ln = $attrPrefix + $ln;
+			
+			///////////////////////////////////////////////////////////////////////////////////////////////////////////
+			// <!ToDo!> Enum names probably should be prefixed
+			///////////////////////////////////////////////////////////////////////////////////////////////////////////
+			
+			$v = `optionMenuGrp -q -sl $convertControls[$i]`;
+			string $ils[] = `optionMenuGrp -q -ils $convertControls[$i]`;
+			string $enum[];
+			for ($p=0;$p<`size $ils`;$p++){
+				$enum[$p] = `menuItem -q -l $ils[$p]`;
+				$enum[$p] = makeNiceAttributeName($enum[$p]);
+				$enum[$p] = $enum[$p] + "=" + $p + ":";
+			}
+			if (`attributeExists $ln $obj` == 0){
+				//addAttr -ln $ln -nn $nn -at "enum" -en (stringArrayToString($enum, "")) $obj;
+				addAttr -ln $ln -at "enum" -en (stringArrayToString($enum, "")) $obj;
+				setAttr ($obj + "." + $ln) ($v - 1);
+			} else {
+				setAttr ($obj + "." + $ln) ($v - 1);
+			}
+			wizlog ("	[+] Add Enum Attr : " + $ln + " Value : " + $v);
+			break ;
+			
+		//_________________________________________
+		// _textFieldGrp - String
+		
+			case "textFieldGrp" : 
+			$tx = `textFieldGrp -q -tx $convertControls[$i]`;		
+			$l = `textFieldGrp -q -l $convertControls[$i]`;
+			
+			//$ln = makeNiceAttributeName($l);
+			$ln = makeNiceAttributeName($attrName);
+			$ln = $attrPrefix + $ln;			
+			$nn = makeNiceAttributeName($l);
+			
+			if (`attributeExists $ln $obj` == 0){
+				//addAttr -ln $ln -nn $nn -dt "string" $obj;
+				if ($sm){
+					addAttr -ln $ln -at message $obj;
+				} else {
+					addAttr -ln $ln -dt "string" $obj;
+					setAttr -type "string" ($obj + "." + $ln) $tx;
+				}
+			} else {
+				setAttr -type "string" ($obj + "." + $ln) $tx;
+			}
+			wizlog ("	[+] Add String Attr : " + $ln + " Value : " + $tx);
+			break ;
+			
+		//_________________________________________
+		// _textFieldButtonGrp - String
+		
+			case "textFieldButtonGrp" :
+			$l = `textFieldButtonGrp -q -l $convertControls[$i]`;
+			$tx = `textFieldButtonGrp -q -tx $convertControls[$i]`;			
+			
+			//$ln = makeNiceAttributeName($l);
+			$ln = makeNiceAttributeName($attrName);
+			$ln = $attrPrefix + $ln;			
+			$nn = makeNiceAttributeName($l);
+			
+			if (`attributeExists $ln $obj` == 0){
+				//addAttr -ln $ln -nn $nn -dt "string" $obj;	
+				if ($sm){
+					addAttr -ln $ln -at message $obj;
+				} else {
+					addAttr -ln $ln -dt "string" $obj;	
+					setAttr -type "string" ($obj + "." + $ln) $tx;
+				}
+			} else {
+				setAttr -type "string" ($obj + "." + $ln) $tx;
+			}
+			wizlog ("	[+] Add String Attr : " + $ln + " Value : " + $tx);
+			break ;
+			
+		//_________________________________________
+		// _textScrollList - String
+
+			case "textScrollList" :
+			$l = `textScrollList -q -ann $convertControls[$i]`;
+			
+			
+			//$ln = makeNiceAttributeName($l);
+			$ln = makeNiceAttributeName($attrName);
+			$ln = $attrPrefix + $ln;			
+			$nn = makeNiceAttributeName($l);
+			
+			string $ai[] = `textScrollList -q -ai $convertControls[$i]`;			
+			string $list = stringArrayToString($ai, " ");
+			if (`attributeExists $ln $obj` == 0){
+				//addAttr -ln $ln -nn $nn -dt "string" $obj;		
+				if ($sm){
+					addAttr -ln $ln -at message $obj;
+				} else {		
+					addAttr -ln $ln -dt "string" $obj;				
+					setAttr -type "string" ($obj + "." + $ln) $list;
+				}
+			} else {
+				setAttr -type "string" ($obj + "." + $ln) $list;
+			}
+			wizlog ("	[+] Add String Attr : " + $ln + " Value : " + $list);
+			break ;
+			
+		}
+	}
+	
+	
+}
+
+global proc string[] wizCopyAttr( string $flags )
+{
+	string $attrPrefix;
+	string $attrSuffix;
+	string $attr;
+	string $so;
+	string $to;
+	int $nnil; // nice name is label
+	int $sm;
+	int $cst, $cts;
+	int $np;
+	string $ln;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-pre" : case "-prefix" :		
+			$attrPrefix = $tok[($i + 1)];
+			break ;
+			
+			case "-suf" : case "-suffix" :		
+			$attrSuffix = $tok[($i + 1)];
+			break ;
+
+			case "-so" : case "-sourceObject" :
+			$so = $tok[($i + 1)];
+			break ;
+			
+			case "-to" : case "-targetObject" :
+			$to = $tok[($i + 1)];
+			break ;
+	
+			case "-attr" : case "-attribute" :
+			$attr = $tok[($i + 1)];
+			break ;
+			
+			case "-cst" : case "-connectSourceToTarget" :
+			$cst = 1;
+			break ;
+			
+			case "-cts" : case "-connectTargetToSource" :
+			$cts = 1;
+			break ;
+			
+			case "-np" : case "-namePrompt" :
+			$np = 1;
+			break ;
+			
+			case "-atn" : case "-attributeName" :
+			$ln = $tok[($i + 1)];
+			break ;
+		}
+	}
+
+	if (`size $so` == 0){
+		wizlog ("[!] No Source Object To Create Attribute Control");
+	}
+	
+	string $type = `getAttr -type ($so + "." + $attr)`;
+	
+	if (`size $ln` == 0){	
+		$ln = $attrPrefix + $attr + $attrSuffix;
+		$ln = makeNiceAttributeName($ln);
+	
+	}
+	
+	// Prompt for a attribute name
+	if ($np){
+		string $prompt = `promptDialog
+			-t "Attribute Name"
+			-m ($attr + " Control Attribute Name : " + $attr)
+			-tx ($ln)
+			-ma center
+			`;
+	
+		string $promptString = `promptDialog -query -tx $prompt`;				
+		$ln = makeNiceAttributeName($promptString);
+	}
+	
+	wizlog ("[#] Attribute : " + $attr + " Type : " + $type);
+	wizlog ("[#] Control Name : " + $ln);
+	
+	//_________________________________________	
+	// Determine If Attr Is Compound
+	string $ctString = `match "[23]+" $type`;
+	wizLog ("	[#] Match 23 : " + $ctString + "\n");
+	int $dtc;
+	if (`size $ctString` == 0){
+		$dtc = 0;
+	} else {
+		$dtc = int($ctString);	
+	}
+	
+	//_________________________________________	
+	// Add The Attribute
+	if (`attributeExists $ln $to` == 0){
+		wizlog ("[+] Adding Attribute : " + $ln + " To Object : " + $to);	
+		switch($type){
+			//_________________________________________	
+			// Strings
+			case "string" : 	
+			int $uaf = `attributeQuery -uaf -node $so $attr`;
+			if ($uaf){
+				addAttr -ln $ln -dt "string" -uaf $to;
+			} else {
+				addAttr -ln $ln -dt "string" $to;
+			}
+			wizlog ("	[+] Add String Attr : " + $ln);
+			
+			string $sa = `getAttr ($so + "." + $attr)`;
+			setAttr ($to + "." + $ln) $sa;	
+			
+			break ;
+			
+			//_________________________________________	
+			// Booleans
+			
+			case "bool" : 
+			addAttr -ln $ln -at bool $to;
+			setAttr -e -keyable true ($to + "." + $ln);
+			int $boolVal = `getAttr ($so + "." + $attr)`;
+			setAttr ($to + "." + $ln) $boolVal;
+			
+			wizlog ("	[+] Add Bool Attr : " + $ln);
+			
+			break ;
+				
+			//_________________________________________	
+			// Ints
+			case "long" : case "short" :
+			addAttr -ln $ln -at long $to;
+			setAttr -e -keyable true ($to + "." + $ln);
+	
+			wizlog ("	[+] Add Int Attr : " + $ln);
+			int $intVal = `getAttr ($so + "." + $attr)`;
+			setAttr ($to + "." + $ln) $intVal;
+			
+			break ;
+			
+			//_________________________________________	
+			// Ints Compound
+			case "long2" : case "long3" : case "short2" : case "short3" :
+			
+			string $addAttrCom = "addAttr -ln " + $ln + " -at long" + $dtc + " " + $to;
+			eval($addAttrCom);
+			
+			for ($p=0;$p<$dtc;$p++){	
+				string $cln = ($ln + $p);
+				if (`attributeExists $cln $to` == 0){
+					wizlog ("[*] addAttr -ln " + $cln + " -at long -p " + $ln + " " + $to + ";");
+					addAttr -ln $cln -at long -p $ln $to;
+				}	
+			}
+			//int $intVals[] = `getAttr ($so + "." + $attr)`;
+			//setAttr ($to + "." + $ln) $intVals[0] $intVals[1] $intVals[2];
+			break ;
+				
+			//_________________________________________	
+			// Floats
+			case "double" : 
+			addAttr -ln $ln -at double $to;
+			setAttr -e -keyable true ($to + "." + $ln);
+			wizlog ("	[+] Add Float Attr : " + $ln);
+			
+			float $floatVal = `getAttr ($so + "." + $attr)`;
+			setAttr ($to + "." + $ln) $floatVal;
+			
+			break ;
+			
+			case "float" : 
+			addAttr -ln $ln -at "float" $to;
+			setAttr -e -keyable true ($to + "." + $ln);
+			wizlog ("	[+] Add Float Attr : " + $ln);
+			
+			float $floatVal = `getAttr ($so + "." + $attr)`;
+			setAttr ($to + "." + $ln) $floatVal;
+			
+			break ;
+			
+			//_________________________________________	
+			// Floats Compound - Double
+			case "double2" : case "double3" :
+			
+			int $uac = `attributeQuery -uac -node $so $attr`;
+			
+			string $addAttrCom = "addAttr -ln " + $ln + " -at double" + $dtc;
+			if ($uac){
+				// If used as color
+				$addAttrCom = $addAttrCom + " -uac ";	
+			}
+			$addAttrCom = $addAttrCom + $to;
+			
+			eval($addAttrCom);
+			
+			for ($p=0;$p<$dtc;$p++){	
+				string $cln = ($ln + $p);
+				if (`attributeExists $cln $to` == 0){
+					wizlog ("[*] addAttr -ln " + $cln + " -at double -p " + $ln + " " + $to + ";");
+					addAttr -ln $cln -at double -p $ln $to;
+					
+				}	
+			}
+			setAttr -e -keyable true ($to + "." + $ln);
+			break ;
+			
+			//_________________________________________	
+			// Floats Compound - Float
+			case "float2" : case "float3" :
+			
+			int $uac = `attributeQuery -uac -node $so $attr`;
+			
+			string $addAttrCom = "addAttr -ln " + $ln + " -at float" + $dtc;
+			
+			if ($uac){
+				// If used as color
+				$addAttrCom = $addAttrCom + " -uac ";	
+			}
+			$addAttrCom = $addAttrCom + $to;
+			wizlog ("[*] " + $addAttrCom);
+			
+			eval($addAttrCom);
+			
+			for ($p=0;$p<$dtc;$p++){	
+				string $cln = ($ln + $p);
+				if (`attributeExists $cln $to` == 0){
+					wizlog ("[*] addAttr -ln " + $cln + " -at \"float\" -p " + $ln + " " + $to + ";");
+					addAttr -ln $cln -at "float" -p $ln $to;
+					
+				}	
+			}
+			setAttr -e -keyable true ($to + "." + $ln);
+			break ;
+			
+			//_________________________________________	
+			// Enum
+			case "enum" :
+			// break enum names and put them back together
+			string $enumNames[] = getEnumAttributeNames(($so + "." + $attr));
+			for ($i=0;$i<`size $enumNames`;$i++){
+				$enumNames[$i] = $enumNames[$i] + "=" + $i + ":";			
+			}	
+	
+			addAttr -ln $ln -at "enum" -en (stringArrayToString($enumNames,"")) $to; 
+			
+			int $enumSl = `getAttr ($so + "." + $attr)`;
+			setAttr ($to + "." + $ln) $enumSl;
+			
+			break ;
+			
+			
+		}
+	} else {
+		wizlog ("[!] Attribute : " + $ln + " Already Exists. Please Use a Unique Attribute Name For Control.");
+		
+	}
+	
+	//_________________________________________	
+	// Connect The Attributes
+	if ($cts){
+		connectAttr ($to + "." + $ln) ($so + "." + $attr);
+		wizlog ("[*] connectAttr " + $to + "." + $ln + " " + $so + "." + $attr + ";");
+		
+	} else if ($cst){
+		connectAttr ($so + "." + $attr) ($to + "." + $ln);
+		wizlog ("[*] connectAttr " + $so + "." + $attr + " " + $to + "." + $ln + ";");
+		
+	}
+	
+	return {""};
+	
+	
+}
+
+
+//@ GET WIZ CRAFT ATTR
+//====================================================================
+/*****************************************************************//**
+	This returns an attribute value as a string for the requested obj/attr/featureType
+	<hr>
+	<b>Synopsis</b><br>
+	getWizCraftAttr [-obj string] [-attr string] [-ft string] <br>
+	
+	This returns a string value because we don't know what type it is till
+	we query the value. The string must be converted to the type needed.<br> <br>
+	
+	Control labels must be formatted correctly like : "Min U Obj" <br>
+	Controls will be named : wizCraft_[featureType][attr]_[controlType] <br>
+	Attributes on assets will be named : obj.[featureType][attr] <br><br>
+		
+	If no -featureType flag is passed then it's assumed that the
+	variable is a global type of attribute and the feature type will not 
+	be included in attribute name. <br><br>
+	
+	An object must be passed. If the object is a wizCraftAsset then
+	The attributes will all be derived from attributes on the wizCraftAsset. <br>
+	If the object is not a wizCraftAsset then all values will come from the UI. <br>
+	
+	<b>Return value</b><br>
+	string the requested attribute value.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-attribute(-attr) <br>
+	-featureType(-ft) <br>
+	
+	<hr>
+	<b>Related</b><br>
+	wizCraftCallback(), wizCraftDuplicateObject(), wizCraftMGMT(), 
+	
+	<b>Examples</b><br>
+	<code>
+	int $minObjU = int(getWizCraftAttr("-obj wizCraft1 -attr MinObjU -ft roof"));
+	int $lowPolyCount = int(getWizCraftAttr("-obj wizCraft1 -attr lowerPolyCountForAnalysis"));
+	float $maxAngle = float(getWizCraftAttr("-sl -attr MaxAngle -ft roof");
+	
+	string $liveWizCraftAsset = getWizCraftAttr("-attr liveWizCraftAsset");
+	
+	</code>
+*********************************************************************/
+global proc string getWizAttr( string $flags )
+{
+	//wizlog("[@] getWizAttr");
+
+	string $obj, $attr, $ft, $type; 
+	int $useAsset;
+	
+	string $tok[] = tokenizeString($flags, " ");	
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" :
+			$obj = $tok[($i + 1)];			
+			break ;
+
+			case "-sl" :
+			string $sel[] = `ls -sl`;
+			$obj = $sel[0];
+			break ;
+			
+			case "-attr" : case "-attribute" :
+			$attr = wizFlagString($tok, $i);
+			$attr = uncapitalizeString($attr);
+			break;
+							
+			case "-ft" : case "-featureType" :
+			$ft = $tok[($i + 1)];
+			break ;
+			
+			case "-typ" : case "-type" :
+			$type = $tok[($i + 1)];
+			break ;
+			
+		}
+	}
+
+	string $dt; // not in use
+	string $qt;
+	string $ctrlType;
+	string $as;
+	string $convertMethod = "string";
+	
+	// set string for attr source
+	switch ($type){
+	
+		// bool types
+		case "checkBox" : case "checkBoxGrp" :
+		
+		$dt = "bool";
+		$qt = "-v";
+		break ;
+		
+		// int types
+		case "intSliderGrp" : 
+		
+		$dt = "int";	
+		$qt = "-v";	
+		break ;
+		
+		case "intFieldGrp" :
+		$convertMethod = "intArrayToString";	
+		$dt = "int";	
+		$qt = "-v";	
+		break ;
+		
+		// float types
+		case "floatSliderGrp" :
+		case "floatSliderButtonGrp" : 
+		
+		$dt = "float";	
+		$qt = "-v";	
+		break ;
+	
+		case "floatFieldGrp" : 		
+		$dt = "float";
+		$convertMethod = "floatArrayToString";	
+		$qt = "-v";
+		break ;
+		
+		// string types
+		case "textField" :
+		case "textFieldGrp" :
+		case "textFieldButtonGrp" :		
+		$dt = "string";	
+		$qt = "-tx";
+		break ;
+
+		// enum types
+		case "optionMenu" :
+		case "optionMenuGrp" :		
+		$as = " -as "; // for getting the attriubte as a string
+		$dt = "string";	
+		$qt = "-v";
+		break ;
+		
+	}
+	
+	if (`objExists $obj` == 0){
+		$useAsset = 0;
+	} else {
+		$useAsset = 1;
+	}
+	
+
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//	Evaluate to get a return value
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	string $attrSrc;
+	if ($useAsset){
+		$attrSrc = ("getAttr " + $as + $obj + "." + $attr);	
+		// Check to see if the attribute is a message. If it is a message then get the connected object.
+		string $sType = `getAttr -type ($obj + "." + $attr)`;
+		if ($sType == "message"){
+			$convertMethod = "connection";
+			string $con[] = `listConnections ($obj + "." + $attr)`;
+			$return = $con[0];
+		}
+	} else {
+		$attrSrc = ($type + " -q " + $qt + " " + $obj + "_" + $attr + "_" + $type);		
+	}
+	
+	string $return;
+	if ($convertMethod == "string"){
+		$return = string(eval($attrSrc));
+	} else if ($convertMethod == "floatArrayToString") {
+		$return = floatArrayToString((eval($attrSrc)), " ");	
+	} else if ($convertMethod == "intArrayToString") {
+		$return = intArrayToString((eval($attrSrc)), " ");	
+	}	
+
+	//wizlog ("	[#] Attr : " + $obj + $attr + " Value : " + $return);
+	if ($return == ""){
+		wizlog ("-w 	[!] WizCraft Attribute Was Not Found [!]");
+	}
+	
+	return $return;
+	
+}
+
+
+
+//CONNECT SELECTED TEXTURES OUT ALPHA TO CHOICE
+//===========================================================
+global proc connectSelectedTexturesOutAlphaToChoice( string $sel[] )
+{
+	string $choice = $sel[(`size $sel` - 1)];
+	string $enumNames;
+	for ($i=0;$i<(`size $sel` - 1);$i++){	
+		$enumNames = $enumNames + $sel[$i];
+		catchQuiet ( `connectAttr -f ($sel[$i] + ".outAlpha") ($choice + ".input[" + $i + "]")` );
+		if ($i < (`size $sel` - 2)){
+			$enumNames = $enumNames + ":";
+		}
+	}
+	select -r $choice;
+	string $ln = ("textureSelection");
+	addAttr -at enum -en $enumNames -ln $ln; 
+	connectAttr -f ($choice + "." + $ln) choice1.selector;
+	
+}
+
+//GET ENUM ATTRIBUTE NAMES
+//=======================================================================
+//USAGE: string $names[] = getEnumAttributeNames("someObj.enumAttrName");
+
+global proc string[] getEnumAttributeNames( string $objEnum )
+{
+	// Query the enumeration fields from the enumerated attribute.	
+	//string $enumFields = `addAttr -q -enumName $objEnum`; // This doesn't work for some enums
+	
+	string $objAttr[] = tokenizeString($objEnum, ".");
+	
+	string $ef[] = `attributeQuery -n $objAttr[0] -listEnum $objAttr[1]`;
+	string $enumFields = $ef[0];
+	
+	// Prepare string arrays for our tokenizing
+	string $enumTokens[];
+	string $fieldTokens[];
+
+	// Extract the fields from the enumeration string.
+	tokenize $enumFields ":" $enumTokens;
+
+	// Print the field value for each.
+	int $fieldValue = 0;
+	string $enumNames[];
+	for ( $token in $enumTokens )
+	{
+		// If this field specifies its own value, use it.
+		int $numTokens = `tokenize $token "=" $fieldTokens`;
+		if ( $numTokens > 1 )
+		{
+			$fieldValue = $fieldTokens[1];
+		}
+
+		// Print it.  
+		print ( "\"" + $fieldTokens[0] + "\" = " + $fieldValue + "\n" );
+		//$enumNames[`size $enumNames`] = $field
+		// Increment field value as default for next enumeration.
+		$fieldValue++;
+		
+	}
+	return $enumTokens;
+}
+
+
+//CREATE REMAP VALUE FOR SELECTED ATTRIBUTES
+//=========================================================
+global proc createRemapValueForSelectedAttributes( string $type )
+{
+	string $sel[] = `textScrollList -q -ai selectMasterListA`;
+	string $attr[] = `textScrollList -q -si connectMasterListA`;
+	
+	string $selB[] = `textScrollList -q -ai selectMasterListB`;
+	string $attrB[] = `textScrollList -q -si connectMasterListB`;
+	
+	for ($i=0;$i<`size $sel`;$i++){
+		for ($p=0;$p<`size $sel`;$p++){
+			string $rvn = $sel[$i] + (capitalizeString($attr[$p])) + "RemapValue";
+			string $remap = `shadingNode -asUtility remapValue -n $rvn`;
+			
+			if ($type == "input"){
+				//Connect the attribute
+				connectAttr -f ($remap + ".outValue") ($sel[$i] + "." + $attr[$p]);
+				//Set min max
+				if (`attributeQuery -mne -n $sel[$i] $attr[$p]`){
+					float $min[] = `attributeQuery -min -n $sel[$i] $attr[$p]`;
+					setAttr ($remap + ".outputMin") $min[0];				
+				} else if (`attributeQuery -sme -n $sel[$i] $attr[$p]`){
+					float $smn[] = `attributeQuery -smn -n $sel[$i] $attr[$p]`;
+					setAttr ($remap + ".outputMin") $smn[0];
+				}
+				if (`attributeQuery -mxe -n $sel[$i] $attr[$p]`){
+					float $max[] = `attributeQuery -max -n $sel[$i] $attr[$p]`;
+					setAttr ($remap + ".outputMax") $max[0];				
+				} else if (`attributeQuery -sxe -n $sel[$i] $attr[$p]`){
+					float $smx[] = `attributeQuery -smx -n $sel[$i] $attr[$p]`;
+					setAttr ($remap + ".outputMin") $smx[0];
+				}
+			} else if ($type == "output"){
+				//Connect the attribute
+				connectAttr -f ($sel[$i] + "." + $attr[$p]) ($remap + ".inputValue") ;
+				//Set min max
+				if (`attributeQuery -mne -n $sel[$i] $attr[$p]`){
+					float $min[] = `attributeQuery -min -n $sel[$i] $attr[$p]`;
+					setAttr ($remap + ".inputMin") $min[0];				
+				} else if (`attributeQuery -sme -n $sel[$i] $attr[$p]`){
+					float $smn[] = `attributeQuery -smn -n $sel[$i] $attr[$p]`;
+					setAttr ($remap + ".inputMin") $smn[0];
+				}
+				if (`attributeQuery -mxe -n $sel[$i] $attr[$p]`){
+					float $max[] = `attributeQuery -max -n $sel[$i] $attr[$p]`;
+					setAttr ($remap + ".inputMax") $max[0];				
+				} else if (`attributeQuery -sxe -n $sel[$i] $attr[$p]`){
+					float $smx[] = `attributeQuery -smx -n $sel[$i] $attr[$p]`;
+					setAttr ($remap + ".inputMin") $smx[0];
+				}
+			} else if ($type == "connect"){
+				//Connect the attribute
+				connectAttr -f ($sel[$i] + "." + $attr[$p]) ($remap + ".inputValue") ;
+				//Set min max
+				if (`attributeQuery -mne -n $sel[$i] $attr[$p]`){
+					float $min[] = `attributeQuery -min -n $sel[$i] $attr[$p]`;
+					setAttr ($remap + ".inputMin") $min[0];				
+				} else if (`attributeQuery -sme -n $sel[$i] $attr[$p]`){
+					float $smn[] = `attributeQuery -smn -n $sel[$i] $attr[$p]`;
+					setAttr ($remap + ".inputMin") $smn[0];
+				}
+				if (`attributeQuery -mxe -n $sel[$i] $attr[$p]`){
+					float $max[] = `attributeQuery -max -n $sel[$i] $attr[$p]`;
+					setAttr ($remap + ".inputMax") $max[0];				
+				} else if (`attributeQuery -sxe -n $sel[$i] $attr[$p]`){
+					float $smx[] = `attributeQuery -smx -n $sel[$i] $attr[$p]`;
+					setAttr ($remap + ".inputMin") $smx[0];
+				}
+			}
+			
+		}
+	}
+}
+
+
+
+//@ ADD NODE STATE AFTER LOADED ATTR
+//====================================================================
+/*****************************************************************//**
+	Adds an attribute nodeStateAfterLoaded
+	<hr>
+	<b>Synopsis</b><br>
+	addNodeStateAfterLoadedAttr [-fa string] [-fb linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-state(-st) <br>
+	
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	addNodeStateAfterLoadedAttr("-sl -st 2");
+	
+	</code>
+*********************************************************************/
+global proc addNodeStateAfterLoadedAttr( string $flags )
+{
+	
+	string $sel[];
+	int $state;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$sel[0] = $tok[($i + 1)];
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;
+				
+			case "-st" : case "-state" :
+			$state = int($tok[($i + 1)]);
+			break ;
+			
+		}
+	}
+
+	string $nodeStates = "normal=0:hasNoEffect=1:blocking=2:waiting-Normal=8:waiting-HasNoEffect=9:waiting-Blocking=10:";
+		
+	for ($i=0;$i<`size $sel`;$i++){	
+	
+		if (`attributeExists "nodeStateAfterLoaded" $sel[$i]` == 0){
+			addAttr -ln "nodeStateAfterLoaded" -at "enum" -en $nodeStates $sel[$i];		
+		}				
+		setAttr ($sel[0] + ".nodeStateAfterLoaded") $state;
+		
+		global string $WIZ_nodeStateAfterLoadedSetName;
+		addSelectedObjectsToSet({$sel[$i]}, $WIZ_nodeStateAfterLoadedSetName);
+		
+	}
+
+}
+
+
+global proc wizActivateNodeStateAfterLoadedObjects()
+{
+	wizlog ("[@] wizActivateNodeStateAfterLoadedObjects");
+	global string $WIZ_nodeStateAfterLoadedSetName;
+	string $nsals[] = `ls -r on ("*" + $WIZ_nodeStateAfterLoadedSetName)`;
+	string $all[];
+	if (`size $nsals` == 0){
+		$all = `ls`;
+	} else {
+		select -r $nsals;
+		$all = `ls -sl`;
+	}
+	for ($i=0;$i<`size $all`;$i++){
+		if (`attributeExists "nodeStateAfterLoaded" $all[$i]`){
+			int $ns = `getAttr ($all[$i] + ".nodeStateAfterLoaded")`;
+			setAttr ($all[$i] + ".nodeState") $ns;	
+
+		}
+	}
+}
+
+global proc wizDeactivateNodeStateAfterLoadedObjects()
+{
+	wizlog ("[@] wizDeactivateNodeStateAfterLoadedObjects");
+	global string $WIZ_nodeStateAfterLoadedSetName;
+	string $nsals[] = `ls -r on ("*" + $WIZ_nodeStateAfterLoadedSetName)`;
+	string $all[];
+	if (`size $nsals` == 0){
+		$all = `ls`;
+	} else {
+		select -r $nsals;
+		$all = `ls -sl`;
+	}
+	for ($i=0;$i<`size $all`;$i++){
+		if (`attributeExists "nodeStateAfterLoaded" $all[$i]`){
+			//int $ns = `getAttr ($all[$i] + ".nodeStateAfterLoaded")`;
+
+			setAttr ($all[$i] + ".nodeState") 0;	
+
+		}
+	}
+}
+
+global proc addDisableNodeAfterLoadedAttribute()
+{
+	string $sel[] = `ls -sl`;
+	for ($i=0;$i<`size $sel`;$i++){
+		if (`attributeExists "disableNodeAfterLoaded" $sel[$i]` == 0){
+			addAttr -ln "disableNodeAfterLoaded" -at bool $sel[$i];
+			
+		}
+		setAttr ($sel[$i] + ".disableNodeAfterLoaded") 1;
+	}
+}
+
+global proc deleteAllUserDefinedAttributes( string $sel[] )
+{
+	for ($i=0;$i<`size $sel`;$i++){
+		string $ud[] = `listAttr -ud $sel[$i]`;
+		for ($p=0;$p<`size $ud`;$p++){
+			deleteAttr -at $ud[$p] $sel[$i];
+			
+		}
+		
+	}
+	
+
+}
+
+/*
+global proc createObjAttributesFromGUIObjects( string $tags)
+{
+	string $obj;
+	string $cb[], $cgb[], $if[], $ifg[], $is[], $isg[], $tf[], $tfg[], $tfbg[], $fs[], $fsg[], $om[], $omg[];
+	string $l, $tx;
+	int $v, $min, $max, $fmn, $fmx;
+	float $fv, $fmin, $fmax, $ffmn, $ffmx;
+	string $tok[] = tokenizeString($tags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break;
+			
+			//Check Box - Boolean
+			case "-cb" : 
+			$cb[`size $cb`] = $tok[($i + 1)];
+			$v = `checkBox -q -v $tok[($i + 1)]`;
+			$l = `checkBox -q -l $tok[($i + 1)]`;
+			$l = makeNiceAttributeName($l);
+			if (`attributeExists $l $obj` == 0){
+				addAttr -ln $l -at bool $obj;
+				setAttr -e -keyable true ($obj + "." + $l);
+				setAttr ($obj + "." + $l) $v;
+			}
+			break;
+			
+			
+			case "-if" : 
+			$if[`size $if`] = $tok[($i + 1)];
+			break;
+			
+			//_intSliderGrp - Int
+			case "-isg" : case "-intSliderGrp" :
+			$isg[`size $isg`] = $tok[($i + 1)];
+			$v = `intSliderGrp -q -v $tok[($i + 1)]`;
+			$min = `intSliderGrp -q -min $tok[($i + 1)]`;
+			$max = `intSliderGrp -q -max $tok[($i + 1)]`;
+			$fmn = `intSliderGrp -q -fmn $tok[($i + 1)]`;
+			$fmx = `intSliderGrp -q -fmx $tok[($i + 1)]`;
+			$l = `intSliderGrp -q -l $tok[($i + 1)]`;
+			$l = makeNiceAttributeName($l);
+			if (`attributeExists $l $obj` == 0){
+				addAttr -ln $l -at long -dv $v $obj;
+				setAttr -e -keyable true ($obj + "." + $l);	
+				setAttr ($obj + "." + $l) $v;
+			}
+			break;
+					
+			//_floatSliderGrp - Float
+			case "-fsg" : case "-floatSliderGrp" :
+			$fv = `floatSliderGrp -q -v $tok[($i + 1)]`;
+			$fmin = `floatSliderGrp -q -min $tok[($i + 1)]`;
+			$fmax = `floatSliderGrp -q -max $tok[($i + 1)]`;
+			$ffmn = `floatSliderGrp -q -fmn $tok[($i + 1)]`;
+			$ffmx = `floatSliderGrp -q -fmx $tok[($i + 1)]`;
+			$l = `floatSliderGrp -q -l $tok[($i + 1)]`;
+			$l = makeNiceAttributeName($l);
+			if (`attributeExists $l $obj` == 0){
+				addAttr -ln $l -at double -dv $v $obj;
+				setAttr -e -keyable true ($obj + "." + $l);	
+				setAttr ($obj + "." + $l) $v;
+			}
+			break;		
+			
+			//OptionMenuGrp - Enum
+			case "-omg" :
+			$l = `optionMenuGrp -q -l $tok[($i + 1)]`;
+			$l = makeNiceAttributeName($l);
+			$v = `optionMenuGrp -q -sl $tok[($i + 1)]`;
+			string $ils[] = `optionMenuGrp -q -ils $tok[($i + 1)]`;
+			string $enum[];
+			for ($p=0;$p<`size $ils`;$p++){
+				$enum[$p] = `menuItem -q -l $ils[$p]`;
+				$enum[$p] = makeNiceAttributeName($enum[$p]);
+				$enum[$p] = $enum[$p] + "=" + $p + ":";
+			}
+			if (`attributeExists $l $obj` == 0){
+				addAttr -ln $l -at "enum" -en (stringArrayToString($enum, "")) $obj;
+				setAttr ($obj + "." + $l) $v;
+			}
+			break;
+			
+			//_textFieldGrp - String
+			case "-tfg" : 
+			$tx = `textFieldGrp -q -tx $tok[($i + 1)]`;		
+			$l = `textFieldGrp -q -l $tok[($i + 1)]`;
+			$l = makeNiceAttributeName($l);
+			if (`attributeExists $l $obj` == 0){
+				addAttr -ln $l -dt "string" $obj;
+				setAttr -e -keyable true ($obj + "." + $l);
+				setAttr -type "string" ($obj + "." + $l) $tx;
+			}
+			break;
+			
+			//_textFieldButtonGrp - String
+			case "-tfbg" :
+			$l = `textFieldButtonGrp -q -l $tok[($i + 1)]`;
+			$tx = `textFieldButtonGrp -q -tx $tok[($i + 1)]`;
+			$l = makeNiceAttributeName($l);
+			if (`attributeExists $l $obj` == 0){
+				addAttr -ln $l -dt "string" $obj;
+				setAttr -e -keyable true ($obj + "." + $l);
+				setAttr -type "string" ($obj + "." + $l) $tx;
+			}
+			break;
+			
+			
+		}
+	}
+	
+	
+}
+*/
+
+
+// GET THIS TOO WORK
+//=========================
+/*
+
+// GENERIC ATTRIBUTE SELECTION LAYOUT
+//----------------------------
+global proc string[] attributeSelectionLayout( string $parent, string $name )
+{
+	string $objListName = $name + "ObectTextScrollList";
+	string $attrListName = $name + "AttributeTextScrollList";
+	
+	string $sca = ("string $sel[] = `textScrollList -q -si " + $objListName + "`;");
+	string $scb = ("string $sel[] = `textScrollList -q -si " + $attrListName + "`;");
+	
+	string $updateAttributeListCommand = ("updateAttributeSelectionTextScrollList(\"" + $objListName + "\", \"" + $attrListName + "\");");
+	
+	$sca = $sca + $updateAttributeListCommand;
+	
+	string $layout = `frameLayout
+		-l "Attribute Selection"
+		-ann ""
+		-bv false
+		-la "center"
+		-li 10
+		-lv false
+		-mw 0
+		-mh 0		
+		
+		-cll true
+		-cl true
+		//-ec "listAttributesOfSelected"
+		-parent $parent
+		($name + "AttributeSelectionFrameLayout")
+		`;
+	
+	listAttributeTypeMenu();
+	
+	string $rowColumnLayout = `rowColumnLayout
+		-numberOfColumns 2
+		-p $layout
+		`;		
+
+		textScrollList
+			-h 200
+			-ams true
+			-dkc ("removeSelectedItemFromTextScrollList(\"" + $objListName + "\");")	
+			-sc $sca
+			-p $rowColumnLayout
+			$objListName		
+			;	
+			
+		textScrollList
+			-h 200
+			-ams true
+			-dkc ("removeSelectedItemFromTextScrollList(\"" + $attrListName + "\");")
+			-sc $scb
+			-p $rowColumnLayout
+			$attrListName
+			;
+		
+
+	string $buttonsLayout = `columnLayout
+		-adjustableColumn true
+		($name + "ButtonsColumnLayout")
+		`;	
+		
+	setParent $rowColumnLayout;	
+	
+	string $buttonGridLayout = `gridLayout
+		-numberOfColumns 3
+		-numberOfRows 2
+		-cw 120
+		-ch 20
+		//-cr true
+		//-ag true
+		-p $buttonsLayout
+		($name + "ButtonsGridLayout")
+		`;
+		
+		string $selObjCommand = ("string $sel[] = `ls -sl`;"+"\n"
+		+"addSelectedObjectsToTextScrollList($sel, \"" + $objListName + "\");"+"\n"
+		);
+		
+		button
+			-l "Select Objects"
+			-c $selObjCommand
+			;
+
+	
+	setParent $buttonGridLayout;
+
+}
+
+
+global proc attributeSelectionLayoutMenuBar( string $name )
+{
+	string $menuBarLayout = `menuBarLayout ($name + "AttributeSelctionMenuBarLayout")`;	
+	string $updateAttrListCommand = "updateAttributeSelectionList(\"" + $name + "\");");
+	menu -label "Attributes";
+
+	menuItem -sm true -l "List Only";
+
+		menuItem -cb false -l "Connectable" -ann "-c" -c $updateAttrListCommand ($name + "ConnectableAttrMenuItem");
+		menuItem -cb false -l "Keyable" -ann "-k" -c $updateAttrListCommand ($name + "KeyableAttrMenuItem");
+		menuItem -cb false -l "ChannelBox" -ann "-cb" -c $updateAttrListCommand ($name + "ChannelBoxAttrMenuItem");	
+		menuItem -cb false -l "Ramps" -ann "-ra" -c $updateAttrListCommand ($name + "RampsAttrMenuItem");
+		menuItem -cb false -l "Scalar" -ann "-s" -c $updateAttrListCommand ($name + "ScalarAttrMenuItem");
+		menuItem -cb false -l "Array" -ann "-a" -c $updateAttrListCommand ($name + "ArrayAttrMenuItem");	
+		menuItem -cb false -l "Multi" -ann "-m" -c $updateAttrListCommand ($name + "MultiAttrMenuItem");
+		menuItem -cb false -l "Unlocked" -ann "-u" -c $updateAttrListCommand ($name + "UnlockedAttrMenuItem");
+		menuItem -cb true -l "Visible" -ann "-v" -c $updateAttrListCommand ($name + "VisibleAttrMenuItem");
+		
+	setParent -menu ..;
+
+}
+
+global proc updateAttributeSelectionList( string $name )
+{
+	string $objtsl[] = `textScrollList -q -ai ($name + "ObectTextScrollList")`;
+	string $attrtsl[] = `textScrollList -q -ai ($name + "AttributeTextScrollList")`;
+	
+	if(`size $selA` > 0){
+		string $attr[] = attrSelGetAttr($objtsl, $name);
+		replaceTextScrollListWithSelectedObjects($attr,($name + "AttributeTextScrollList"));
+		//listCompoundAttribuesOfSelected($selA);
+	}
+
+}
+
+
+global proc string[] attrSelGetAttr(string $obj, string $name )
+{
+	string $listAttrFlag = " ";
+	if(`menuItem -q -cb conAttrRampList` == true){
+		$listAttrFlag += (`checkBox -q -ann conAttrRampList` + " ");
+	}
+	if(`menuItem -q -cb conAttrScalarList` == true){
+		$listAttrFlag += (`checkBox -q -ann conAttrScalarList` + " ");
+	}	
+	if(`menuItem -q -cb conAttrArrayList` == true){
+		$listAttrFlag += (`checkBox -q -ann conAttrArrayList` + " ");
+	}	
+	if(`menuItem -q -cb conAttrVisibleList` == true){
+		$listAttrFlag += (`checkBox -q -ann conAttrVisibleList` + " ");
+	}
+	if(`menuItem -q -cb conAttrConnectableList` == true){
+		$listAttrFlag += (`checkBox -q -ann conAttrConnectableList` + " ");
+	}
+	if(`menuItem -q -cb conAttrKeyableList` == true){
+		$listAttrFlag += (`checkBox -q -ann conAttrKeyableList` + " ");
+	}
+	if(`menuItem -q -cb conAttrChannelBoxList` == true){
+		$listAttrFlag += (`checkBox -q -ann conAttrChannelBoxList` + " ");
+	}
+	if(`menuItem -q -cb conAttrMultiList` == true){
+		$listAttrFlag += (`checkBox -q -ann conAttrMultiList` + " ");
+	}
+	if(`menuItem -q -cb conAttrUnlockedList` == true){
+		$listAttrFlag += (`checkBox -q -ann conAttrUnlockedList` + " ");
+	}
+	
+	//string $attr[] = `listAttr -c -hd -u -k $sel[0]`; //Keyable -k seems to crash maya
+	string $attr[];
+	
+	global string $tempAttr[];
+	clear $tempAttr;
+	string $listAttrCommand = "global string $tempAttr[]; clear $tempAttr; $tempAttr = `listAttr -lf " + $listAttrFlag + $obj + "`;";
+	
+	print("ListAttrCommand: " + $listAttrCommand + "\n");
+	eval ($listAttrCommand);
+	return $tempAttr;
+
+}
+*/
+
+//@ WIZ CONNECTION QUERY
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $conAttr[] = wizConnectionQuery("-sl -ca");
+	
+	</code>
+*********************************************************************/
+global proc string[] wizConnectionQuery( string $flags )
+{
+	string $obj, $type;
+	string $sel[];
+	int $ca;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-typ" : case "-type" :
+			$type = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-ca" : case "-connectingAttributes" :
+			$ca = 1;
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	
+	if ($ca == 1){
+		string $conA[] = `listConnections -et true -p true $sel[0]`;
+		wizlog ((niceArrayList("	[#] Connections To " + $sel[0] + " [#]", $conA)));
+		string $conAttr[];
+		for ($i=0;$i<`size $conA`;$i++){
+			string $tokConA[] = tokenizeString($conA[$i], ".");	
+			if ($tokConA[0] == $sel[1]){
+				stringArrayRemoveAtIndex(0, $tokConA);
+				$conAttr[0] = stringArrayToString($tokConA, ".");
+				
+			}
+			
+		}
+		string $conB[] = `listConnections -et true -p true $sel[1]`;
+		wizlog ((niceArrayList("	[#] Connections To " + $sel[1] + " [#]", $conB)));
+		for ($i=0;$i<`size $conB`;$i++){
+			string $tokConB[] = tokenizeString($conB[$i], ".");	
+			if ($tokConB[0] == $sel[0]){
+				stringArrayRemoveAtIndex(0, $tokConB);
+				$conAttr[1] = stringArrayToString($tokConB, ".");
+			}
+			
+		}
+		return $conAttr;
+		
+	
+	
+	}
+	
+
+}
+
+/*
+global proc string[] wizCopyEnumAttribute( string $attr, string $newName )
+{
+	
+
+}
+*/
+
+/*
+global proc string[] wizCopyUserDefinedAttributes( string $flags )
+{
+	string $obj, $type;
+	string $sel[];
+	int $edit;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-typ" : case "-type" :
+			$type = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	for ($i=0;$i<`size $sel`;$i++){
+		string $ud[] = `listAttr -ud $sel[$i]`;
+		for ($p=0;$p<`size $ud`;$p++){
+			deleteAttr -at $ud[$p] $sel[$i];
+			
+		}
+		
+	}
+	
+
+}
+*/
+
+//@ WIZ CHOICE SELECTION
+//====================================================================
+/*****************************************************************//**
+	Select two or more choice nodes and this will make a new choice node to choice
+	between the choice nodes.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName("-obj someObject -q -sl");
+	
+	</code>
+*********************************************************************/
+global proc wizChoiceSelection( string $flags )
+{
+	string $obj;
+	string $choice;
+	string $name = "ChoiceSelection";
+	string $sel[] = `ls -sl`;;
+	int $edit;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-n" : case "-name" :
+			$name = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			$choice = $sel[(`size $sel` - 1)];
+			stringArrayRemoveAtIndex((`size $sel` - 1), $sel);
+			break ;
+			
+			case "-c" : case "-choice" :
+			$choice = $tok[($i + 1)];
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	
+	
+	string $selectEnum[];
+	if ($edit){
+		string $ud[] = `listAttr -ud $choice`;
+		$selectEnum = getEnumAttributeNames(($choice + "." + $ud[0]));
+		//Need to add =i because maya is weird
+		for ($i=0;$i<`size $selectEnum`;$i++){
+			$selectEnum[$i] = $selectEnum[$i] + "=" + $i + ":";			
+		}
+		$newI = (`size $selectEnum`);
+		int $nameI = 0;
+		for ($i=$newI;$i<($newI + `size $sel`);$i++){
+			connectAttr ($sel[$nameI] + ".output") ($choice + ".input[" + $i + "]");
+			
+			$selectEnum[`size $selectEnum`] = $sel[$nameI] + "=" + $i + ":";	
+			//Add the attribute and set the attr to the file texture path
+			$nameI++;
+		}
+
+		addAttr -e -enumName (stringArrayToString($selectEnum,"")) ("." + $ud[0]) $choice; 
+		setAttr -e -keyable true ($choice + "." + $ud[0]);
+		
+	} else {
+		
+		$choice = `shadingNode -asUtility choice -n $name`;
+			
+		for ($i=0;$i<`size $sel`;$i++){
+			$selectEnum[`size $selectEnum`] = $sel[$i] + "=" + $i + ":";	
+		}
+		string $selName = ($name + "Selection");
+		addAttr -ln $selName -at "enum" -en (stringArrayToString($selectEnum,"")) $choice; 
+		setAttr -e -keyable true ($choice + "." + $selName);
+		
+		connectAttr ($choice + "." + $selName) ($choice + ".selector");
+		
+		for ($i=0;$i<`size $sel`;$i++){
+			
+			connectAttr ($sel[$i] + ".output") ($choice + ".input[" + $i + "]");
+			
+		}
+	
+	}
+	
+}
+
+
+global proc attributeMathLayout( string $parent )
+{
+	string $layout = `frameLayout
+		-l "Attribute Math"	
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $parent		
+		`;
+		
+		/*
+		radioButtonGrp
+			-l "Function"
+			-la4 "Add" "Subtract" "Multiply" "Divide"
+			-en1 true
+			attributeMath_function_radioButtonGrp
+			;
+		*/
+		
+		string $menuItemLabels[] = { "add", "subtract", "multiply", "divide" };
+		string $omg = wizOptionMenuGrpMenuItems("Slider Function", "attributeMath_sliderFunction_optionMenuGrp", $menuItemLabels);
+		
+		string $com = ("float $v = `floatSliderGrp -q -v attributeMath_floatValue_floatSliderGrp`;"+"\n");
+		
+		string $dc = ("string $func = `optionMenuGrp -q -v attributeMath_sliderFunction_optionMenuGrp`;"+"\n"
+		+ $com + "wizAttributeMath(\"-sw -aw -\" + $func + \" -v \" + $v);");
+		
+		floatSliderGrp
+			-l "Value"
+			-f true
+			-pre 4
+			-min -1.0
+			-max 1.0
+			-fmn -999999999
+			-fmx 999999999
+			-dc $dc
+			attributeMath_floatValue_floatSliderGrp
+			;	
+		
+		
+		//_________________________________________
+		// Function Buttons
+		gridLayout
+			-nc 4
+			-w 200
+			-h 25
+			-cr false
+			-ag false
+			-cw 50
+			-ch 25
+			;
+			
+		button
+			-l "Add"
+			-c ($com + "wizAttributeMath(\"-sw -aw -add -v \" + $v);")
+			;
+			
+		button
+			-l "Subtract"
+			-c ($com + "wizAttributeMath(\"-sw -aw -sub -v \" + $v);")
+			;
+
+		button
+			-l "Multiply"
+			-c ($com + "wizAttributeMath(\"-sw -aw -mult -v \" + $v);")
+			;	
+			
+		button
+			-l "Divide"
+			-c ($com + "wizAttributeMath(\"-sw -aw -div -v \" + $v);")
+			;	
+			
+		setParent ..;
+		
+}
+
+global proc wizAttributeMath( string $flags )
+{
+	string $obj, $type;
+	string $sel[];
+	string $attr[];
+	int $add, $sub, $mult, $div;
+	float $v;
+	int $sw, $aw;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-sw" : case "-selectWiz" :
+			$sw = 1;
+			break ;
+				
+			case "-aw" : case "-attributeWiz" :
+			$aw = 1;
+			break ;
+			
+			case "-a" : case "-add" :
+			$add = 1;
+			break ;			
+			
+			case "-sub" : case "-subtract" :
+			$sub = 1;
+			break ;
+			
+			case "-mult" : case "-multiply" :
+			$mult = 1;
+			break ;
+			
+			case "-div" : case "-divide" :
+			$div = 1;
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;
+			
+			case "-v" : case "-value" :
+			$v = float($tok[($i + 1)]);
+			break ;
+		}
+	}
+	
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	if ($sw){
+		$sel = `textScrollList -q -ai selectMasterListA`;
+		
+	}
+	
+	if ($aw){
+		$attr = `textScrollList -q -si connectMasterListA`;
+		
+	}
+		
+	for ($i=0;$i<`size $sel`;$i++){
+		for ($ai=0;$ai<`size $attr`;$ai++){
+				float $getValue = float(`getAttr ($sel[$i] + "." + $attr[$ai])`);
+				if ($add){
+					float $newValue = $getValue + $v;
+					setAttr ($sel[$i] + "." + $attr[$ai]) $newValue;
+									
+				}
+				
+				if ($sub){
+					float $newValue = $getValue - $v;
+					setAttr ($sel[$i] + "." + $attr[$ai]) $newValue;
+								
+				}
+				
+				if ($mult){
+					float $newValue = $getValue * $v;
+					setAttr ($sel[$i] + "." + $attr[$ai]) $newValue;
+								
+				}
+				
+				if ($div){
+					float $newValue = $getValue / $v;
+					setAttr ($sel[$i] + "." + $attr[$ai]) $newValue;
+								
+				}
+				
+				
+		}
+			
+	}
+	
+	
+
+}
+
+
+//@ WIZ ATTRIBUTE SET
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName("-obj someObject -q -sl");
+	
+	</code>
+*********************************************************************/
+global proc wizAttributeSet( string $flags )
+{
+	string $obj;
+	string $sel[];
+	string $attr[];
+	int $sw, $aw;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-sw" : case "-selectWiz" :
+			$sw = 1;
+			break ;
+				
+			case "-aw" : case "-attributeWiz" :
+			$aw = 1;
+			break ;
+			
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-attr" : case "-attribute" :
+			$attr[`size $attr`] = $tok[($i + 1)];
+			break ;
+			
+			
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	if ($sw){
+		$sel = `textScrollList -q -ai selectMasterListA`;
+		
+	}
+	
+	if ($aw){
+		$attr = `textScrollList -q -si connectMasterListA`;		
+	}
+	
+	
+	for ($i=0;$i<`size $sel`;$i++){
+		for ($ai=0;$ai<`size $attr`;$ai++){
+			string $setName = ($attr[$ai] + "Set");
+			if (`objExists $setName` == 0){
+				sets -em -n $setName; 			
+			}
+			sets -e -fe $setName ($sel[$i] + "." + $attr[$ai]);	
+		}
+			
+	}
+	
+	
+
+}
+
+
+global proc string attrWizCreateControlAttribute()
+{
+	return "";
+	
+}
+
+//@ PROC NAME
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = createAttributesFromWindowControls("-sl -win OptionBoxWindow");
+	
+	</code>
+*********************************************************************/
+global proc string[] createAttributesFromWindowControls( string $flags )
+{
+	string $obj, $type;
+	string $window;
+	string $sel[];
+	int $edit;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-win" : case "-window" :
+			$type = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	
+	string $windowUI = "OptionBoxWindow";
+
+	// Brute force: Get a list of all control layouts, and see which
+	// is a child of the specified window.
+	//
+	string $controls[] = `lsUI -l -controlLayouts`;
+
+	// Create a wildcard pattern used by the "gmatch" command.
+	//
+	string $pattern = $windowUI + "*";
+
+	// Default empty string to denote that no matching layout was found.
+	//
+	string $layout = "";
+
+	for ( $ui in $controls )
+	{
+	// Compare the wildcard pattern against the name of this control.
+	//
+	if ( `gmatch $ui $pattern` )
+	{
+	  // Found it!
+	  //
+	  string $tokens[];
+	  int $numTokens = `tokenize $ui "|" $tokens`;
+	  if ( $numTokens > 1 )
+	  {
+		// This returns a path to the control, specifying the window as the parent.
+		// It's advisable to always reference UI controls by their full path.
+		//
+		$layout = $tokens[0] + "|" + $tokens[1];
+
+		break;
+	  }
+	}
+	}
+
+	wizlog ("[#] Layout : " + $layout);
+	
+	getAllUIBelowParent($layout);
+
+	createObjAttributesFromGUIObjectsInLayout($sel[0], $layout, "option_");
+	
+	return {""};
+}
+
+
+global proc string forceGetControlType( string $ctrl )
+{
+	//string $ctrlTypes[] = { "checkBox" };
+	
+	if (`checkBox -q -ex $ctrl` == 1){
+		wizlog ("[#] " + $ctrl + " : Is Type : checkBox");
+		return "checkBox";
+		
+	}
+	
+	if (`checkBoxGrp -q -ex $ctrl` == 1){
+		wizlog ("[#] " + $ctrl + " : Is Type : checkBoxGrp");
+		return "checkBoxGrp";
+		
+	}
+
+	if (`intSliderGrp -q -ex $ctrl` == 1){
+		wizlog ("[#] " + $ctrl + " : Is Type : intSliderGrp");
+		return "intSliderGrp";
+		
+	}
+	
+	if (`intField -q -ex $ctrl` == 1){
+		wizlog ("[#] " + $ctrl + " : Is Type : intField");
+		return "intField";
+		
+	}
+	
+	if (`intFieldGrp -q -ex $ctrl` == 1){
+		wizlog ("[#] " + $ctrl + " : Is Type : intFieldGrp");
+		return "intFieldGrp";
+		
+	}
+	
+	if (`floatSliderGrp -q -ex $ctrl` == 1){
+		wizlog ("[#] " + $ctrl + " : Is Type : floatSliderGrp");
+		return "floatSliderGrp";
+		
+	}
+	
+	if (`floatFieldGrp -q -ex $ctrl` == 1){
+		wizlog ("[#] " + $ctrl + " : Is Type : floatFieldGrp");
+		return "floatFieldGrp";
+		
+	}
+	
+	if (`optionMenuGrp -q -ex $ctrl` == 1){
+		wizlog ("[#] " + $ctrl + " : Is Type : optionMenuGrp");
+		return "optionMenuGrp";
+		
+	}
+	
+	if (`textFieldGrp -q -ex $ctrl` == 1){
+		wizlog ("[#] " + $ctrl + " : Is Type : textFieldGrp");
+		return "textFieldGrp";
+		
+	}
+	
+	if (`textFieldButtonGrp -q -ex $ctrl` == 1){
+		wizlog ("[#] " + $ctrl + " : Is Type : textFieldButtonGrp");
+		return "textFieldButtonGrp";
+		
+	}
+	
+	if (`textScrollList -q -ex $ctrl` == 1){
+		wizlog ("[#] " + $ctrl + " : Is Type : textScrollList");
+		return "textScrollList";
+		
+	}
+	
+	return "";
+}
+
+//@ PROC NAME
+//====================================================================
+/*****************************************************************//**
+	This creates a new attribute on first selected objects to drive the
+	visibility of all other objects.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	Use this to create a simple object selector. Object selection
+	corresponds to int.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-attributeNamePrompt(-anp) <br>
+	-attributeName(-an) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = wizSetDrivenVisibility("-sl -anp");
+	
+	</code>
+*********************************************************************/
+global proc wizSetDrivenVisibility( string $flags )
+{
+	string $obj;
+	string $attrName = "visibilitySelection";
+	string $sel[];
+	int $edit;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+			
+			case "-anp" : case "-attributeNamePrompt" :
+			$attrName = wizFieldPromptDialog("Driver Attribute Name", "Name Of Driver Attribute : ", "OK", "Cancel");
+			break ;
+			
+			case "-an" : case "-attributeName" :
+			$attrName = $tok[($i + 1)];
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			$obj = $sel[0];
+			stringArrayRemoveAtIndex(0, $sel);
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	if (`size $sel` == 0){
+		wizlog ("-w [!] Multiple Objects Must Be Selected");
+	}
+	
+	string $ln = makeNiceAttributeName($attrName);
+	if (`attributeExists $ln $obj` == 0){
+		addAttr -ln $ln -at long -dv 0 $obj;
+		setAttr -e-keyable true ($obj + "." + $ln);
+	}
+
+	
+	for ($i=0;$i<`size $sel`;$i++){
+	
+		setAttr ($obj + "." + $ln) $i;
+		
+		// turn of visibility of all
+		for ($p=0;$p<`size $sel`;$p++){
+			if ($p != $i){
+				setAttr ($sel[$p] + ".visibility") 0;	
+				setDrivenKeyframe -currentDriver ($obj + "." + $ln) ($sel[$p] + ".visibility");
+			}
+			
+		}		
+		// turn on visibility of selection
+		setAttr ($sel[$i] + ".visibility") 1;
+		
+		setDrivenKeyframe -currentDriver ($obj + "." + $ln) ($sel[$i] + ".visibility");	
+		
+	}
+	
+	
+
+}
+
+
+//@ PROC NAME
+//====================================================================
+/*****************************************************************//**
+	This creates a new attribute on first selected objects to drive the
+	visibility of all other objects.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	Use this to create a simple object selector. Object selection
+	corresponds to int.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-attributeNamePrompt(-anp) <br>
+	-attributeName(-an) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = wizSetDrivenVisibility("-sl -anp");
+	
+	</code>
+*********************************************************************/
+global proc wizSetDrivenSelection( string $flags )
+{
+	string $obj;
+	string $attrName = "visibilitySelection";
+	string $attrSel = "enable";
+	string $sel[];
+	int $edit;
+	int $lt;
+	int $allOff = 1; // Make -1 = all off
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-en" : case "-enable" :
+			$enSel = 1;
+			$attrSel = "enable";
+			break ;
+			
+			case "-attr" : case "-attribute" :
+			$attrSel = $tok[($i + 1)];
+			break ;
+		
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+			
+			case "-anp" : case "-attributeNamePrompt" :
+			$attrName = wizFieldPromptDialog("Driver Attribute Name", "Name Of Driver Attribute : ", "OK", "Cancel");
+			break ;
+			
+			case "-an" : case "-attributeName" :
+			$attrName = $tok[($i + 1)];
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			$obj = $sel[0];
+			stringArrayRemoveAtIndex(0, $sel);
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+			case "-lt" : case "-layeredTexture" :
+			$lt = 1;
+			break ;
+			
+			case "-ao" : case "-allOff" :
+			$allOff = 1;
+			break ;
+			
+			case "-fro" : case "-frozen" :
+			$attrSel = "frozen";
+			break ;
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	if (`size $sel` == 0){
+		wizlog ("-w [!] Multiple Objects Must Be Selected");
+	}
+	
+	string $ln = makeNiceAttributeName($attrName);
+	if (`attributeExists $ln $obj` == 0){
+		addAttr -ln $ln -at long -dv 0 $obj;
+		setAttr -e-keyable true ($obj + "." + $ln);
+	}
+
+	//_________________________________________
+	// For Layered Texture Selection
+	if ($lt){
+		wizlog (niceArrayList("[TEXTURE SELECTION LAYERED TEXTURES]", $sel));
+		
+		for ($i=0;$i<`size $sel`;$i++){
+		
+			int $mi[] =	`getAttr -mi ($sel[$i] + ".inputs")`;
+			//setAttr ($obj + "." + $ln) $i;
+			int $m;
+			if ($allOff){
+				$m = -1;
+			}
+			for ($m=0;$m<`size $mi`;$m++){
+				setAttr ($obj + "." + $ln) $m;
+				
+				wizlog ("[#] Current Texture Layer : " + $mi[$m]);
+				for ($p=0;$p<`size $mi`;$p++){
+					if ($p != $m){
+						setAttr ($sel[$p] + ".inputs[" + $mi[$p] + "].isVisible") 0;	
+						setDrivenKeyframe -currentDriver ($obj + "." + $ln) ($sel[$i] + ".inputs[" + $mi[$p] + "].isVisible");
+						wizlog ("[#] Set Drive Key [OFF] : setDrivenKeyframe -currentDriver (" + $obj + "." + $ln + ") (" + $sel[$i] + ".inputs[" + $mi[$p] + "].isVisible)");
+					}
+					
+				}
+				if ($m == -1){
+					continue ;
+				}
+				setAttr ($sel[$i] + ".inputs[" + $mi[$m] + "].isVisible") 1;
+		
+				setDrivenKeyframe -currentDriver ($obj + "." + $ln) ($sel[$i] + ".inputs[" + $mi[$m] + "].isVisible");	
+				
+				wizlog ("[#] Set Drive Key [ON] : setDrivenKeyframe -currentDriver (" + $obj + "." + $ln + ") (" + $sel[$i] + ".inputs[" + $mi[$m] + "].isVisible)");
+					
+			}
+			
+		}
+	
+		return ;
+	}
+	
+	
+	int $i;
+	if ($allOff){
+		$i = -1;
+	}
+	
+	for ($i;$i<`size $sel`;$i++){
+	
+		setAttr ($obj + "." + $ln) $i;
+		
+		// turn of visibility of all
+		for ($p=0;$p<`size $sel`;$p++){
+			if ($p != $i){
+				setAttr ($sel[$p] + "." + $attrSel) 0;	
+				setDrivenKeyframe -currentDriver ($obj + "." + $ln) ($sel[$p] + "." + $attrSel);
+			}
+			
+		}		
+		if ($i == -1){
+			continue ;
+		}
+		// turn on visibility of selection
+		setAttr ($sel[$i] + "." + $attrSel) 1;
+		
+		setDrivenKeyframe -currentDriver ($obj + "." + $ln) ($sel[$i] + "." + $attrSel);	
+		
+	}
+	
+	
+	
+
+}
+
+
+
+global proc wizFreezeSelected( string $flags )
+{
+
+	string $sel[];
+	int $freeze;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+	
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;	
+			break ;	
+			
+			case "-f" : case "-freeze" :
+			$freeze = 1;
+			break ;
+			
+			case "-uf" : case "-unFreeze" :
+			$freeze = 0;
+			break ;
+		
+		}
+	}
+	
+	for ($i=0;$i<`size $sel`;$i++){
+		if (`attributeExists "frozen" $sel[$i]`){
+			
+				setAttr ($sel[$i] + ".frozen") $freeze;
+			
+		}
+	}
+}
+
+
+global proc wizSetDrivenKey( string $flags )
+{
+	string $obj, $type;
+	string $sel[];
+	int $wiz;
+	string $driver;
+	string $driven[];
+	string $driverAttr;
+	string $drivenAttr[];
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-wiz" : 
+			$wiz = 1;
+			string $sla[] = `textScrollList -q -ai selectMasterListA`;
+			$driver = $sla[0];
+			string $slaAttr[] = `textScrollList -q -si connectMasterListA`;
+			$driverAttr = $slaAttr[0];
+			$driven = `textScrollList -q -ai selectMasterListB`;
+			$drivenAttr = `textScrollList -q -si connectMasterListB`;
+			break ;
+
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	select -r $driven;
+	for ($i=0;$i<`size $drivenAttr`;$i++){
+		setDrivenKeyframe -at $drivenAttr[$i] -cd ($driver + "." + $driverAttr);
+
+	}
+	
+	
+	
+	
+}
+
+
+//@ WIZ ADD ENUM ATTRIBUTE
+//====================================================================
+/*****************************************************************//**
+	Adds an enum attribute to selected object.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	Adds enum attribute
+	
+	<b>Return value</b><br>
+	null.
+	
+	<b>Flags</b><br>
+	-name(-n) <br>
+	-selected(-sl) <br>
+	-enumerations(-en) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	wizAddEnumAttribute("-sl -n someEnumAttributeName -en green red blue");
+	
+	</code>
+*********************************************************************/
+global proc wizAddEnumAttribute( string $flags )
+{
+	string $ln;
+	string $sel[];
+	string $enumNames[];
+	string $tok[] = tokenizeString($flags, " ");
+
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-n" : case "-name" : case "-ln" : case "-longName" :
+			$ln = $tok[($i + 1)];
+			break ;
+			
+			case "-en" : case "-enumerations" : case "-enumNames" :
+			$enumNames = wizFlagArray($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;
+		}
+	}
+
+	for ($i=0;$i<`size $sel`;$i++){
+
+		for ($i=0;$i<`size $enumNames`;$i++){
+			$enumNames[$i] = $enumNames[$i] + "=" + $i + ":";			
+		}	
+	
+		addAttr -ln $ln -at "enum" -en (stringArrayToString($enumNames,"")) $sel; 		
+	
+	}
+	
+}
+

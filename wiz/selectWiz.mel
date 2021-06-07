@@ -1,0 +1,4354 @@
+/*
+todo:
+
+make a convert sorted to sets function
+
+rename objects options
+	- add - sorted by type - to Beginning/End
+	- remove numbers and renumber by finding all of same name in whole scene and starting at 1
+	- suffix, prefix add
+	- total rename
+	
+	
+
+sort by type options 
+	- type1, obj1, obj2 | type2, obj3, obj4...
+	sort by - connected - type -
+	
+ls type - - with menu, just send a type to a function which sets the global var of type to list
+
+move to other list function
+maybe a callback function to allow dragging and dropping?
+
+make a subtract A from B / B from A function
+make an add A to B / B to A function
+make an intersect A with B function
+
+
+
+*/
+
+global proc selectWiz()
+{
+
+}
+
+//GLOBAL VARS
+global string $WIZ_activeSelectList;
+$WIZ_activeSelectList = "selectMasterListA";
+global string $WIZ_lsTag[];
+$WIZ_lsTag = getSelectMasterTags("init");
+
+//OPEN CLOSE SELECT WIZ
+//========================================================
+//OPEN SELECT WIZ
+//---------------------
+global proc openSelectWiz()
+{
+	tabLayout -e -sti 1 wizSelectionTab;	
+	frameLayout -e -cl false selectorLayout_frameLayout;	
+	if(`menuItem -q -cb selectMasterListAAutoUpdateList` == 1 || `menuItem -q -cb selectMasterListBAutoUpdateList` == 1){
+		startSelectWizAutoSelectScriptJob();
+	}
+}
+
+//CLOSE SELECT WIZ
+//---------------------
+global proc closeSelectWiz()
+{
+	frameLayout -e -cl true selectorLayout_frameLayout;	
+	stopSelectWizAutoSelectScriptJob();
+}
+
+//ACTIVE SELECTION LIST
+//========================================================
+
+//SET ACTIVE SELECTION LIST
+//--------------------------------
+global proc setActiveSelectionList(string $textScrollList)
+{
+	global string $WIZ_activeSelectList;
+	$WIZ_activeSelectList = $textScrollList;
+	//debugML1("Set : ActiveSelectList: " + $WIZ_activeSelectList + "\n");
+}
+
+//GET ACTIVE SELECTION LIST
+//--------------------------------
+global proc string getActiveSelectionList()
+{
+	global string $WIZ_activeSelectList;
+	//debugML1("Get : ActiveSelectList: " + $WIZ_activeSelectList + "\n");
+	return $WIZ_activeSelectList;
+
+}
+
+//FORCE GET SELECTION LIST
+//--------------------------------
+global proc string[] forceGetSelectionList()
+{
+	wizlog("[@] forceGetSelectionList");
+	//This looks through text scroll lists for objects to select
+	//If it can't find anything then it defaults to whatever is currently selected
+	//If nothing is selected, then too bad.
+	global string $WIZ_activeSelectList;
+	string $sel[] = `textScrollList -q -si $WIZ_activeSelectList`;
+	if (`size $sel` == 0){
+		$sel = `textScrollList -q -ai $WIZ_activeSelectList`;
+		if(`size $sel` == 0){
+			$sel = `ls -sl`;
+		}
+	}
+	wizlog((niceArrayList("		[#] Selection List [#]", $sel)));
+	return $sel;
+}
+
+//CHECK SEL
+//--------------------------------
+//** Verifies that something is either selected in the viewport or from selectWiz. */
+global proc string[] checkSel(string $sel[])
+{
+	string $curSel[] = `ls -fl -sl`;	
+	if (`size $sel` > 0){
+		if (`size $curSel` == 0){
+			select -r $sel;	
+		}
+		return $sel;
+	}
+	global string $WIZ_activeSelectList;
+	$sel = `textScrollList -q -si $WIZ_activeSelectList`;
+	if (`size $sel` == 0){
+		$sel = `textScrollList -q -ai $WIZ_activeSelectList`;
+		if(`size $sel` == 0){
+			$sel = `ls -sl`;
+		}
+	} 
+	if (`size $curSel` == 0){
+		select -r $sel;	
+	}
+	return $sel;
+
+}
+
+//** Verifies that something is selected. */
+global proc string[] wizValidateSelected( string $sel[] )
+{	
+	if (`size $sel` == 0){
+		$sel = `ls -sl`;
+		if (`size $sel` == 0){
+			wizlog("[@] wizGetSelected");
+			wizLog("-e	[!] Nothing Selected! [!]");
+			return $sel;
+		}
+	}
+	return $sel;
+
+}
+/*
+global proc int isSelected(string $sel[])
+{
+	string $ls[] = `ls -fl -sl`;
+	string $lsSel[] = `ls -fl $sel`;
+		
+}
+*/
+//LAYOUTS
+//==============================================================================
+//==============================================================================
+//SELECT MASTER LAYOUT
+//----------------------------
+global proc selectMasterLayout(string $parent)
+{
+	string $layout = `frameLayout
+		-l "Selector"
+		-ann ""
+		-bv 0
+		-la "center"
+		-li 10
+		-lv 0
+		-mw 0
+		-mh 0		
+		
+		-cll true
+		-cl true		
+		-parent $parent
+		selectorLayout_frameLayout
+		`;
+		
+	string $rowLayout = `rowLayout
+		-nc 4
+		-p $layout
+		selectMasterListRowLayout
+		`;
+		
+	//SELECT MASTER LIST A		
+	string $colLayoutA = `columnLayout
+		-adj true
+		-p $rowLayout
+		selectMasterListColA
+		`;		
+		
+		selectMasterListMenuBarLayout("selectMasterListA");
+		
+		textScrollList
+			-h 200
+			-ams true
+			-dkc ("doSelectWizDeleteKeyCommand(\"selectMasterListA\");")
+			-dcc ("doSelectWizDoubleClickCommand(\"selectMasterListA\")")
+			-sc ("doSelectWizSelectCommand(\"selectMasterListA\")")
+			-dgc dragTextScrollListSelection
+			-dpc dropTextScrollListSelection
+			selectMasterListA		
+			;	
+		
+		selectMasterSelectMenu("selectMasterListA");
+		updateSelectionButtonCommand("selectMasterListA");
+	
+	setParent..;
+	
+	//MIDDLE COLUMN
+	string $colArrowLayoutA = `columnLayout
+		-adj true
+		-p $rowLayout
+		colArrowLayoutA
+		`;
+		
+	selectionArrangementColumnLayout();	
+	
+	//SELECT MASTER LIST B
+	string $colLayoutB = `columnLayout
+		-adj true
+		-p $rowLayout
+		selectMasterListColB
+		`;		
+		
+		selectMasterListMenuBarLayout("selectMasterListB");		
+		
+		textScrollList
+			-h 200
+			-ams true
+			-dkc ("doSelectWizDeleteKeyCommand(\"selectMasterListB\");")
+			-dcc ("doSelectWizDoubleClickCommand(\"selectMasterListB\")")
+			-sc ("doSelectWizSelectCommand(\"selectMasterListB\")")
+			-dgc dragTextScrollListSelection
+			-dpc dropTextScrollListSelection
+			selectMasterListB		
+			;
+
+		selectMasterSelectMenu("selectMasterListB");
+		updateSelectionButtonCommand("selectMasterListB");		
+			
+	setParent..;
+	
+	inspectionFrameLayout($layout);
+	/*
+	//This doesn't work yet
+	selectFromConstructorLayout($rowLayout);
+	*/
+	
+	
+}
+
+//CSV TO COMPONENT SELECTION
+//===============================================================================
+//CSV TO COMPONENT SELECTION WINDOW
+//--------------------------------------------
+global proc csvToComponentSelectionWindow()
+{
+		
+	if(`window -q -ex csvToComponentSelectionWindow` == 1){
+		deleteUI csvToComponentSelectionWindow;
+	}
+	
+	string $csvToCompSelWin = `window
+		-t "CSV To Component Selection"
+		-sizeable on
+		-resizeToFitChildren on
+		-titleBar on
+		csvToComponentSelectionWindow	
+		`;
+		
+	columnLayout
+	-adjustableColumn true
+	;
+	
+	string $cType[] = { "faces", "vertices", "edges", "uvs" };  	
+	wizOptionMenuGrpMenuItems("Component Type:", "csvToComponentSelectionTypeOptionMenuGrp", $cType);	
+	
+	string $sel[] = forceGetSelectionList();
+	string $obj = $sel[0];
+	
+	string $bc = ("string $cs[] = csvToComponentSelection(" + "\"" +  $obj + "\"" + ",`optionMenuGrp -q -v csvToComponentSelectionTypeOptionMenuGrp`,`textFieldButtonGrp -q -tx csvToComponentSelectionTextFieldButtonGrp`);"); 
+	$bc = $bc + "global string $WIZ_activeSelectList; replaceTextScrollListWithSelectedObjects($cs,$WIZ_activeSelectList);";
+	$bc = $bc + "deleteUI csvToComponentSelectionWindow;";
+	
+	string $csvTextFieldButtonGrp = `textFieldButtonGrp 
+		-l "CSV:"
+		-tx "" 
+		-bl "Create Selection"	
+		-bc $bc
+		-cal 1 "left"
+		//-cw 1 140
+		-adj 2
+		//-cal 2 "left"
+		
+		csvToComponentSelectionTextFieldButtonGrp
+		`;
+		
+	showWindow $csvToCompSelWin;	
+
+}
+
+//MENUS
+//===============================================================================
+//===============================================================================
+//SELECT MASTER SELECT MENU
+//-----------------------------------
+global proc selectMasterSelectMenu( string $textScrollList )
+{
+	string $menuLabel = "Select A";
+	if ($textScrollList == "selectMasterListB"){
+		$menuLabel = "Select B";
+	}
+	
+	// menuBarLayout
+	string $menuBarLayout = `menuBarLayout ($textScrollList + "SelectMenu")`;	
+	menu -l $menuLabel ($textScrollList + "SelectMenuMenu");
+		selectMasterSelectMenuItems($textScrollList);
+	setParent -menu..;	
+		
+	// popupMenu
+	popupMenu -p $textScrollList;		
+		selectMasterSelectMenuItems($textScrollList);
+	setParent -menu..;
+			
+}
+
+global proc selectMasterSelectMenuItems( string $textScrollList )
+{
+	menuItem -l "Select Replace" -c ("makeSelectMasterSelection(" + "\"" + $textScrollList + "\"" + ",\"replace\")");
+	menuItem -l "Select Add" -c ("makeSelectMasterSelection(" + "\"" + $textScrollList + "\"" + ",\"add\")");
+	//menuItem -l "Select Hierarchy" -c ("makeSelectMasterSelection(" + "\"" + $textScrollList + "\"" + ",\"heirarcy\")");
+	menuItem -l "Clear" -c ("makeSelectMasterSelection(" + "\"" + $textScrollList + "\"" + ",\"clear\")");
+	
+}
+
+//SELECT MASTER LIST MENU BAR LAYOUT
+//------------------------------------------
+global proc selectMasterListMenuBarLayout(string $textScrollList)
+{
+	string $menuLabel = "Select A";
+	if($textScrollList == "selectMasterListB"){
+		$menuLabel = "Select B";
+	}
+	string $autoUpdateList = $textScrollList + "AutoUpdateList";
+	string $listMB = $textScrollList + "MenuBar";
+	string $so = $textScrollList + "SingleObj";
+	string $smartSelect = $textScrollList + "SmartSelect";
+	
+	string $fullPath = $textScrollList + "FullPath";
+	string $showType = $textScrollList + "ShowType";
+	string $hierarchy = $textScrollList + "Hierarchy";
+	
+	string $geoTransforms = $textScrollList + "GeometryTransforms";
+	
+	string $transforms = $textScrollList + "Transforms";
+	string $shapes = $textScrollList + "Shapes";
+	string $lights = $textScrollList + "Lights";
+	string $cameras = $textScrollList + "Cameras";
+	string $textures = $textScrollList + "Textures";
+	string $materials = $textScrollList + "Materials";
+	
+	string $all = $textScrollList + "All";
+	string $flat = $textScrollList + "Flat";
+	
+	string $deleteAction = $textScrollList + "DeleteAction";
+	
+	string $menuBarLayoutA = `menuBarLayout	$listMB`;
+		menu -l ($menuLabel + " Options");
+		
+	//SELECT
+		menuItem -sm true -l "Select";
+			menuItem -l "Select Replace" -c ("makeSelectMasterSelection(" + "\"" + $textScrollList + "\"" + ",\"replace\")");
+			menuItem -l "Select Add" -c ("makeSelectMasterSelection(" + "\"" + $textScrollList + "\"" + ",\"add\")");
+			menuItem -l "Select Heirarchy" -c ("replaceSelectionWithHeirarchyOfSelection(" + "\"" + $textScrollList + "\"" + ")");
+			menuItem -l "Select Downstream" -c ("getAllDownstreamNodes(`ls -sl`);");
+			
+			menuItem -l "Clear" -c ("makeSelectMasterSelection(" + "\"" + $textScrollList + "\"" + ",\"clear\")");
+			menuItem -l "Select All In List" -c ("selectAllInTextScrollList(" + "\"" + $textScrollList + "\"" + ")");
+			//Auto Update Menu Item
+			
+			menuItem -l "Auto Update List" -cb false -c ("toggleSelectWizAutoSelect(" + "\"" + $autoUpdateList + "\"" + ")") $autoUpdateList;
+			menuItem -l "Remove Objects That Do Not Exist" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"removeObjectsThatDoNotExist\")");
+			menuItem -l "Disable PolySelectConstraint" -c "polySelectConstraint -dis;";
+			
+		setParent -menu..;
+			//menuItem -d true;
+	//--------------------------------------------------------------------
+	//////////////////////////////////////////////////////////////////////
+	//			RELATIONSHIPS	
+	//////////////////////////////////////////////////////////////////////
+	//--------------------------------------------------------------------		
+		//RELATIONSHIPS	
+		menuItem -sm true -l "Relationships" -to true;
+			menuItem -l "Shape" -c  ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"lsShapes\")");
+			menuItem -l "All" -cb false -c ("updateSelectionButtonCommand(" + "\"" + $textScrollList + "\"" + ")") $all;
+			menuItem -l "Heirarchy" -cb false -c ("updateSelectionButtonCommand(" + "\"" + $textScrollList + "\"" + ")") $hierarchy;
+			menuItem -l "Downstream Connections" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"getAllDownstreamNodes\")");
+			menuItem -l "Upstream Connections" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"getAllUpstreamNodes\")");
+			menuItem -l "Container" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"selectAssetContainingSelected\")");
+			menuItem -l "Select All Of Same Name" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"lsRecursive\")");
+			menuItem -l "Select All Of Same Type" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"lsAllOfSameType\")");
+			menuItem -l "Random Selection" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"selectWizRandomSelection\")");
+			menuItem -l "Future History" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"selectWizListHistory\")");
+		setParent -menu..;
+		
+		//FORMAT
+		menuItem -sm true -l "Format";				
+			menuItem -l "Full Path" -cb false -c ("updateSelectionButtonCommand(" + "\"" + $textScrollList + "\"" + ")") $fullPath;
+			menuItem -l "Show Type" -cb false -c ("updateSelectionButtonCommand(" + "\"" + $textScrollList + "\"" + ")") $showType;
+			menuItem -l "Flat" -cb false -c ("updateSelectionButtonCommand(" + "\"" + $textScrollList + "\"" + ")") $flat;
+		setParent -menu..;
+		
+	//COMPONENTS
+		menuItem -d true;		
+			menuItem -sm true -l "Components" -to true;
+			
+			//POLYGON PROBLEM AREAS
+			menuItem -sm true -l "Polygon Problem Areas" -to true;					
+			menuItem -l "High Valence Vertices" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"getHighValenceVertices\")"); 	
+				menuItem -ob true -c ("openCurrentOptionsLayout(\"highValenceVerticesOptions\");");
+			
+			menuItem -sm true -l "T Shapes";
+				menuItem -l "T Shapes" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"getTShapes\")");
+					menuItem -ob true -c ("openCurrentOptionsLayout(\"tShapesOptionsMenu\");");
+				menuItem -l "Interior Faces Of T Shapes" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"getInteriorFacesOfTShapes\")");
+				menuItem -l "T Shape Faces On Borders" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"getTShapeFacesOnBorder\")");
+					
+			setParent -menu..;
+			
+			menuItem -sm true -l "Non Manifold Geometry" -to true;
+				menuItem -l "Non Manifold Vertices" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"getNonManifoldVertices\")");
+				menuItem -l "Interior Faces Of Non Manifold Vertices" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"getInteriorFacesOfNonManifoldVertices\")");
+			
+			setParent -menu..;
+			
+			menuItem -l "Unmapped Faces" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"selectUnmappedFaces\")");
+			
+			menuItem -l "Faces With Too Many Sides" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"getFacesWithTooManySides\")");
+				menuItem -ob true -c ("openCurrentOptionsLayout(\"tooManySidesOptions\");");
+			
+			menuItem -l "Face With More Than 4 Vertices" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"getFacesWithMoreThan4Vertices\")"); 
+			
+			setParent -menu..;
+				
+			//CLOSEST TO OBJ	
+			menuItem -sm true -l "Closest To Object" -to true;
+				
+				string $getPosCom = ("string $sel[] = `ls -sl`;"+"\n"
+				+"float $t[] = `xform -q -ws -t $sel[0]`;");
+
+				menuItem -l "Closest Face" -c ($getPosCom + " getClosestMeshComponents(\"-obj \" + $sel[1] + \" -typ face -pos \" + $t[0] + \" \" + $t[1] + \" \" + $t[2]);");
+				menuItem -l "Closest Vertex" -c ($getPosCom + " getClosestMeshComponents(\"-obj \" + $sel[1] + \" -typ vertex -pos \" + $t[0] + \" \" + $t[1] + \" \" + $t[2]);");
+				menuItem -l "Closest Edge" -c ($getPosCom + " getClosestMeshComponents(\"-obj \" + $sel[1] + \" -typ edge -pos \" + $t[0] + \" \" + $t[1] + \" \" + $t[2]);");
+				menuItem -l "Closest Shell Faces" -c ($getPosCom + " getClosestMeshComponents(\"-obj \" + $sel[1] + \" -typ shellFaces -pos \" + $t[0] + \" \" + $t[1] + \" \" + $t[2]);");
+				menuItem -l "Closest Shell Vertices" -c ($getPosCom + " getClosestMeshComponents(\"-obj \" + $sel[1] + \" -typ shellVertices -pos \" + $t[0] + \" \" + $t[1] + \" \" + $t[2]);");
+				menuItem -l "Closest Shell Edges" -c ($getPosCom + " getClosestMeshComponents(\"-obj \" + $sel[1] + \" -typ shellEdges -pos \" + $t[0] + \" \" + $t[1] + \" \" + $t[2]);");
+				menuItem -l "Closest Shell Edge Perimeter" -c ($getPosCom + " getClosestMeshComponents(\"-obj \" + $sel[1] + \" -typ shellEdgePerimeter -pos \" + $t[0] + \" \" + $t[1] + \" \" + $t[2]);");
+			
+					
+			setParent -menu..;
+			
+			//DIRECTION
+			menuItem -sm true -l "Direction" -to true;
+			
+				string $getComponentsInDirectionCommand = ("float $dir[] = `floatFieldGrp -q -v getComponentsInDirectionDirectionFloatFieldGrp`;"
+				+"float $min = `intFieldGrp -q -v1 getComponentsInDirectionMinFloatFieldGrp`;"
+				+"float $max = `intFieldGrp -q -v1 getComponentsInDirectionMaxFloatFieldGrp`;"
+				+"string $comp[] = getComponentsInDirection(`ls -fl -sl`, $dir, $min, $max);"
+				+"replaceTextScrollListWithSelectedObjects($comp," + "\"" + $textScrollList + "\"" + ");");
+				
+				menuItem -l "Get Components In Direction" -c $getComponentsInDirectionCommand;
+					menuItem -ob true -c ("openCurrentOptionsLayout(\"getComponentsInDirectionOptions\");");
+								
+				menuItem -l "Get Components In Axis Direction";
+					menuItem -ob true -c ("openCurrentOptionsLayout(\"getComponentsOfTypeInAxisDirectionOptionsMenu\");");
+				
+				
+				menuItem -l "Get Components On Bounding Box Side";
+					menuItem -ob true -c ("openCurrentOptionsLayout(\"getComponentsOnBoundingBoxSideOptions\");");
+				
+				menuItem -l "Get Components In Bounding Box Side";
+					menuItem -ob true -c ("openCurrentOptionsLayout(\"getComponentsInBoundingBoxSideOptions\");");
+									
+					
+				string $ncidirCommand = ("float $dir[] = `floatFieldGrp -q -v getNextComponentInDirectionDirectionFloatFieldGrp`;"
+				+"string $sel[] = `ls -fl -sl`;"
+				+"string $comp = $sel[0];"
+				+"string $next = getNextComponentInDirection($comp, $dir);"
+				+"addObjectToTextScrollList($next," + "\"" + $textScrollList + "\"" + ");");
+				
+				menuItem -l "Get Next Component In Direction" -c $ncidirCommand;
+					menuItem -ob true -c ("openCurrentOptionsLayout(\"getNextComponentInDirectionOptions\");");
+					
+			setParent -menu..;
+			
+			//AREA
+			menuItem -sm true -l "Area" -to true;				
+				menuItem -l "Get Components In Min Max Area";
+					menuItem -ob true -c ("openCurrentOptionsLayout(\"getComponentsOfTypeInMinMaxAreaOptionsMenu\");");
+				
+			setParent -menu..;
+			
+			//ANGLE
+			menuItem -sm true -l "Angle" -to true;
+				menuItem -l "Get Components Min Max Angle";
+					menuItem -ob true -c ("openCurrentOptionsLayout(\"getComponentsOfTypeAtMinMaxAngleOptionsMenu\");");
+							
+			setParent -menu..;
+			
+			//BORDER
+			menuItem -sm true -l "Border" -to true;
+					string $componentsOnBorderCommand = ("string $type = `optionMenuGrp -q -v getComponentsOfTypeOnBorderPolyComponentsTypeOptionMenuGrp`;"
+					+"getComponentsOfTypeOnBorder(`ls -sl`, $type);");
+				menuItem -l "Get Edges On Border" -c ("getComponentsOfTypeOnBorder(`ls -sl`, \"edge\");"); 	
+			
+				menuItem -l "Get Components On Border" -c $componentsOnBorderCommand;
+					menuItem -ob true -c ("openCurrentOptionsLayout(\"getComponentsOfTypeOnBorderOptionsMenu\");");
+				menuItem -l "Get Edges On Face Selection Border" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"getEdgesOnFaceSelectionBorder\")"); 	
+				menuItem -l "Poly Border Faces" -c ("wizPolyBorderFaceSelection(`ls -sl`);");
+			setParent -menu..;
+			
+			//PROPOGATE
+			menuItem -sm true -l "Propogate" -to true;	
+				menuItem -l "Expand Point Select Constraint Until Type Is Selected";
+					menuItem -ob true -c ("openCurrentOptionsLayout(\"expandPointSelectConstraintUntilTypeIsSelectedOptions\");");
+			
+			
+				menuItem -l "Grow Selection By Edge Angle" -c ("python(\"import fx_growSelectionByEdgeAngle; fx_growSelectionByEdgeAngle.run()\");");
+				menuItem -l "Propogate Component Selection";
+					menuItem -ob true -c ("openCurrentOptionsLayout(\"propogateFaceSelectionMaxAngleOptions\");");
+			setParent -menu..;			
+			
+			menuItem -l "Select UVs In Range";
+				menuItem -ob true -c ("openCurrentOptionsLayout(\"wizSelectUVsInRangeOptions\");");
+			
+			//LIST
+			menuItem -sm true -l "List" -to true;
+				menuItem -l "Faces In Logical Order" -c ("string $sel[] = forceGetSelectionList();string $f[] = wizGetComponentFromSelection($sel,\"faces\");replaceTextScrollListWithSelectedObjects($f," + "\"" + $textScrollList + "\"" + ");");
+				menuItem -l "Vertices In Logical Order" -c ("string $comp[] = getPolyComponentsInLogicalOrder(`ls -sl`,\"vertices\");replaceTextScrollListWithSelectedObjects($comp," + "\"" + $textScrollList + "\"" + ");");
+				menuItem -l "Edges In Logical Order" -c ("string $comp[] = getPolyComponentsInLogicalOrder(`ls -sl`,\"edges\");replaceTextScrollListWithSelectedObjects($comp," + "\"" + $textScrollList + "\"" + ");");
+				menuItem -l "UVs In Logical Order" -c ("string $comp[] = getPolyComponentsInLogicalOrder(`ls -sl`,\"uvs\");replaceTextScrollListWithSelectedObjects($comp," + "\"" + $textScrollList + "\"" + ");");
+				menuItem -l "Vertices In Face Order" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"getVerticesFromFace\")");
+				menuItem -l "CSV To Component Selection" -c ("csvToComponentSelectionWindow()"); 
+				
+			setParent -menu..;
+				
+			//INTERIOR
+			menuItem -sm true -l "Interior" -to true;				
+				menuItem -l "Interior Faces Of Edges" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"getInteriorFacesOfEdges\")");
+				menuItem -l "Interior Faces Of Vertices" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"getInteriorFacesOfVertices\")");
+			setParent -menu..;
+				menuItem -l "Adjacent Components" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"getAdjacentComponents\")");
+				menuItem -l "Get Component Type" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"getAllComponentSelectionType\")");
+			
+			menuItem -l "Tri Faces" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"getTriFaces\")");
+			menuItem -l "Quad Faces" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"getQuadFaces\")");
+			menuItem -l "N Sided Faces" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"getNSidedFaces\")");
+			
+			setParent -menu..;	
+		//CONVERT SELECTION
+			menuItem -sm true -l "Convert Selection" -to true;
+			
+			//POLYGONS			
+			menuItem -sm true -l "Polygons" -to true;
+			
+			menuItem -sm true -l "Polygon Componenets";			
+			menuItem -l "To Vertices" -c ("convertPolySelectionList(" + "\"" + $textScrollList + "\"" + ",\"vertices\")");
+			menuItem -l "To Faces" -c ("convertPolySelectionList(" + "\"" + $textScrollList + "\"" + ",\"faces\")");
+			menuItem -l "To Edges" -c ("convertPolySelectionList(" + "\"" + $textScrollList + "\"" + ",\"e\")");
+			menuItem -l "To UVs" -c ("convertPolySelectionList(" + "\"" + $textScrollList + "\"" + ",\"uvs\")");
+			menuItem -l "To Vertices And Edges" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"convertSelectionToVerticesAndEdges\")");
+			
+			setParent -menu..;
+				
+			menuItem -sm true -l "Other Polygon Conversions" -to true;
+			menuItem -l "Non Manifold Vertices" -c ("evalCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"getPolyInfo NonManifoldVertices\");"); 
+			menuItem -l "Non Manifold Edges" -c ("evalCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"getPolyInfo NonManifoldEdges\");"); 
+			menuItem -l "Lamina Faces" -c ("evalCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"getPolyInfo LaminaFaces\");"); 
+			menuItem -l "Edge To Face" -c ("evalCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"getPolyInfo EdgeToFace\");"); 
+			menuItem -l "Vertex To Face" -c ("evalCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"getPolyInfo VertexToFace\");"); 
+			menuItem -l "Face To Edge" -c ("evalCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"getPolyInfo FaceToEdge\");"); 
+			menuItem -l "Face To Vertex" -c ("evalCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"getPolyInfo FaceToVertex\");"); 
+			menuItem -l "Edge To Vertex" -c ("evalCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"getPolyInfo EdgeToVertex\");"); 
+			menuItem -l "Vertex To Edge" -c ("evalCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"getPolyInfo VertexToEdge\");"); 
+			menuItem -l "Face Normals" -c ("evalCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"getPolyInfo FaceNormals\");"); 
+			setParent -menu..;					
+				
+			setParent -menu..;
+			
+			menuItem -l "Count Selected Components" -c ("string $sel[] = `ls -fl -sl`;countSelectedComponents($sel);");
+			
+			
+			setParent -menu..;
+			
+			//LIMIT TO
+		menuItem -d true;
+			
+			menuItem -sm true -l "Limit Selection";
+				menuItem -l "Single Object" -cb false $so;			
+			
+			//TYPE
+			menuItem -sm true -l "Type";
+				menuItem -l "Geometry Transforms" -cb false -c ("makeSelectMasterSelection(" + "\"" + $textScrollList + "\"" + ", \"replace\")") $geoTransforms;
+				menuItem -l "Transforms" -cb false -c ("updateSelectionButtonCommand(" + "\"" + $textScrollList + "\"" + ")") $transforms;
+				menuItem -l "Shapes" -cb false -c ("updateSelectionButtonCommand(" + "\"" + $textScrollList + "\"" + ")") $shapes;
+				menuItem -l "Lights" -cb false -c ("updateSelectionButtonCommand(" + "\"" + $textScrollList + "\"" + ")") $lights;
+				menuItem -l "Cameras" -cb false -c ("updateSelectionButtonCommand(" + "\"" + $textScrollList + "\"" + ")") $cameras;
+				menuItem -l "Textures" -cb false -c ("updateSelectionButtonCommand(" + "\"" + $textScrollList + "\"" + ")") $textures;
+				menuItem -l "Materials" -cb false -c ("updateSelectionButtonCommand(" + "\"" + $textScrollList + "\"" + ")") $materials;
+				menuItem -l "Nurbs" -cb false;	
+				
+			setParent -menu..;
+			setParent -menu..;
+			
+		menuItem -d true;
+		//SORT	
+			menuItem -sm true -l "Sort";
+				menuItem -l "Alphabetically" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"sortSelectionListAlphabetically\");");
+					menuItem -ob true -c ("openCurrentOptionsLayout(\"sortMethodOptionsMenu\");");	
+				menuItem -l "By Name" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"sortSelectionListByName\");");
+					menuItem -ob true -c ("openCurrentOptionsLayout(\"sortMethodOptionsMenu\");");	
+				menuItem -l "By Material" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"sortObjectsByMaterial\");");				
+					menuItem -ob true -c ("openCurrentOptionsLayout(\"sortMethodOptionsMenu\");");	
+				menuItem -l "By Group" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"sortObjectsByGroup\");");				
+					menuItem -ob true -c ("openCurrentOptionsLayout(\"sortMethodOptionsMenu\");");	
+				menuItem -l "By Top Down Group" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"sortObjectsByTopDownGroup\");");				
+					menuItem -ob true -c ("openCurrentOptionsLayout(\"sortMethodOptionsMenu\");");	
+				menuItem -l "By Top Down Group Shader" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"sortObjectsByTopDownGroupShader\");");				
+					menuItem -ob true -c ("openCurrentOptionsLayout(\"sortMethodOptionsMenu\");");	
+				menuItem -l "By Type" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"sortObjectsByType\");");				
+					menuItem -ob true -c ("openCurrentOptionsLayout(\"sortMethodOptionsMenu\");");	
+				menuItem -l "By Closest To Point" -c ("sortByClosestToPoint(`ls -fl -sl`,{0,0,0});");				
+					menuItem -ob true -c ("openCurrentOptionsLayout(\"sortByClosestToPointOptions\");");
+				menuItem -l "By Direction" -c ("sortByDirection(`ls -fl -sl`,{0,0,1});");				
+					menuItem -ob true -c ("openCurrentOptionsLayout(\"sortByDirectionOptions\");");	
+				menuItem -l "By Distance Direction" -c ("sortByDistanceDirection(`ls -fl -sl`,{0,0,0},{0,0,1});");				
+					menuItem -ob true -c ("openCurrentOptionsLayout(\"sortByDistanceDirectionOptions\");");							
+					
+				menuItem -sm true -l "Geometry";
+					menuItem -l "By Matching Poly Geometry" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"sortByMatchingPolyGeometry\");");
+						string $smom = "{ \"sortMethodOptionsMenu\", \"sortByMatchingGeometryOptionsMenu\" }";
+						menuItem -ob true -c ("openMultiCurrentOptionsLayouts(" + $smom + ");");
+				setParent -menu..;
+				
+				menuItem -l "By Matching Transform" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"sortByMatchingTransforms\");");
+						string $smom = "{ \"sortMethodOptionsMenu\", \"sortByMatchingTransformsOptionsMenu\" }";
+						menuItem -ob true -c ("openMultiCurrentOptionsLayouts(" + $smom + ");");
+							
+				menuItem -sm true -l "UV";			
+					menuItem -l "Poly Component By UV Space U Direction" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"sortPolyComponentByUVSpaceU\");");
+					menuItem -l "Poly Component By UV Space V Direction" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"sortPolyComponentByUVSpaceV\");");
+					menuItem -l "UVs Into Rows And Columns" -c ("sortUVsIntoRowColumns(\"-sl -u\");");
+					menuItem -l "Wiz Sort UVs" -c ("wizSortUVs(\"-sl\");");
+					
+				
+				setParent -menu..;
+				
+				menuItem -l "Shuffle" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"shuffleSeperatedSortedArray\");");	
+					menuItem -ob true -c ("openCurrentOptionsLayout(\"sortMethodOptionsMenu\");");	
+				
+			setParent -menu..;
+			
+			menuItem -sm true -l "Rename";
+				menuItem -l "Renumber All" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"renumberAllObjects\");");
+				menuItem -l "Remove Special Characters" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"removeSpecialCharactersFromSelectionList\");");
+				
+		setParent -menu..;
+				
+		menuItem -sm true -l "List All Of Type" -to true;
+		
+			menuItem -l "Selected Type" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"wizListAllOfSelectedType\");");
+			
+			menuItem -sm true -l "Geometry" -to true;
+			showAllOfTypeMenu("geometry", $textScrollList);
+			setParent -menu..;
+			
+			menuItem -sm true -l "DrawDB" -to true;
+			showAllOfTypeMenu("drawdb", $textScrollList);
+			setParent -menu..;
+			
+			menuItem -sm true -l "Dynamics" -to true;
+			showAllOfTypeMenu("dynamics", $textScrollList);
+			setParent -menu..;
+			
+			menuItem -sm true -l "Shaders" -to true;
+			showAllOfTypeMenu("shader", $textScrollList);
+			setParent -menu..;
+			
+			menuItem -sm true -l "Textures" -to true;
+			showAllOfTypeMenu("texture", $textScrollList);
+			setParent -menu..;
+			
+			menuItem -sm true -l "Utilities" -to true;
+			showAllOfTypeMenu("utility", $textScrollList);
+			setParent -menu..;
+			
+			menuItem -sm true -l "Lights" -to true;
+			showAllOfTypeMenu("light", $textScrollList);
+			setParent -menu..;
+			
+		setParent -menu..;
+		
+		menuItem -d true;
+		
+			//INSTANCE SELECTION
+			menuItem -sm true -l "Instances";
+				menuItem -l "Get All Instances" -c ("string $allInst[] = getAllInstances(); replaceTextScrollListWithSelectedObjects($allInst, " + "\"" + $textScrollList + "\"" + ")");
+				menuItem -l "Select Instances" -c ("passSelectionListToCommand(" + "\"" + $textScrollList + "\"" + ",\"selectAllInstancesFromSelection\");");
+				menuItem -l "Get Original Of Instance" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"getOriginalOfInstance\");");
+				menuItem -l "Remove Instances From Selection" -c ("removeInstancesFromSelectionList(" + "\"" + $textScrollList + "\"" + ")");
+			
+			setParent -menu..;
+			
+		menuItem -d true;
+			menuItem -sm true -l "Intersect Lists";
+				string $intListCommandAB = (
+				"string $intersection[] = subtractTextScrollListFromTextScrollList(\"selectMasterListA\", \"selectMasterListB\");"+"\n"
+				+"replaceTextScrollListWithSelectedObjects($intersection, \"selectMasterListA\");"+"\n"
+				);
+				string $intListCommandBA = (
+				"string $intersection[] = subtractTextScrollListFromTextScrollList(\"selectMasterListB\", \"selectMasterListA\");"+"\n"
+				+"replaceTextScrollListWithSelectedObjects($intersection, \"selectMasterListB\");"+"\n"
+				);
+				menuItem -l "A - B" -c $intListCommandAB;
+				menuItem -l "B - A" -c $intListCommandBA;
+			setParent -menu..;
+				
+			menuItem -sm true -l "Commands";
+				menuItem -sm true -l "Repeat Last";
+					menuItem -l "Do Repeat Last On List" -ecr false -c ("repeatLastOnAllTextScrollList(" + "\"" + $textScrollList + "\"" + ");");
+					menuItem -l "Do Repeat Last On List A And B" -ecr false -c ("repeatLastOnSelectWizLists");					
+				setParent -menu..;
+				
+				menuItem -sm true -l "List Action Options";
+					menuItem -l "Delete From List And Scene" -cb false $deleteAction;
+				setParent -menu..;
+				
+				menuItem -sm true -l "Expressions";
+					menuItem -l "New Get Object List Expression" -c ("passSelectionListToCommand(" + "\"" + $textScrollList + "\"" + ",\"makeNewSelectionMasterGetObjectExpression\");");
+				setParent -menu..;
+				
+			//PRINTING
+			textScrollListPrintFunctionsMenuItems($textScrollList);
+			/*
+			menuItem -sm true -l "Print";
+				menuItem -l "Array - {\"Object1\",\"Object2\"}" -c ("passSelectionListToCommand(" + "\"" + $textScrollList + "\"" + ",\"printBracketedArrayList\");");
+				menuItem -l "Array - Object1,Object2" -c ("passSelectionListToCommand(" + "\"" + $textScrollList + "\"" + ",\"printCSVArrayList\");");
+				menuItem -l "Print Test Int Array" -c ("printTestIntArray(0,100,20);");
+					menuItem -ob true -c ("openCurrentOptionsLayout(\"printTestArrayOptions\");");
+				menuItem -l "Print Test Float Array" -c ("printTestFloatArray(0,100,20);");
+					menuItem -ob true -c ("openCurrentOptionsLayout(\"printTestArrayOptions\");");
+				menuItem -l "Print Test String Array" -c ("printTestStringArray(0,100,20,\"float\");");
+					menuItem -ob true -c ("openCurrentOptionsLayout(\"printTestArrayOptions\");");
+			
+			setParent -menu..;
+				*/
+				
+		menuItem -d true;
+		setParent -menu..;
+		menuItem -l "Help" -c ("openSelectWizHelp();");
+		
+		
+	//SETS MENU
+		
+		menu -l "Sets";
+			
+			string $setFromAllCommand = ("string $ai[] = `textScrollList -q -ai \"" + $textScrollList + "\"`;"
+			+"createSetFromSelection($ai, \"\");");
+			
+			string $setFromSelectedCommand = ("string $si[] = `textScrollList -q -si \"" + $textScrollList + "\"`;"
+			+"createSetFromSelection($si, \"\");");
+			
+			string $setFromSortedListCommand = ("string $ai[] = `textScrollList -q -ai \"" + $textScrollList + "\"`;"
+			+"createSetsFromSorted($ai);");
+			
+			menuItem -l "Create Set From All" -c $setFromAllCommand;
+			menuItem -l "Create Set From Selected" -c $setFromAllCommand;
+			menuItem -l "Create Sets From Sorted List" -c $setFromSortedListCommand;
+			menuItem -l "Empty And Delete Selected Sets" -c ("emptyAndDeleteSelectedSets(`ls -sl`);");
+			
+			//FINISH THIS
+			/*
+			string $sortByTypeSetCom = ("string $sel[] = `ls`;"+"\n"
+			+"makeSelectMasterSelection(\"selectMasterListB\",\"replace\");"+"\n"
+			+"
+			*/
+			
+			string $sortByTypeSetCom = (
+			"string $type[] = { \"Geometry\", \"DrawDB\", \"Dynamics\", \"Shaders\", \"Textures\", \"Utilities\", \"Lights\" };"+"\n"
+			+"string $allSets[];"+"\n"
+			+"for ($i=0;$i<`size $type`;$i++){"+"\n"
+			+"	string $nodeTypes[] = `listNodeTypes $type[$i]`;"+"\n"
+			+"	for ($p=0;$p<`size $nodeTypes`;$p++){"+"\n"
+			+"		string $all[] = `ls -type $nodeTypes[$p]`;"+"\n"
+			+"		if (`size $all` > 0){"+"\n"
+			+"			string $sortSet = createSetFromSelection($all, ($nodeTypes[$p] + \"Set\"));"+"\n"
+			+"			$allSets[`size $allSets`] = $sortSet;"+"\n"
+			+"		}"+"\n"		
+			+"	}"+"\n"	
+			+"}"+"\n"
+			+"string $allGoodSets[];"+"\n"
+			+"for ($i=0;$i<`size $allSets`;$i++){"+"\n"
+			+"	if (`objExists $allSets[$i]` == 1){"+"\n"
+			+"		$allGoodSets[`size $allGoodSets`] = $allSets[$i];"+"\n"
+			+"	}"+"\n"
+			+"}"+"\n"
+			+"createSetFromSelection($allGoodSets, (\"AllObjectsByTypeSet\"));"+"\n"
+			);
+			
+			menuItem -l "Sort All Objects Into Sets By Type" -c $sortByTypeSetCom;
+			
+		setParent -menu..;
+		
+	//SHOW MENU	
+		menu -l "Show";			
+			menuItem -l "Isolate Selected" -c ("lsVisHi(`ls -sl`);setIsolateSelectState(1);");
+			menuItem -l "Isolate Selected In List" -c ("passSelectionListSelectedToCommand(" + "\"" + $textScrollList + "\"" + ",\"focusOnAndIsolateAllSelected\");");
+			menuItem -l "Isolate All In List" -c ("passSelectionListToCommand(" + "\"" + $textScrollList + "\"" + ",\"focusOnAndIsolateAllSelected\");");
+			menuItem -l "Turn Off Isolate" -c ("setIsolateSelectState(0);");
+			menuItem -l "Show All" -c ("passSelectionListToCommand(" + "\"" + $textScrollList + "\"" + ",\"focusOnAndShowAllSelected\");");
+			menuItem -l "Show Options" -c ("openCurrentOptionsLayout(\"selectWizSelectCommandsOptions\");");
+			menuItem -l "Move Selected Into View" -c ("moveSelectedIntoView(`ls -sl`);");
+					
+
+			
+		setParent -menu..;
+		
+	
+}
+
+global proc nodeTypeMenuItems( string $textScrollList )
+{
+		
+	menuItem -sm true -l "List All Of Type" -to true;
+	
+		menuItem -sm true -l "Geometry" -to true;
+		showAllOfTypeMenu("geometry", $textScrollList);
+		setParent -menu..;
+		
+		menuItem -sm true -l "DrawDB" -to true;
+		showAllOfTypeMenu("drawdb", $textScrollList);
+		setParent -menu..;
+		
+		menuItem -sm true -l "Dynamics" -to true;
+		showAllOfTypeMenu("dynamics", $textScrollList);
+		setParent -menu..;
+		
+		menuItem -sm true -l "Shaders" -to true;
+		showAllOfTypeMenu("shader", $textScrollList);
+		setParent -menu..;
+		
+		menuItem -sm true -l "Textures" -to true;
+		showAllOfTypeMenu("texture", $textScrollList);
+		setParent -menu..;
+		
+		menuItem -sm true -l "Utilities" -to true;
+		showAllOfTypeMenu("utility", $textScrollList);
+		setParent -menu..;
+		
+		menuItem -sm true -l "Lights" -to true;
+		showAllOfTypeMenu("light", $textScrollList);
+		setParent -menu..;
+		
+	setParent -menu..;
+
+
+}
+
+//SELECTION ARRANGEMENT COLUMN LAYOUT
+//-------------------------------------------
+global proc selectionArrangementColumnLayout()
+{
+	iconTextButton
+		-i "wiz/Arrow-Up-icon.png"
+		-c "moveTextScrollListSelected(-1)"
+		;
+		
+	iconTextButton
+		-i "wiz/Arrow-Down-icon.png"
+		-c "moveTextScrollListSelected(1)"
+		;
+		
+	iconTextButton
+		-i "wiz/arrowMoveRightGreen1.png"
+		-c "moveSelectionFromActiveListToTextScrollListDir(1)"
+		;
+
+	iconTextButton
+		-i "wiz/arrowMoveLeftGreen1.png"
+		-c "moveSelectionFromActiveListToTextScrollListDir(-1)"
+		;	
+}
+
+//SELECT MASTER SELECTION METHODS
+//===============================================================================
+//THIS IS HOW WE MAKE A SELECTION FROM TAGS
+//MAKE SELECT MASTER SELECTION
+//-------------------------------------
+global proc makeSelectMasterSelection( string $textScrollList, string $tag)
+{
+	global string $WIZ_lsTag[];
+	//string $lssl[] = `ls -sl`;
+	
+	if ($tag == "clear"){
+		clearTextScrollList($textScrollList);
+		return;
+	}
+	string $ls = "ls";
+	for ($i=0;$i<`size $WIZ_lsTag`;$i++){
+		$ls += " " + $WIZ_lsTag[$i];
+	}
+	
+	//$ls = $ls + " -sl";
+	string $sel[] = `eval($ls)`;
+	
+	if (`menuItem -q -cb ($textScrollList + "GeometryTransforms")`){
+		$sel = getGeometryTransforms($sel);	
+	}
+	
+	//debugList("ls", {$ls}, 1, "add");
+	if ($tag == "add"){
+		addSelectedObjectsToTextScrollList($sel,$textScrollList);
+	} else if($tag == "replace"){
+		replaceTextScrollListWithSelectedObjects($sel,$textScrollList);
+	}
+}
+
+//UPDATE SELECTION BUTTON COMMAND
+//-------------------------------------------
+global proc updateSelectionButtonCommand( string $textScrollList )
+{
+	int $fullPath = `menuItem -q -cb ($textScrollList + "FullPath")`;
+	int $hierarchy = `menuItem -q -cb ($textScrollList + "Hierarchy")`;
+	
+	// leaf
+	
+	int $showType = `menuItem -q -cb ($textScrollList + "ShowType")`;
+	int $transforms = `menuItem -q -cb ($textScrollList + "Transforms")`;
+	int $shapes = `menuItem -q -cb ($textScrollList + "Shapes")`;
+	int $lights  = `menuItem -q -cb ($textScrollList + "Lights")`;
+	int $cameras = `menuItem -q -cb ($textScrollList + "Cameras")`;
+	int $textures = `menuItem -q -cb ($textScrollList + "Textures")`;
+	int $materials = `menuItem -q -cb ($textScrollList + "Materials")`;
+	int $all = `menuItem -q -cb ($textScrollList + "All")`;
+	int $flat = `menuItem -q -cb ($textScrollList + "Flat")`;
+	
+	global string $WIZ_lsTag[];
+	string $tag[] = getSelectMasterTags("tag");
+	
+	if($fullPath){ $WIZ_lsTag[0] = $tag[0];} else { $WIZ_lsTag[0] = "";}
+	if($showType){ $WIZ_lsTag[1] = $tag[1];} else { $WIZ_lsTag[1] = "";}
+	if($hierarchy){ $WIZ_lsTag[2] = $tag[2];} else { $WIZ_lsTag[2] = "";}
+	
+	//if($showType){ $WIZ_lsTag[3] = $tag[3];} else { $WIZ_lsTag[3] = "";}
+	
+	if($transforms){ $WIZ_lsTag[4] = $tag[4];} else { $WIZ_lsTag[4] = "";}
+	if($shapes){ $WIZ_lsTag[5] = $tag[5];} else { $WIZ_lsTag[5] = "";}
+	if($lights){ $WIZ_lsTag[6] = $tag[6];} else { $WIZ_lsTag[6] = "";}
+	if($cameras){ $WIZ_lsTag[7] = $tag[7];} else { $WIZ_lsTag[7] = "";}
+	if($textures){ $WIZ_lsTag[8] = $tag[8];} else { $WIZ_lsTag[8] = "";}
+	if($materials){ $WIZ_lsTag[9] = $tag[9];} else { $WIZ_lsTag[9] = "";}
+	
+	//WARNING THIS ONE IS OPPOSITE
+	if($all){ $WIZ_lsTag[10] = "";} else { $WIZ_lsTag[10] = $tag[10];}
+	
+	if($flat){ $WIZ_lsTag[11] = $tag[11];} else { $WIZ_lsTag[11] = "";}
+	
+	makeSelectMasterSelection($textScrollList, "replace");
+}
+
+//GET SELECT MASTER TAGS
+//-------------------------------------
+global proc string[] getSelectMasterTags(string $returnType)
+{
+	//global string $WIZ_lsTag[9];
+	
+	string $tag[] = { "-l","-st","-dag","-lf","-tr","-s","-lt","-ca","-tex","-mat", "-sl","-fl"};
+	string $fullTag[] = { "-long", "-showType", "-dagObjects", "-transforms", "-shapes", "-lights", "-cameras","-textures","-materials", "-selected","-flat" };
+	string $menuItem[] = { "Full Path", "ShowType", "Hierarchy", "Transforms", "Shapes", "Lights", "Cameras", "Textures","Materials", "Selected","Flat"};
+	int $initSize = `size $tag`;
+	string $init[]; 
+	$init[$initSize] = "";
+	
+	
+	if($returnType == "tag"){
+		return $tag;
+	} else if($returnType == "fullTag"){
+		return $fullTag;
+	} else if($returnType == "menuItem"){
+		return $menuItem;
+	} else if($returnType == "init"){
+		return $init;
+	}
+
+}
+
+//SELECT FROM CONSTRUCTOR LAYOUT
+//-------------------------------------
+global proc selectFromConstructorLayout(string $parent)
+{
+	string $colLayoutC = `columnLayout
+			-adj true
+			-p $parent
+			selectFromConstructorLayout
+			`;
+			
+	button
+		-label "Select"
+		-c "makeSelectionFromSelectFromConstructor"
+		;	
+		
+	addTypeRelationOptionMenuGrp($colLayoutC, 0);
+	
+	setParent..;
+
+}
+
+//MAKE NEW SELECTION MASTER GET OBJECT EXPRESSION
+//----------------------------------------------------
+global proc makeNewSelectionMasterGetObjectExpression(string $sel[])
+{
+	global string $WIZ_activeSelectList;
+	string $exp = newGetObjectListExpression($sel,$WIZ_activeSelectList);
+
+}
+
+//ADD TYPE RELATION OPTION MENU GRP
+//----------------------------------------------------
+global proc addTypeRelationOptionMenuGrp(string $parent, int $count)
+{
+	string $type[] = getSelectConstructorTypeList();
+	string $rel[] = getObjectRelationTypeList();
+	
+	optionMenuGrp
+		-p $parent
+		("selectFromConstructorOptionMenuGrp" + $count)
+		;
+		for($i=0;$i<`size $type`;$i++){
+			menuItem -l $type[$i] -p (("selectFromConstructorOptionMenuGrp" + $count) + "|OptionMenu");
+		}
+		
+	optionMenuGrp
+		-p $parent
+		("objectRelationshipOptionMenuGrp" + $count)
+		;
+		for($i=0;$i<`size $rel`;$i++){
+			menuItem -l $rel[$i] -p (("objectRelationshipOptionMenuGrp" + $count) + "|OptionMenu");
+		}
+	
+}
+
+//GET SELECT CONSTRUCTOR TYPE LIST
+//----------------------------------------------------
+global proc string[] getSelectConstructorTypeList()
+{
+	string $type[] = { "transforms", "shapes", "geometry", "materials"};
+	return $type;
+}
+
+//GET OBJECT RELATION TYPE LIST
+//----------------------------------------------------
+global proc string[] getObjectRelationTypeList()
+{
+	string $rel[] = { "below", "allBelow", "above", "allAbove"};
+	return $rel;
+}
+
+//SHOW ALL OF TYPE MENU
+//=======================================
+global proc showAllOfTypeMenu( string $type , string $textScrollList )
+{
+	string $nodeTypes[] = `listNodeTypes $type`;
+	for ($i=0;$i<`size $nodeTypes`;$i++){
+		string $c = ("string $all[] = `ls -type " + $nodeTypes[$i] + "`; replaceTextScrollListWithSelectedObjects($all, \"" + $textScrollList + "\");");
+		menuItem -l $nodeTypes[$i] -c $c;
+		
+	}
+}
+
+
+//SELECT SCRIPT JOBS
+//================================================================================
+//START
+//START SELECT WIZ AUTO SELECT SCRIPT JOB
+//-----------------------------------------
+global proc int startSelectWizAutoSelectScriptJob()
+{
+	int $jobNum = getWizScriptJobNumber("autoSelectWiz");
+	if(`scriptJob -ex $jobNum`){
+		return $jobNum;
+	}
+	$jobNum = `scriptJob -e "SelectionChanged"	("updateCurrentSelectMasterListSelection()")`;
+	putWizScriptJob("autoSelectWiz", $jobNum);
+	return $jobNum;
+
+}
+
+//STOP
+//STOP SELECT WIZ AUTO SELECT SCRIPT JOB
+//-----------------------------------------
+global proc stopSelectWizAutoSelectScriptJob()
+{
+	int $jobNum = getWizScriptJobNumber("autoSelectWiz");
+	if($jobNum == -1){ return;}
+	if(`scriptJob -ex $jobNum`){
+		scriptJob -f -k $jobNum;
+	
+	}
+}
+
+//TOGGLE ON/OFF
+//-----------------------------------------
+global proc toggleSelectWizAutoSelect(string $menuItem)
+{
+	int $state = `menuItem -q -cb $menuItem`;
+	print("Toggle Select State: " +  $state + "\n");
+	if($state == 1){
+		startSelectWizAutoSelectScriptJob();
+		print("Starting Auto Select\n");
+	} else {
+		stopSelectWizAutoSelectScriptJob();
+		print("Stopping Auto Select\n");
+	}
+}
+
+//AUTO UPDATE SELECTION LIST
+//-----------------------------------------
+global proc updateCurrentSelectMasterListSelection()
+{
+	global string $WIZ_activeSelectList;
+	string $si[] = `textScrollList -q -si $WIZ_activeSelectList`;
+	string $sel[] = `ls -sl`;
+	//Dont reselect what is aleady selected in the textscrolllist
+	if (`size $sel` == `size $si`){
+		if(stringArrayContainsSame($sel, $si) == 1){
+			return;	
+		}	
+	}
+	replaceTextScrollListWithSelectedObjects($sel, $WIZ_activeSelectList);
+}
+
+//SELECTING
+//===============================================================================
+//===============================================================================
+
+//SELECT NOTHING
+//---------------------------------
+global proc selectNothing()
+{
+	global string $gSelect;
+	setToolTo $gSelect;
+	selectMode -co;
+	selectMode -object;
+	select -cl;
+}
+
+//SMART SELECT GEOMETRY OBJECTS
+//---------------------------------
+global proc string[] smartSelectGeometryObjects(string $sel[])
+{
+	int $allGeoTransforms = isSelectionAllGeometryTransforms($sel);
+	int $allGroups = isSelectionAllGroups($sel);
+	string $transf[];
+	string $groups[];
+	string $transfUnderGroups[];
+	string $tempSel[];
+	if ($allGeoTransforms){
+		debugML4("Selection contains only Geometry Transforms" + "\n");
+		$transf = $sel;
+	} else if($allGroups){
+		debugML4("Selection contains only Group Transforms" + "\n");
+		//List the transforms of any mesh or nurbsSurface node in the heirarchy;
+		$transf = `eval("listTransforms (\" -dag -v -type mesh -type nurbsSurface " + stringArrayToString($sel, " ") + "\")")`;
+		$groups = lsGroupsFromSelection($transf);
+		stringArrayRemove($groups,$transf);
+	} else{
+		debugML4("Selection contains Mix of Groups and Other Transforms" + "\n");
+		$groups = lsGroupsFromSelection($sel);
+	
+		$transfUnderGroups = `eval("listTransforms (\" -dag -v -type mesh -type nurbsSurface " + stringArrayToString($groups, " ") + "\")")`;
+	
+		$transf = `eval("listTransforms (\" -dag -v -type mesh -type nurbsSurface " + stringArrayToString($sel, " ") + "\")")`;
+		appendStringArray($transf,$transfUnderGroups,`size $transfUnderGroups`);
+		stringArrayRemove($groups, $transf);
+	}
+	
+	$transf = stringArrayRemoveDuplicates($transf);
+	
+	return $transf;	
+
+}
+
+//@ SMART SELECT OBJECTS OF TYPE
+//====================================================================
+/*****************************************************************//**
+	This will search through relatives and connections to try to find an object of type.
+	<hr>
+	<b>Synopsis</b><br>
+	smartSelectObjectsOfType [string $sel[]] [-to string] [-typ string ]<br>
+	<b>Order or precedence</b><br><hr>
+	[1] In selection <br>
+	[2] Shape node of selection <br>
+	[3] Children of selection <br>
+	[4] All descendants of selection  <br>
+	[5] All connection to all descendants of selection <br> 
+	
+	<b><I>[6]Would be nice to add a recursive search of connected nodes.</i></b><br>
+	
+	
+	<b>Return value</b><br>
+	string[] any objects of type found
+	
+	<b>Flags</b><br>
+	-type(-typ), -transformOf(-to)
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	string $selOfType[] = smartSelectObjectsOfType(`ls -sl`, "mesh");
+	
+	</code>
+*********************************************************************/
+global proc string[] smartSelectObjectsOfType( string $sel[], string $flags )
+{
+	//wizlog ("[@] smartSelectObjectsOfType");
+	//wizlog ((niceArrayList("		[#] Selected [#]", $sel)));
+	
+	$sel = wizValidateSelected($sel);
+	string $type = $flags;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-to" : case "-transformOf" :
+			break;
+				
+			case "-typ" : case "-type" :
+			$type = $tok[($i + 1)];
+			break;
+			
+		}
+	}
+	
+	//wizlog ("	[#] Type To Find : " + $type + " [#]");
+	
+	string $return[] = `ls -typ $type $sel`;
+	string $checked[];
+	if (`size $return` == 0){
+		appendStringArray($checked, $sel, `size $sel`);
+		string $s[] = `listRelatives -s $sel`;
+		$return = `ls -type $type $s`;
+		if (`size $return` == 0){
+			appendStringArray($checked, $s, `size $s`);
+			string $c[] = `listRelatives -c $sel`;
+			$return = `ls -type $type $c`;
+			if (`size $return` == 0){
+				appendStringArray($checked, $c, `size $c`);
+				string $ad[] = `listRelatives -ad $sel`;
+				$return = `ls -type $type $ad`;
+				
+				if (`size $return` == 0){
+					string $ac[] = `listHistory -ac $sel`;
+					$return = `ls -type $type $ac`;
+					if (`size $return` == 0){
+						string $af[] = `listHistory -f on -af $sel`;
+						$return = `ls -type $type $af`;
+						
+						if (`size $return` == 0){
+							string $lh[] = `listHistory -f on -af -ag on -ac $sel`;
+							$return = `ls -type $type $lh`;
+						
+						}
+						
+					}
+					
+				
+				}
+				/*
+				if (`size $return` == 0){
+					appendStringArray($checked, $ad, `size $ad`);
+					string $conChecked[];
+					for ($i=0;$i<`size $checked`;$i++){
+						string $con[] = `listConnections $checked[$i]`;
+						for ($p=0;$p<`size $con`;$p++){
+							string $conRel[] = `listRelatives -ad $con[$p]`;
+							string $conRelType[] = `ls -type $type $conRel`;
+							if (`size $conRelType` > 0 ){
+								appendStringArray($return, $conRelType, `size $conRelType`);
+							}
+						}			
+						
+						appendStringArray($conChecked, $con, `size $con`);
+						string $isType[] = `ls -type $type $con`;
+						if (`size $isType` > 0 ){
+							appendStringArray($return, $isType, `size $isType`);
+						}
+					}
+					appendStringArray($checked, $conChecked, `size $conChecked`);
+				}
+			}
+			*/
+			}
+		}
+	}
+	
+	if (`size $return` == 0){
+		//wizLog("	[!] Could Not Find Any Objects Of Type : " + $type + " From Selection [!]");
+		//wizLog("	[#] Checked Objects : " + (niceArrayList("	[#] Seached Objects : ", $checked)));
+	}
+	//wizLog("	[#] Checked Objects : " + (niceArrayList("	[#] Seached Objects : ", $checked)));
+	return $return;
+}
+
+//SELECTING ALL
+//=====================================
+//SELECT ALL IN ARRAY
+//-----------------------
+global proc selectAllInArray(string $obj[])
+{
+	select -r $obj;	
+}
+
+//SELECT ALL OBJECTS IN ARRAY
+//-----------------------------
+global proc selectAllObjectsInArray(string $obj[])
+{	
+	select -cl;
+	//Make sure we don't have a list of objects that don't exist before we try to select them and get errors
+	string $sel[];
+	appendStringArray($sel,$obj,`size $obj`);
+	$sel = removeObjectsThatDontExist($sel);
+	select -r $sel;
+}
+
+//ADD SELECT ALL OBJECTS IN ARRAY
+//-----------------------------------
+global proc addSelectAllObjectsInArray(string $obj[])
+{
+	select -add $obj;
+}
+
+//TEST FOR TYPE
+//===============================================================================
+//IS POLY GEOMETRY
+//---------------------------
+global proc int isPolyGeometry(string $obj)
+{
+	if(`objExists $obj` == 0){return 0;}
+	string $rel[] = `listRelatives -type mesh $obj`;
+	if(`size $rel` > 0){
+		return 1;	
+	} else {
+		return 0;	
+	}
+}
+
+//IS GEOMETRY TRANSFORM
+//---------------------------
+global proc int isGeometryTransform(string $sel)
+{
+	if(`objExists $sel` == 0){return 0;}
+	string $rel[] = `listRelatives -type mesh -typ nurbsSurface -typ subdiv $sel`;
+	if(`size $rel` > 0){
+		return 1;	
+	} else {
+		return 0;	
+	}
+}
+
+//IS SELECTION ALL GEOMETRY TRANSFORMS
+//-------------------------------------------
+global proc int isSelectionAllGeometryTransforms(string $sel[])
+{
+	string $geoTrans[] = getGeometryTransforms($sel);
+	if (`size $sel` == `size $geoTrans`){
+		return 1;
+	} else {
+		return 0;
+	}
+}
+
+//IS GROUP
+//---------------------------
+global proc int isGroup(string $obj)
+{
+	if(`objExists $obj` == false){ return 0;}
+	string $transforms[] = `ls -tr $obj`;
+	if(`size $transforms` == 0){ return 0;}
+	string $rel[] = `listRelatives -s $transforms`;
+	if(`size $rel` == 0){
+		return 1;
+	} else {
+		return 0;
+	}
+}
+
+//IS SELECTED GROUP
+//-----------------------------------
+global proc int isSelectedGroup(string $sel[])
+{
+	int $i;
+	for($i=0;$i<`size $sel`;$i++){
+		if(`objExists $sel[$i]` == false){ continue;}
+		string $rel[] = `listRelatives  -s $sel[$i]`;
+		if(`size $rel` == 0){
+			return 1;
+		} else {
+			return 0;
+		}
+	}
+	return 0;
+}
+
+//IS SELECTION ALL GROUPS
+//-----------------------------------
+global proc int isSelectionAllGroups(string $sel[])
+{
+	int $groupCount = 0;
+	for($i=0;$i<`size $sel`;$i++){
+		if(`objExists $sel[$i]` == false){ continue;}
+		string $rel[] = `listRelatives  -s $sel[$i]`;
+		if(`size $rel` == 0){
+			$groupCount++;
+		} 
+	}
+	if($groupCount == `size $sel`){
+		return 1;
+	} else {
+		return 0;
+	}	
+}
+
+//IS COMPONENT SELECTION
+//---------------------------
+global proc int isComponentSelection(string $sel)
+{
+	string $tok[];
+	int $numTok = `tokenize $sel "." $tok`;
+	if($numTok > 1){
+		return 1;	
+	} else {
+		return 0;	
+	}
+}
+
+//IS FACE SELECTION
+//---------------------------
+global proc int isFaceSelection(string $sel[])
+{
+	int $isFace = 1;
+	for($i=0;$i<`size $sel`;$i++){
+		string $tok[] = tokenizeString($sel[$i], ".");
+		if(startsWith($tok[1], "f") == 0){
+				$isFace = 0;
+				return 0;
+		}
+	}
+	return $isFace;
+}
+
+//GET TRANSFORMS OF TYPE
+//================================================================================
+//================================================================================
+
+global proc string[] lsVisHi(string $sel[])
+{
+	
+	select -r -vis -hi $sel;
+	string $visHi[] = `ls -sl`;
+	return $visHi;
+}
+
+//GET OBJECTS OF TYPE FROM SELECTION
+//===============================================
+global proc string[] getObjectsInSelectedGroups(string $sel[])
+{
+	string $heirarchy[];
+	int $i;
+	for ($i=0;$i<`size $sel`;$i++){
+		//Select any node that is visible in the heirarchy of selected
+		select -r -vis -hi $sel[$i];
+		//List the transforms of any mesh or nurbsSurface node in the heirarchy
+		string $transf[] = `listTransforms "-v -type mesh -type nurbsSurface -sl"`;
+		appendStringArray($heirarchy, $transf, `size $transf`);	
+	}
+	return $heirarchy;
+}
+
+//GET GEOMETRY TRANSFORMS IN HEIRARCHY
+//---------------------------------------------
+global proc string[] getGeometryTransformsInHeirarchy(string $sel[])
+{
+	string $t[] = `eval("listTransforms (\" -dag -typ mesh -typ nurbsSurface " + stringArrayToString($sel, " ") + "\")")`;
+	$t = stringArrayRemoveDuplicates($t);
+	return $t;	
+
+}
+
+//GET CHILD GEOMETRY TRANSFORMS
+//--------------------------------
+global proc string[] getChildGeometryTransforms(string $sel[])
+{
+	//printProc("getChildGeometryTransforms");
+	string $child[] = `listRelatives -c $sel`;
+	string $geometry[] = getGeometryTransforms($child);
+	return $geometry;	
+}
+
+//GET GEOMETRY TRANSFORMS
+//--------------------------------
+global proc string[] getGeometryTransforms(string $sel[])
+{
+	//printProc("getGeometryTransforms");
+	//string $geo[] = removeObjectsThatDontExist($sel);
+	//$geo = removeSeparators($geo);
+	string $tr[] = `ls -tr $sel`;
+	string $rel[] = `listRelatives -typ mesh -typ nurbsSurface $tr`;
+	string $t[];
+	if (`size $rel` > 0){
+		$t = `eval("listTransforms (\"" +  stringArrayToString($rel, " ") + "\")")`;
+	}
+	$t = stringArrayRemoveDuplicates($t);
+	return $t;
+
+}
+
+//GET NURBS TRANSFORMS
+//--------------------------------
+global proc string[] getNurbsTransforms(string $sel[])
+{
+	//printProc("getNurbsTransforms");
+	$sel = removeObjectsThatDontExist($sel);
+	$sel = removeSeparators($sel);
+	string $tr[] = `ls -tr $sel`;
+	string $rel[] = `listRelatives -typ nurbsSurface $tr`;
+	string $t[];
+	if(`size $rel` > 0){
+		$t = `eval("listTransforms (\"" +  stringArrayToString($rel, " ") + "\")")`;
+	}
+	$t = stringArrayRemoveDuplicates($t);
+	return $t;	
+}
+
+//GET OBJECT FROM COMPONENT
+//--------------------------------------
+global proc string getObjectFromComponent( string $comp[] )
+{
+	//Method1
+	/*
+	$comp = removeObjectsThatDontExist($comp);
+	if(`size $comp` == 0){return "";}
+	
+	string $tokComp = $comp[0];
+	string $buffer[];
+	int $numTok = `tokenize $tokComp "." $buffer`;
+	string $obj = $buffer[0];
+	
+	return $obj;
+	*/
+	/*
+	select -r $comp;
+	selectMode -o;
+	string $sel[] = `ls -sl`;
+	string $obj = $sel[0];
+	return $obj;
+	*/
+	/*
+	string $sel[] = `listTransforms "-o -sl"`;
+	$sel = stringArrayRemoveDuplicates($sel);
+	string $obj = $sel[0];
+	return $obj;
+	*/
+	string $tok[] = tokenizeString($comp[0], ".");
+	string $obj = $tok[0];
+	return $obj;
+}
+
+
+global proc string[] getObjectsFromComponents( string $comp[] )
+{
+	/*
+	select -r $comp;
+	SelectToggleMode;
+	toggleSelMode;
+	string $sel[] = `ls -sl`;
+	return $sel;
+	*/
+	string $sel[] = `listTransforms "-o -sl"`;
+	$sel = stringArrayRemoveDuplicates($sel);	
+	return $sel;
+}
+
+//GET TRANSFORMS OF TYPE IN GROUPS
+//--------------------------------------
+global proc string[] getTransformsOfTypeInSelectedGroups( string $sel[], string $type)
+{
+	//printProc("getTransformsOfTypeInSelectedGroups");
+	string $heirarchy[];
+	int $i;
+	for($i=0;$i<`size $sel`;$i++){
+		//Select any node that is visible in the heirarchy of selected
+		select -r -vis -hi $sel[$i];
+		string $transf[] = `listTransforms "-v -type $type -sl"`;
+		//Remove the selected group node from the list
+		$transf = stringArrayRemove($sel, $transf);	
+		appendStringArray($heirarchy, $transf, `size $transf`);
+	}
+	clear $sel;
+	appendStringArray($sel, $heirarchy, `size $heirarchy`);
+	return $sel;
+}
+
+//GET ROOT TRANSFORMS
+//--------------------------------------
+global proc string[] getRootTransformsOfSelectedObjects( string $sel[] )
+{
+	string $root[];	
+	string $dag[] = `ls -dag $sel`;
+	for ($i=0;$i<`size $dag`;$i++){	
+		$root[`size $root`] = rootOf($dag[$i]);
+		
+	}
+	
+	$root = stringArrayRemoveDuplicates($root);
+	$root = removeLeadingSeparators($root);
+	return $root;
+}
+
+//GET TRANSFORMS BELOW
+//--------------------------------------
+
+global proc string[] getTransformsBelow(string $sel[])
+{
+	$sel = removeObjectsThatDontExist($sel);
+	string $t[] = `ls -dag -tr $sel`;
+	return $t;
+}
+
+//GET ALL TOP LEVEL TRANSFORMS
+//--------------------------------------
+global proc string[] getAllTopLevelTransforms()
+{
+	select -cl;
+	string $topTr[];
+	string $tr[] = `ls -tr`;
+	for ($i=0;$i<`size $tr`;$i++){
+		string $p[] = `listRelatives -p $tr[$i]`;
+		print $p;
+		if (`size $p` == 0){
+		    select -add $tr[$i];
+		    $topTr[`size $topTr`] = $tr[$i];
+		}
+	}
+	return $topTr;
+}
+
+//GET OBJECTS OF TYPE IN SELECTED HIERARCHY
+//-------------------------------------------------------
+global proc string[] getObjectsOfTypesInSelectedHierarchy( string $sel[], string $type[] )
+{
+	string $return[];
+	for ($i=0;$i<`size $sel`;$i++){
+		string $objs[] = getObjectsOfTypesInObjectsHierarchy($sel[$i], $type);
+		$return = appendStringArray($return, $objs, `size $objs`);
+	}
+	return $return;
+}
+
+//GET OBJECTS OF TYPE IN OBJECTS HIERARCHY
+//-------------------------------------------------------
+global proc string[] getObjectsOfTypesInObjectsHierarchy( string $obj, string $type[] )
+{
+	select -r -hi $obj;	
+	string $return[];
+	for ($i=0;$i<`size $type`;$i++){
+		string $objs[] = `ls -type $type[$i] -sl`;
+		$return = appendStringArray($return, $objs, `size $objs`);
+		
+	}
+	//string $return[] = `ls -type $type -sl`;
+	return $return;
+}
+
+//GET OBJECTS OF TYPE IN SELECTED ASSET
+//-------------------------------------------------------
+global proc string[] getConnectedObjectsOfTypesFromSelected( string $sel[], string $type[] )
+{
+	string $return[];
+	for ($i=0;$i<`size $sel`;$i++){
+		string $objs[] = getConnectedObjectsOfTypes($sel[$i], $type);
+		appendStringArray($return, $objs, `size $objs`);
+	}
+	return $return;
+}
+
+//GET OBJECTS OF TYPE IN OBJECTS ASSET
+//-------------------------------------------------------
+/*
+string $sel[] = `ls -sl`;
+getObjectsOfTypesInObjectsAsset($sel[0], {"singleShadingSwitch", "doubleShadingSwitch", "tripleShadingSwitch"});
+
+*/
+global proc string[] getConnectedObjectsOfTypes( string $obj, string $type[] )
+{
+	select -r -hi $obj;	
+	string $hi[] = `ls -sl`;
+	
+	string $return[];
+	for ($i=0;$i<`size $type`;$i++){
+		string $con[] = `listConnections -type $type[$i] $hi`;
+		print ("Connections : Of Type : " + $type[$i] + "\n" + stringArrayToString($con, "\n		- ") + "\n");
+		appendStringArray($return, $con, `size $con`);
+		
+	}
+	return $return;
+}
+
+//GET (OTHER)
+//==============================================================
+//GET OBJECTS THAT DO NOT EXIST
+//--------------------------------------
+global proc string[] getObjectsThatDontExist(string $sel[])
+{
+	string $doNotExist[] = getObjectsThatDoNotExist($sel);
+	return $doNotExist;
+}
+
+global proc string[] getObjectsThatDoNotExist(string $sel[])
+{
+	string $doNotExist[];
+	for($i=0;$i<`size $sel`;$i++){
+		if($sel[$i] == "|"){ continue;}
+		if(`objExists $sel[$i]` == false){
+			$doNotExist[`size $doNotExist`] = $sel[$i];
+		}
+	}
+	return $doNotExist;
+}
+
+//GET INVISIBLE
+//--------------------------------------
+global proc string[] getInvisibleFromSelected(string $sel[])
+{
+	//printProc("getInvisibleFromSelected");
+	string $invisible[];
+	string $invisibleNodeTransforms[] = `ls -dag -iv $sel`;
+	string $belowInvisible[] = `ls -dag $invisibleNodeTransforms`;
+	appendStringArray($invisible,$invisibleNodeTransforms,`size $invisibleNodeTransforms`);
+	appendStringArray($invisible,$belowInvisible,`size $belowInvisible`);
+	debugML4("Invisible: " + stringArrayToStringNiceList($invisible));
+	
+	return $invisible;
+}
+
+//GET GROUPS
+//==============================================================
+//GET GROUPS IN HEIRARCHY
+//--------------------------------------
+global proc string[] getAllGroupsInHeirarchyOfSelected(string $sel[])
+{
+	//printProc("getAllGroupsInHeirarchyOfSelected - WARNING THIS MIGHT BE BROKEN!");
+	string $group[];
+	for($i=0;$i<`size $sel`;$i++){
+		select -r -hi $sel[$i];
+		string $transform[] = `ls -tr -sl`;
+		for($t=0;$t<`size $transform`;$t++){
+			$isGroup = isGroup($transform[$t]);
+			if($isGroup){
+				$group[`size $group`] = $transform[$t];
+			}
+		}
+		
+	}	
+	$group = stringArrayRemoveDuplicates($group);
+	return $group;
+}
+
+//GET GROUPS FROM SELECTION
+//--------------------------------------
+global proc string[] lsGroups(string $sel[])
+{
+	//printProc("lsGroups");
+	string $group[];	
+	for($i=0;$i<`size $sel`;$i++){
+		if(`isGroup($sel[$i])`){
+			$group[`size $group`] = $sel[$i];	
+		}
+	}	
+	$group = stringArrayRemoveDuplicates($group);
+	return $group;	
+	}
+	
+	global proc string[] lsGroupsFromSelection(string $sel[])
+	{
+	printProc("lsGroupsFromSelection");
+	string $group[] = lsGroups($sel);
+	return $group;
+}
+
+
+//INSTANCES
+//========================================================================
+//IS INSTANCE
+//-----------------------------------------
+global proc int isInstance(string $sel[])
+{
+	if(`size $sel` > 1){
+		string $inst[] = getAllInstancesFromSelection($sel);
+		if(`size $inst` > 0){
+			return 1;	
+		} else {
+			return 0;	
+		}
+	}
+	string $original[] = getOriginalOfInstance($sel);
+	if($original[0] == ""){
+		return 0;
+	} else {
+		return 1;
+	}
+}
+
+//ORIGINAL OF INSTANCE
+//===============================================
+//GET ORIGINAL OF INSTANCE
+//----------------------------------------
+global proc string[] getOriginalOfInstance(string $sel[])
+{
+	if(`objExists $sel[0]` == 0){ return {""};}
+	string $shape[] = `listRelatives -f -shapes $sel[0]`;
+	string $lr[];
+	if(`size $shape` > 0){
+		appendStringArray($lr,$shape,`size $shape`);
+	} else {
+		appendStringArray($lr,$sel,`size $sel`);
+	}
+	string $parent[] = `listRelatives -f -allParents $lr`;
+	if(`size $parent` <= 1){
+		return {""};
+	} else {
+		string $original[] = `ls $parent[0]`;
+		return {$original[0]};
+	}
+}
+
+//GET ORIGINAL OF INSTANCE(S)
+//----------------------------------------
+global proc string lsOriginalOfInstances(string $sel[])
+{
+	string $original[] = getOriginalOfInstance($sel);
+	return $original[0];
+}
+
+//SELECT ORIGINAL OF INSTANCE(S)
+//----------------------------------------
+global proc string selectOriginalOfInstances(string $sel[])
+{
+	string $original[] = getOriginalOfInstance($sel);
+	select -r $original;
+	return $original[0];
+}
+
+//ALL INSTANCES
+//=============================================
+//GET ALL INSTANCES
+//----------------------------------------
+global proc string[] getAllInstances()
+{
+	string $all[] = `ls -tr`;
+	string $inst[] = getAllInstancesFromSelection($all);
+	return $inst;
+	
+}
+
+//GET ALL INSTANCES FROM SELECTION
+//----------------------------------------
+global proc string[] getAllInstancesFromSelection(string $sel[])
+{
+	debugML1("Selection: " + stringArrayToStringNiceList($sel));
+	string $instances[];
+	string $originals[];
+	for($i=0;$i<`size $sel`;$i++){
+		if(`isInstance({$sel[$i]})`){
+			$instances[`size $instances`] = $sel[$i];
+			string $o[] = getOriginalOfInstance({$sel[$i]});
+			$originals[`size $originals`] = $o[0];		
+		}
+	}
+	debugML1("Instances: " + stringArrayToStringNiceList($instances));
+	debugML1("Originals: " + stringArrayToStringNiceList($originals));
+	//$originals = stringArrayRemoveDuplicates($originals);
+	$instances = stringArrayRemove($originals,$instances);
+	
+	debugML1("Return Instances: " + stringArrayToStringNiceList($instances));
+	return $instances;
+}
+
+//SELECT ALL INSTANCES FROM SELECTION
+//----------------------------------------
+global proc selectAllInstancesFromSelection(string $sel[])
+{
+	string $instances[] = getAllInstancesFromSelection($sel);
+	select -r $instances;
+}
+
+//REMOVE INSTANCES FROM SELECTION LIST
+//----------------------------------------
+global proc removeInstancesFromSelectionList(string $textScrollList)
+{
+	string $sel[] = `textScrollList -q -ai $textScrollList`;
+	string $instances[] = getAllInstancesFromSelection($sel);
+	
+	openDebugWiz();
+	debugList("Instances", $instances, 1, "replace");
+	
+	//debugML1("Instances: " + stringArrayToStringNiceList($instances));
+	for($i=0;$i<`size $instances`;$i++){
+		textScrollList -edit -si $instances[$i] $textScrollList;
+	}
+	removeSelectedItemFromTextScrollList($textScrollList);
+
+}
+
+//FILTER OUT INSTANCES FROM SELECTION
+//----------------------------------------
+global proc string[] filterOutInstancesFromSelection(string $sel[])
+{
+	string $instances[] = getAllInstancesFromSelection($sel);
+	$sel = stringArrayRemove($instances,$sel);
+	return $sel;
+}
+
+global proc string[] filterOutInstancedObjectsFromSelected(string $sel[])
+{
+	//printProc("filterOutInstancedObjectsFromSelected");	
+	//filterOutInstancedObjectsFromSelected(`ls -sl`);
+	string $remove[];
+	for($i=0;$i<`size $sel`;$i++){
+		int $isInstance = isInstance({$sel[$i]});
+		if($isInstance == 1){
+			$remove[`size $remove`] = $sel[$i];
+		}
+	}
+	$sel = stringArrayRemove($remove, $sel);
+	return $sel;
+}
+
+
+global proc string[] lsRecursive( string $sel[] )
+{
+	select -cl;
+	for ($i=0;$i<`size $sel`;$i++){
+		string $tok[] = tokenizeString($sel[$i], ":");
+		int $size = `size $tok` - 1;
+		string $r[] = `ls -r true ($tok[$size])`;
+		select -add $r;
+	}
+	
+	string $return[] = `ls -sl`;
+	return $return;
+	
+
+}
+
+global proc string[] lsShapes( string $sel[] )
+{
+	select -cl;
+	for ($i=0;$i<`size $sel`;$i++){
+		string $s[] = `listRelatives -s $sel[$i]`;
+		select -add $s[0];		
+	}
+	
+	string $return[] = `ls -sl`;
+	return $return;
+
+}
+
+//GET TYPE
+//==============================================================================
+//==============================================================================
+//GET NODE TYPE FOR SELECTED
+//--------------------------------------
+global proc string[] getNodeTypeForSelected(string $sel[])
+{
+	string $nodeType[];
+	for($i=0;$i<`size $sel`;$i++){
+		if(`objExists $sel[$i]` == 0){
+			$nodeType[$i] = "";
+		} else {
+			$nodeType[$i] = `nodeType $sel[$i]`;
+		}	
+	}
+	return $nodeType;
+}
+
+//GET OBJECT NODE TYPE
+//--------------------------------------
+global proc string getObjectNodeType(string $obj)
+{
+	string $type;
+	string $shape[] = `listRelatives -f -s $obj`;
+	if(`size $shape` == 0){
+		$type = "group";
+	} else {
+		$type = `nodeType $shape[0]`;
+	}
+	debugML2("Obj: " + $obj + " Shape: " + $shape[0] + " Type: " + $type + "\n");
+	return $type;
+
+}
+
+//GET MAIN SHAPE NODES FROM SELECTION
+//--------------------------------------
+/* USAGE:
+	string $sel[] = `ls -sl`;
+	getMainShapeNodesFromSelection($sel);
+	
+*/
+global proc string[] getMainShapeNodesFromSelection( string $sel[] )
+{
+	string $s[];
+	for ($i=0;$i<`size $sel`;$i++){
+		string $myShape[] = `ls -s $sel[$i]`;
+		if (`size $myShape` > 0){
+			$s[`size $s`] = $myShape[0];
+			$s[`size $s`] = $sel[$i];	
+			continue;
+		}
+		string $shape[] = `listRelatives -f -s $sel[$i]`;
+		if (`size $shape` > 0){
+			$s[`size $s`] = $shape[0];	
+		}
+	}
+	return $s;
+}
+
+//REMOVAL AND DELETION
+//==============================================================================
+//==============================================================================
+//REMOVE GROUPS FROM ARRAY
+//--------------------------------------
+global proc string[] removeGroupsFromArray(string $sel[])
+{
+	//printProc("removeGroupsFromArray");	
+	string $remove[];
+	for($i=0;$i<`size $sel`;$i++){
+		$isGroup = isGroup($sel[$i]);
+		if($isGroup){
+			$remove[`size $remove`] = $sel[$i];
+		}
+	}	
+	$sel = stringArrayRemove($remove,$sel);
+	return $sel;
+}
+
+//REMOVE INSTANCES FROM SELECTION
+//--------------------------------------
+global proc string[] removeInstancesFromSelectionArray(string $sel[])
+{
+	//printProc("removeInstancesFromSelectionArray");	
+	string $instance[];
+	string $keep[];
+	for($i=0;$i<`size $sel`;$i++){
+		int $inst = isInstance({$sel[$i]});
+		if($inst == 0){
+			$keep[`size $keep`] = $sel[$i];
+		} else {
+			$instance[`size $instance`] = $sel[$i];	
+		}
+	}
+	clear $sel;
+	appendStringArray($sel, $keep, `size $keep`);
+	openDebugWiz();
+	debugList("Instances", $instance, 1, "replace");
+	debugList("Not Instance", $sel, 2, "replace");
+	return $sel;
+}
+
+//REMOVE OBJECTS THAT DO NOT EXIST
+//--------------------------------------
+global proc string[] removeObjectsThatDontExist(string $sel[])
+{
+	string $return[] = removeObjectsThatDoNotExist($sel);
+	return $return;
+}
+
+global proc string[] removeObjectsThatDoNotExist(string $sel[])
+{
+	//printProc("removeObjectsThatDoNotExist");	
+	string $doNotExist[];
+	for($i=0;$i<`size $sel`;$i++){
+		if($sel[$i] == "|"){ continue;}
+		if(`objExists $sel[$i]` == false){
+			//stringArrayRemoveAtIndex($i, $sel);
+			$doNotExist[`size $doNotExist`] = $sel[$i];
+		}
+	}
+	string $return[] = stringArrayRemove($doNotExist,$sel);
+	debugML4("Do Not Exist: " + stringArrayToStringNiceList($doNotExist));
+	debugML4("Exist: " + stringArrayToStringNiceList($return));
+	return $return;
+}
+
+//DELETE AND REMOVE FROM ARRAY
+//--------------------------------------
+global proc string[] deleteAndRemoveObjectsFromArray(string $keep[], string $delete[])
+{
+	int $i;
+	for($i=0;$i<`size $delete`;$i++){
+		if(`objExists $delete[$i]` == false){ continue;}
+		delete $delete[$i];
+	}	
+	//$keep = removeObjectsThatDontExist($keep);
+	return $keep;
+}
+
+//DELETE SELECTED
+//--------------------------------------
+global proc deleteSelectedObjects(string $sel[])
+{
+	delete $sel;	
+}
+
+
+//FIND OBJECTS RELATIONSHIPS
+//===============================================================================
+//GET TRASFORMS
+//================================================
+//GET ALL TOP LEVEL TRANSFORMS
+//--------------------------------
+global proc string[] getAllTopLevelTransforms()
+{
+	//printProc("getAllTopLevelTransforms");
+	string $topLevel[];
+	string $sel[] = `ls -tr`;
+	for($i=0;$i<`size $sel`;$i++){
+		string $firstParent = firstParentOf($sel[$i]);
+		if($firstParent == ""){
+			$topLevel[`size $topLevel`] = $sel[$i];
+		}
+	}
+	return $topLevel;
+}
+
+//GET PARENT COUNT FROM SELECTION
+//----------------------------------------
+global proc int[] getParentCountFromSelection(string $sel[])
+{
+	int $parentCount[];
+	for($i=0;$i<`size $sel`;$i++){	
+		string $parents[] = `listRelatives -p $sel[$i]`;
+		$parentCount[$i] = `size $parents`;
+	}
+	return $parentCount;
+}
+
+//GET TRANSFORMS BELOW
+//----------------------------------------
+
+global proc string[] getTransformsBelow(string $sel[])
+{
+	//printProc("getTransformsBelow");
+	
+	//This is orgiginal function that might be flawed
+	/* 	
+	
+	string $t[] = `eval("listTransforms (\" -dag " + stringArrayToString($sel, " ") + "\")")`;
+	return $t;
+	*/
+	
+	//This might work better
+	
+	string $rel[] = `listRelatives -c`;
+	string $tr[] = `ls -tr $rel`;
+	return $tr;	
+	
+}
+
+//GET TRANSFORMS FROM
+//-------------------------------
+global proc string[] getTransformsFrom(string $sel[])
+{
+	//printProc("getTransformsFrom");	
+	string $t[] = `eval("listTransforms (\" " + stringArrayToString($sel, " ") + "\")")`;
+	return $t;		
+}
+
+//GET PARENT OF OBJECT
+//------------------------------
+global proc string getParentOfObject(string $obj)
+{
+	string $parent = firstParentOf($obj);
+	return $parent;
+}
+
+//GET OBJECT ROOT
+//------------------------------
+global proc string getObjectRoot(string $obj)
+{
+	string $root = rootOf($obj);
+	return $root;
+}
+
+//FIRST PARENTS
+//=========================================================
+//DO SELECTED OBJECTS SHARE SAME FIRST PARENT
+//-------------------------------------------------
+global proc int doSelectedObjectsShareSameFirstParent(string $sel[])
+{
+	string $parent = firstParentOf($sel[0]);
+	for($i=0;$i<`size $sel`;$i++){
+		string $selParent = firstParentOf($sel[$i]);
+		if($selParent != $parent){
+			return 0;	
+		}
+	}	
+	return 1;
+}
+
+//GET FIRST PARENTS OF SELECTED
+//-------------------------------------------------
+global proc string[] getFirstParentsOfSelected(string $sel[])
+{
+	if(`objExists $sel[0]` == 1){	
+		string $parent[];
+		$parent[0] = firstParentOf($sel[0]);
+		if(`size $sel` == 1){ return $parent;}
+	}
+	string $firstParents[];
+	for($i=0;$i<`size $sel`;$i++){
+		if(`objExists $sel[$i]` == 0){ continue;}
+		string $fp = firstParentOf($sel[$i]);
+		if($fp != ""){
+			$firstParents[`size $firstParents`] = $fp;	
+		}
+	}	
+	return $firstParents;		
+}
+
+//GET FIRST PARENT OF SELECTED IF SHARE SAME PARENT
+//-------------------------------------------------
+global proc string getFirstParentOfSelectedIfShareSameParent(string $sel[])
+{
+	string $parent = firstParentOf($sel[0]);
+	if(`size $sel` == 1){ return $parent;}
+	for($i=0;$i<`size $sel`;$i++){
+		string $selParent = firstParentOf($sel[$i]);
+		if($selParent != $parent){
+			return "";	
+		}
+	}	
+	return $parent;	
+}
+
+//GET FIRST COMMON PARENT FROM SELECTED
+//--------------------------------------------
+global proc string getFirstCommonParentFromSelected(string $sel[])
+{
+	//printProc("getFirstCommonParentFromSelected");	
+	/*
+	getFirstCommonParentFromSelected(`ls -sl`);
+	*/	
+	if(`size $sel` == 1){
+		return $sel[0];	
+	}
+	
+	//The Idea: Tokenize the group hierarchy and then use a stringArrayIntersector to see at what index the arrays stops matching(intersecting)
+	debugML1("getFirstCommonParentFromSelected... " + "\n");
+	string $firstCommonParent;
+	string $deepest = getDeepestObjectInHeirarchy($sel);
+	string $lsl[] = `ls -l $sel`; //Get the long name of the objects so we have a full path to the object that we can tokenize
+	
+	debugML1("	- Selected: " + stringArrayToString($lsl, " ") + "\n");
+	
+	int $fcpI = 9999999; //Fisrt Common Parent Index
+	
+	//Do an initial intersection
+	string $compareHi[] = tokenizeGroupHierarchy($deepest);
+	
+	//Intersector
+	string $intersect = `stringArrayIntersector`;
+	stringArrayIntersector -edit -intersect $compareHi $intersect;
+	
+	for ($i=0;$i<`size $lsl`;$i++){	
+		if(`objExists $lsl[$i]` == 0){ continue;}
+		
+		string $hi[] = tokenizeGroupHierarchy($lsl[$i]);
+		stringArrayIntersector -edit -intersect $hi $intersect;
+		
+		string $commonParents[] = `stringArrayIntersector -q $intersect`;
+		debugML1("	- commonParents: " + stringArrayToString($commonParents, " ") + "\n");
+		if(`size $commonParents` == 0){
+			debugML1("	* First Common Parent: " + "World" + "\n");
+			return "";	
+		}
+		
+		int $smallestIntersect = (`size $commonParents` - 1);
+		debugML1("	- smallestIntersect: " + $smallestIntersect + " -fcpI: " + $fcpI + "\n");
+		//Continue to compare the size of the intersection untill we've determined that we've found the smallest intersection we are going to get
+		if($smallestIntersect <= $fcpI){
+			$fcpI = $smallestIntersect;
+			$firstCommonParent = $hi[$fcpI];
+			debugML1("		- firstCommonParent: " + $firstCommonParent + "\n");
+		}
+	
+	}
+	debugML1("	* First Common Parent: " + $firstCommonParent + "\n");
+	return $firstCommonParent;
+
+}
+
+//DEEPEST
+//===================================================
+//GET DEEPEST OBJECT IN HEIRARCHY
+//-----------------------------------------
+global proc string getDeepestObjectInHeirarchy(string $sel[])
+{
+	//printProc("getDeepestObjectInHeirarchy");
+	//getDeepestObjectInHeirarchy(`ls -sl`);
+	debugML5("getDeepestObjectInHeirarchy... " + "\n");
+	string $deepest;
+	int $deepestI = 0;
+	string $lsl[] = `ls -l $sel`;
+	for($i=0;$i<`size $lsl`;$i++){	
+		if(`objExists $lsl[$i]` == 0){ continue;}
+		string $hi[] = tokenizeGroupHierarchy($lsl[$i]);
+		debugML5("	- Hierarchy: " + stringArrayToString($hi, " ") + "\n");
+		if(`size $hi` >= $deepestI){
+			$deepestI = `size $hi`;
+			$deepest = $lsl[$i];	
+		}
+	}
+	debugML1("	* Deepest In Hierarchy: " + $deepest + "\n");
+	return $deepest;
+}
+
+//HIGHEST
+//===================================================
+//GET HIGHEST OBJECT IN HEIRARCHY
+//-----------------------------------------
+global proc string[] getHighestObjectsInHierarchy(string $sel[])
+{
+	string $highest[];
+	int $least;
+	int $parentCount[] = getParentCountFromSelection($sel);
+	$parentCount = sort($parentCount);
+	$least = $parentCount[0];
+	
+	for($i=0;$i<`size $sel`;$i++){
+		string $parents[] = `listRelatives -p $sel[$i]`;
+		if(`size $parents` == $least){
+			$highest[`size $highest`] = $sel[$i];
+		}
+	}
+	return $highest;
+}
+
+
+//@ <><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			CONNECTED NODES
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><> 
+//@ GET ALL DOWNSTREAM NODES
+//============================================================
+/*USAGE: 
+	Get Downstream Nodes Of Selected : 
+	
+		getAllDownstreamNodes(`ls -sl`);
+		
+	Get Downstream Nodes Of An Object's Attribute : 
+	
+		getAllDownstreamNodes({"someNode.color"})`;
+		
+		listConnections -s on -d off `ls -sl`;
+		
+*/
+
+
+global proc string[] getObjectsOfTypeConnectedRecursive( string $sel[] )
+{
+	string $down[];
+	if (catchQuiet(`listConnections -s off -d on $sel[0]`)){
+		print("WIZ| Error In : 	getAllDownstreamNodes\n");
+		return {};
+	}
+	$down = `listConnections -s off -d on $sel[0]`;
+	if (`size $down` == 0){
+		print("WIZ| getAllDownstreamNodes : No Connections Found On : " + $sel[0] + "\n");
+		return {};	
+	}
+	
+	string $all[] = $down;
+	int $stop;
+	
+	while (true){
+		string $downLevel[];
+		
+		for ($i=0;$i<`size $down`;$i++){
+			string $nextDown[] = `listConnections -s off -d on $down[$i]`;
+			$nextDown = stringArrayRemoveDuplicates($nextDown);
+			if (`size $nextDown` == 0){
+				$stop = 1;
+				break;
+			}
+			
+			appendStringArray($all, $nextDown, `size $nextDown`);
+			appendStringArray($downLevel, $nextDown, `size $nextDown`);
+			$downLevel = stringArrayRemoveDuplicates($downLevel);
+			$all = stringArrayRemoveDuplicates($all);
+			clear $nextDown;
+		}
+		if($stop == 1){
+			break;	
+		}
+		clear $down;
+		$down = $downLevel;
+		clear $downLevel;
+		
+		
+	}
+	$all = stringArrayRemoveDuplicates($all);
+	select -r $all;
+	print("WIZ| getAllDownstreamNodes : " + $sel[0] + "\n=========================\n - " + stringArrayToString($all, "\n - ") + "\n");
+	print("=========================\n");
+	return $all;
+}
+
+//@ PROC NAME
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-fa string] [-fb linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-fa, -fb
+	
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName("-fa aString -fb anotherString");
+	
+	</code>
+*********************************************************************/
+global proc string[] getAllDownstreamNodes( string $sel[] )
+{
+	string $down[];
+	if(catchQuiet(`listConnections -s on -d off $sel[0]`)){
+		print("WIZ| Error In : 	getAllDownstreamNodes\n");
+		return {};
+	}
+	$down = `listConnections -s on -d off $sel[0]`;
+	if(`size $down` == 0){
+		print("WIZ| getAllDownstreamNodes : No Connections Found On : " + $sel[0] + "\n");
+		return {};	
+	}
+	
+	string $all[] = $down;
+	int $stop;
+	
+	while (true){
+		string $downLevel[];
+		
+		for ($i=0;$i<`size $down`;$i++){
+			string $nextDown[] = `listConnections -s on -d off $down[$i]`;
+			$nextDown = stringArrayRemoveDuplicates($nextDown);
+			if (`size $nextDown` == 0){
+				$stop = 1;
+				break;
+			}
+			/*
+			int $ok = wizInformationDialog("Connected", ("Connected Nodes : \n - " + stringArrayToString($nextDown, "\n - ")), "NEXT", "STOP");
+			if($ok == 0){
+				return $all;
+			}
+			*/
+			appendStringArray($all, $nextDown, `size $nextDown`);
+			appendStringArray($downLevel, $nextDown, `size $nextDown`);
+			$downLevel = stringArrayRemoveDuplicates($downLevel);
+			$all = stringArrayRemoveDuplicates($all);
+			clear $nextDown;
+		}
+		if($stop == 1){
+			break;	
+		}
+		clear $down;
+		$down = $downLevel;
+		clear $downLevel;
+		
+		
+	}
+	$all = stringArrayRemoveDuplicates($all);
+	select -r $all;
+	print("WIZ| getAllDownstreamNodes : " + $sel[0] + "\n=========================\n - " + stringArrayToString($all, "\n - ") + "\n");
+	print("=========================\n");
+	return $all;
+}
+
+
+global proc string[] getAllUpstreamNodes( string $sel[] )
+{
+	string $down[];
+	if(catchQuiet(`listConnections -s off -d on $sel[0]`)){
+		print("WIZ| Error In : 	getAllUpstreamNodes\n");
+		return {};
+	}
+	$down = `listConnections -s off -d on $sel[0]`;
+	if(`size $down` == 0){
+		print("WIZ| getAllUpstreamNodes : No Connections Found On : " + $sel[0] + "\n");
+		return {};	
+	}
+	
+	string $all[] = $down;
+	int $stop;
+	
+	while (true){
+		string $downLevel[];
+		
+		for ($i=0;$i<`size $down`;$i++){
+			string $nextDown[] = `listConnections -s off -d on $down[$i]`;
+			$nextDown = stringArrayRemoveDuplicates($nextDown);
+			if (`size $nextDown` == 0){
+				$stop = 1;
+				break;
+			}
+			/*
+			int $ok = wizInformationDialog("Connected", ("Connected Nodes : \n - " + stringArrayToString($nextDown, "\n - ")), "NEXT", "STOP");
+			if($ok == 0){
+				return $all;
+			}
+			*/
+			appendStringArray($all, $nextDown, `size $nextDown`);
+			appendStringArray($downLevel, $nextDown, `size $nextDown`);
+			$downLevel = stringArrayRemoveDuplicates($downLevel);
+			$all = stringArrayRemoveDuplicates($all);
+			clear $nextDown;
+		}
+		if($stop == 1){
+			break;	
+		}
+		clear $down;
+		$down = $downLevel;
+		clear $downLevel;
+		
+		
+	}
+	$all = stringArrayRemoveDuplicates($all);
+	select -r $all;
+	print("WIZ| getAllUpstreamNodes : " + $sel[0] + "\n=========================\n - " + stringArrayToString($all, "\n - ") + "\n");
+	print("=========================\n");
+	return $all;
+}
+
+
+
+//@ GET ALL DOWNSTREAM NODES OF TYPE
+//--------------------------------------------------------
+global proc string[] getAllDownstreamNodesOfType( string $sel , string $type )
+{
+	string $down[] = getAllDownstreamNodes({$sel});
+	if(`size $down` == 0){
+		print("WIZ| getAllDownstreamNodesOfType : No Connections Found On : " + $sel + "\n");
+		return {};	
+	}
+	string $ofType[] = `ls -type $type $down`;
+	
+	print("WIZ| getAllDownstreamNodesOfType : " + $sel + " : Type : " + $type + "\n=========================\n - " + stringArrayToString($ofType, "\n - ") + "\n");
+	print("=========================\n");
+	
+	return $ofType;
+}
+
+//@ SELECT ASSET CONTAINING SELECTED
+//====================================================================
+/*****************************************************************//**
+	Selects the asset that the selected object is inside of.
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	string $asset[] = selectAssetContainingSelected(`ls -sl`);
+	
+	</code>
+*********************************************************************/
+global proc string[] selectAssetContainingSelected( string $sel[] )
+{
+	string $asset[] ;
+	$asset[0] = `container -q -fc $sel`;
+	select -r $asset;
+	return $asset;
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         SETS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//@ CREATE SET FROM SELECTION
+//====================================================================
+/*****************************************************************//**
+	Creates a new set with the selected objects
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	string $set = createSetFromSelection(`ls -sl`, "set1");
+	
+	</code>
+*********************************************************************/
+global proc string createSetFromSelection( string $sel[], string $name)
+{
+	//printProc("createSetFromSelection");	
+	string $addToSet = stringArrayToString($sel, " ");
+	string $setCommand = "sets";
+	if ($name != ""){
+		$setCommand = $setCommand + " -n " + $name;
+	}
+	$setCommand = $setCommand + " " + $addToSet + " ;";
+	string $set = `eval($setCommand)`;
+	return $set;
+}
+
+//@ GET ALL OBJECTS IN SET
+//====================================================================
+/*****************************************************************//**
+	Gets all the members of all the selected sets.
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	string $allMem[] = getAllObjectsInSets(`ls -sl`);
+	
+	</code>
+*********************************************************************/
+global proc string[] getAllObjectsInSets( string $sets[])
+{
+	string $all[];
+	for($i=0;$i<`size $sets`;$i++){	
+		string $set[] = `sets -q $sets[$i]`;
+		appendStringArray($all,$set,`size $set`);
+	}
+	return $all;
+}
+
+//WIZ SELECT SET MEMBERS
+//-----------------------------------
+//@ PROC NAME
+//====================================================================
+/*****************************************************************//**
+	Selects the members of the currently selected set.
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	wizSelectSetMembers();
+	
+	</code>
+*********************************************************************/
+global proc string[] wizSelectSetMembers()
+{
+	string $sel[] = `ls -sl`;
+	string $setMem[] = `sets -q $sel`;
+	select -r $setMem;
+	return $setMem;
+}
+
+//EMPTY AND DELETE ALL SELECTED SETS
+//-----------------------------------
+
+global proc emptyAndDeleteSelectedSets(string $set[])
+{
+	for($i=0;$i<`size $set`;$i++){ 
+		emptyAndDeleteSet($set[$i]);
+	}	
+}
+
+global proc emptyAndDeleteSets(string $set[])
+{
+	emptyAndDeleteSelectedSets($set);
+}
+
+global proc emptyAndDeleteSet(string $set)
+{
+	//First Empty the set so we don't delete anything we want to keep
+	sets -cl $set;
+	delete $set;	
+}
+
+//GET COMPONETS FROM SET FLAT
+//-----------------------------------
+global proc string[] getComponentsFromSetFlat(string $set)
+{
+	string $sq[] = `sets -q $set`;	
+	select -r $sq;
+	string $comp[] = `ls -fl -sl`;
+	return $comp;
+}
+
+//@ ADD SELECTED OBJECTS TO SET
+//====================================================================
+/*****************************************************************//**
+	Adds the selected objects to the named set
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	addSelectedObjectsToSet(`ls -sl`, "set1");
+	
+	</code>
+*********************************************************************/
+global proc string addSelectedObjectsToSet( string $sel[], string $setName )
+{
+    string $set;
+	if (`size $sel` == 0){
+		wizlog ("-w [!] No Objects Selected To Add To Set : " + $setName + " [!]");
+		return "";
+	}
+    if (`objExists $setName` == 0){
+        $set = `sets -n $setName`;
+    } else {
+        $set = $setName;
+    }
+    wizlog (niceArrayList(("	[+] Adding To Set : " + $set + " [+]"), $sel));
+	
+    sets -e -fe $set $sel;
+	
+    return $set;
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         POLYGON COMPONENTS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//================================================================================
+//POLYGON INFO
+//=================================
+global proc string[] getPolyInfo(string $request)
+{
+	string $sel[] = forceGetSelectionList();
+	string $pi[];
+	switch($request){
+		case "NonManifoldVertices" :
+		$pi = `polyInfo -nmv $sel`;
+		break;
+		case "NonManifoldEdges" :
+		$pi = `polyInfo -nme $sel`;
+		break;
+		case "LaminaFaces" :
+		$pi = `polyInfo -lf $sel`;
+		break;
+		case "EdgeToFace" :
+		$pi = `polyInfo -ef $sel`;
+		break;
+		case "VertexToFace" :
+		$pi = `polyInfo -vf $sel`;
+		break;
+		case "FaceToEdge" :
+		$pi = `polyInfo -fe $sel`;
+		break;
+		case "FaceToVertex" :
+		$pi = `polyInfo -fv $sel`;
+		break;
+		case "EdgeToVertex" :
+		$pi = `polyInfo -ev $sel`;
+		break;
+		case "VertexToEdge" :
+		$pi = `polyInfo -ve $sel`;
+		break;
+		case "FaceNormals" :
+		$pi = `polyInfo -fn $sel`;
+		break;
+	}
+	return $pi;
+}
+
+//GET POLY INFO INFO
+//=================================
+
+global proc string[] getPolyInfoInfo(string $request)
+{
+	string $returnType;
+	string $tok[] = tokenizeString($request, " ");
+	for($i=0;$i<`size $tok`;$i++){
+		switch($tok[$i]){
+			case "-nmv" :
+			$returnType = "int";
+			
+			case "-nme" :
+			$returnType = "int";
+			
+			case "-lf" :
+			$returnType = "int";
+			
+			case "-ef" :
+			$returnType = "int";
+			
+			case "-vf" :
+			$returnType = "int";
+			
+			case "-fe" :
+			$returnType = "int";
+			
+			case "-fv" :
+			$returnType = "int";
+			
+			case "-ev" :
+			$returnType = "int";
+			
+			case "-ve" :
+			$returnType = "int";
+			
+			case "-fn" :
+			$returnType = "float";
+			
+			case "returnType" : case "return type" : 
+			return {$returnType};
+		}
+	}
+}
+
+//GET SELECTION FROM POLY INFO
+//THIS IS NOT FINISHED
+global proc string[] getSelectionFromPolyInfo(string $sel[], string $polyInfoTag)
+{
+	/*	
+	string $returnType = getPolyInfo(	
+	string $sel[];
+	for($i=0;$i<`size $polyInfo`;$i++){
+		string $piTok[] = tokenizeString($polyInfo[$i], ":");
+		string $vals[] = tokenizeString($piTok[1], " ");
+		float $n[] = stringArrayToFloatArray($vals);
+		$fn = appendFloatArray($fn, $n, `size $n`);
+	
+	}
+	*/
+	
+	return $sel;	
+}
+
+//TOGGLE COMMAND
+//==============================================================================
+global proc toggleCommand(string $arg)
+{
+	string $tok[];
+	int $numTok = `tokenize $arg " " $tok`;
+	string $on, $off;
+	int $state;
+	string $eval;
+	for($i=0;$i<`size $tok`;$i++){
+		switch($tok[$i]){
+			case "-on" :
+			$on = $tok[($i + 1)];
+			continue;
+			case "-off" :
+			$off = $tok[($i + 1)];
+			continue;
+			case "-off" :
+			$state = catchQuiet(int(($tok[($i + 1)])));
+			continue;
+		}
+	}
+	if($state == 1){
+		$eval = $on;	
+		eval($eval);
+		return;
+	} else if($state == 0){
+		$eval = $off;	
+		eval($eval);
+		return;
+	}
+}
+
+//WIZ SELECT
+//=============================================
+global proc string[] wizSelect(string $sel[], string $request)
+{	
+	string $tok[] = tokenizeString($request, " ");
+	for($i=0;$i<`size $tok`;$i++){
+		switch($tok[$i]){
+			case "ConvertSelectionToFaces" :
+			$sel = wizConvertSelectionToFaces($sel);
+			return $sel;
+				
+		}
+	}
+}
+
+//COMPONENT SELECTION
+//======================================================================================
+//GET COMPONENTS FROM SELECTION
+//=========================================
+global proc string[] wizGetComponent(string $sel[], string $type)
+{	
+	$startTime = `timerX`;
+	string $dbl = "-dmi WizGetComponentDebugMenuItem -t Wiz Get Component"; string $dbm = "add"; int $dbc = 1;
+	
+	int $method = 0;
+	
+	string $c;
+	string $plcc;
+	switch($type){
+		case "-f" : case "face" : case "faces" : case "f" :
+		$c = "f";
+		$plcc = "-tf";
+		break;
+		case "-v" : case "vertex" : case "vertices" : case "v" : case "vtx" :
+		$c = "vtx";
+		$plcc = "-tv";
+		break;
+		case "-e" : case "edge" : case "edges" : case "e" : 
+		$c = "e";
+		$plcc = "-te";
+		break;
+		case "-uv" : case "uv" : case "map" : 
+		$c = "map";
+		$plcc = "-tuv";
+		break;
+		
+	}
+	int $validType;
+	string $vt = "No";
+	if($c != "" && $plcc != ""){
+		$validType = 1;
+		$vt = "Yes";	
+		if($validType == 0){
+			print("Selction is not correct type for - Wiz Get Component From Selection.\n");
+			return $sel;	
+		}
+	}
+	
+	debugListArray($dbl, " - Selection: ", $sel, $dbc, $dbm, "", 100);	
+	debugList($dbl, { (" - Type Requested: " + $type) }, $dbc, $dbm);
+	debugList($dbl, { (" - Is Valid Type: " + $vt) }, $dbc, $dbm);
+	debugList($dbl, { ("-----------------------") }, $dbc, $dbm);
+	
+	
+	string $comp[];
+	for($i=0;$i<`size $sel`;$i++){
+		if(isGeometryTransform($sel[$i]) == 1){			
+			debugList($dbl, { (" - Selection Is Transform - ") }, $dbc, $dbm);			
+			
+			string $co[] = `ls -fl ($sel[$i] + "." + $c + "[*]")`;		
+			appendStringArray($comp,$co,`size $co`);			
+		} else if (isComponentSelection($sel[$i]) == 1){
+						
+			string $selString = stringArrayToStringArrayString($sel);
+			string $eval = "polyListComponentConversion " + $plcc + " " + $selString + " ;";
+			string $co[] = `eval($eval)`;	
+			string $flco[] = `ls -fl $co`;
+			appendStringArray($comp,$flco,`size $flco`);
+			
+		} else {
+			
+			debugList($dbl, { ("[ERROR] CANNOT GET COMPONENTS FROM CURRENT SELECTION") }, $dbc, $dbm);
+			
+			print("Selction is not correct type for - Wiz Get Component From Selection.\n");	
+		}
+	}
+	
+	debugListArray($dbl, " - Components - ", $comp, $dbc, $dbm, "[END]", 100);
+		
+	debugTime("wizGetComponent",(`timerX -startTime $startTime`));
+	return $comp;
+	
+}
+
+//--------------------------------------------------------------------
+//////////////////////////////////////////////////////////////////////
+//			CONVERT SELECTION
+//////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------
+//WIZ CONVERT COMPONENT
+//==============================================================
+global proc string[] wizConvertSelection(string $sel[], string $type)
+{
+	select -r $sel;
+	string $return[];
+	switch($type){
+		case "-f" : case "face" : case "faces" : case "f" :
+		ConvertSelectionToFaces;
+		break;
+		
+		case "-v" : case "vertex" : case "vertices" : case "v" : case "vtx" :
+		ConvertSelectionToVertices;
+		break;
+		
+		case "-e" : case "edge" : case "edges" : case "e" : 
+		ConvertSelectionToEdges;
+		break;
+		
+		case "-uv" : case "uv" : case "map" : 
+		ConvertSelectionToUVs;
+		break;		
+		
+	}
+	$return = `ls -fl -sl`;
+	return $return;
+}
+
+//CONVERT SELECTION TO VERTICES AND EDGES
+//==================================================
+/*
+	USAGE:
+	Given a selection of either vertices or edges
+	this will select both the vertices and the edges
+*/
+global proc string[] convertSelectionToVerticesAndEdges( string $sel[] )
+{
+	if (`size $sel` == 0){
+		$sel = `ls -fl -sl`;
+	}
+	string $curSelType = getComponentSelectionType($sel[0]);
+	string $other[];
+	if ($curSelType == "v"){
+		$other = wizConvertSelection($sel, "e");
+	} else if ($curSelType == "e"){
+		$other = wizConvertSelection($sel, "vtx");
+	}
+	select -r $sel;
+	select -add $other;
+	string $return[] = `ls -fl -sl`;
+	return $return;
+}
+
+
+//WIZ GET COMPONENT FROM SELECTION
+//========================================================
+//Same as above
+global proc string[] wizGetComponentFromSelection(string $sel[], string $type)
+{
+	string $comp[] = wizGetComponent($sel, $type);	
+	return $comp;
+}
+
+//WIZ CONVERT SELECTION TO FACES ( get rid of this function )
+//============================================================
+global proc string[] wizConvertSelectionToFaces(string $sel[])
+{
+	//polySelectConstraint -m 3 -t 0x0008;	
+	string $allF[];
+	for($i=0;$i<`size $sel`;$i++){
+		if(isGeometryTransform($sel[$i]) == 1){
+			string $f[] = `ls -fl ($sel[$i] + ".f[*]")`;
+			appendStringArray($allF,$f,`size $f`);
+		} else if (isComponentSelection($sel[$i]) == 1){
+			string $f[] = `polyListComponentConversion -tf $sel`;
+			appendStringArray($allF,$f,`size $f`);
+		} else {
+			print("Selction is not correct type to be converted to faces.\n");	
+		}
+	}
+	return $allF;
+}
+
+//WIZ CONVERT SELECTION TO VERTEX ( get rid of this function )
+//============================================================
+global proc string[] wizConvertSelectionToVertex(string $sel[])
+{
+	string $v[] = `polyListComponentConversion -tv $sel`;
+	return $v;
+}
+
+//GET COMPONENTS IN LOGICAL ORDER
+//=========================================
+global proc string[] getPolyComponentsInLogicalOrder(string $sel[], string $type)
+{
+	if(`size $sel` == 0){	
+		$sel = forceGetSelectionList();
+	}
+	
+	string $comp[] = wizGetComponentFromSelection($sel,$type);
+	return $comp;
+}
+
+//CSV TO COMPONENT SELECTION
+//=========================================
+global proc string[] csvToComponentSelection(string $obj, string $type,string $csv)
+{
+	string $sel[];
+	string $num[] = tokenizeCSV($csv);
+	$num = stringArrayRemoveAllSpaces($num);
+	string $c = getComponentTypePrefix($type, "componentPrefix");
+	for($i=0;$i<`size $num`;$i++){
+		$sel[$i] = $obj + "." + $c + "[" + $num[$i] + "]";
+		
+	}
+	return $sel;
+}
+
+//--------------------------------------------------------------------
+//////////////////////////////////////////////////////////////////////
+//			GET TYPE
+//////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------
+//GET COMPONENT SELECTION TYPE
+//=========================================
+global proc string getComponentSelectionType( string $sel )
+{
+	string $tok[];
+	int $numTok = `tokenize $sel "." $tok`;
+	
+	if (startsWith($tok[1], "f") == 1) return "f";
+	if (startsWith($tok[1], "vtx") == 1) return "vtx";
+	if (startsWith($tok[1], "e") == 1) return "e";
+	if (startsWith($tok[1], "map") == 1) return "map";
+	
+	return "";
+}
+
+//@ GET SELECTED COMPONENT TYPE
+//====================================================================
+/*****************************************************************//**
+	Returns the name or abbrevation of the currently selected component's type.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-selected(-sl) <br>
+	-fullName(-fn) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $componentType = getSelectedComponentType("-sl -fn");
+	
+	</code>
+*********************************************************************/
+global proc string getSelectedComponentType( string $flags )
+{
+	string $sel[] = `ls -sl`;
+	int $fn;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+				
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-fn" : case "-fullName" :
+			$fn = 1;
+			break ;
+			
+		}
+	}
+	
+	string $toki[] = tokenizeString($sel[0], ".");
+	
+	if ($fn){
+		if (startsWith($toki[1], "f") == 1) return "face";
+		if (startsWith($toki[1], "vtx") == 1) return "vertex";
+		if (startsWith($toki[1], "e") == 1) return "edge";
+		if (startsWith($toki[1], "map") == 1) return "map";
+	} else {		
+		if (startsWith($toki[1], "f") == 1) return "f";
+		if (startsWith($toki[1], "vtx") == 1) return "vtx";
+		if (startsWith($toki[1], "e") == 1) return "e";
+		if (startsWith($toki[1], "map") == 1) return "map";
+	}
+	
+	return "";
+
+}
+
+//GET ALL COMPONENT SELECTION TYPE
+//-----------------------------------
+global proc string[] getAllComponentSelectionType(string $sel[])
+{
+	string $cType[];
+	for($i=0;$i<`size $sel`;$i++){	
+		$cType[$i] = getComponentSelectionType($sel[$i]);
+	}
+	return $cType;
+}
+
+//GET COMPONENT TYPE PREFIX
+//===========================================
+/*****************************************************************//**
+*	This will give you a prefix for a component type selection.
+*	More information.
+*	USAGE : 
+*
+*********************************************************************/
+global proc string getComponentTypePrefix(string $type, string $returnType)
+{
+	string $c;
+	string $plcc;
+	string $psc;
+	switch($type){
+		case "-f" : case "face" : case "faces" : case "f" :
+		$c = "f";
+		$plcc = "-tf";
+		$psc = "0x0008";
+		break;
+		case "-v" : case "vertex" : case "vertices" : case "v" : case "vtx" :
+		$c = "vtx";
+		$plcc = "-tv";
+		$psc = "0x0001";
+		break;
+		case "-e" : case "edge" : case "edges" : case "e" : 
+		$c = "e";
+		$plcc = "-te";
+		$psc = "0x8000";
+		break;
+		case "-uv" : case "uv" : case "map" : 
+		$c = "map";
+		$plcc = "-tuv";
+		$psc = "0x0010";
+		break;
+		
+	}
+	int $validType;
+	string $vt = "No";
+	if($c != "" && $plcc != ""){
+		$validType = 1;
+		$vt = "Yes";	
+		if($validType == 0){
+			print("Selction is not correct type for - Wiz Get Component From Selection.\n");
+			return "";	
+		}
+	}
+	
+	string $return;
+	switch($returnType){
+		case "componentPrefix" : case "c" : 
+		return $c;
+		case "polyListComponentConversionTag" : case "polyListComponentConversion" :
+		return $plcc;	
+		case "polySelectConstraint" : case "polySelectConstraintType" :
+		return $psc;	
+	}
+}
+
+//GET ADJACENT COMPONENTS
+//===================================================
+global proc string[] getAdjacentComponents(string $sel[])
+{
+	$sel = `ls -fl $sel`;
+	string $type = getComponentSelectionType($sel[0]);
+	string $adj[];
+	if($type == "f"){
+		ConvertSelectionToEdges;
+		ConvertSelectionToFaces;
+		$adj = `ls -fl -sl`;
+		return $adj;
+	} else if($type == "vtx"){
+		ConvertSelectionToEdges;
+		ConvertSelectionToVertices;
+		$adj = `ls -fl -sl`;
+		return $adj;
+	} else if($type == "e"){
+		ConvertSelectionToVertices;
+		ConvertSelectionToEdges;
+		$adj = `ls -fl -sl`;
+		return $adj;
+	} 
+	return $adj;
+}
+
+//LIST COMPONENTS IN LOGICAL ORDER
+//=================================================
+global proc string[] listObjectComponentsInLogicalOrder(string $sel[], string $type)
+{
+	//this doesn't work yet.	
+	print("listObjectComponentsInLogicalOrder - This doesn't work yet!!! \n");
+	string $c = getComponentTypePrefix($type, "componentPrefix");
+	
+	return $sel;
+	}
+	
+	global proc string[] listPolyFacesInLogicalOrder(string $sel[])
+	{
+	string $f[] = listObjectComponentsInLogicalOrder($sel, "faces");
+	return $f;
+}
+
+global proc int countSelectedComponents(string $sel[])
+{
+	print(`size $sel`);
+	return (`size $sel`);
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                   POLYGON CONSTRAINT SELECTIONS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//SELECTION BASED ON POLY SELECTION CONSTRAINT
+//===========================================================================================
+//===========================================================================================
+
+//PROPOGATE COMPONENT SELECTION
+//==========================================================================
+//PROPOGATE FACE SELECTION MAX ANGLE
+//-----------------------------------------
+global proc string[] propogateFaceSelectionMaxAngle(string $sel[],float $minAngle, float $maxAngle)
+{
+	string $dbl = "-dmi PropogateFaceSelectionMaxAngleDebugMenuItem -t Propogate Face Selection Max Angle"; string $dbm = "add"; int $dbc = 1;
+	menuItem -e -cb true SelectAdjacentEdgesAtMaxAngleDebugMenuItem;
+	
+	//Make sure we have an edge selected	
+	string $cType = getComponentSelectionType($sel[0]);
+	switch($cType){
+		case "vtx" : case "f" : case "map" :
+		debugList($dbl, { (" - Selection Is Type: " + $cType) }, $dbc, $dbm);
+		debugList($dbl, { (" - Convert To Edge - ") }, $dbc, $dbm);
+		$sel = `polyListComponentConversion -te`;
+		select -r $sel;
+		break;
+		
+	}
+	
+	debugListArray($dbl, " - Edge Selection: ", $sel, $dbc, $dbm, "", 10);
+	
+	//Propogate edge selection at max angle
+	int $growing = 1;
+	while($growing){
+		string $e[] = selectAdjacentEdgesAtMaxAngle($sel, $minAngle, $maxAngle);
+		debugListArray($dbl, " - Grow Edges: ", $e, $dbc, $dbm, "GROW", 10);
+		
+		if(`size $e` > `size $sel`){
+			clear $sel;
+			appendStringArray($sel, $e, `size $e`);
+			$growing = 1;	
+		} else {
+			clear $sel;
+			appendStringArray($sel, $e, `size $e`);
+			$growing = 0;
+			break;
+		}
+	}
+	//polySelectConstraint -dis;
+	
+	select -r $sel;
+	
+	//Select all the faces inside the edges
+	int $inside = `checkBox -q -v propogateComponentSelectionInsideOptionCheckBox`;
+	debugList($dbl, { (" - Inside Faces: " + $inside) }, $dbc, $dbm);
+	
+	//selectType -pf true;
+	debugListArray($dbl, " - Edge Selection: ", $sel, $dbc, $dbm, "", 50);
+	string $f[];
+	if($inside){
+		$f = `polyListComponentConversion -in -fe -tf`;
+		debugListArray($dbl, " - Faces: ", $f, $dbc, $dbm, "", 50);
+	} else {
+		$f = `polyListComponentConversion -fe -tf`;	
+		debugListArray($dbl, " - Faces: ", $f, $dbc, $dbm, "", 50);
+	}
+	if(`size $f` == 0){	
+		$f = `polyListComponentConversion -fe -tf`;
+		debugListArray($dbl, " - Faces: ", $f, $dbc, $dbm, "", 50);
+	}
+	
+	select -r $f;
+	$f = `ls -fl -sl`;
+	
+	//<DEBUG>
+	//debugListArray($dbl, " - Faces: ", $f, $dbc, $dbm, "", 100);
+	//<DEBUG>
+	
+	$sel = stringArrayRemoveDuplicates($sel);
+	polySelectConstraint -dis;
+	
+	return $sel;
+
+}
+
+//--------------------------------------------------------------------
+//////////////////////////////////////////////////////////////////////
+//			ANGLE
+//////////////////////////////////////////////////////////////////////
+//-------------------------------------------------------------------- 
+//SELECT AT MAX ANGLE
+//==========================================================
+//SELECT EDGES AT MAX ANGLE
+//------------------------------------
+global proc string[] selectAdjacentEdgesAtMaxAngle(string $sel[], float $minAngle, float $maxAngle)
+{
+	string $dbl = "-dmi SelectAdjacentEdgesAtMaxAngleDebugMenuItem -t Select Adjacent Edges At Max Angle"; string $dbm = "add"; int $dbc = 1;	
+	
+	$sel = `ls -fl $sel`;
+	
+	//<DEBUG>
+	
+	debugList($dbl, { (" - Max Angle: " + $maxAngle) }, $dbc, $dbm);
+	debugList($dbl, { (" - Size Selected: " + `size $sel`) }, $dbc, $dbm);
+	debugList($dbl, { ("----------------------") }, $dbc, $dbm);
+	
+	//<DEBUG>
+	
+	string $e[];   
+	selectType -pe true;
+	polySelectConstraint -m 3 -t 0x8000 -pp 1 -a on -ab $minAngle $maxAngle;
+	$e = `ls -fl -sl`;
+	
+	//<DEBUG>
+	debugListArray($dbl, " - Edges: ", $e, $dbc, $dbm, "", 20);
+	//<DEBUG>
+	
+	return $e;	
+}
+
+//SELECT FACES AT MAX ANGLE
+//------------------------------------
+global proc string[] selectAdjacentFacesAtMaxAngle(string $sel[], float $minAngle, float $maxAngle)
+{
+		
+	int $debug = `menuItem -q -cb SelectAdjacentFacesAtMaxAngleDebugMenuItem`;
+	
+	string $dbl = "Select Adjacent Faces At Max Angle";
+	int $dbc = 1;
+	string $dbm = "replace";
+	
+	$sel = `ls -fl $sel`;
+	
+	//<DEBUG>
+	if($debug){
+		debugList($dbl, { (" - Max Angle: " + $maxAngle) }, $dbc, $dbm);
+		debugList($dbl, { (" - Size Selected: " + `size $sel`) }, $dbc, $dbm);
+		debugList($dbl, { ("----------------------") }, $dbc, $dbm);
+	}
+	//<DEBUG>
+	
+	string $e[];   
+	if(`size $sel` > 1){
+		$e = `polyListComponentConversion -in -te`;  
+		$e = `ls -fl $e`; 
+	} else {
+		$e = `polyListComponentConversion -te`;  
+		$e = `ls -fl $e`;
+	}  
+	
+	//print("PolyList Edges:" + stringArrayToString($e, " ") + "\n");
+	
+	selectType -pe true;
+	select -r $e;
+	polySelectConstraint -m 1 -t 0x8000 -pp 1 -a on -ab $minAngle $maxAngle;
+	polySelectConstraint -m 1 -t 0x8000 -pp 1 -a on -ab $minAngle $maxAngle;
+	$e = `ls -fl -sl`;
+	
+	//<DEBUG>
+	if($debug){
+		debugList($dbl, { (" - Edges - " + `size $e`) }, $dbc, $dbm);
+		debugList($dbl, $e, $dbc, $dbm);
+		debugList($dbl, { ("----------------------") }, $dbc, $dbm);
+	}
+	//<DEBUG>
+	
+	selectType -pf true;
+	string $f[] = `polyListComponentConversion -in -fe -tf`;
+	if(`size $f` == 0){
+		//print(" - First Edge Selection -" + "\n");	
+		$f = `polyListComponentConversion -fe -tf`;
+	
+	}
+	select -r $f;
+	$f = `ls -fl $f`;
+	
+	//<DEBUG>
+	if($debug){
+		debugList($dbl, { (" - Faces - " + `size $f`) }, $dbc, $dbm);
+		debugList($dbl, $f, $dbc, $dbm);
+		debugList($dbl, { ("----------------------") }, $dbc, $dbm);
+	}
+	//<DEBUG>
+	
+	return $f;
+}
+
+
+//GET COMPONENTS OF TYPE AT MIN MAX ANGLE
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-fa string] [-fb linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-fa, -fb
+	
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $f[] = getComponentsOfTypeAtMinMaxAngle(`ls -sl`, "face", 15, 360);
+	
+	</code>
+*********************************************************************/
+global proc string[] getComponentsOfTypeAtMinMaxAngle(string $sel[], string $type, float $min, float $max)
+{
+		
+	string $dbl = "-dmi GetComponentsOfTypeAtMinMaxAngleDebugMenuItem -t Get Component At Angle";
+	string $dbm = "add";
+	int $dbc = 1;
+	
+	select -r $sel;
+	debugList($dbl, { (" - Selected: " +  `size $sel`) }, $dbc, $dbm);
+	debugList($dbl, $sel, $dbc, $dbm);	
+	string $typePrefix = getComponentTypePrefix($type, "polySelectConstraint");
+	
+	string $psc = "polySelectConstraint -m 3 -t " + $typePrefix + " -a 1 -ab " + $min + " " + $max + ";";
+	eval($psc);
+	
+	debugList($dbl, { (" - polySelectConstraint Command - ") }, $dbc, $dbm);	
+	debugList($dbl, { ( $psc ) }, $dbc, $dbm);	
+	//debugList($dbl, {(tslDiv(""))}, $dbc, $dbm);
+	
+	string $return[] = `ls -fl -sl`;
+	polySelectConstraint -dis;
+	
+	return $return;
+
+}
+
+//--------------------------------------------------------------------
+//////////////////////////////////////////////////////////////////////
+//			AREA
+//////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------
+//GET COMPONENTS IN MIN MAX AREA
+//============================================
+global proc string[] getComponentsInMinMaxArea(string $sel[], float $min[], float $max[])
+{
+	string $cType = getComponentSelectionType($sel[0]);
+	string $typePrefix = getComponentTypePrefix($cType, "polySelectConstraint");
+	$min[0] = $max[0] - ($max[0] - $min[0]);
+	$min[1] = $max[1] - ($max[1] - $min[1]);
+	$min[2] = $max[2] - ($max[2] - $min[2]);
+	
+	string $psc = (
+	"polySelectConstraint -m 3 -t " + $typePrefix + " -d 3 -db 0 100 -dp "
+	+ $min[0] + " " + $min[1] + " " + $min[2] + " -da "
+	+ $max[0] + " " + $max[1] + " " + $max[2] + " ;");
+	
+	eval($psc);
+	
+	$sel = `ls -fl -sl`;
+	polySelectConstraint -dis;
+	
+	return $sel;	
+}
+
+
+
+//GET COMPONENTS OF TYPE IN MIN MAX AREA
+//----------------------------------------------
+global proc string[] getComponentsOfTypeInMinMaxArea( string $sel[], string $type, float $min[], float $max[])
+{
+/*############ PROBLEM ###############################################
+This doesn't work right. Use distance from plane
+#####################################################################*/
+	//print("Sel: " + stringArrayToString($sel, " ") + " Type: " + $type + " Min: " + floatArrayToString($min, " ") + " Max: " + floatArrayToString($max, " ") + "\n");
+	string $typePrefix = getComponentTypePrefix($type, "polySelectConstraint");
+	float $mn[];
+	float $db[];
+	float $dp[];
+	float $dbAdd;
+	for($i=0;$i<`size $min`;$i++){
+		$mn[$i] = (0 - $max[$i]) + $min[$i];
+		$dp[$i] = ($max[$i] - $min[$i]);
+		$dbAdd = $dbAdd + ($max[$i] - $min[$i]);
+	}
+	float $dbMax = $dbAdd / 3;
+	
+	
+	string $psc = (
+	"polySelectConstraint -m 3 -t " + $typePrefix + " -d 3 -db 0 100 -dp "
+	+ $mn[0] + " " + $mn[1] + " " + $mn[2] + " -da "
+	+ $max[0] + " " + $max[1] + " " + $max[2] + " ;");
+	
+	//This is probably the right way to go...
+	/*
+	string $psc = (
+	"polySelectConstraint -m 3 -t " + $typePrefix + " -d 3 -db 0 " + $dbMax + " -dp "
+	+ $dp[0] + " " + $dp[1] + " " + $dp[2] + " -da 0 0 0 ;");
+	*/
+	
+	eval($psc);
+	//print(" Min: " + floatArrayToString($mn, " ") + " Max: " + floatArrayToString($max, " ") + "\n");
+	
+	$sel = `ls -fl -sl`;
+	polySelectConstraint -dis;
+	
+	return $sel;		
+}
+
+//@ GET COMPONENTS OF TYPE IN BOUNDING BOX SIDE
+//====================================================================
+global proc string[] getComponentsOfTypeInBoundingBoxSide( string $sel[], string $type, float $dir[])
+{
+	polySelectConstraint -dis;
+	selectMode -co;
+    //selectType -pf true;
+	
+	//print("Sel: " + stringArrayToString($sel, " ") + " Type: " + $type + " Min: " + floatArrayToString($min, " ") + " Max: " + floatArrayToString($max, " ") + "\n");
+	string $typePrefix = getComponentTypePrefix($type, "polySelectConstraint");
+	float $dp[];
+	
+	//string $obj = $sel[0];
+	string $obj = getObjectFromComponent($sel);
+	float $center[] = `getAttr ($obj + ".center")`;
+	float $piv[] = `xform -q -ws -piv $obj`;
+
+	float $bboxSize[] = `getAttr ($obj + ".boundingBoxSize")`;
+	
+	//print (wizDiv("s"));
+	//print ("Object Center : " + floatArrayToString($center, " ") + "\n");
+	//print ("BBoxSize Original : " + floatArrayToString($bboxSize, " ") + " \n");
+
+	float $bboxSizeHalf[] = { ($bboxSize[0] * 0.5), ($bboxSize[1] * 0.5), ($bboxSize[2] * 0.5) };
+	//print ("Half BBoxSize : " + floatArrayToString($bboxSizeHalf, " ") + "\n");
+	
+	float $bboxSizeDir[] = { ($dir[0] * $bboxSizeHalf[0]), ($dir[1] * $bboxSizeHalf[1]), ($dir[2] * $bboxSizeHalf[2]) };
+	//print ("Dir BBoxSize : " + floatArrayToString($bboxSizeDir, " ") + "\n");
+	
+	$dp[0] = $bboxSizeDir[0] + $center[0];
+	$dp[1] = $bboxSizeDir[1] + $center[1];
+	$dp[2] = $bboxSizeDir[2] + $center[2];
+	
+	//print ("Distance Point : " + floatArrayToString($dp, " ") + "\n");
+
+	float $dbMax = (abs($bboxSizeDir[0])) + (abs($bboxSizeDir[1])) + (abs($bboxSizeDir[2]));
+	
+	//print ("Distance Bound : 0 " + $dbMax + "\n");
+	//print (wizDiv("end"));
+	string $psc = (
+	"polySelectConstraint -m 3 -t " + $typePrefix + " -d 3 -db 0 " + $dbMax + " -dp "
+	+ $dp[0] + " " + $dp[1] + " " + $dp[2] + " -da "
+	+ $dir[0] + " " + $dir[1] + " " + $dir[2] + " ;");
+
+	//print ($psc + "\n");
+	//print (wizDiv("end"));
+	eval($psc);
+
+	$sel = `ls -fl -sl`;
+	polySelectConstraint -dis;
+	
+	
+	return $sel;		
+}
+
+//--------------------------------------------------------------------
+//////////////////////////////////////////////////////////////////////
+//			DIRECTION
+//////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------
+//GET COMPONENTS OF TYPE IN AXIS DIRECTION
+//====================================================
+global proc string[] getComponentsOfTypeInAxisDirection(string $sel[], string $type, string $axis, int $dir)
+{
+	int $debug = `menuItem -q -cb GetComponentsOfTypeInAxisDirectionDebugMenuItem`;	
+	string $dbl = "Get Components Of Type In Axis Direction";
+	int $dbc = 1;
+	string $dbm = "add";
+	
+	string $typePrefix = getComponentTypePrefix($type, "polySelectConstraint");
+	float $psc[] = convertAxisDirection($axis, $dir, "polySelectConstraintAxis");
+	
+	
+	string $polySelectConstraint = (
+	"polySelectConstraint -m 3 -t " + $typePrefix + " -d 3 -db 0 " + $psc[0] + " -dp "
+	+ $psc[1] + " " + $psc[2] + " " + $psc[3]
+	+ " -da " + $psc[4] + " " + $psc[5] + " " + $psc[6] + " ;");
+	
+	//<DEBUG>
+	if($debug){
+		debugList($dbl, { (" - Poly Select Constraint - ") }, $dbc, $dbm);
+		debugList($dbl, { ($polySelectConstraint) }, $dbc, $dbm);
+		debugList($dbl, { ("polySelectConstraint -dis;") }, $dbc, $dbm);
+		debugList($dbl, { ("----------------------") }, $dbc, $dbm);
+	}
+	//<DEBUG>
+	
+	$sel = `eval($polySelectConstraint)`;
+	
+	polySelectConstraint -dis;
+	
+	return $sel;
+
+}
+
+//POLY SELECT CONSTRAINT COMPONENTS OF TYPE IN AXIS DIRECTION
+//====================================================
+global proc string[] polySelectConstraintAxisDirection(string $sel[], string $type, string $axis, int $dir)
+{
+	int $debug = `menuItem -q -cb GetComponentsOfTypeInAxisDirectionDebugMenuItem`;	
+	string $dbl = "Get Components Of Type In Axis Direction";
+	int $dbc = 1;
+	string $dbm = "add";
+	
+	string $typePrefix = getComponentTypePrefix($type, "polySelectConstraint");
+	float $psc[] = convertAxisDirection($axis, $dir, "polySelectConstraintAxis");
+	
+	
+	string $polySelectConstraint = (
+	"polySelectConstraint -m 3 -t " + $typePrefix + " -d 3 -db 0 " + $psc[0] + " -dp "
+	+ $psc[1] + " " + $psc[2] + " " + $psc[3]
+	+ " -da " + $psc[4] + " " + $psc[5] + " " + $psc[6] + " ;");
+	
+	//<DEBUG>
+	if($debug){
+		debugList($dbl, { (" - Poly Select Constraint - ") }, $dbc, $dbm);
+		debugList($dbl, { ($polySelectConstraint) }, $dbc, $dbm);
+		debugList($dbl, { ("polySelectConstraint -dis;") }, $dbc, $dbm);
+		debugList($dbl, { ("----------------------") }, $dbc, $dbm);
+	}
+	//<DEBUG>
+	
+	eval($polySelectConstraint);
+	
+	string $comp[] = `ls -fl -sl`;
+	
+	return $comp;
+
+}
+
+//POLY SELECT CONSTRAINT DIRECTION
+//===========================================================
+global proc string[] getComponentsInDirection(string $sel[], float $dir[], float $min, float $max)
+{
+	string $dbl = "-dmi GetComponentsInDirectionDebugMenuItem -t Get Components In Direction"; string $dbm = "add"; int $dbc = 1;
+	
+	string $type = getComponentSelectionType($sel[0]);
+	debugListString($dbl, (" - Type: " + $type), $dbc, $dbm);
+	
+	string $typePrefix = getComponentTypePrefix($type, "polySelectConstraint");
+	debugListString($dbl, (" - Type Prefix: " + $typePrefix), $dbc, $dbm);
+	
+	string $polySelectConstraint = ("polySelectConstraint -m 3 -t " + $typePrefix + " -o 1 -ob " + $min + " " + $max + " -oa " 
+	+ $dir[0] + " " + $dir[1] + " " + $dir[2] + ";");	
+	debugListString($dbl, (" - PolySelectConstraint: " + $polySelectConstraint), $dbc, $dbm);
+	
+	eval($polySelectConstraint);
+	string $comp[] = `ls -fl -sl`;
+	
+	polySelectConstraint -dis;
+	
+	debugListArray($dbl, " - Components In Direction: ", $comp, $dbc, $dbm, "", 20);
+	return $comp;
+}
+
+//GET COMPONENTS ON BOUNDING BOX SIDE
+//====================================================
+global proc string[] getComponentsOnBoundingBoxSide( string $sel[], string $type, float $dir[] , float $max )
+{
+	if (`size $sel` == 0){
+		print("Noting is Selected\n");
+	}
+	if (isComponentSelection($sel[0])){
+		$sel[0] = getObjectFromComponent($sel);
+	}
+	
+	string $dbl = "-dmi GetComponentsOnBoundingBoxSideMenuItem -t Get Components On BBox Side"; string $dbm = "add"; int $dbc = 1;
+	
+	string $typePrefix = getComponentTypePrefix($type, "polySelectConstraint");
+	float $bboxSize[] = `getAttr ($sel[0] + ".boundingBoxSize")`;
+	
+	float $center[] = `getAttr ($sel[0] + ".center")`;
+	
+	float $dp[] = {($center[0] + ($dir[0] * ($bboxSize[0] * 0.5))),
+	($center[1] + ($dir[1] * ($bboxSize[1] * 0.5))),($center[2] + ($dir[2] * ($bboxSize[2] * 0.5)))};
+	
+	//debugListArray($dbl, " - DistancePoint: ", $dp, $dbc, $dbm, "[NEXT]", 100);
+	
+	string $comp[];
+	while (`size $comp` == 0){
+		string $polySelectConstraint = (
+		"polySelectConstraint -m 3 -t " + $typePrefix + " -d 3 -db 0 " + $max + " -dp "
+		+ $dp[0] + " " + $dp[1] + " " + $dp[2]
+		+ " -da " + $dir[0] + " " + $dir[1] + " " + $dir[2] + " ;");
+		
+		debugList($dbl, { (" - PolySelectConstraint: " + $polySelectConstraint) }, $dbc, $dbm);
+		
+		eval ($polySelectConstraint);
+		
+		$comp = `ls -fl -sl`;
+		if(`size $comp` > 1){
+			break;
+		}
+		$max = $max * 2;
+	}
+	debugListArray($dbl, " - Components: ", $comp, $dbc, $dbm, "[NEXT]", 100);
+	
+	if (`floatSliderGrp -q -ex getComponentsOnBoundingBoxSideMaxFloatSliderGrp`){
+		floatSliderGrp -e -v $max getComponentsOnBoundingBoxSideMaxFloatSliderGrp;
+	}
+	
+	polySelectConstraint -dis;
+	
+	return $comp;
+}
+
+/*======================| SUMMARY |===================================
+    To select upward facing components : 
+    orientation on / max degrees : 0 - 90? / Vy : 1
+    Opposite for downwards
+    
+    To Get Area of selected Faces
+    local area = -a / worldArea = -wa
+    polyEvaluate -a `ls -sl`;
+    
+    
+/*=======================| USAGE |====================================	
+
+====================================================================*/
+
+global proc string getUpwardFacingComponents( string $sel[], string $type )
+{
+    string $typePrefix = getComponentTypePrefix($type, "polySelectConstraint");
+    
+    return "";
+}
+
+//--------------------------------------------------------------------
+//////////////////////////////////////////////////////////////////////
+//			BORDER
+//////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------
+//GET COMPONENTS OF TYPE ON BORDER
+//====================================================
+global proc string[] getComponentsOfTypeOnBorder(string $sel[], string $type)
+{
+	string $dbl = "-dmi GetComponentsOfTypeOnBorderDebugMenuItem -t Components On Border"; string $dbm = "add"; int $dbc = 1;
+	polySelectConstraint -dis;
+	
+	select -r $sel;	
+	debugListArray($dbl," - Selected: ", $sel, $dbc, $dbm, "", 100);
+	
+	string $typePrefix = getComponentTypePrefix($type, "polySelectConstraint");
+	
+	debugListString($dbl, (" - Type: " + $type), $dbc, $dbm);
+	debugListString($dbl, (" - TypePrefix: " + $typePrefix), $dbc, $dbm);
+	debugListString($dbl, (tslDiv("")), $dbc, $dbm);
+	
+	selectType -pe true;
+	polySelectConstraint -m 3 -t 0x8000 -w 1;
+	string $eb[] = `ls -fl -sl`;
+	
+	debugListArray($dbl," - Border Edges: ", $eb, $dbc, $dbm, "", 100);
+	
+	switch($type){
+		case "edge" : case "edges" : case "-e" : case "e" : case "Edge" : case "Edges" :
+		polySelectConstraint -dis;
+		return $eb;
+		
+		case "face" : case "faces" : case "-f" : case "f" : case "Face" : case "Faces" :
+		string $f[] = `polyListComponentConversion -fe -tf`;	
+		select -r $f;
+		$f = `ls -fl -sl`;	
+		debugListArray($dbl," - Border Faces: ", $f, $dbc, $dbm, "", 100);
+		polySelectConstraint -dis;
+		return $f;
+		
+		case "vertex" : case "vertices" : case "-v" : case "v" : case "Vertex" : case "Vertices" :
+		string $v[] = `polyListComponentConversion -fe -tv`;
+		select -r $v;
+		$v = `ls -fl -sl`;	
+		debugListArray($dbl," - Border Vertices: ", $v, $dbc, $dbm, "", 100);
+		polySelectConstraint -dis;
+		return $v;
+		
+		case "uv" : case "uvs" : case "-uv" : case "-uvs" : case "UV" : case "UVs" :
+		string $uv[] = `polyListComponentConversion -fe -tuv`;
+		select -r $uv;
+		$uv = `ls -fl -sl`;	
+		debugListArray($dbl," - Border UVs: ", $uv, $dbc, $dbm, "", 100);
+		polySelectConstraint -dis;
+		return $uv;	
+		
+	}
+
+}
+
+//GET EDGES ON FACE SELECTION BORDER
+//====================================================
+global proc string[] getEdgesOnFaceSelectionBorder(string $f[])
+{
+	$f = checkSel($f);	
+	string $e[] = `polyListComponentConversion -te -bo`;
+	select -r $e;
+	return $e;
+}
+
+//--------------------------------------------------------------------
+//////////////////////////////////////////////////////////////////////
+//			DISTANCE
+//////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------
+//GET COMPONENTS AT DISTANCE FROM POINT
+//====================================================
+global proc string[] getComponentsOfTypeAtDistanceFromPoint(string $sel[], string $type, float $point[], float $min, float $max)
+{	
+	string $dbl = "-dmi GetComponentsOfTypeAtDistanceFromPointDebugMenuItem -t Get Component At Distance";
+	string $dbm = "add";
+	int $dbc = 1;
+	
+	select -r $sel;
+	debugList($dbl, { (" - Selected: " +  `size $sel`) }, $dbc, $dbm);
+	debugList($dbl, $sel, $dbc, $dbm);	
+	string $typePrefix = getComponentTypePrefix($type, "polySelectConstraint");
+	
+	string $psc = "polySelectConstraint -m 3 -t " + $typePrefix + " -d 1 -dp " + $point[0] + " " + $point[1] + " " + $point[2] + " -db " + $min + " " + $max + ";";
+	eval($psc);
+	
+	debugList($dbl, { (" - polySelectConstraint Command - ") }, $dbc, $dbm);	
+	debugList($dbl, { ( $psc ) }, $dbc, $dbm);	
+	debugList($dbl, {(tslDiv(""))}, $dbc, $dbm);
+	
+	string $return[] = `ls -fl -sl`;
+	polySelectConstraint -dis;
+	
+	return $return;
+
+}
+
+//--------------------------------------------------------------------
+//////////////////////////////////////////////////////////////////////
+//			INTERIOR
+//////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------
+//GET INTERIOR FACES OF EDGES
+//====================================================
+global proc string[] getInteriorFacesOfEdges(string $e[])
+{
+	$e = checkSel($e);	
+	select -r $e;	
+	string $v[] = `polyListComponentConversion -fe -tv`;
+	select -r $v;
+	string $f[] = `polyListComponentConversion -in -fv -tf`;
+	select -r $f;
+	$f = `ls -fl -sl`;
+	return $f;
+}
+
+//GET INTERIOR FACES OF VERTICES
+//====================================================
+global proc string[] getInteriorFacesOfVertices(string $v[])
+{
+	$v = checkSel($v);	
+	select -r $v;	
+	string $e[] = `polyListComponentConversion -fv -te`;
+	select -r $e;
+	string $f[] = `polyListComponentConversion -in -fe -tf`;
+	select -r $f;
+	$f = `ls -fl -sl`;
+	return $f;
+}
+
+
+/*
+global proc string[] getFacesToEdgeOfMinMaxAngle(string $sel[], float $min, float $max)
+{
+	string $e[] = getComponentsOfTypeAtMinMaxAngle($sel, "edge", $min, $max);
+	
+}
+*/
+
+global proc selectObjectsThatShareMaterials(string $sel[])
+{
+	
+}
+
+//@ EXPAND POINT SELECT CONSTRAINT UNTIL TYPE IS SELECTED
+//====================================================================
+global proc expandPointSelectConstraintUntilTypeIsSelected( string $sel[], string $type, float $point[], float $incSize )
+{
+	polySelectConstraint -dis;
+	//selectMode -co;
+    //selectType -pf true;
+	
+	//print("Sel: " + stringArrayToString($sel, " ") + " Type: " + $type + " Min: " + floatArrayToString($min, " ") + " Max: " + floatArrayToString($max, " ") + "\n");
+	string $typePrefix = getComponentTypePrefix($type, "polySelectConstraint");
+	float $dp[];
+	float $dbMax;
+	int $i=0;
+	while (true){
+		select -r $sel;
+		polySelectConstraint -dis;
+		selectMode -co;
+		$dbMax = $dbMax + $incSize;
+		
+		string $polySelectConstraint = (
+		"polySelectConstraint -m 2 -t " + $typePrefix + " -d 1 -db 0 " + $dbMax
+		+ " -dp " + $point[0] + " " + $point[1] + " " + $point[2] + " -da 0 0 0 ;");
+		
+		print($polySelectConstraint + "\n");
+		eval ($polySelectConstraint);
+		
+		/*
+		polySelectConstraint -m 3 -t $typePrefix -d 1 -db 0 $incSize
+		-dp $point[0] $point[1] $point[2] -da 0 0 0;
+		*/
+		string $ps[] = `ls -sl`;
+		if (`size $ps` > 0 || $i == 100){
+			printNiceArrayList("Sel : ", $ps);
+			polySelectConstraint -dis;
+			return ;
+		}
+		$i++;
+	}
+}
+
+//@ WIZ LIST ALL OF SELECTED TYPE
+//====================================================================
+/*****************************************************************//**
+	Lists All Objects Of The Same Type As Passed.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName("-obj someObject -q -sl");
+	
+	</code>
+*********************************************************************/
+global proc string[] wizListAllOfSelectedType( string $sel[] )
+{
+	string $nodeType = `nodeType $sel[0]`;
+	string $allOfType[] = `ls -type $nodeType`;
+	wizlog ((niceArrayList(("All Of Type : " + $nodeType), $allOfType)));
+	return $allOfType;
+
+}
+
+
+//@ HELP
+//=============================================================================================
+//@ OPEN SELECT WIZ HELP
+//------------------------------
+global proc openSelectWizHelp()
+{
+	wizHelpWindow();
+	string $layout = "selectWizHelpLayout";
+	if(`layout -q -ex $layout`){
+		return;	
+	}
+	$layout = wizHelpContentLayout($layout, "SelectWiz");	
+	selectWizHelpLayout($layout);
+	
+}
+
+global proc selectWizHelpLayout(string $parent)
+{
+	//REPLACE THIS!!!!
+	setParent $parent;
+	string $about = (
+	"Prep For Painting runs a series of processes on selected objects to unite meshes and optimize uv space"
+	+" to prepare the objects for 3d painting across multiple mesh surfaces.\n"
+	);
+	
+	wizText($about);
+	separator -style "single";
+	
+	string $mainProcess = (
+	"The main function of prep for painting is to unite meshes. To decide which meshes to unite there are several options."
+	);
+	wizText($mainProcess);
+	string $uniteByMenuItems[] = { "all", "shader", "allGroups", "topDownGroup", "topDownGroupShader"}; 
+	wizOptionMenuGrpMenuItems("Unite By:", "", $uniteByMenuItems);	
+	string $uniteByAnn = (" - All: All selected objects will be united into one object." + "\n"
+	+ " - Shader: Objects will be united together based on shared materials." + "\n"
+	+ " - All Groups: Starting with lowest in heirarchy. Objects that share the same parent will be united." + "\n"
+	+ " - Top Down Group: Starting with highest in heirarchy. Objects that share the same parent will be united." + "\n"
+	+ " - Top Down Group Shader: Starting with highest in heirarchy. Objects that share the same parent will be united."
+	+ " Then objects that share the same materials will be united."
+	);			
+	wizText($uniteByAnn);
+	
+	separator -style "single";
+	
+	string $optimizeProcess = (
+	"The other important function that prep for painting does is to find objects that share the same geometry and lay them out"
+	+ " into the same uv space. This eliminates the need to paint the same screw head window pane or whatever over and over.\n"
+	+ "If you want to make use of this feature select [consolidateUVSpace].\n"
+	+ "You can also select [instanceMatchingGeometry].\n"
+	+ "Istead of laying out uvs into the same space for geometry that maches. Prep for painting will make instances of the geometry.\n"
+	);
+	
+	$optimizeProcess = ("The other important function that prep for painting does is to find objects that share the same geometry and do one of several options.");
+	wizText($optimizeProcess);
+	string $optimizeByMenuItems[] = { "none", "consolidateUVSpace", "instanceMatchingGeometry"};  	
+	wizOptionMenuGrpMenuItems("Optimize By:", "", $optimizeByMenuItems);	
+		
+	string $optimizeByAnn = (" - None: No optimization will be done. UVs will just be layout out." + "\n"
+	+ " - Consolidate UV Space: Any objects that share the same geometry will share the same UV space." 
+	+ " This eliminates the need to paint the same screw head, window pane or whatever over and over."+ "\n"
+	+ " - Instance Matching Geometry: Any objects that share the same geometry will be instanced.");
+	wizText($optimizeByAnn);	
+	separator -style "single";	
+	
+	string $opsy = "Another helpful function is the optimize symetrical function.";
+	wizText($opsy);
+	string $optimizeSymetricalMenuItems[] = { "none", "X", "Y", "Z"};
+	wizOptionMenuGrpMenuItems("Optimize Symetrical:", "", $optimizeSymetricalMenuItems);
+	string $optimzieSymetricalAnn = (" - None: No optimization will be done. No objects will be cut or analyized for symetry." + "\n"
+	+ " - X , Y , Z: Any object that lies on both sides of the specified axis will be cut in half."
+	+ " The positive side of the axis will be kept. There is another option under process settings to optionally mirror the object(s).");
+	wizText($optimzieSymetricalAnn);	
+	separator -style "single";
+		
+	string $ph = ("To keep all the hierarchy of the selected objects during and after the process of uniting objects check this box.\n");
+	wizText($ph);	
+	checkBox -l "Preserve Heirarchy" -v 1 ;
+	separator -style "single";
+	
+	string $ces = ("If you wish to run each step in the process in order manually check this box.\n"
+	+"After each step you can make changes or cancel the operation with the cancel button.\n");		
+	wizText($ces);		
+	checkBox -l "Confirm Each Step" -v 0 ;	
+	
+	separator -style "single";
+	
+	string $other = ("There are other optional processes you can automatically perform during prep for painting.\n"
+	+"They are located under the Process settings rolldown.\n"
+	+"Each process can be performed individually by selecting it from the [Process Functions] menu."
+	);		
+	
+	wizText($other);	
+	//string $menuBarLayout = `menuBarLayout`;	
+	//prepForPaintingMainMenu($parent);
+	
+	separator -style "single";
+	
+	setParent..;
+}
+
+//@ SELECT WIZ RANDOM SELECTION
+//====================================================================
+/*****************************************************************//**
+	Pass a list of objects and get a return selection of the list randomized.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $ranSel[] = selectWizRandomSelection(`ls -sl`);
+	
+	</code>
+*********************************************************************/
+global proc string[] selectWizRandomSelection( string $sel[] )
+{
+	select -cl;
+	string $return[];
+	for ($i=0;$i<`size $sel`;$i++){
+		int $doSel = randInt(0,1);
+		if ($doSel){
+			select -add $sel[$i];
+			$return[`size $return`] = $sel[$i];
+		}
+	}
+	
+	return $return;
+
+}
+
+global proc string[] lsAllOfSameType( string $sel[] )
+{
+	string $return[];
+	for ($i=0;$i<`size $sel`;$i++){
+		string $nt = `nodeType $sel[$i]`;
+		string $allOfType[] = `ls -type $nt`;
+		$return[`size $return`] = $sel[$i];
+		appendStringArray($return, $allOfType, `size $allOfType`);
+		
+	}
+	
+	return $return;
+
+}
+
+global proc string[] selectWizListHistory( string $sel[] )
+{
+	select -r $sel;
+	
+	string $his[] = wizListHistory("-sl -f");
+	return $his;
+	
+}
+
+//@ WIZ LIST HISTORY
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $history[] = wizListHistory("-sl -af");
+	
+	</code>
+*********************************************************************/
+global proc string[] wizListHistory( string $flags )
+{
+	string $obj, $type;
+	string $return[];
+	string $sel[];
+	int $edit;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-typ" : case "-type" :
+			$type = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-af" : case "-allFuture" :
+			$af = 1;
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	for ($i=0;$i<`size $sel`;$i++){
+		string $lh[] = `listHistory -ac -af`;
+		appendStringArray($return, $lh, `size $lh`);
+		
+	}
+	
+	return $return;
+
+}
+
+
+global proc string[] wizTextureMapSelection( string $flags )
+{
+	string $obj, $type;
+	string $return[];
+	string $sel[];
+	int $edit;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-typ" : case "-type" :
+			$type = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-af" : case "-allFuture" :
+			$af = 1;
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	return {""};
+	
+}
+
+global proc wizPolyBorderFaceSelection( string $sel[] )
+{
+	select -r $sel[0];
+	
+	polySelectConstraint -m 3 -t 1 -w 1;
+	ConvertSelectionToEdges;
+	ConvertSelectionToFaces;
+
+}

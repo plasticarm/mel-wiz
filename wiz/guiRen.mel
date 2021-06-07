@@ -1,0 +1,226 @@
+/*
+    GUIRen.mel
+    
+    Run a local render within the GUI
+    Was doRen.mel
+    
+    Sometimes, this is the only way to successfully render particles, fluids,
+      and other dynamics.
+    
+    
+    NOTES:
+        Source script to run over animation timeline range
+        Frames can be renamed in Windows cmd with:
+            rename \\name\name\project\Maya_db\work\CB\images\filename.*.sgi snowSpray10s.*.sgi
+
+    TODO:
+        +ESC doesn't abort with mental ray renders
+          mental ray seems to catch ESC and not pass it to Maya
+          problem seems to be that mental ray renders use the main progress bar as well, so it was
+            clobbering my usage of it.
+          fixed by changing when progress bar appears, so as not to conflict with render.
+        +Write images to current project
+        +Add GUI for run-up, step, img name, output dir, frame range ...
+        +Check/Change output image format to SGI/TGA/...
+        -Supress overwrite confirm dialog (???)
+        Variable frame number padding
+        List of frames, rather than range
+        Sometimes, following abort, Submit aborts immediately
+*/
+
+string $GRversionStr = "0.92b";
+
+global proc DoGUIRen ()  {
+    string $dir = `textField -q -text GRDirectory`;
+    if (`filetest -e $dir` == 0){
+		sysFile -makeDir $dir;	
+	}
+	if (`filetest -e $dir` == 0){
+        error ("WIZ| wizMakeDir : Could Not Make Directory : " + $dir + "\n");
+		return ;
+	} 
+    
+    string $fn = `textField -q -text GRFileName`;
+    int $start = `textField -q -text GRStart`;
+    int $end = `textField -q -text GREnd`;
+    int $step = `textField -q -text GRStep`;
+    int $doRunup = `checkBox -q -v GRDoRunup`;
+    int $runup = `textField -q -text GRRunup`;
+    int $i, $j, $abort;
+    
+    if ($runup > $start) $runup = $start;
+    
+    fileInfo "GRDirectory" $dir;
+    fileInfo "GRFileName" $fn;
+    fileInfo "GRStart" $start;
+    fileInfo "GREnd" $end;
+    fileInfo "GRStep" $step;
+    fileInfo "GRDoRunup" $doRunup;
+    fileInfo "GRRunup" $runup;
+
+    global string $gMainProgressBar;  // This is defined on maya startup
+    
+    if ($doRunup && $runup < $start)  {
+        progressBar -edit -beginProgress -isInterruptable true -status "Runup..." -min $runup -max $start $gMainProgressBar;
+        $abort = 0;
+        for ($i = $runup; $i < $start; ++$i)  {
+            if (`progressBar -query -isCancelled $gMainProgressBar`) { $abort = 1; break; }
+            currentTime $i;
+            progressBar -e -step 1 $gMainProgressBar;
+        }
+        progressBar -edit -endProgress $gMainProgressBar;
+        if ($abort)  {
+            print("*** GUIRen: ABORT!!!\n");
+            return;
+        }
+    }
+    
+    //setAttr defaultRenderGlobals.imageFormat 5;        // SGI
+    setAttr "defaultRenderGlobals.imageFormat" 40; //EXR
+    
+    currentTime $start;
+    int $cf = $start;
+    $abort = 0;
+    
+    string $renLayers[] = guiRenGetRenderableRenderLayers();
+    
+    for ($rl=0;$rl<`size $renLayers`;$rl++){
+    	editRenderLayerGlobals -currentRenderLayer $renLayers[$rl];
+		for ($i = $start; $i <= $end; $i += $step)  {
+		
+			for ($j = $cf+1; $j <= $i; ++$j)
+				currentTime $j;
+			$cf = $i;
+			
+			if ($i == $start)
+				RenderIntoNewWindow;
+			else
+				renderWindowRender redoPreviousRender renderView;
+				
+			progressBar -edit -beginProgress -isInterruptable true -status "Saving..."  -min $start -max ($start+1) $gMainProgressBar;
+			if (`progressBar -query -isCancelled $gMainProgressBar`) { $abort = 1; break; }
+			
+			string $i4 = $i;
+			if ($i < 10) $i4 = "000" + $i;
+			else if ($i < 100) $i4 = "00" + $i;
+			else if ($i < 1000) $i4 = "0" + $i;
+			renderWindowSaveImageCallback "renderView" ($dir+"/"+$fn+"_"+$renLayers[$rl]+"."+$i4+".exr") "EXR";
+			
+			if (`progressBar -query -isCancelled $gMainProgressBar`) { $abort = 1; break; }
+			progressBar -edit -endProgress $gMainProgressBar;
+			
+			clearCache -all;
+		}
+    }
+    
+    progressBar -edit -endProgress $gMainProgressBar;
+    if ($abort)  {
+        print("*** GUIRen: ABORT!!!\n");
+    } else    
+        print("*** GUIRen: DONE!\n");
+     
+
+}
+
+//GET RENDER LAYERS
+//===========================================================
+global proc string[] guiRenGetRenderLayers()
+{
+	string $rl[] = `ls -typ renderLayer`;
+	string $rn[] = `ls -rn $rl`;
+	
+	//Get rid of render layers from referenced files
+	string $renderLayers[] = stringArrayRemove($rn, $rl);
+	
+	//print $renderLayers;
+	return $renderLayers;
+	
+}
+
+//GET RENDERABLE RENDER LAYERS
+//===========================================================
+global proc string[] guiRenGetRenderableRenderLayers()
+{
+	string $renderableRL[];
+	string $rl[] = guiRenGetRenderLayers();
+	for($i=0;$i<`size $rl`;$i++){
+		int $renderable = `getAttr ($rl[$i] + ".renderable")`;
+		if($renderable == 1){
+			$renderableRL[`size $renderableRL`] = $rl[$i];	
+		}
+	}
+	return $renderableRL;
+	
+}
+
+
+// Callback after user browses for action file
+global proc int GRSetOutputDir (string $dirName, string $fileType)  {
+    textField -e -text $dirName GRDirectory;
+    return 1;
+}
+
+global proc GUIRen ()  {
+    chdir "C:";
+    string $dir = `workspace -q -rd` + "images";
+    string $hn = strip(system("hostname"));
+    string $fn = "render_" + $hn;
+    
+    int $start = `playbackOptions -q -min`;
+    int $end = `playbackOptions -q -max`;
+    int $step = 1;
+    int $doRunup = 1;
+    int $runup = `playbackOptions -q -ast`;
+    
+    string $fi[];
+    $fi = `fileInfo -q "GRDirectory"`; if ($fi[0] != "") $dir = $fi[0];
+    $fi = `fileInfo -q "GRFileName"`; if ($fi[0] != "") $fn = $fi[0];
+    $fi = `fileInfo -q "GRStart"`; if ($fi[0] != "") $start = $fi[0];
+    $fi = `fileInfo -q "GREnd"`; if ($fi[0] != "") $end = $fi[0];
+    $fi = `fileInfo -q "GRStep"`; if ($fi[0] != "") $step = $fi[0];
+    $fi = `fileInfo -q "GRDoRunup"`; if ($fi[0] != "") $doRunup = $fi[0];
+    $fi = `fileInfo -q "GRRunup"`; if ($fi[0] != "") $runup = $fi[0];
+    
+        
+    if (`window -q -ex GRwin`) deleteUI GRwin;
+    if (`windowPref -q -ex GRwin`) windowPref -remove GRwin;
+
+    global string $GRversionStr;
+    string $w = `window -width 670 -height 240 -title ("GUI Render v" + $GRversionStr) GRwin`;
+    string $form = `formLayout`;
+        
+    string $rc1 = `rowColumnLayout -nc 3 -cw 1 100 -cw 2 480 -cw 3 80 -cat 1 "right" 0`;
+         text -label "Output Directory: ";
+         textField -text $dir GRDirectory;
+         button -label "Browse" -c "fileBrowserDialog -m 4 -ds 1 -fc \"GRSetOutputDir\" -an \"Select\" -wt \"Choose a Driectory to Render to\";";
+    setParent ..;
+
+    string $rc2 = `rowColumnLayout -nc 2 -cw 1 100 -cw 2 160 -cat 1 "right" 0`;
+         text -label "Image Name: ";
+         textField -width 80 -text $fn GRFileName;
+         text -l "";
+         text -l "";
+         text -label "Start: ";
+         textField -width 80 -text $start GRStart;
+         text -label "End: ";
+         textField -width 80 -text $end GREnd;
+         text -label "Step: ";
+         textField -width 80 -text $step GRStep;
+//        text -l "";
+        checkBox -v $doRunup -label "Do Runup" -onc "textField -e -en 1 GRRunup" -ofc "textField -e -en 0 GRRunup" GRDoRunup;
+//         text -label "Runup: ";
+         textField -width 80 -text $runup -en $doRunup GRRunup;
+    setParent ..;
+
+    string $rc3 = `rowColumnLayout -nc 3 -cw 1 400 -cw 2 80 -cw 3 80`;
+        text -l "";    
+        button -l "Render" -c "DoGUIRen; deleteUI GRwin;";
+        button -l "Cancel" -c "deleteUI GRwin;";
+    setParent ..;
+
+    formLayout -e -af $rc1 "top" 10 -af $rc2 "top" 30 -af $rc3 "top" 170 $form;
+         
+    showWindow $w;
+}
+
+GUIRen;

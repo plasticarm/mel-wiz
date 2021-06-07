@@ -1,0 +1,16 @@
+
+void main(){
+
+	if(ModalDialogOkCancel("Select A File In The Import Folder"," ")){
+		ForEachFileInFolder("","*.fbx","ImportFBXToPaint");
+	}
+	
+	
+} 
+
+void ImportFBXToPaint(string &in FileName){
+		ToRoom("UV");
+		SetFileForFileDialogs(FileName); 
+		cmd("$MERGEOBJ");
+		
+}

@@ -1,0 +1,900 @@
+
+
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                    SELECTION FROM TEXTURE MAP
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//@ CREATE MESH SELECTION FROM TEXTURE OUTPUT
+//====================================================================
+/*****************************************************************//**
+	This will make a mesh component selection by generating a new texture map specified by tags.
+	<hr>
+	<b>Synopsis</b><br>
+	createMeshSelectionFromTextureOutput [-obj string] [-typ string] [-tt string] [-ma float]<br>
+	[-mfc float] [-mnh float] [-u int] [-v int] [-inv bool] [-dir float float float] <br>
+	[-ro float float float] [-n string] [-rt string] [-sln string]<br>
+	This is really only to be used with the wizCraft system.
+	
+	<b>Return value</b><br>
+	string[] Return array is based on the -returnType flag. Multiple -rt flags can be used.
+	
+	<b>Flags</b><br>
+	-tag1, -tag2
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	string $v[] = createMeshSelectionFromTextureOutput($sel[0], "-sln roofSelection -typ snow -ro -180 0 0");
+	
+	</code>
+*********************************************************************/
+global proc string[] createMeshSelectionFromTextureOutput( string $tags )
+{
+	wizLog ("[@] createMeshSelectionFromTextureOutput\n");
+	wizlog ("	[*] createMeshSelectionFromTextureOutput(\"" + $tags + "\");");
+	
+	string $imageFormat = `getAttr "defaultRenderGlobals.imageFormat"`;
+	wizCraftCallback("-q resetRenderGlobals", ("setAttr \"defaultRenderGlobals.imageFormat\" " + $imageFormat + ";"));
+	wizCraftCallback("-q cleanup", ("wizCraftCallback(\"-ex resetRenderGlobals\",\"\");"));
+
+	string $type;
+	string $sTexType;
+	string $selName;
+	string $obj, $typeName;
+	float $dir[] = { 0.0, 1.0, 0.0 };
+	float $rot[] = { 0.0, 0.0, 0.0 };
+	string $tok[] = tokenizeString($tags, " ");
+	float $maxAngle, $minFaceCount, $minHeight, $maxHeight;
+	int $uObjCount, $vObjCount;
+	int $invert;
+	int $cornerMask;
+	float $th;
+	
+	string $return[];
+	string $returnType[];
+	string $sel[];
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			$obj = $sel[0];
+			$selName = $obj;
+			break ;
+			
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			$selCom = " -obj " + $obj;
+			break;
+			
+			case "-typ" : case "-type" :
+			$type = $tok[($i + 1)];
+			break ;			
+			
+			case "-tt" : case "-textureType" :
+			$sTexType = $tok[($i + 1)];
+			break ;	
+			
+			case "-ma" : case "-maxAngle" :
+			$maxAngle = float($tok[($i + 1)]);
+			break;
+			
+			case "-mfc" : case "-minFaceCount" :
+			$minFaceCount = float($tok[($i + 1)]);
+			break;
+			
+			case "-mnh" : case "-minHeight" :
+			$minHeight = float($tok[($i + 1)]);
+			break;
+			
+			case "-mxh" : case "-maxHeight" :
+			$maxHeight = float($tok[($i + 1)]);
+			break;			
+			
+			case "-u" : case "-uObjCount" :
+			$uObjCount = int($tok[($i + 1)]);
+			break;
+			
+			case "-v" : case "-vObjCount" :
+			$vObjCount = int($tok[($i + 1)]);
+			break;
+			
+			case "-inv" : case "-invert" :
+			$invert = int($tok[($i + 1)]);
+			break;
+			
+			case "-dir" : case "-direction" :
+			$dir = { (float($tok[($i + 1)])), (float($tok[($i + 2)])), (float($tok[($i + 3)])) };
+			break ;
+			
+			case "-ro" : case "-rotate" :
+			$rot = { (float($tok[($i + 1)])), (float($tok[($i + 2)])), (float($tok[($i + 3)])) };
+			break ;
+			
+			case "-n" : case "-sln" : case "-selectionName" :
+			$selName = $tok[($i + 1)];
+			break ;
+			
+			case "-rt" : case "-returnType" : 
+			$returnType[`size $returnType`] = $tok[($i + 1)];
+			break ;
+			
+			case "-sln" : case "-selectionName" : 
+			$selName = $tok[($i + 1)];
+			break ;
+			
+			case "-cm" : case "-cornerMask" :
+			$cornerMask = 1;
+			break ;
+			
+			case "-th" : case "-threshold" :
+			$th = float($tok[($i + 1)]);
+			break ;
+			/*
+			case "-slt" : case "-selectedTexture" :
+			$sel[] = `ls -sl`;
+			$slt = $sel[0];
+			//$obj = $sel[1];
+			break ;
+			*/
+		}
+	}
+
+	wizLog ("	[#] Obj : " + $obj + " [#] \n");
+	global string $WIZCRAFT_objNN;
+	
+	//_________________________________________
+	// 	Initialize
+	
+	//Make an output file path
+	string $sTex;
+	string $p3d;
+	//string $sTexOutName[] = wizCraftMGMT(("-q -n -ft " + $type + " -ot " + $sTexType + $selName));	
+	string $sTexOutName[] = wizCraftMGMT(("-q -n -ft " + $type + " -ot FeatureMaskMap"));	
+	string $outFileTex[];	
+	string $outType[] = wizCraftMGMT(("-q -n -ft " + $type + " -ot " + $sTexType + $selName));
+	string $outFile[] = wizCraftGetFileOutputPaths(("-typ " + $outType[0] + " -ext tif"));		
+	string $selMapFilePath = $outFile[0];	
+	string $outTex;	
+	
+	wizLog ("	[#] Solid Texture Out Name : " + $sTexOutName[0]);
+	wizLog ("	[#] Out Type : " + $outType[0]);
+	wizLog ("	[#] Solid Texture Type : " + $sTexType);
+	wizLog ("	[-] Out Texture Selection File : " + $outFile[0] + "\n");
+	
+	// make a lambert shader to connect textures too
+	string $shader[] = wizCreateNewShader(($sTexOutName[0] + "Lambert"), "lambert");
+	
+	//_________________________________________
+	// Create Textures
+	
+	// we can make different kinds of 3d textures for a variety of mapping masks
+	// snow, ramp projection, ao, noise... 
+	// <!ToDoWiz> - $sTex should really be an array so we can add multiple types of 3d textures at this step
+	if ($sTexType == "snow"){
+		// make a snow texture		
+		$sTex = `shadingNode -asTexture snow`;		
+		$p3d = `shadingNode -asUtility place3dTexture`;
+		wizCraftMGMT("-ata -sl");
+		connectAttr ($p3d + ".worldInverseMatrix[0]") ($sTex + ".placementMatrix");
+		
+		///////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//	set the 2nd color to black and set depth decay to 100
+		//	- so there is a harsh line and not a gradual fade.
+		//	also, invert the snow
+		//	set threshold to max angle * 0.01
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
+		setAttr ($sTex + ".surfaceColor") -type double3 0.0 0.0 0.0;
+		setAttr ($sTex + ".depthDecay") 100;
+		if ($maxAngle > 0.0){
+			setAttr ($sTex + ".threshold") ($maxAngle * 0.01);
+		} 
+		
+		if ($th > 0){
+			setAttr ($sTex + ".threshold") $th;
+		}
+		
+		if ($invert){
+			setAttr ($sTex + ".invert") 1;
+		}
+					
+		// Set the rotation of the snow texture for desired effect
+		xform -ro $rot[0] $rot[1] $rot[2] $p3d;	
+	}
+	
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//	Middle snow can be used for making window locators
+	//	It's two snow textures with one snow upsidedown. 
+	//	Then combined and inverted so we get a white area in the middle and black on the tops and bottoms
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	if ($sTexType == "middleSnow"){
+		string $snowTex[];
+		string $snowP3d[];
+		
+		string $laytexName[] = wizCraftMGMT(("-q -n -ft " + $type + " -suf " + capitalizeString($selName)));
+		// the sTex is the layered texture with two snows.
+		$sTex = createLayeredTexture($laytexName[0]);		
+		wizCraftMGMT("-ata " + $sTex);
+		
+		for ($i=0;$i<2;$i++){			
+			// make a snow texture		
+			string $snowName[] = wizCraftMGMT("-q -n -ft " + $type + " -ot middleSnow -num " + $i);
+			string $p3dName[] = wizCraftMGMT("-q -n -ft " + $type + " -ot middleSnowP3D -num " + $i);
+			$snowTex[$i] = `shadingNode -n $snowName[0] -asTexture snow`;		
+			$snowP3d[$i] = `shadingNode -n $p3dName[0] -asUtility place3dTexture`;
+			wizCraftMGMT("-ata -sl");
+			connectAttr ($snowP3d[$i] + ".worldInverseMatrix[0]") ($snowTex[$i] + ".placementMatrix");
+			
+			///////////////////////////////////////////////////////////////////////////////////////////////////////////
+			//	set the 2nd color to black and set depth decay to 100
+			//	- so there is a harsh line and not a gradual fade.
+			//	also, invert the snow
+			//	set threshold to max angle * 0.01
+			//////////////////////////////////////////////////////////////////////////////////////////////////////////
+			setAttr ($snowTex[$i] + ".surfaceColor") -type double3 0.0 0.0 0.0;
+			setAttr ($snowTex[$i] + ".depthDecay") 100;
+			setAttr ($snowTex[$i] + ".threshold") ($maxAngle * 0.01);
+			setAttr ($snowTex[$i] + ".invert") 1;
+						
+			// Set the rotation of the snow texture for desired effect
+			xform -ro $rot[0] $rot[1] $rot[2] $snowP3d;	
+			
+		}
+		select -r $snowTex;
+		select -add $sTex;
+		addSelectedTexturesToLayeredTexture({$snowTex[0], $snowTex[1], $sTex });
+		
+		// rotate the 2nd snow so that it is going the reverse direction of the first snow.
+		xform -ro ($rot[0] + 180) $rot[1] $rot[2] $snowP3d[1];	
+		
+		// use in blend mode
+		setAttr ($sTex + ".inputs[0].blendMode") 2;	
+		
+	}
+	
+	if ($sTexType == "ao"){
+		select -r $obj;
+		
+		string $aoName[] = wizCraftMGMT("-q -n -ft " + $type + " -ot AOMap -num " + $i);
+		string $outAO[] = wizCraftGetFileOutputPaths(("-typ " + $aoName[0] + " -ext tif"));	
+		string $aoBakeSetName[] = wizCraftMGMT("-q -n -ft " + $type + " -ot AOBakeSet -num " + $i);
+		mrCreateBakeSetExactName($aoBakeSetName[0], "textureBakeSet"); assignBakeSet $aoBakeSetName[0] "";
+		applyAttrPreset $aoBakeSetName[0] "wizCraftAO" 1;
+		setAttr -type "string" ($aoBakeSetName[0] + ".prefix") $aoBakeSetName[0];
+		string $sg[] = getShadingGroupsFromObject($obj);
+		//string $lm[] = `convertLightmap -bo $aoBakeSetName[0] -mi -f $outAO[0] $sg[0] $obj`;
+		string $lm[] = `convertLightmap -bo $aoBakeSetName[0] $sg[0] $obj`;
+		wizlog ("	[+] Lightmap : " + stringArrayToString($lm, " "));
+		
+		
+		$sTex = wizNewFileTexture($aoName[0]);
+		
+		//setAttr -type "string" ($sTex + ".fileTextureName") $incName;
+		
+		/* for converting ambient occlusion map
+		convertLightmap -camera persp -bo tmpTextureBakeSet -ulb initialShadingGroup $obj;
+		*/
+		
+		///////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//	We need to get the file... add it to a file texture and then layer it
+		//	
+		//	
+		//	
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
+		
+	}
+	
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//	Add a Corner Mask Map
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	string $cmTex;
+	string $cornerMaskTexture;
+	if ($cornerMask == 1){
+		string $cmt[] = wizCreateCornerMaskTexture("-obj " + $obj + " -ft " + $type);
+		$cornerMaskTexture =$cmt[0];
+		wizlog ("	[!] Corner Mask Texture Code Is Not Complete [!]");
+		/*
+		wizlog ("	[+] Creating Corer Mask Texture");
+		//creaseObjectEdges($obj);
+		getComponentsOfTypeAtMinMaxAngle({$obj}, "edges", 15, 360);
+		ConvertSelectionToVertices;
+		string $cornerVertices[] = `ls -fl -sl`;
+		string $cornerMaskTexFile[] = wizCraftMGMT("-q -n -ft " + $type + " -ot CornerMask");
+		string $cornerVFile[] = wizCraftGetFileOutputPaths(("-typ " + $cornerMaskTexFile[0] + " -ext tif"));	
+		createMeshVertexColorSelectionMap("-fn " + $cornerVFile[0] + " -inv -fsx 1024 -fsy 1024 -obj " + $obj);
+		string $cmTex = wizNewFileTexture($cornerMaskTexFile[0]);
+		setAttr -type "string" ($cmTex + ".fileTextureName") $cornerVFile[0];
+		//wizCraftMGMT(("-ata " + $cmTex));
+		wizlog ("	[#] Corner Mask : " + $cmTex);
+		$cornerMaskTexture = $cmTex;
+		*/
+	}
+			
+	//_________________________________________
+	// Layer The Textures
+	
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//	Now we make a few more textures.
+	//	A ramp connected to a projection. 
+	//	We can use this to cut off the above textures so we can set a min and max height.
+	//	Then we layer the textures with a layered texture.
+	//	Multiply the ramp projection on top of the other textures so we get the black values to cut off at height.
+	//	ramp projection [0] = ramp texture [1] projection node [2] = place3dTexture
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+		
+
+	// create a ramp projection and set the ends to min max values - string $sel[] = `ls -sl`; string $obj = $sel[0];
+	string $rampProjName[] = wizCraftMGMT("-q -n -ft " + $type + " -suf RampProjection");
+	string $rampProj[] = createRampProjectionToFitObj($obj, $rampProjName[0]);
+	select -r $rampProj[0];
+	wizCraftMGMT(("-ata " + $rampProj[0]));
+		
+	// Set the ramp entries color and position	
+	float $rpMin = (clamp(0.0, 1.0,($minHeight * 0.01)));
+	float $rpMax = (clamp(0.0, 1.0,($maxHeight * 0.01)));
+	setAttr ($rampProj[0] + ".interpolation") 0;
+	setAttr ($rampProj[0] + ".colorEntryList[0].color") -type double3 0 0 0;
+	setAttr ($rampProj[0] + ".colorEntryList[0].position") 0.0;		
+	setAttr ($rampProj[0] + ".colorEntryList[1].color") -type double3 1 1 1;
+	setAttr ($rampProj[0] + ".colorEntryList[1].position") $rpMin;	
+	setAttr ($rampProj[0] + ".colorEntryList[2].color") -type double3 0 0 0;	
+	setAttr ($rampProj[0] + ".colorEntryList[2].position") $rpMax;
+		
+	// layer the textures
+	//string $laytexName[] = wizCraftMGMT(("-q -n -ft " + $type + " -suf " + capitalizeString($selName)));
+	string $laytex = createLayeredTexture($sTexOutName[0]);
+	wizlog ("	[#] Layered Texture : " + $laytex);
+	
+	// layer the height ramp
+	string $addTextures[];
+	int $rampTexIndice;
+	if (`objExists $rampProj[1]`){
+		$addTextures[`size $addTextures`] = $rampProj[1];
+		$rampTexIndice = 0;
+	}
+	
+	// layer the snow
+	if (`objExists $sTex`){
+		$addTextures[`size $addTextures`] = $sTex;
+		
+	} 
+	
+	// layer the corner mask
+	if (`objExists $cornerMaskTexture`){
+		$addTextures[`size $addTextures`] = $cornerMaskTexture;
+		wizlog ("	[#] Layer Corner Mask Texture");
+	}
+	
+	$addTextures[`size $addTextures`] = $laytex;
+	addSelectedTexturesToLayeredTexture($addTextures);
+	
+	// multiply the textures
+	//setAllBlendModesOnSelectedLayeredTexture($laytex, 6);
+	int $indices[] = `getAttr -mi ($laytex + ".inputs")`;
+	for ($i=0;$i<(`size $indices` - 1);$i++){
+		setAttr ($laytex + ".inputs[" + $indices[$i] + "].blendMode") 6;	
+	}
+	
+	// disconnect the ramp alpha
+	if (`objExists $rampProj[1]`){
+		//disconnectAttr ($rampProj[1] + ".outAlpha") ($laytex + ".inputs[$rampTexIndice].alpha");
+		//setAttr ($laytex + ".inputs[$rampTexIndice].alpha") 1;
+	}
+	
+	// add to asset
+	wizCraftMGMT ("-ata " + $laytex);
+		
+	// connect the layered texture to the shader
+	connectAttr -f ($laytex + ".outColor") ($shader[0] + ".color");
+	
+	// connect the shader to the object
+	select -r $obj;	
+	select -add $shader[1];	
+	sets -e -forceElement $shader[1];
+	wizCraftMGMT(("-ata " + $shader[1]));
+	
+	//_________________________________________
+	// Render the Solid Texture to output file
+	
+	//Add textureOutputPath attr to the 3d texture
+	wizLog ("	[*] addTextureOutputFilePathAttr(\"" + $sTex + "\", \"" + $outFile[0] + "\");\n");
+	addTextureOutputFilePathAttr($laytex, $selMapFilePath);
+	
+	// render the texture to a file
+	$outFileTex = wizUpdateSolidTextureFromTextureOutputPath({$obj}, $laytex);
+	$outTex = $outFileTex[0];
+	string $featureMaskMapSet[] = wizCraftMGMT(("-s -ft " + $type + " -ot FeatureMaskMap " + $outTex));
+		
+	wizLog ("	[+] Solid Texture Node : " + $sTex + "\n");
+	wizLog ("	[+] Out Solid Texture File Node: " + $outTex + "\n");
+	wizLog ("	[+] Out Solid Texture File Path : " + $selMapFilePath + "\n");
+		
+	//_________________________________________
+	// Make the selection map
+	
+	//////////////////////////////////////////////////////////////
+	//	The Output map is not connected to the object shader.
+	//	It only needs to be connected to the hairSystem.
+	//////////////////////////////////////////////////////////////
+	
+	// Finally - make a selection from the texture map
+	wizLog ("	[*] wizMakeSelectionFromTextureMap({ \"" + $obj + "\" }, \"" + $selMapFilePath + "\");");
+	string $newSel[] = wizMakeSelectionFromTextureMap({$obj}, $selMapFilePath);
+	wizCraftMGMT("-s -ft " + $type + " -ot VertexSelection");
+	
+	// Return the texture file node
+	if (stringArrayContains("textureFile", $returnType)){
+		$return[`size $return`] = $outTex;	
+		wizLog ("	[-] Return : Texture Selection Texture File : " + $outTex + "\n");
+	}
+	// Return the texture file path
+	if (stringArrayContains("texturePath", $returnType)){
+		$return[`size $return`] = $selMapFilePath;	
+		wizLog ("	[-] Return : Texture Selection Texture File Path : " + $selMapFilePath + "\n");
+	}
+	// Return the selected components
+	if (stringArrayContains("components", $returnType)){
+		appendStringArray($return, $newSel, `size $newSel`);
+		wizLog ("	[-] Return : Selected Components : Size " + `size $newSel` + "\n");	
+	}	
+	
+	//////////////////////////////////////////////////////////////////////
+	//	The artSelectCtx tool needs to get shut down
+	//////////////////////////////////////////////////////////////////////
+	setToolTo moveSuperContext;
+	selectMode -o;
+	select -cl;
+	
+	return $return;	
+	
+}
+
+/*
+global proc wizCraftComponentSelectionFromTexture( string $flags )
+{
+	string $sel[];
+	string $tex;
+	
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			$selCom = " -obj " + $obj;
+			break;
+			
+			case "-typ" : case "-type" :
+			$type = $tok[(
+			
+			}
+			
+	}
+
+
+}
+*/
+
+//@ WIZ MAKE SELECTION FROM TEXTURE MAP
+//====================================================================
+/*****************************************************************//**
+	Pass an object and a texture file path and get a component selection in return.
+	<hr>
+	<b>Synopsis</b><br>
+	wizMakeSelectionFromTextureMap [string $sel[]] [string $texturefilepath] <br>
+	You must use paths with forward slashes "/"
+	The component mode you want to select from must already be the current component mode.
+	<!ToDoWiz> Or maybe it only selects vertices. This is not yet determined!
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-tag1, -tag2
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	string $f[] = wizMakeSelectionFromTextureMap(`ls -sl`, "C:/Users/Glen/Documents/maya/projects/Assets/sourceimages/shapes/patterns/ramps/RampPattern1.png");
+	
+	</code>
+*********************************************************************/
+global proc string[] wizMakeSelectionFromTextureMap( string $sel[], string $texfilepath )
+{
+	wizLog ("[@]wizMakeSelectionFromTextureMap\n");
+	wizLog ("	[*] wizMakeSelectionFromTextureMap({ \"" + $sel[0] + "\" }, \"" + $texfilepath + "\");\n");
+	// make sure symetry is off
+	symmetricModelling -e -symmetry 0 -topoSymmetry 0;
+	select -r $sel[0];
+	
+	string $artSel = `artSelectCtx -reflection false -n "textureSelect"`;
+	
+	
+	
+	setToolTo $artSel;
+	artSelectCtx -e -reflection false -ifm "luminance" -irm true -ifl $texfilepath $artSel;
+	if (`confirmStep("OK")` == 0){ return {""}; }
+	
+	string $newSel[] = `ls -sl`;
+	return $newSel;
+	
+}
+
+//@ CREATE RAMP PROJECTION TO FIT OBJ
+//====================================================================
+/*****************************************************************//**
+	This creates a ramp and a 3d projection and fits the projection to an objects bounding box.
+	<hr>
+	<b>Synopsis</b><br>
+	createRampProjectionToFitObj [string $obj] [string $name] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] returns a string array with the ramp[0], projection[1], and place3dTexture[2]
+	
+	<b>Flags</b><br>
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	string $sel[] = `ls -sl`;
+	string $name = ($sel[0] + "RampProjection");
+	string $rampProj[] = createRampProjectionToFitObj($sel[0], $name);
+	
+	</code>
+*********************************************************************/
+global proc string[] createRampProjectionToFitObj( string $obj, string $name )
+{
+	// Crate a ramp
+	string $ramp = wizCreateNewRampTexture($name);
+
+	// Create a projection and connect ramp to it.
+	string $proj[] = create3dProjectionNode();
+	connectAttr -force ($ramp + ".outColor") ($proj[0] + ".image");
+	connectAttr -force ($ramp + ".outColor") ($proj[0] + ".transparency");
+	
+	fitPlace3dTextureToObjBBox($obj, $proj[1]);
+	
+	return {$ramp, $proj[0], $proj[1]};	
+
+}
+
+//@ WIZ CREATE CORNER MASK TEXTURE
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName("-obj someObject -q -sl");
+	
+	</code>
+*********************************************************************/
+global proc string[] wizCreateCornerMaskTexture( string $flags )
+{
+	wizlog ("[@] wizCreateCornerMaskTexture");
+	string $obj, $ft;
+	string $sel[];
+	string $tok[] = tokenizeString($flags, " ");
+	int $x = 1024;
+	int $y = 1024;
+	string $ext = "tif";
+	float $minAngle = 15.0;
+	float $maxAngle = 360.0;
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-ft" : case "-featureType" :
+			$ft = $tok[($i + 1)];
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			$obj = $sel[0];
+			break ;			
+			
+			case "-x" : case "-xResolution" :
+			$x = int ($tok[($i + 1)]);
+			break ;
+			
+			case "-y" : case "-yResolution" :
+			$y = int ($tok[($i + 1)]);
+			break ;
+			
+			case "-eft" : case "-exportFileType" : 
+			$ext = $tok[($i + 1)];
+			break ;
+			
+			case "-mna" : case "-minAngle" : 
+			$minAngle = float ($tok[($i + 1)]);
+			break ;
+			
+			case "-mxa" : case "-maxAngle" : 
+			$maxAngle = float ($tok[($i + 1)]);
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	string $cmTex;
+	string $cornerMaskTexture;
+	
+	wizlog ("	[+] Creating Corer Mask Texture");
+	//creaseObjectEdges($obj);
+	getComponentsOfTypeAtMinMaxAngle({$obj}, "edges", $minAngle, $maxAngle);
+	ConvertSelectionToVertices;
+	string $cornerVertices[] = `ls -fl -sl`;
+	string $cornerMaskTexFile[];
+	if ($ft == ""){
+		$cornerMaskTexFile = wizCraftMGMT("-q -n -ft shape -ot CornerMask");
+	} else {
+		$cornerMaskTexFile = wizCraftMGMT("-q -n -ft " + $ft + " -ot CornerMask");
+	}
+	
+	string $cornerVFile[] = wizCraftGetFileOutputPaths(("-typ " + $cornerMaskTexFile[0] + " -ext " + $ext));	
+	createMeshVertexColorSelectionMap("-fn " + $cornerVFile[0] + " -inv -fsx " + $x + " -fsy " + $y + " -obj " + $obj + " -eft " + $ext);
+	string $cmTex = wizNewFileTexture($cornerMaskTexFile[0]);
+	setAttr -type "string" ($cmTex + ".fileTextureName") $cornerVFile[0];
+	//wizCraftMGMT(("-ata " + $cmTex));
+	wizlog ("	[#] Corner Mask : " + $cmTex);
+	$cornerMaskTexture = $cmTex;
+
+	return { $cornerMaskTexture };
+	
+}
+
+global proc string[] wizCreateSnowSandwidch( string $flags )
+{
+	wizlog ("[@] wizCreateSnowSandwidch");
+	string $obj, $ft;
+	string $sel[];
+	float $rot[];
+	float $maxAngle;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-ft" : case "-featureType" :
+			$ft = $tok[($i + 1)];
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			$obj = $sel[0];
+			break ;			
+			
+			case "-ma" : case "-maxAngle" :
+			$maxAngle = float ($tok[($i + 1)]);
+			break ;
+			
+			case "-ro" : case "-rotation" :
+			string $rotString[] = wizFlagArray($tok, $i);
+			$rot = stringArrayToFloatArray($rotString);
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	
+	string $snowTex[];
+	string $snowP3d[];
+	
+	string $laytexName[] = wizCraftMGMT(("-q -n -ft " + $ft + " -ot SnowSandwidch"));
+	// the sTex is the layered texture with two snows.
+	string $sTex = createLayeredTexture($laytexName[0]);		
+	wizCraftMGMT("-ata " + $sTex);
+		
+	for ($i=0;$i<2;$i++){			
+		// make a snow texture		
+		string $snowName[] = wizCraftMGMT("-q -n -ft " + $ft + " -ot middleSnow -num " + $i);
+		string $p3dName[] = wizCraftMGMT("-q -n -ft " + $ft + " -ot middleSnowP3D -num " + $i);
+		$snowTex[$i] = `shadingNode -n $snowName[0] -asTexture snow`;		
+		$snowP3d[$i] = `shadingNode -n $p3dName[0] -asUtility place3dTexture`;
+		wizCraftMGMT("-ata -sl");
+		connectAttr ($snowP3d[$i] + ".worldInverseMatrix[0]") ($snowTex[$i] + ".placementMatrix");
+		
+		///////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//	set the 2nd color to black and set depth decay to 100
+		//	- so there is a harsh line and not a gradual fade.
+		//	also, invert the snow
+		//	set threshold to max angle * 0.01
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
+		setAttr ($snowTex[$i] + ".surfaceColor") -type double3 0.0 0.0 0.0;
+		setAttr ($snowTex[$i] + ".depthDecay") 100;
+		setAttr ($snowTex[$i] + ".threshold") ($maxAngle * 0.01);
+		setAttr ($snowTex[$i] + ".invert") 1;
+					
+		// Set the rotation of the snow texture for desired effect
+		xform -ro $rot[0] $rot[1] $rot[2] $snowP3d;	
+			
+	}
+	select -r $snowTex;
+	select -add $sTex;
+	addSelectedTexturesToLayeredTexture({$snowTex[0], $snowTex[1], $sTex });
+	
+	// rotate the 2nd snow so that it is going the reverse direction of the first snow.
+	xform -ro ($rot[0] + 180) $rot[1] $rot[2] $snowP3d[1];	
+	
+	// use in blend mode
+	setAttr ($sTex + ".inputs[0].blendMode") 2;	
+
+	return {$sTex};
+	
+		
+}
+
+
+//@ MAKE U V AREA MASK RAMP
+//====================================================================
+// DO NOT USE
+/*======================| SUMMARY |===================================
+    This takes a min max uv area and creats a ramp with a white square
+    corresponding to that precise area.
+    It returns the name of the new ramp.
+/*=======================| USAGE |====================================	
+    makeUVAreaMaskRamp("uvAreaMaskRamp", { 0.0, 0.5, 0.1, 0.5 });
+====================================================================*/
+global proc string makeUVAreaMaskRamp( string $name, float $uvMinMax[] )
+{
+	wizLog("[@] makeUVAreaMaskRamp\n");
+    string $ramp = wizCreateNewRampTexture($name);
+    //print ("Make UV Area Mask Ramp : U Min : " + $uvMinMax[0] + " : V Min : " + $uvMinMax[1] + " : U Max : " + $uvMinMax[2] + " : V Max : " + $uvMinMax[3] + " " + "\n");
+    //Put the entry 1 at the min v position
+    //Put the entry 2 and the max v position
+    setAttr ($ramp + ".interpolation") 0;
+    
+    setAttr ($ramp + ".colorEntryList[0].color") -type double3 0.0 0.0 0.0;
+    setAttr ($ramp + ".colorEntryList[0].position") 0.0;  
+    
+    if ($uvMinMax[1] < 1.0 && $uvMinMax[1] > 0.0){
+        setAttr ($ramp + ".colorEntryList[1].color") -type double3 1.0 1.0 1.0;
+        setAttr ($ramp + ".colorEntryList[1].position") $uvMinMax[1];
+    }
+    if ($uvMinMax[3] < 1.0 && $uvMinMax[3] > 0.0){
+        setAttr ($ramp + ".colorEntryList[2].color") -type double3 0.0 0.0 0.0;
+        setAttr ($ramp + ".colorEntryList[2].position") $uvMinMax[3];  
+    }
+    //Set the default color to black
+    setAttr ($ramp + ".defaultColor") -type double3 0 0 0 ;
+    
+    //Set the u coverage to the u max - the u min, then move the ramp over to the u min
+    if ($uvMinMax[2] < 1.0 && $uvMinMax[2] > 0.0 && $uvMinMax[0] < 1.0 && $uvMinMax[0] > 0.0){
+        string $p2d = getTexturesPlace2dTextureNode($ramp);
+        setAttr ($p2d + ".coverageU") ($uvMinMax[2] - $uvMinMax[0]);
+        setAttr ($p2d + ".translateFrameU") $uvMinMax[0];
+    }
+    return $ramp;
+}
+
+
+
+global proc wizPolySnowBuildup( string $flags )
+{
+	string $obj, $type;
+	string $sel[];
+	int $extrudeIterations = 1;
+	float $threshold = 0.5;
+	float $extrudeDistance = 1;
+	float $extrudeOffset = 1;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-wiz" : 
+			$extrudeIterations = `intSliderGrp -q -v wizCraft_polySnowBuildupExtrudeIterations_intSliderGrp`;
+			$threshold = `floatSliderGrp -q -v wizCraft_polySnowBuildupThreshold_floatSliderGrp`;
+			$extrudeDistance = `floatSliderGrp -q -v wizCraft_polySnowBuildupExtrudeDistance_floatSliderGrp`;
+			$extrudeOffest = `floatSliderGrp -q -v wizCraft_polySnowBuildupExtrudeOffset_floatSliderGrp`;
+			$sel = `ls -sl`;
+			break ;
+				
+			case "-typ" : case "-type" :
+			$type = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	wizlog (niceArrayList("[SELECTED]", $sel));
+	string $ms[] = `listRelatives -s $sel[0]`;
+	
+	
+	string $v[] = createMeshSelectionFromTextureOutput("-sl -rt components -th " + $threshold + " -typ snowBuildup -tt snow");
+	wizlog (niceArrayList("[VERTICES] : ", $v));
+	
+	select -r $v;
+	ConvertSelectionToFaces;
+	
+	
+	string $f[] = `ls -fl -sl`;
+	if (`size $f` == 0){
+		wizlog ("[!] No Faces To Build Snow On [!] Try Reducing Threshold");
+		return ;
+	}
+	
+	polyChipOff -ch 1 -kft 1 -dup 1 -off 0 $f;
+	// polyChipOff1 // 
+	//polyPerformAction ("polySeparate -rs 1", "o", 0);
+	string $ps[] = `polySeparate -rs 1 -ch 1 $ms[0]`;
+	//string $ps[] = `polySeparate -rs 1 -ch 1 $sel[0]`;
+	// polySurface1 polySurface2 polySeparate1 // 
+	// polySeparate -rs 1 -ch 1 terrainPlaneMesh1Shape // 
+	select -r $ps;
+	delete -ch;
+	
+	string $snowf[];
+	wizlog (niceArrayList("[PS]", $ps));
+	if (`size $ps` > 2){
+		select -cl;
+		stringArrayRemoveAtIndex((`size $ps`-1), $ps);
+		stringArrayRemoveAtIndex(0, $ps);
+		
+		wizlog (niceArrayList("[PS]", $ps));
+		string $pu[] = `polyUnite -ch 1 -mergeUVSets 1 -name ("SnowBuildupMesh") $ps`;
+		delete -ch $pu;
+		ConvertSelectionToFaces;
+		$snowf = `ls -fl -sl`;
+	} else {
+		select -r $ps[1];
+		ConvertSelectionToFaces;
+		$snowf = `ls -fl -sl`;
+	}
+	select -r $snowf;
+	wizCraftMGMT("-s -ft snowBuildup -ot SnowBaseFaceSelection");
+	
+	if (`checkBox -q -v wizCraft_polySnowBuildupExtrudeFaces_checkBox`){
+		string $pe[] = `polyExtrudeFacet -constructionHistory 1 -keepFacesTogether 1 -pvx 0.0 -pvy 0.0 -pvz 0.0 -divisions 1 -twist 0 -taper 1 -off 0 -thickness 0 -smoothingAngle 180 $snowf`;
+		setAttr ($pe[0] + ".localTranslate") -type double3 0 0 $extrudeDistance ;
+
+		setAttr ($pe[0] + ".offset") $extrudeOffset;
+	
+		wizCraftMGMT("-s -ft snowBuildup -ot FaceSelection");
+	}
+	//select -r $snowf;
+	//
+	
+	/*
+	ConvertSelectionToVertices;
+	string $ev[] = `ls -fl -sl`;
+	polyAverageVertex -i 10 -ch 1 $ev;
+	*/
+
+}

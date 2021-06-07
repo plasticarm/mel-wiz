@@ -1,0 +1,56 @@
+global proc hudWiz()
+{
+
+}
+/*
+
+
+
+float $fov = `getAttr FOVAngleRemapValue1.outValue`;
+//setAttr fovAnnotation.text -type "string" ("FOV : " + $fov);
+//headsUpMessage -time 1.0 ("FOV : " + $fov);
+
+float $pitch = `getAttr CameraPitchRemapValue1.outValue`;
+//setAttr pitchAnnotation.text -type "string" ("Pitch : " + $pitch);
+
+global proc string getCameraInfo()
+{
+float $fov = `getAttr FOVAngleRemapValue1.outValue`;
+float $pitch = `getAttr CameraPitchRemapValue1.outValue`;
+float $surfaceDis = `getAttr DistanceToSurfaceRemapValue1.outValue`;
+string $surfaceDisMessage = ("SURFACE DISTANCE: " + $surfaceDis + "\n");
+if($surfaceDis < 5){
+	$surfaceDisMessage = ("SURFACE DISTANCE: " + $surfaceDis + " **********FLAMES WARNING**********" + "\n");
+}
+
+string $hudOut = (
+"FOV: " + $fov + "\n"
++$surfaceDisMessage
++"PITCH: " + $pitch + "\n"
+);
+
+return $hudOut;
+}
+
+global proc toggleCameraInfoHUDVisibiliy()
+{
+int $vis = `headsUpDisplay -q -vis HUDFullDomeCameraInfo`;
+if($vis == 1){
+	headsUpDisplay -edit -vis false HUDFullDomeCameraInfo;
+} else {
+	headsUpDisplay -edit -vis true HUDFullDomeCameraInfo;
+}
+}
+*/
+
+global proc removeAllHudButtons(){
+		
+}
+
+global proc removeHudButtons(string $buttons[]){
+	for($i=0; $i<`size $buttons`;$i++){
+		if(`headsUpDisplay -ex $buttons[$i]`){
+			headsUpDisplay -rem $buttons[$i];
+		}
+	}
+}

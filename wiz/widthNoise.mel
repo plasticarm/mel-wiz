@@ -1,0 +1,158 @@
+// Copyright (C) 1997-2014 Autodesk, Inc., and/or its licensors.
+// All rights reserved.
+//
+// The coded instructions, statements, computer programs, and/or related
+// material (collectively the "Data") in these files contain unpublished
+// information proprietary to Autodesk, Inc. ("Autodesk") and/or its licensors,
+// which is protected by U.S. and Canadian federal copyright law and by
+// international treaties.
+//
+// The Data is provided for use exclusively by You. You have the right to use,
+// modify, and incorporate this Data into other products for purposes authorized 
+// by the Autodesk software license agreement, without fee.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. AUTODESK
+// DOES NOT MAKE AND HEREBY DISCLAIMS ANY EXPRESS OR IMPLIED WARRANTIES
+// INCLUDING, BUT NOT LIMITED TO, THE WARRANTIES OF NON-INFRINGEMENT,
+// MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, OR ARISING FROM A COURSE 
+// OF DEALING, USAGE, OR TRADE PRACTICE. IN NO EVENT WILL AUTODESK AND/OR ITS
+// LICENSORS BE LIABLE FOR ANY LOST REVENUES, DATA, OR PROFITS, OR SPECIAL,
+// DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES, EVEN IF AUTODESK AND/OR ITS
+// LICENSORS HAS BEEN ADVISED OF THE POSSIBILITY OR PROBABILITY OF SUCH DAMAGES.
+
+//
+// widthNoise
+//
+// this is a paint effect runtime mel function
+// It makes the width along a tube vary in a random
+// manner. ( only affects base tubes and twigs, not leaves or flowers )
+
+global proc float []
+widthNoise(
+
+// current segment count on base brushstroke
+int	  $step,
+// this next variable is true if this is the first segment created 
+int   $isStartTube,
+
+// The following 3 vectors define a coordinate system
+// for the brushstroke, in a similar fashion to a matrix
+// One can use them to create forces and offsets that
+// are in the "brushstroke space"
+// Unlike a normal coordinate frame, these vectors change
+// along the brushstroke, and will mirror any deformations to
+// the base brushstroke( or curve on surface ).
+
+// vector in direction of brushstroke 
+float $vX, float $vY, float $vZ,
+// surface normal at current brushstroke segment
+float $nX, float $nY, float $nZ,
+// vector across direction of brushstroke ( crossProduct of v and n above )
+float $uX, float $uY, float $uZ,
+
+// a random seed that is unique for this tube 
+int   $randSeed,
+
+// the growth section: 0 branch, 1 twig, 2 leaf, 3 flower
+int	  $tubeType,	
+
+int	  $maxSegments,		// the number of segments the longest tubes have	
+int	  $segments,		// the number of segments this tube has	
+int	  $remainingSegments, // the number of segments yet to be created	
+int	  $branchDepth,		// The branching level this segment is on( 0 is the base )
+int   $branchId,        // Index for the segment, each segment on each level is unique (0..n)
+int   $parentId,        // BranchID for the parent of this segment
+int   $siblingCnt,      // The number of sibling segments at this level, n-1
+
+// the start and end points of the current tube segment in worldspace
+float $sX, float $sY, float $sZ,	     
+float $eX, float $eY, float $eZ,	     
+
+// the current length per segment
+float $segmentLength,
+
+// the start and end widths of the current tube segment in worldspace
+float $startWidth, float $endWidth,
+
+float $flatness, // current flatness of tube
+// current twist  of segment about tube axis
+float $twistX, float $twistY, float $twistZ,
+
+
+// color, transparency, and incandescence of current tube segment
+float $colorR, float $colorG, float $colorB,
+float $transparencyR, float $transparencyG, float $transparencyB,
+float $incandescenceR, float $incandescenceG, float $incandescenceB,
+                                                                                            
+// name of brush and stroke
+string $brushName, string $strokeName
+)
+{
+	float $tubes[];
+
+//------------------------------------------------------------
+// Add any Customizations Here:
+//------------------------------------------------------------
+	if( $tubeType < 2 ) // is a branch or a twig 
+	{
+		// for interactive feed back, create the following
+		// attributes on some node, such as your brush,
+		// then set these variables here with getAttr.  Or just
+		// edit these values, save, then type "source widthNoise"
+		// inside Maya.
+
+		float $randScale = .2;
+		float $randFrequency = 200.0;
+		float $tubeWidth1 = .05;
+		float $tubeWidth2 = .05;
+
+		float $tubeU = (float)$remainingSegments/(float)$segments;
+		float $curWidth = $tubeU * $tubeWidth1 + (1-$tubeU) * $tubeWidth2;
+		// Use the seed to offset the u value used for the noise
+		$tubeU += (float)$randSeed/(float)$segments;
+		// Use noise to determine a scale value at the current
+		// point along the tube. 
+		float $wrand = 1 + ($randScale * noise( $tubeU * $randFrequency ));
+		$endWidth = $curWidth * $wrand;
+	}
+	else
+	{
+		// else do nothing
+		$tubes[0] = 0;
+		return( $tubes );
+	}
+//------------------------------------------------------------
+
+	// We set the outputs for the current segment.
+	// Note that all these values must be set here, not
+	// only the modified ones.
+    $tubes[0] = 1; // 1 indicates that we have modified the segment 
+	$tubes[1] = $tubeType; 
+	$tubes[2] = $segments; 
+	$tubes[3] = $remainingSegments; // set this to zero to terminate a tube
+	$tubes[4] = $sX;
+	$tubes[5] = $sY;
+	$tubes[6] = $sZ;
+	$tubes[7] = $eX;
+	$tubes[8] = $eY;
+	$tubes[9] = $eZ;
+	$tubes[10] = $endWidth;
+	$tubes[11] = $segmentLength;
+	$tubes[12] = $flatness;
+	$tubes[13] = $twistX;
+	$tubes[14] = $twistY;
+	$tubes[15] = $twistZ;
+	$tubes[16] = $colorR;
+	$tubes[17] = $colorG;
+	$tubes[18] = $colorB;
+	$tubes[19] = $transparencyR;
+	$tubes[20] = $transparencyG;
+	$tubes[21] = $transparencyB;
+	$tubes[22] = $incandescenceR;
+	$tubes[23] = $incandescenceG;
+	$tubes[24] = $incandescenceB;
+
+ 	$tubes[25] = 0;
+
+ 	return( $tubes );
+}
+

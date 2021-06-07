@@ -1,0 +1,177 @@
+global proc boundingBoxWiz()
+{
+
+}
+
+//@ PROC NAME
+//====================================================================
+/*****************************************************************//**
+	Uses the geomToBBox command to make a bbox.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-tag1 string] [-tag2 linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-tag1, -tag2
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName($string, 2);
+	
+	</code>
+*********************************************************************/
+global proc string wizGeomToBBox( string $obj )
+{
+	//string $name = makeNiceName($obj);
+	//string $name = $name + "BBox";
+	select -r $obj;
+	string $bbox[] = `geomToBBox -ko -s -ns "_BBox" -shaderColor 0 1 0.043`;
+	return $bbox[0];
+	
+}
+
+global proc string createBBoxCube( string $obj )
+{
+    int $bbAxisAlign = 0;
+    //1 means not axis aligned. so if the object is rotated it makes a bounding box in world space
+    //0 means opposite
+	int $bbWarning = 0;
+	float $bbInfo[5];
+	float $bbPos[2];
+	float $bbSize[2];
+	string $j[];
+
+	string $bbObject[];
+    
+	//get selected meshes
+
+    //generate name for BB
+    string $bbName = ($obj +"BBoxCube");
+
+    //un-parent object so all rotations and transformations are correct if not parent to world
+    $bbParent = `listRelatives -p $obj`;
+    if (`size $bbParent` != 0) parent -world $obj;
+
+    //get rotation of object
+    //next two lines are for component selection, but position isn't working atm
+    //$j = `ls -o $obj`;
+    //$j= `listRelatives -p $j`;  //needs extra test first
+    float $objectRotation[ ] = `xform -q -ro $obj`;
+    float $objectPivot[2] = `xform -q -rp $obj`;
+    
+    //get bounding box co-ordinates
+    $bbInfo = `getBBoxInfo $obj $bbAxisAlign`;
+    
+    //work out the size of the bounding box + offset value
+    $bbSize[0] = ($bbInfo[3] - $bbInfo[0]);
+    $bbSize[1] = ($bbInfo[4] - $bbInfo[1]);
+    $bbSize[2] = ($bbInfo[5] - $bbInfo[2]);
+    
+    //restore rotation then pivot of object	
+    xform -ro $objectRotation[0] $objectRotation[1] $objectRotation[2] $obj;
+    xform -rp $objectPivot[0] $objectPivot[1] $objectPivot[2] $obj;
+    
+    //reparent object, as long as it's not parent to the world
+    if (`size $bbParent` != 0) parent $obj $bbParent;
+    
+    //check if bounding box results in a -ve size
+    if ($bbSize[0] <= 0 || $bbSize[1] <= 0 ||  $bbSize[2] <= 0 ){
+        //if bounding box is too small send warning, and add to global warning variable
+        warning ("Offset creates a -ve bounding box for " + $obj);
+        $bbWarning ++;
+    } else {
+        //create bounding Box using information
+        //BBoxCreate $bbSize $bbName $bbPos $bbInfo $bbAxisAlign $objectRotation $shaderSGName;
+
+        //create the bounding box
+        $bbObject = `polyCube 
+            -object on 
+            -width $bbSize[0] 
+            -height $bbSize[1]  
+            -depth $bbSize[2] 
+            -name $bbName
+            `;
+        
+            
+        //calculate the position of the bounding box
+        $bbPos[0]  = ($bbInfo[3] + $bbInfo[0]) * 0.5;
+        $bbPos[1]  = ($bbInfo[4] + $bbInfo[1]) * 0.5;
+        $bbPos[2]  = ($bbInfo[5] + $bbInfo[2]) * 0.5;
+
+        //move and rotate bounding box into position and //freeze the transforms
+        move -absolute $bbPos[0] $bbPos[1] $bbPos[2] $bbObject;
+        if ($bbAxisAlign != 1){
+            rotate -a $objectRotation[0] $objectRotation[1] $objectRotation[2] $bbObject;
+        }
+        //makeIdentity -apply true -t 1 -r 0 -s 1 -n 0 $bbTemp;
+            //Make the cube look like wireframe
+        setAttr ($bbObject[0] + ".overrideEnabled") 1;
+        setAttr ($bbObject[0] + ".overrideShading") 0;
+        setAttr ($bbObject[0] + ".overrideTexturing") 0;
+        setAttr ($bbObject[0] + ".overrideColor") 17;   
+        select -r $bbObject[0];
+        makeSelectedUnrenderable();
+        
+    }
+        
+
+	
+	//restore the selection
+	//select -replace $sel;
+	return $bbObject[0];
+}
+
+
+//Function to get the co-ordiates of the bounding box
+global proc float[] getBBoxInfo( string $obj, int $bbAxisAlign)
+{
+	float $bbInfo[5];	
+	if ($bbAxisAlign != 1){
+		//center pivot then rotate object
+		xform -cp $obj;
+		xform -ro 0 0 0 $obj;		
+		//get the co-ordinates of the bounding box
+		$bbInfo =`xform -query -bb $obj`;		
+	} else {
+		select $obj;
+		PolySelectConvert 3;
+						
+		float $test[ ] = `xform -query -ws -t`;
+		$sizeTest = ((`size $test`) / 3);
+
+	
+		for ($a=1, $bbInfo[0] = $test[0], $bbInfo[3] = $test[0], $x=3, $bbInfo[1] = $test[1], $bbInfo[4] = $test[1], $y=4, $bbInfo[2] = $test[2], $bbInfo[5] = $test[2], $z=5; $a < $sizeTest; $a++)
+			{
+				////X////
+				$tempX = $test[$x];
+				$x = $x + 3;
+				//min x
+				$bbInfo[0] = `min $bbInfo[0] $tempX`;
+				//max x
+				$bbInfo[3] = `max $bbInfo[3] $tempX`;
+				
+				////Y////
+				$tempY = $test[$y];
+				$y = $y + 3;
+				//min y
+				$bbInfo[1] = `min $bbInfo[1] $tempY`;
+				//max y
+				$bbInfo[4] = `max $bbInfo[4] $tempY`;
+				
+				////Z////
+				$tempZ = $test[$z];
+				$z = $z + 3;
+				//min z
+				$bbInfo[2] = `min $bbInfo[2] $tempZ`;
+				//maz z
+				$bbInfo[5] = `max $bbInfo[5] $tempZ`;
+			}
+	}
+	
+	return $bbInfo;
+}

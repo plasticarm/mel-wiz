@@ -1,0 +1,5010 @@
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//|||||||||||||||||||||||||:::WIZ:::||||||||||||||||||||||||||||||||||
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+/*====================================================================
+Author: Glen Johnson
+Email: plasticarm@gmail.com
+Website: plasticarm.com / hrpictures.com
+----------------------------------------------------------
+Summary:
+
+
+
+====================================================================*/
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 	SCRIPT TO CHANGE SOMETHING WHEN RENDER LAYER IS CHANGED
+//
+//	- Pre Mel -
+//	scriptJob -kws -e renderLayerManagerChange "someProc";	
+//
+//	- Expression -
+//	global proc someProc(){
+//		string $rl = `editRenderLayerGlobals -q -currentRenderLayer`;
+//		print ("Render Layer Changed : " + $rl + "\n");
+//		if($rl == "NeuronsRL"){
+//			setAttr MainCameraShape1.depthOfField 1;
+//		} else {
+//		setAttr MainCameraShape1.depthOfField 0;
+//		}
+//	}
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//====================================================================
+//			GLOBAL VARS
+
+global string $WIZ_renderingWizRenderDirectoryFlag;
+global string $WIZ_cameraAngles[];
+$WIZ_cameraAngles = { "Default", "Persp", "Front", "Top", "Side", "HeadLevel", "WaistLevel", "FootLevel" };
+
+
+//====================================================================
+
+
+global proc renderingWiz()
+{
+
+}
+
+
+
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//////////////////////////////////////////////////////////////////////
+//			LAYOUTS
+//////////////////////////////////////////////////////////////////////
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+//RENDERING WIZ LAYOUT
+//-----------------------------------------
+global proc renderingWizLayout(string $parent)
+{
+		
+	renderingWizMenuBarLayout($parent);				
+	
+	batchRenderCommandsLayout($parent);
+	
+	preRenderCommandsLayout($parent);
+	
+	fileNamePrefixLayout($parent);
+		
+	planetariumRenderingLayout($parent);
+	
+	wizGUIRen($parent);
+	
+	fullDomeViewportLayout($parent);	
+	
+	renderingWizRenderLayerReferenceLoaderLayout($parent);
+
+	renderingWizRenderHeightmapTilesLayout($parent);
+		
+}
+
+global proc renderingWizColumnLayout(string $parent)
+{
+	string $columnLayout = wizStandardColumnLayout($parent, "renderingWizColumnLayout");	
+	
+	renderingWizLayout($columnLayout);
+
+}
+
+global proc renderingWizFrameLayout(string $parent)
+{
+	string $layout = wizStandardFrameLayout($parent, "Rendering", "Renderer");
+	
+	renderingWizLayout($layout);
+
+}
+
+
+//""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+//////////////////////////////////////////////////////////////////////
+//			MENUS
+//////////////////////////////////////////////////////////////////////
+//""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+
+//RENDERING WIZ MENU BAR LAYOUT
+//----------------------------------------------
+global proc renderingWizMenuBarLayout(string $parent)
+{
+	string $menuBarLayout = `menuBarLayout
+		-parent $parent`;	
+		renderingWizMenu();
+}
+
+//RENDERING WIZ MENU
+//----------------------------------------------
+global proc renderingWizMenu()
+{
+	menu -l "Camera";
+		renderWizCameraMenuItems();
+	
+	menu -l "Presets";	
+		renderWizPresetsMenuItems();
+		
+	menu -l "Planetarium";		
+		renderWizPlanetariumMenuItems();
+		
+	menu -l "Object Settings";		
+		menuItem -l "Make Selected Un-Renderable" -c "makeSelectedUnrenderable";
+		menuItem -l "Make Selected Renderable" -c "makeSelectedRenderable";
+		menuItem -l "Make Selected Only Visible When Rendering" -c "makeSelectedObjectsVisibleOnlyWhenRendering";
+		menuItem -l "Remove Selected From Only Visible When Rendering"  -c "removeFromVisibleWhenRendering";
+		menuItem -l "Create Ignore In View Fit Set" -ann "This will create a set with the selected objects. When the function fitVisibleObjectsInView() is invoked, the objects contained in the set will be deselected." -c ("wizIgnoreFitViewSet(\"-sl\");");
+		
+	menu -l "Batch Render";		
+        renderWizBatchRenderMenuItems();
+		
+	menu -l "Vue";
+		menuItem -l "Enable Vue Rendering" -c ("enableVueRendering();");
+		menuItem -l "Disable Vue Rendering" -c ("disableVueRendering();");
+		menuItem -l "Add Close Vue On Open Script Node" -c ("addCloseVueOnOpenScriptNode();");		
+		menuItem -l "Remove Close Vue On Open Script Node" -c ("if(`objExists \"CloseVueOnOpenScriptNode\"`){ delete \"CloseVueOnOpenScriptNode\";");
+		menuItem -l "Add Close Vue After Rendering Default Render Layer Script" -c ("createTurnVueOffAfterRenderingDefaultRenderLayerPreRenderLayerMel();");	
+	
+	menu -l "Info";
+		menuItem -l "Get Reference Proxy Tags" -c ("getReferenceProxyTags();");
+		
+	menu -l "Mental Ray" ;
+		menuItem -l "Add Memory Mode To mentalrayGlobals" -c ("addAttr -ln \"memoryMode\" -at \"enum\" -enumName \"None:Report:Inquiry:Abort:Release\" mentalrayGlobals");
+		
+}
+
+//** Rendering Wiz camera menu items. */
+global proc renderWizCameraMenuItems()
+{	
+	menuItem -l "Make Selected Cameras Renderable" -c "makeSelectedCamerasRenderable";
+	menuItem -l "Hook Up All Cameras To MR Sun" -c ("wizHookUpCamerasToMRSun(\"-all\");");
+	menuItem -l "Hook Up All Cameras To MR Sun Volume Mode" -c ("wizHookUpCamerasToMRSun(\"-all -vol\");");
+	menuItem -l "4x4 Render Tile Cameras" -c ("tile_camera_4x4();");
+	menuItem -l "Tile Camera" -c ("int $divisions = `intFieldGrp -q -v1 wizTileCamera_divisions_intFieldGrp`; wizTileCamera(\"-div \" + $divisions + \"\");");
+		menuItem -ob true -c ("openCurrentOptionsLayout(\"tileCameraOptions\");");
+	menuItem -l "Create DOF Rig" -c ("wizCameraDOFRig(\"-sl\");");
+	menuItem -l "Create DOF Rig With Bokeh" -c ("wizCameraDOFRig(\"-sl -b\");");
+}
+
+//** Rendering Wiz presets menu items. */
+global proc renderWizPresetsMenuItems()
+{	
+	menuItem -l "Set Default Render Env" -c ("openCurrentOptionsLayout(\"defaultRenderEnvOptions\");");
+		menuItem -ob true -c ("openCurrentOptionsLayout(\"defaultRenderEnvOptions\");");
+	menuItem -l "PNG" -c ("wizSetRenderPreset(\"exr16\");");
+	menuItem -l "EXR 16Bit" -c ("wizSetRenderPreset(\"exr16\");");
+	
+	string $fgC = ("int $fgState = `menuItem -q -cb renderingWizFinalGatherGIFGAOMenuItem`;"
+	+"setAttr \"miDefaultOptions.globalIllum\" $fgState;"
+	+"setAttr \"miDefaultOptions.finalGather\" $fgState;"
+	);
+	//+"setAttr \"miDefaultOptions.ambientOcclusion\" $fgState;"
+	menuItem -l "Final Gather GI-FG-AO" -cb true -c $fgC renderingWizFinalGatherGIFGAOMenuItem;
+}
+
+//** Rendering Wiz batch render menu items. */
+global proc renderWizBatchRenderMenuItems()
+{	
+	menuItem -l "Render Poster Image" -c ("saveScenePosterImage();");
+			menuItem -ob true -c ("openCurrentOptionsLayout(\"posterImageOptions\");");
+	menuItem -l "Render Object Icon" -c ("wizRenderObjectIcon(\"-sl\");");
+			menuItem -ob true -c ("openCurrentOptionsLayout(\"objectIconOptions\");");		
+	
+	menuItem -l "Output Batch Render File"	-c "outputBatchRenderFile";
+	menuItem -l "Append To Batch Render File" -c ("appendToBatchRenderFile(\"-crg\");");
+	menuItem -l "Save Rendered Image To Art Images" -c ("wizSaveRenderToArtImages();");
+	menuItem -l "Save Render Copy" -c "wizSaveRenderCopy()";
+	
+}
+
+//** Rendering Wiz planetarium menu items. */
+global proc renderWizPlanetariumMenuItems()
+{	
+	menuItem -l "Toggle Planetarium" -c "togglePlanetarium";
+	menuItem -l "Toggle Planetarium View"	-c "togglePlanetariumView";
+	menuItem -l "Render To Planetarium" -c "renderToPlanetarium";
+	menuItem -l "Turn Off Planetarium" -c "turnOffPlanetarium";
+}
+
+//BATCH RENDER COMMANDS MENU
+//------------------------------------------------
+global proc batchRenderCommandsMenu(string $parent)
+{
+	string $batchRenderCommandsMenuLayout = `menuBarLayout
+		-p $parent
+		batchRenderCommandsMenuLayout	
+		`;
+		
+	string $batchRenderCommandsMenu = `menu -l "File"`;
+				
+	menuItem -l "New Batch Render File" -c "createNewBatchRenderFile" createNewBatchRenderFile;
+		
+	string $renderFlagsMenu = `menu	-l "Flags" renderFlagsMenu`;	
+	/*
+		menuItem -l "Auto Render Threads" -ann "-mr:art" -cb true wizAutoRenderThreadsRenderFlagMenuItem;
+		menuItem -l "Start Frame" -ann "startFrame" -cb true wizStartFrameRenderFlagMenuItem;
+		menuItem -l "End Frame" -ann "endFrame" -cb true wizEndFrameRenderFlagMenuItem;
+		menuItem -l "By Frame" -ann "byFrameStep" -cb true wizByFrameRenderFlagMenuItem;
+		menuItem -l "Renumber Frame By" -ann "-rfb" -cb false wizRenumberFrameByRenderFlagMenuItem;
+		menuItem -l "Renumber Frame Start" -ann "-rfs" -cb false wizRenumberFrameStartRenderFlagMenuItem;
+		menuItem -l "Width" -ann "width" -cb true wizWidthRenderFlagMenuItem; 
+		menuItem -l "Height" -ann "height" -cb true wizHeightRenderFlagMenuItem;
+		menuItem -l "Renderable Cameras" -ann "camera" -cb false wizCamerasRenderFlagMenuItem;
+		menuItem -l "All Cameras" -ann "camera" -cb false wizAllCamerasRenderFlagMenuItem;
+		menuItem -l "All Render Layers" -ann "-rl" -cb false wizAllRenderLayersRenderFlagMenuItem;
+		menuItem -l "Renderable Render Layers" -ann "-rl" -cb false wizRenderableRenderLayersRenderFlagMenuItem;
+		menuItem -l "Project Path" -cb true wizProjectPathRenderFlagMenuItem;
+		menuItem -l "Render Directory" -cb false wizRenderDirectoryRenderFlagMenuItem;
+			menuItem -ob true -c ("openCurrentOptionsLayout(\"batchRenderRenderDirectoryOptions\");");
+	*/
+	
+		wizMenuItem("-l Auto Render Threads -ann -cb 1 -n wizAutoRenderThreadsRenderFlagMenuItem");
+		wizMenuItem("-l Auto Memory Limit -ann aml -cb 1 -n wizAutoMemoryLimitRenderFlagMenuItem");
+		
+		wizMenuItem("-l Width -ann width -cb 1 -n wizWidthRenderFlagMenuItem"); 
+		wizMenuItem("-l Height -ann height -cb 1 -n wizHeightRenderFlagMenuItem");
+		wizMenuItem("-l Percent Res -ann percentRes -cb 0 -n wizPercentResRenderFlagMenuItem");
+		
+		wizMenuItem("-l Start Frame -ann startFrame -cb 1 -n wizStartFrameRenderFlagMenuItem");
+		wizMenuItem("-l End Frame -ann endFrame -cb 1 -n wizEndFrameRenderFlagMenuItem");
+		wizMenuItem("-l By Frame -ann byFrameStep -cb 1 -n wizByFrameRenderFlagMenuItem");
+		wizMenuItem("-l Renumber Frame By -ann rfb -cb 0 -n wizRenumberFrameByRenderFlagMenuItem");
+		wizMenuItem("-l Renumber Frame Start -ann rfs -cb 0 -n wizRenumberFrameStartRenderFlagMenuItem");
+		wizMenuItem("-l Skip Existing Frames -ann skipExistingFrames -cb 1 -n wizSkipExistingFramesRenderFlagMenuItem");
+		
+		wizMenuItem("-l Renderable Cameras -ann camera -cb 0 -n wizCamerasRenderFlagMenuItem");
+		wizMenuItem("-l All Cameras -ann camera -cb 0 -n wizAllCamerasRenderFlagMenuItem");
+		wizMenuItem("-l All Render Layers -ann rl -cb 0 -n wizAllRenderLayersRenderFlagMenuItem");
+		wizMenuItem("-l Renderable Render Layers -ann rl -cb 0 -n wizRenderableRenderLayersRenderFlagMenuItem");
+		
+		wizMenuItem("-l Keep Pre Image -ann Keeps the rendered image before post processing is done -cb 0 -n wizKeepPreImageRenderFlagMenuItem");
+		
+		wizMenuItem("-l Project Path -cb 1 -n wizProjectPathRenderFlagMenuItem");
+		wizMenuItem("-l Render Directory -cb 0 -n wizRenderDirectoryRenderFlagMenuItem");
+			menuItem -ob true -c ("openCurrentOptionsLayout(\"batchRenderRenderDirectoryOptions\");");
+		wizMenuItem("-l &> File.diag & -cb 1 -n wizFileDiagFlagMenuItem");	
+			
+			
+	//Add More Flags Here
+}
+
+
+//GET WIZ RENDER COMMANDS
+//================================================
+global proc string getWizRenderCommands(){
+	
+	string $rcommand = "Render -r mr ";
+	
+	//string $autoRenderThreads = " -art ";
+	//string $autoRenderThreads = "-mr:art";
+	//string $autoRenderThreads = "-r mr -art ";
+	
+	if (`menuItem -q -cb wizAutoRenderThreadsRenderFlagMenuItem`){
+		$rcommand = $rcommand + "-art ";
+	}
+	
+	if (`menuItem -q -cb wizAutoMemoryLimitRenderFlagMenuItem`){
+		$rcommand = $rcommand + "-aml ";
+	}
+	
+	//FILE NAME
+	string $file = `file -q -sn`;
+	if ($file == ""){
+		error("The file must be saved before it can be added to the batch render file.\n");
+		return "";
+	}
+	string $fileBn = basename ($file, ".mb");
+	string $fileBnEx = basename ($file, "");
+		
+	//SETTINGS
+	$useCurrentSettings = `checkBox -q -v useCurrentSettingsBatchFileOption`;
+	string $settings = "";
+	
+	if ($useCurrentSettings){
+		$settings = getCurrentRenderSettingsForBatchRenderFile();
+	} else {
+		//BASIC RENDER SETTINGS		
+		$settings = getBasicWizRenderSettingsCommand();
+	}
+			
+	string $projPath = `workspace -q -rd`;
+	
+	$projPath = "-proj " + $projPath + " ";
+	
+	/* For switching / to \ if using windows system
+	string $os = `about -os`;
+	if ($os == "nt" || $os == "win64"){
+		$projPath = toNativePath($projPath);
+		$file = toNativePath($file);
+	} 
+	*/
+	
+	$rcommand = $rcommand + $settings;
+	
+	if (`menuItem -q -cb wizCamerasRenderFlagMenuItem`){
+		
+		string $allCams[] = `ls -ca`;
+		for ($i=0;$i<`size $allCams`;$i++){
+			int $renderable = `getAttr ($allCams[$i] + ".renderable")`;
+			if ($renderable){
+				$rcommand = $rcommand + "-cam " + $allCams[$i] + " ";
+			}
+		}
+		
+	} else if(`menuItem -q -cb wizAllCamerasRenderFlagMenuItem`){
+		string $allCams[] = `ls -ca`;
+		for ($i=0;$i<`size $allCams`;$i++){
+				$rcommand = $rcommand + "-cam " + $allCams[$i] + " ";
+		}
+	}
+	
+	//Render Directory Flags
+	if (`menuItem -q -cb wizRenderDirectoryRenderFlagMenuItem`){
+		global string $WIZ_renderingWizRenderDirectoryFlag;
+		if($WIZ_renderingWizRenderDirectoryFlag == ""){
+			print ("WIZ| Render Directory Must Be Set In Render Directory Options Menu Before Using This Flag\n");
+			
+		} else {
+			string $rdCommand = "-rd " + $WIZ_renderingWizRenderDirectoryFlag + " ";
+			$rcommand = $rcommand + $rdCommand;
+		}
+	}
+	
+	//Render Layer Flags
+	if (`menuItem -q -cb wizAllRenderLayersRenderFlagMenuItem` || `menuItem -q -cb wizRenderableRenderLayersRenderFlagMenuItem`){
+		string $rl[];
+		if(`menuItem -q -cb wizAllRenderLayersRenderFlagMenuItem`){
+			$rl = wizGetRenderLayers();
+		} else if(`menuItem -q -cb wizRenderableRenderLayersRenderFlagMenuItem`){
+			$rl = wizGetRenderableRenderLayers();
+		}
+
+		string $rc[];
+		for ($i=0;$i<`size $rl`;$i++){
+			string $rlc = "-rl " + $rl[$i] + " ";
+			$rc[$i] = $rcommand + $rlc;
+			if(`menuItem -q -cb wizProjectPathRenderFlagMenuItem`){
+				$rc[$i] = $rc[$i] + $projPath;		
+			}
+			
+			$rc[$i] = $rc[$i] + " " + $file + "\n";
+		}
+		$rcommand = stringArrayToString($rc, " ");
+		
+	} else {		
+		if(`menuItem -q -cb wizProjectPathRenderFlagMenuItem`){
+			$rcommand = $rcommand + $projPath;		
+		}
+		$rcommand = $rcommand + $file;
+	}
+	
+	//OUTPUT LOG?
+	if (`menuItem -q -cb wizFileDiagFlagMenuItem` == 1){
+		string $outputLog = (" &> " + $file + ".diag &");
+		$rcommand = $rcommand + $outputLog;
+	}
+	
+	return $rcommand;
+}
+
+//GET BASIC WIZ RENDER SETTINGS COMMAND
+//================================================
+global proc string getBasicWizRenderSettingsCommand()
+{
+	//BASIC RENDER SETTINGS	
+	string $settings = "";
+	float $startEndTimes[] = getBatchRenderStartEnd();
+	//string $startEnd = "-s " + $startEndTimes[0] + " -e " + $startEndTimes[1];
+	
+	string $startFrame = "-s " + $startEndTimes[0] + " ";
+	string $endFrame = "-e " + $startEndTimes[1] + " ";
+	
+	float $byFrameNum = `getAttr "defaultRenderGlobals.byFrameStep"`;
+	string $byFrame = "-b " + $byFrameNum + " ";
+	
+	int $resX = `getAttr defaultResolution.width`;
+	string $resolutionX = "-x " + $resX + " ";
+	int $resY = `getAttr defaultResolution.height`;
+	string $resolutionY = "-y " + $resY + " ";
+	
+	string $rl[] = wizGetRenderableRenderLayers();
+	string $rlc;
+	for ($i=0;$i<`size $rl`;$i++){
+		$rlc = $rlc + "-rl " + $rl[$i] + " ";
+	}
+	
+	
+	
+	/*
+	$imageFileFormat = " -of " + $imageFileFormat;
+	int $resX = `getAttr defaultResolution.width`;
+	*/
+	if (`menuItem -q -cb wizWidthRenderFlagMenuItem`){
+		$settings = $settings + $resolutionX;		
+	}
+	if (`menuItem -q -cb wizHeightRenderFlagMenuItem`){
+		$settings = $settings + $resolutionY;		
+	}
+	if (`menuItem -q -cb wizPercentResRenderFlagMenuItem`){
+		$settings = $settings + "-percentRes 100 ";		
+	}
+	
+	if (`menuItem -q -cb wizStartFrameRenderFlagMenuItem`){
+		$settings = $settings + $startFrame;		
+	}
+	if (`menuItem -q -cb wizEndFrameRenderFlagMenuItem`){
+		$settings = $settings + $endFrame;		
+	}
+	if (`menuItem -q -cb wizByFrameRenderFlagMenuItem`){
+		$settings = $settings + $byFrame;		
+	}
+	
+	if (`menuItem -q -cb wizRenumberFrameByRenderFlagMenuItem`){
+		$settings = $settings + "-rfb 1 ";		
+	}
+	if (`menuItem -q -cb wizRenumberFrameStartRenderFlagMenuItem`){
+		$settings = $settings + "-rfs 1 ";		
+	}
+	if (`menuItem -q -cb wizKeepPreImageRenderFlagMenuItem`){
+		$settings = $settings + "-keepPreImage 1 ";		
+	}
+	
+	/*
+	if(`menuItem -q -cb wizRenderLayersRenderFlagMenuItem`){
+		$settings = $settings + $rlc;		
+	}
+	*/
+	//$settings = $startEnd + $byFrame + " -of IFF " + $resolutionX + $resolutionY;
+	//$settings = $startEnd + $byFrame + " " + $resolutionX + $resolutionY + $rlc;
+	return $settings;
+}
+
+//PLANETARIUM RENDERING LAYOUT
+//--------------------------------------------
+global proc planetariumRenderingLayout(string $parent)
+{
+	string $frameLayout = `frameLayout
+		-l "Planetarium Rendering"
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true		
+		-parent $parent
+		`;
+	
+	//Set defaults		
+	global int $WIZ_viewWithPlanetariumViewer;
+	if(`optionVar -ex WIZ_viewWithPlanetariumViewer`){
+		$WIZ_viewWithPlanetariumViewer = `optionVar -q WIZ_viewWithPlanetariumViewer`;
+	} else {
+		$WIZ_viewWithPlanetariumViewer = 1;
+	}
+
+	global int $WIZ_openInPlanetariumPlayer;
+	if(`optionVar -ex WIZ_openInPlanetariumPlayer`){
+		$WIZ_openInPlanetariumPlayer = `optionVar -q WIZ_openInPlanetariumPlayer`;
+	} else {
+		$WIZ_openInPlanetariumPlayer = 1;
+	}		
+	
+	string $planetariumFolder;
+	if(`optionVar -ex WIZ_planetariumFolder`){
+		$planetariumFolder = `optionVar -q WIZ_planetariumFolder`;
+	} else {
+		$planetariumFolder = "";
+	}
+	
+	global string $WIZ_planetariumPlayer;
+	if(`optionVar -ex WIZ_planetariumPlayer`){
+		$WIZ_planetariumPlayer = `optionVar -q WIZ_planetariumPlayer`;
+	} else {
+		$WIZ_planetariumPlayer = "";
+	}
+	
+			
+	checkBox 
+		-l "View with Planetarium Viewer"
+		-v $WIZ_viewWithPlanetariumViewer
+		viewWithPlanetariumViewerOption
+		;
+	
+	checkBox 
+		-l "Open in Planetarium Player"
+		-v $WIZ_openInPlanetariumPlayer
+		openInPlanetariumPlayerOption
+		;
+		
+	textFieldButtonGrp
+		-ed true
+		-label "Planetarium Player"
+		-text $WIZ_planetariumPlayer
+		-ann "Select the .php or .html file. Not the .unity3d file. Unless it's a Unity3d .exe."
+		-cal 1 "center"
+		-buttonLabel "Select"
+		-bc "assignPlanetariumPlayerFile"
+		getPlanetariumPlayerFile
+		;
+	
+	checkBox 
+		-l "Render Sequence in Window"
+		-v false
+		renderSequenceInWindowOption
+		;
+	
+	checkBox 
+		-l "Save All Images"
+		-v true
+		saveAllPlanetariumImagesOption
+		;
+		
+	checkBox 
+		-l "Render With Selected Camera"
+		-v false
+		renderWithSelectedCameraOption
+		;
+		
+	textFieldButtonGrp
+		-ed true
+		-label "Render Camera"
+		-text  ""
+		-ann ""
+		-cal 1 "center"
+		-buttonLabel "Select"
+		-bc "selectPlanetariumRenderCamera"
+		getPlanetariumRenderCamera
+		;
+		
+
+	textFieldButtonGrp
+		-ed true
+		-label "Save to Folder"
+		-text $planetariumFolder
+		-ann ""
+		-cal 1 "center"
+		-buttonLabel "Select"
+		-bc "assignPlanetariumRenderFolder"
+		getPlanetariumRenderFolder
+		;
+		
+	button
+		-label "Render Sequence"
+		-command "renderPlanetariumSequence"
+		;
+		
+	textFieldButtonGrp
+		-l "Arbitrary Frames"
+		-ann "This Renders An Arbitrary List Of Frames In The Render View. Use Commas Between Frames ( 1, 5, 10 )"
+		-text ""
+		-cal 1 "center"
+		-bl "Render"
+		-bc ("renderArbitraryFramesInRenderView();")
+		renderArbitraryFramesInRenderViewTextFieldButtonGrp
+		;	
+		
+	textFieldButtonGrp
+		-ed true
+		-label "Open in Planetarium Player"
+		-text ""
+		-cal 1 "center"
+		-buttonLabel "Select"
+		-bc ("assignFileToTextFieldButtonGrp(\"openImageInPlanetariumPlayerTextFieldButtonGrp\");")
+		openImageInPlanetariumPlayerTextFieldButtonGrp
+		;	
+	
+	button
+		-label "Open"
+		-command ("string $image = `textFieldButtonGrp -q -tx openImageInPlanetariumPlayerTextFieldButtonGrp`; openImageInPlanetariumPlayer($image);")
+		;
+	setParent..;
+}
+
+
+//RENDERING WIZ RENDER LAYER REFERENCE LAYOUT
+//--------------------------------------------
+global proc renderingWizRenderLayerReferenceLoaderLayout(string $parent)
+{
+	string $frameLayout = `frameLayout
+		-l "Render Layer Reference Loading"
+		-ann "This creates scripts to load references when specific render layers are activated. "
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true		
+		-parent $parent
+		`;
+		
+	wizTextFieldGrp(
+		"-l Render Layer Name "
+		+"-tx MasterLayer "
+		+"-n renderWiz_RLRLRenderLayer_textFieldGrp"
+		);	
+		
+	wizCheckBox(
+		"-l Load Recursively "
+		+"-v 0 "
+		+"-n renderWiz_RLRLLoadRecursively_checkBox"
+		);
+		
+	button
+		-l "Create"
+		-c ("wizRenderLayerReferenceLoader(\"-wiz\");")
+		;
+		
+	
+		
+}
+
+//RENDER WIZ RENDER HEIGHTMAP TILES LAYOUT
+//--------------------------------------------
+global proc renderingWizRenderHeightmapTilesLayout(string $parent)
+{
+	string $frameLayout = `frameLayout
+		-l "Heightmap Tiles"
+		-ann " "
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true		
+		-parent $parent
+		`;
+		
+	wizIntFieldGrp(
+		"-l Num Tiles Squared "
+		+"-v 2 "
+		+"-n renderWiz_heightmapTilesNumTilesSq_intFieldGrp"
+		);	
+		
+	wizFloatFieldGrp(
+		"-l Tile Size "
+		+"-v 10000.0 "
+		+"-n renderWiz_heightmapTilesTileSize_floatFieldGrp"
+		);	
+		
+	wizTextFieldButtonGrp(
+		"-l Camera "
+		+"-bc ao "
+		+"-bl Select "
+		+"-n renderWiz_heightmapTilesCamera_textFieldButtonGrp"
+		);
+		
+	
+		
+	button
+		-l "Render"
+		-c ("wizRenderHieghtmapTiles(\"-wiz\");")
+		;
+		
+	
+		
+}
+
+
+//BATCH RENDER COMMANDS LAYOUT
+//--------------------------------------------
+global proc batchRenderCommandsLayout(string $parent)
+{
+	string $frameLayout = `frameLayout
+		-l "Batch Render Commands"
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true		
+		-parent $parent
+	`;	
+	
+	global string $WIZ_batRenFile;
+	$WIZ_batRenFile = getSavedBatchRenderFile();
+	
+	batchRenderCommandsMenu($frameLayout);		
+		
+	checkBox 
+		-l "Use Render Flags"
+		-v false
+		useCurrentSettingsBatchFileOption
+		;
+		
+	checkBox 
+		-l "Delete Batch File When Render is Complete"
+		-v false
+		deleteBatchFileOption
+		;
+				
+	button
+		-label "Output Batch Render File For Scene"
+		-command "outputBatchRenderFile"
+		;
+	
+	textFieldButtonGrp
+		-ed true
+		-cal 1 "left"
+		-cw 1 120
+		-adj 2
+		-label "Batch Render File"
+		-text  $WIZ_batRenFile
+		-ann ""
+		//-cal 1 "center"
+		-buttonLabel "Select"
+		-bc "assignAppendableBatchRenderFile"
+		getAppendableBatchRenderFile
+		;
+			
+	checkBox
+		-l "Header Information"
+		-v false
+		renderingWizHeaderInformation_checkBox
+		;
+		
+	button
+		-label "Append To Batch Render File"
+		-command ("appendToBatchRenderFile(\"-crg\");")
+		;
+		
+	string $renderCommandButtonCommand = (
+	"string $rc = getWizRenderCommands();\n"
+	+"textFieldButtonGrp -e -text $rc renderingWizRenderCommandTextFieldButtonGrp;\n"
+	+"string $sf = `scrollField -q -tx renderingWizRenderCommandScrollField`;\n"
+	+"string $tx = $rc;\n"
+	+"if($sf != \"\"){\n"
+	+"	$tx = $sf + \";\" + $rc;\n"
+	+"}\n"
+	+"scrollField -e -tx $tx renderingWizRenderCommandScrollField;"
+	);
+	
+	string $renderCommand = `textFieldButtonGrp
+		-l "Command:"
+		-cal 1 left
+		-cw 1 60
+		-adj 2
+		-tx "Render -mr:art -s 0 -e 100 -x 1024 -y 1024"
+		-bl "Get Command"
+		-bc $renderCommandButtonCommand
+		renderingWizRenderCommandTextFieldButtonGrp
+		`;
+		
+	string $rcsf = `scrollField 
+		-tx ""
+		-h 200
+		-ww true
+		//-nl 10
+		renderingWizRenderCommandScrollField
+		`;
+	
+	string $appendCom = ("string $command = `scrollField -q -tx renderingWizRenderCommandScrollField`;"+"\n"
+	+"appendToBatchRenderFile(\"-rcf \" + $command);"+"\n"
+	);
+	
+	string $exCom = ("string $command = `scrollField -q -tx renderingWizRenderCommandScrollField`;"+"\n"
+	//+"executeBatchRenderCommand(\"-com \" + $command);"+"\n"
+	+"system ($command);"+"\n"
+	);
+	
+	
+	button
+		-l "Append To Batch Render File"
+		-c $appendCom
+		;
+		
+	button
+		-l "Execute Command"
+		-c $exCom
+		;
+		
+	sendCommandsToNetworkComputerLayout($frameLayout);
+	
+	setParent..;
+
+	
+}
+
+//SEND COMMANDS TO NETWORKD COMPUTER LAYOUT
+//--------------------------------------------
+global proc sendCommandsToNetworkComputerLayout(string $parent)
+{
+	string $frameLayout = `frameLayout
+		-l "Send Commands To Computer"
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true		
+		-parent $parent
+		`;	
+	
+	textFieldButtonGrp
+		-ed true
+		-l "Select Networked Computer"
+		-text  ""
+		-ann ""
+		-cal 1 "center"
+		-buttonLabel "Select"
+		-bc "selectNetworkedComputer"
+		getNetworkedComputerForBatchRenderCommands
+		;
+	
+	textFieldButtonGrp
+		-ed true
+		-l "Execute File"
+		-text  ""
+		-ann ""
+		-cal 1 "center"
+		-buttonLabel "Select"
+		-bc "selectFileToExecuteOnNetworkedComputer"
+		getFileToExecuteOnNetworkedComputerForBatchRenderCommands
+		;
+	
+	text -l "Command To Execute On Networked Computer";			
+	textField -h 180 -tx "" commandToExecuteOnNetworkedComputer;
+	button 
+		-l "Execute Command"	
+		-c "executeCommandOnNetworkedComputer"
+		;
+		
+}
+
+//PRE RENDER COMMANDS LAYOUT
+//--------------------------------------------
+global proc preRenderCommandsLayout(string $parent)
+{
+	string $frameLayout = `frameLayout
+			-l "Pre Render Commands"
+			-ann ""
+			-bv true
+			-la "center"
+			-li 10
+			-lv true
+			-mw 10
+			-mh 10		
+			
+			-cll true
+			-cl true		
+			-parent $parent
+			`;	
+		
+		button
+			-l "Add Load Original References Before Batch Rendering Pre Mel"
+			-ann ("This adds a script node and a preMel command\n that will load all original(HiRes) files before batch rendering\n")
+			-c ("addLoadOriginalReferencesBeforeBatchRenderingPreMel();")
+			;
+			
+		button
+			-l "Add Load Original References Before Rendering Script Node"
+			-ann ("This adds a script node that will load all original(HiRes)\n files before rendering, and then unload to proxies after rendering\n")
+			-c ("addLoadOriginalReferencesBeforeRenderingScriptNode();")
+			;
+			
+		button
+			-l "Turn On Smoothing Nodes When Rendering"
+			-c "addTurnOnSmoothingNodesWhenRenderingExpression"
+			;
+			
+		intFieldGrp
+			-l "Smooth Divisions"
+			-cal 1 "left"
+			-nf 1
+			-v1 1
+			preRenderCommandsSmoothDivisionsIntFieldGrp
+			;
+			
+		button
+			-l "Create Visible Only When Rendering Expression"
+			-c "createMakeVisibleOnlyWhenRenderingExpression"
+			;
+			
+		button
+			-l "Remove Visible Only When Rendering Expression"
+			-c "removeMakeVisibleOnlyWhenRenderingExpression"
+			;
+			
+		button
+			-l "Add DirMap Fluid Cache Directory Command"
+			-c "addDirMapFluidCacheDirToPreRender"
+			;
+			
+		button
+			-l "Create Smoothing Based On Camera Distance Script Node"
+			-c "setUpSmoothingBasedOnCameraDistance"
+			;
+			
+		button
+			-l "Create Disable Sim Camera View Expression"
+			-c "createDisableSimulateCameraViewExpression"
+			;
+			
+		button
+			-l "Add Get Current Camera Expression"
+			-c "addGetWizCurrentCameraToExpressions"
+			;
+		
+		button
+			-l "Add Fix Fluid Current Time Expression"
+			-c "addFixFluidCurrentTimeExpression"
+			;
+			
+		button
+			-l "Cache nHair Before Rendering"
+			-c ("addCacheNHairBeforeRenderingPreMel();")
+			;
+					
+		textFieldButtonGrp
+			-ed true
+			-label "Camera"
+			-text ""
+			-ann ""
+			//-cal 1 "center"
+			-buttonLabel "Select"
+			-bc "assignCameraForSmoothingDistanceCalculation"
+			getCameraForSmoothingDistanceCalculation
+			;
+			
+		floatSliderButtonGrp 
+			-cal 1 "left" 
+			-cw3 140 70 100
+			-l "Set All Smoothing Bias Values" 
+			-minValue 0		
+			-maxValue 100
+			-value 50 
+			-precision 3
+			-fieldMinValue 0.0001 
+			-fieldMaxValue 100
+			-fs 0.05
+			-sliderStep 1
+			-step 1
+			//-changeCommand "setPlaybackBy"
+			-buttonLabel "Set"
+			-buttonCommand "setAllSmoothingCameraDistanceBiasValues"
+			-field true	
+			 setAllSmoothingBiasValues
+			 ;	
+		
+		setParent..;	
+		
+}
+
+//FILE NAME PREFIX LAYOUT
+//----------------------------------------
+global proc fileNamePrefixLayout(string $parent)
+{
+	frameLayout
+		-l "File Name Prefix"
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10	
+		-mh 10
+		-cll true
+		-cl true
+			
+		-p $parent
+		;
+		
+	createRenderDirectoryAndPrefixes();	
+
+}
+
+global proc createRenderDirectoryAndPrefixes()
+{
+
+	string $filename = `file -q -sn`;
+	$filename = basename ($filename, ".mb");
+	//print ($filename);
+	string $rl = "<RenderLayer>";
+	string $sc = "<Scene>";
+	string $cam = "<Camera>";
+	string $ex = "<Extension>";
+	string $slash = "/";
+	string $us = "_";
+	string $date = `date`;
+	
+	int $resW = `getAttr defaultResolution.width`;
+	string $by = "X";
+	int $resH = `getAttr defaultResolution.height`;
+	string $res = $resW + $by + $resH;
+	
+	string $templateA = "GroupName/" + $sc + "/" + $sc + "_" + $rl + "_" + $cam;
+	string $templateAec = `encodeString $templateA`;
+	string $templateB = "GroupName/" + $sc + "/" + $sc + "_" + $rl + "/" + $sc + "_" + $rl + "_" + $cam + "_" + $res;
+	string $templateBec = `encodeString $templateB`;
+	
+	global string $MY_customFileNamePrefix;
+	global string $MY_setFileNamePrefix;
+	
+	//print ("TemplateA: " + $templateAec + "\n");
+	
+	//print $res;
+	textFieldButtonGrp
+		-l "Template A"
+		-cw 1 60
+		-cw 2 300
+		-cw 3 40
+		-text $templateA
+		-buttonLabel "Use"
+		-bc ("setFileNamePrefixString " + 1 )
+		templateA
+		;
+		
+	textFieldButtonGrp
+		-l "Template B"
+		-cw 1 60
+		-cw 2 300
+		-cw 3 40
+		-text $templateB
+		-buttonLabel "Use"
+		-bc ("setFileNamePrefixString " + 2 )
+		templateB
+		;
+		
+	textFieldButtonGrp
+		-l "Custom"
+		-cw 1 60
+		-cw 2 300
+		-cw 3 40
+		-text $MY_customFileNamePrefix
+		-buttonLabel "Use"
+		-bc ("setFileNamePrefixString " + 3 )
+		myFileNamePrefix
+		;	
+		
+	text
+		-l $MY_setFileNamePrefix
+		-ww true
+		-bgc 0.0 0.0 0.0
+		setFileNamePrefix
+		;
+		
+	button
+		-l "Change Render Globals File Name Prefix"
+		-command "setRenderDirectoryAndPrefixes"
+		setRenderDirectoryAndPrefixes;
+	
+	string $timeAndDateLayout = `rowColumnLayout
+		-numberOfRows 1
+		//-ral center
+		//-vis false
+		//-columnAlign "center"
+		//-numberOfColumns 2
+		//-cw 1 90
+		//-cw 2 280
+		`;
+		
+	text
+		-l $date
+		-w 90
+		-ww true
+		-p $timeAndDateLayout
+		currentTimeAndDate
+		;
+		
+	button
+		-l "Add Date to File Name Prefix"
+		-w 300
+		-command "addDateToFileNamePrefix"
+		-p $timeAndDateLayout
+		addDateToFileNamePrefix;
+		
+	//updateDate();
+}
+
+//()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()
+//////////////////////////////////////////////////////////////////////
+//			FUNCTIONS
+//////////////////////////////////////////////////////////////////////
+//()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()
+
+//RENDER WHEN DONE
+//================================================
+global proc wizBatchRender()
+{
+	
+	string $currentRendererName = currentRenderer(); renderer -query -rendererUIName $currentRendererName;
+	if($currentRendererName == "mayaSoftware"){
+		mayaBatchRender;
+	} else if($currentRendererName == "mentalRay"){
+		batchRender;
+	}
+	
+}
+
+//RENDERING FUNCTIONS
+//===============================================================================
+//===============================================================================
+//CAMERAS
+//===============================================================================
+
+global proc toggleGetWizCurrentCameraEval()
+{
+	if(`menuItem -q -cb toggleGetWizCurrentCameraEvalMenuItem` == 0){
+		//menuItem -e -cb 1 toggleGetWizCurrentCameraEvalMenuItem;
+	} else {
+		//menuItem -e -cb 0 toggleGetWizCurrentCameraEvalMenuItem;
+	}
+}
+
+global proc int getWizCurrentCameraEvalState()
+{
+	int $state = `menuItem -q -cb toggleGetWizCurrentCameraEvalMenuItem`;
+	return $state;
+}
+
+//GET CURRENT CAMERA
+//------------------------------------------
+global proc string getWizCurrentCamera()
+{
+		
+	if (getWizCurrentCameraEvalState() == 0){
+		print("WIZ| getWizCurrentCamera : getWizCurrentCameraEval is turned OFF : Cannot Get Current Camera\n");
+		return "";
+	}
+	int $foundCamera = 0;
+	string $cameraName;
+	string $currentPanel;
+	string $currentPanelQuery[] = { "`getPanel -withFocus`", "`playblast -activeEditor`",  "`getPanel -underPointer`", "`getPanel -type modelPanel`" };
+	
+	for ($i=0;$i<`size $currentPanelQuery`;$i++){
+		string $eval = "modelPanel -q -cam " + $currentPanelQuery[$i] + ";";
+		if (catchQuiet(`eval($eval)`) == 0){
+			//debugML1("FOUND CAMERA : Get Current Camera : " + $cameraName + " = " + $eval + "\n");
+			$cameraName = `eval($eval)`;
+			$foundCamera = 1;
+			break;
+		} else {
+			//debugML1("ERROR : Get Current Camera : " + $eval + "\n");
+		}
+		
+	}
+	
+	if ($foundCamera == 0){
+		print("Can't Find Current Camera. Try Clicking on Modeling Panel." + "\n");	
+	}		
+	
+	return $cameraName;	
+
+}
+
+//SET CURRENT CAMERA
+//------------------------------------------
+global proc setWizCurrentCamera(string $camera)
+{
+	if(getWizCurrentCameraEvalState() == 0){
+		print("WIZ| setWizCurrentCamera : getWizCurrentCameraEval is turned OFF : Cannot Set Current Camera\n");
+		return;
+	}	
+	string $currentPanel = `getPanel -withFocus`;
+	modelPanel -edit -cam $camera $currentPanel;
+
+}
+
+//MOVE SELECTED CAMERA TO CAMERA VIEW
+//------------------------------------------
+global proc moveSelectedCameraToCameraView(string $sel[])
+{
+	string $moveCamera = $sel[0];
+	string $currentCamera = getWizCurrentCamera();
+	copyAttr -values -attribute translate -attribute rotate  $currentCamera $moveCamera;
+	setWizCurrentCamera($moveCamera);
+
+}
+
+//GET CURRENT VIEWPORT CAMERA
+//------------------------------------------
+global proc string getCurrentViewportCamera()
+{
+	if(getWizCurrentCameraEvalState() == 0){
+		print("WIZ| getCurrentViewportCamera : getWizCurrentCameraEval is turned OFF : Cannot Get Current Viewport Camera\n");
+		return "";
+	}	
+	string $currentPanel = `playblast -activeEditor`;
+	// or // string $currentPanel = `getPanel -withFocus`;
+	string $cameraName = `modelPanel -q -cam $currentPanel`;
+	return $cameraName;
+}
+
+//GET CURRENT CAMERA EXPRESSION
+//------------------------------------------
+global proc addGetWizCurrentCameraToExpressions()
+{
+	global string $lastKnownCamera;
+	string $expName = "GetCurrentCamera";
+	string $exp = (	
+	"global proc string getWizCurrentCamera()\n"
+	+"{\n"
+	+"global string $lastKnownCamera;\n"
+	+"string $cameraName;\n"
+	+"global int $doingBatchRender;\n"
+	+"if($doingBatchRender == 1){\n"
+	+"	global string $camera;\n"
+	+"	$cameraName = $camera;\n"
+	+"	return $cameraName;\n"
+	+"} else {\n"
+	+"	string $panel = `getPanel -wf`;\n"
+	+"	if(\"modelPanel\" == `getPanel -to $panel`){\n"
+	+"		$cameraName = `modelEditor -q -camera $panel`;\n"
+	+"		$lastKnownCamera = $cameraName;\n"
+	+"	} else { \n"
+	+"		$cameraName = $lastKnownCamera;\n"
+	+"	} \n"
+	+"	return $cameraName;\n"
+	
+	+"	//string $currentPanel = `playblast -activeEditor`;\n"
+	+"	// or // string $currentPanel = `getPanel -withFocus`;\n"
+	+"	//$cameraName = `modelPanel -q -cam $currentPanel`;\n"
+	+"	//return $cameraName;\n"
+	
+	+"}\n"
+	+"}\n"
+	);
+	catchQuiet(`delete $expName`);
+	expression -s ($exp) -n ($expName);
+}
+
+//MAKE SELECTED CAMERAS RENDERABLE
+//-----------------------------------------
+global proc makeSelectedCamerasRenderable()
+{
+	string $selectedCameras[] = `ls -sl`;
+	string $allCameras[] = `ls -type "camera"`;
+	
+	int $i;
+	for($i=0;$i<`size $allCameras`;$i++){
+		setAttr ($allCameras[$i] + ".renderable") 0;
+	}
+	print("Cameras: ");
+	for($i=0;$i<`size $selectedCameras`;$i++){
+		setAttr ($selectedCameras[$i] + ".renderable") 1;
+		print($selectedCameras[$i] + " ");
+	}
+	print(" are now set to render. All other cameras will not render." + "\n");
+
+}
+
+global proc setSelectedCameraRenderable(string $sel[], int $state)
+{
+	
+}
+
+//MAKE SELECTED CAMERAS UNRENDERABLE
+//-----------------------------------------
+global proc makeSelectedUnrenderable()
+{
+	string $sel[] = `ls -sl`;
+	int $i;
+	for ($i=0;$i<`size $sel`;$i++){
+		setAttr ($sel[$i] + ".castsShadows") 0;
+		setAttr ($sel[$i] + ".receiveShadows") 0;
+		setAttr ($sel[$i] + ".motionBlur") 0;
+		setAttr ($sel[$i] + ".primaryVisibility") 0;
+		setAttr ($sel[$i] + ".smoothShading") 0;
+		setAttr ($sel[$i] + ".visibleInReflections") 0;
+		setAttr ($sel[$i] + ".visibleInRefractions") 0;
+		//setAttr ($sel[$i] + ".doubleSided") 0;
+		//setAttr ($sel[$i] + ".opposite") 0;
+		print($sel[$i] + " will not render. \n");
+	}
+
+}
+
+global proc makeSelectedRenderable()
+{
+	string $sel[] = `ls -sl`;
+	int $i;
+	for ($i=0;$i<`size $sel`;$i++){
+		setAttr ($sel[$i] + ".castsShadows") 1;
+		setAttr ($sel[$i] + ".receiveShadows") 1;
+		setAttr ($sel[$i] + ".motionBlur") 1;
+		setAttr ($sel[$i] + ".primaryVisibility") 1;
+		setAttr ($sel[$i] + ".smoothShading") 1;
+		setAttr ($sel[$i] + ".visibleInReflections") 1;
+		setAttr ($sel[$i] + ".visibleInRefractions") 1;
+		//setAttr ($sel[$i] + ".doubleSided") 0;
+		//setAttr ($sel[$i] + ".opposite") 0;
+		//print($sel[$i] + " will not render. \n");
+	}
+
+}
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			PRE-POST MEL
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//====================================================================
+
+//PRE-POST RENDER COMMANDS
+//=================================================================================
+//=================================================================================
+
+//ADD TO PRE-POST MEL COMMANDS
+//---------------------------------------
+global proc addToPreMelPostMelCommands(string $script, string $pmel)
+{
+	
+	string $curMel;
+	if($pmel == "preMel"){
+		$curMel = `getAttr defaultRenderGlobals.preMel`;
+	} else if($pmel == "postMel"){
+		$curMel = `getAttr defaultRenderGlobals.postMel`;
+	}
+	/*
+	string $cur[] = tokenizeString($curMel, ";");
+	for($i=0;$i<`size $cur`;$i++){
+		if($cur[$i] == $script){
+			warning ("WIZ| This command already exists. Skipping.\n");	
+			return;
+		}
+	}
+	*/
+	
+	string $newMel = `substitute $script $curMel ""`;
+	$newMel = $newMel + $script;
+	if($pmel == "preMel"){
+		setAttr -type "string" defaultRenderGlobals.preMel $newMel;
+	} else if($pmel == "postMel"){
+		setAttr -type "string" defaultRenderGlobals.postMel $newMel;
+	}
+
+}
+
+//ADD TO PRE-POST RENDER LAYER MEL COMMANDS
+//---------------------------------------
+global proc addToPreRenderLayerMelPostRenderLayerMelCommands(string $script, string $pmel)
+{
+	
+	string $curMel;
+	if($pmel == "pre" || $pmel == "preRenderLayerMel"){
+		$curMel = `getAttr defaultRenderGlobals.preRenderLayerMel`;
+	} else if($pmel == "postMel" || $pmel == "postRenderLayerMel"){
+		$curMel = `getAttr defaultRenderGlobals.postRenderLayerMel`;
+	}
+	
+	string $newMel = `substitute $script $curMel ""`;
+	$newMel = $newMel + $script;
+	if($pmel == "pre" || $pmel == "preRenderLayerMel"){
+		setAttr -type "string" defaultRenderGlobals.preRenderLayerMel $newMel;
+	} else if($pmel == "postMel" || $pmel == "postRenderLayerMel"){
+		setAttr -type "string" defaultRenderGlobals.postRenderLayerMel $newMel;
+	}
+
+}
+
+//ADD DOING BATCH RENDER GLOBAL VAR TO PRE AND POST MEL COMMANDS
+//=========================================================================
+//This adds a global var so you can query whether maya is doing a batch rendering or not
+global proc addDoingBatchRenderGlobalVarToPreMelPostMelCommands()
+{
+	string $preMel = `getAttr defaultRenderGlobals.preMel`;
+	string $preMelCom = "; global int $doingBatchRender; $doingBatchRender = 1;";
+	string $pre = `substitute $preMelCom $preMel""`;
+	$pre = $pre + $preMelCom;
+	setAttr -type "string" defaultRenderGlobals.preMel $pre;
+	
+	string $postMel = `getAttr defaultRenderGlobals.postMel`;
+	string $postMelCom = "; global int $doingBatchRender; $doingBatchRender = 0;";
+	string $post = `substitute $postMelCom $postMel ""`;
+	$post = $post + $postMelCom;
+	setAttr -type "string" defaultRenderGlobals.postMel $post;
+}
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			EXPRESSIONS
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//====================================================================
+//EXPRESSIONS
+//================================================================================
+//================================================================================
+
+//SMOOTHING AT DISTANCE
+//======================================================================
+//ASSIGN SMOOTHING AT DISTANCE CAMERA
+//---------------------------------------------
+global proc assignCameraForSmoothingDistanceCalculation()
+{
+	string $sel[] = `ls -sl`;
+	textFieldButtonGrp
+		-e 
+		-tx $sel[0] 
+		getCameraForSmoothingDistanceCalculation
+		;
+		
+}
+
+//SMOOTHING BASED ON CAMERA DISTANCE EXPRESSION
+//=================================================
+global proc setUpSmoothingBasedOnCameraDistance()
+{
+	string $smoothingNode[] = `ls -type "polySmoothFace"`;
+	string $smoothingCamera = `textFieldButtonGrp -q -tx getCameraForSmoothingDistanceCalculation`;
+	string $camArg = "string $cam = getWizCurrentCamera();\n";
+	if($smoothingCamera != ""){
+		$camArg = "string $cam = " + "\"" +  $smoothingCamera + "\"" + ";\n";	
+	}
+	string $obj[];
+	int $i;
+	// Get all the objs that have smoothing groups.
+	for($i=0;$i<`size $smoothingNode`;$i++){
+		string $mesh[] = `listConnections -t "mesh" $smoothingNode[$i]`;
+		string $rel[] = `listRelatives -p $mesh[0]`;
+		$obj[$i] = $rel[0];
+		//print("Obj: " + $obj[$i] + " SmoothingNode: " + $smoothingNode[$i] + "\n");
+		addCameraDistanceBiasAttributeToSmoothingNode($smoothingNode[$i]);	
+	}
+	global string $SN_smoothObj[];
+	global string $SN_smoothNode[];
+	clear $SN_smoothObj;
+	clear $SN_smoothNode;
+	appendStringArray($SN_smoothObj, $obj, `size $obj`);
+	appendStringArray($SN_smoothNode, $smoothingNode, `size $smoothingNode`);
+	
+	string $objString = createStringFormatedStringArray($obj);
+	string $smoothNodeString = createStringFormatedStringArray($smoothingNode);
+	string $varScript = (
+	"global string $SN_smoothObj[];\n"
+	+"global string $SN_smoothNode[];\n"
+	+"clear $SN_smoothObj;\n"
+	+"clear $SN_smoothNode;\n"
+	+"$SN_smoothObj[" + `size $objString` + "] = " + $objString + ";\n"
+	+"$SN_smoothNode[" + `size $smoothNodeString` + "] = " + $smoothNodeString + ";\n"
+	);
+	deleteOldScriptNode("SmoothSmoothingNodesVariableNames");
+	string $varScriptNodeName = `scriptNode -st 1 -bs $varScript -n "SmoothSmoothingNodesVariableNames"`;
+	
+	string $quote = "\"";
+	string $slash = "\\";
+	string $quoteString = $quote + $slash + $quote + $quote;
+	string $script = (
+	"smoothSmoothingNodesBasedOnCameraDistance();\n"
+	+"global proc smoothSmoothingNodesBasedOnCameraDistance()\n"
+	+"{\n"
+	+"global string $SN_smoothObj[];\n"
+	+"global string $SN_smoothNode[];\n"
+	+"float $camDisBias[];\n"
+	+"int $i;\n"
+	+"for($i=0;$i<`size $SN_smoothNode`;$i++){\n"
+	+"	$camDisBias[$i] = `getAttr ($SN_smoothNode[$i] + \".cameraDistanceBias\")`;\n"
+	+"}\n"
+	+ $camArg
+	+"float $camPos[] = `xform -q -ws -t $cam`;\n"
+	+"for($i=0;$i<`size $SN_smoothObj`;$i++){\n"
+	+"	float $objPos[] = `objectCenter $SN_smoothObj[$i]`;\n"
+	+"	float $camDis = sqrt( (($camPos[0] - $objPos[0]) * ($camPos[0] - $objPos[0])) + (($camPos[1] - $objPos[1]) * ($camPos[1] - $objPos[1]))+(($camPos[2] - $objPos[2]) * ($camPos[2] - $objPos[2])));\n"
+	+"	float $smoothAmount =  ($camDisBias[$i] / $camDis) * 2;\n"
+	+"	catchQuiet(`setAttr ($SN_smoothNode[$i] + \".divisions\") $smoothAmount`);\n"
+	+"	//print(\"Obj: \" + $SN_smoothObj[$i] + \" Camera: \" + $cam + \" CamDis : \" + $camDis + \" SmoothAmount: \" + $smoothAmount + \"\\n\");\n"
+	+"}\n"
+	+"}\n"
+	);
+	deleteOldScriptNode("SmoothSmoothingNodesBasedOnCameraDistance");
+	string $nodeName = `scriptNode -st 7 -bs $script -n "SmoothSmoothingNodesBasedOnCameraDistance"`;
+	addDoingBatchRenderGlobalVarToPreMelPostMelCommands();
+	addGetWizCurrentCameraToExpressions();
+}
+
+//ADD CAMERA DISTANCE BIAS
+//------------------------------
+global proc addCameraDistanceBiasAttributeToSmoothingNode(string $smoothNode)
+{
+	if (attributeExists ("cameraDistanceBias", $smoothNode)==0){
+		addAttr -ln "cameraDistanceBias" -at double -k 1 -min -99999999 -max 999999999 -smn 0 -smx 200 -dv 100 $smoothNode;
+	}	
+}
+
+//SET ALL CAMERA DISTANCE BIAS VALUES
+//---------------------------------------------
+global proc setAllSmoothingCameraDistanceBiasValues()
+{
+	float $val = `floatSliderButtonGrp -q -v setAllSmoothingBiasValues`;
+	global string $SN_smoothNode[];
+	int $i;
+	for($i=0;$i<`size $SN_smoothNode`;$i++){
+		setAttr ($SN_smoothNode[$i] + ".cameraDistanceBias") $val;
+	}
+}
+
+//VISIBLE ONLY WHEN RENDERING EXPRESSION
+//=================================================================
+
+//CREATE MAKE VISIBLE ONLY WHEN RENDERING EXPRESSION
+//------------------------------------------------------
+global proc createMakeVisibleOnlyWhenRenderingExpression()
+{
+	global string $visWhenRen[];
+	clear $visWhenRen;
+	string $expName = "MakeVisibleOnlyWhenRendering";
+	string $exp = (	
+	"global proc makeVisibleWhenRendering()\n"
+	+"{\n"
+	+"global string $visWhenRen[];\n"
+	+"int $i;\n"
+	+"for($i=0;$i<`size $visWhenRen`;$i++){\n"
+	+"	setAttr ($visWhenRen[$i] + \".visibility\") true;\n"
+	+"}\n"
+	+"}\n"
+	+"\n"
+	+"global proc hideWhenRenderingIsComplete()\n"
+	+"{\n"
+	+"global string $visWhenRen[];\n"
+	+"int $i;\n"
+	+"for($i=0;$i<`size $visWhenRen`;$i++){\n"
+	+"	setAttr ($visWhenRen[$i] + \".visibility\") false;\n"
+	+"}\n"
+	+"}\n"
+	);
+	catchQuiet(`delete $expName`);
+	expression -s ($exp) -n ($expName) -ae false;	
+	
+	string $beforeScript = (
+	"string $allObj[] = `ls`;\n"
+	+"global string $visWhenRen[];\n"
+	+"clear $visWhenRen;\n"
+	+"int $i;\n"
+	+"for($i=0;$i<`size $allObj`;$i++){\n"
+	+"	if(attributeExists (\"visibleWhenRendering\", $allObj[$i]) == 1){\n"
+	+"		$vwr = `getAttr ($allObj[$i] + \".visibleWhenRendering\")`;\n"
+	+"		if($vwr){\n"
+	+"			$visWhenRen[`size $visWhenRen`] = $allObj[$i];\n"
+	+"		}\n"
+	+"	}\n"
+	+"}\n"
+	);
+	catchQuiet(`delete "InitVisibleWhenRenderingObjects"`);
+	string $nodeName = `scriptNode -st 1 -bs $beforeScript -n "InitVisibleWhenRenderingObjects"`;
+	
+	string $preMel = "; makeVisibleWhenRendering();";
+	addToPreMelPostMelCommands($preMel, "preMel");
+	string $postMel = "; hideWhenRenderingIsComplete();";
+	addToPreMelPostMelCommands($postMel, "postMel");
+
+}
+
+//MAKE SELECTED OBJECTS VISIBLE ONLY WHEN RENDERING
+//------------------------------------------------------
+global proc makeSelectedObjectsVisibleOnlyWhenRendering()
+{
+	global string $visWhenRen[];
+	string $sel[] = `ls -sl`;
+	int $i;
+	for($i=0;$i<`size $sel`;$i++){
+		int $found = stringArrayContains($sel[$i], $visWhenRen);	
+		if($found == 0){
+			if(attributeExists ("visibility", $sel[$i]) == 1){
+				$visWhenRen[`size $visWhenRen`] = $sel[$i];
+				setAttr ($sel[$i] + ".visibility") false;
+				addVisisbleWhenRenderingAttributeToObject($sel[$i]);
+			}
+		}
+	}
+}
+
+//ADD VISIBLE WHEN RENDERING ATTRIBUTE TO OBJECT
+//------------------------------------------------------
+global proc addVisisbleWhenRenderingAttributeToObject(string $obj)
+{
+	if(attributeExists ("visibleWhenRendering", $obj) == 0){
+		addAttr -ln visibleWhenRendering -at bool -k 1 -dv 1 $obj;			
+	}	
+}
+
+//DELETE VISIBLE WHEN RENDERING ATTRIBUTE ON OBJECT
+//------------------------------------------------------
+global proc deleteVisisbleWhenRenderingAttributeOnObject(string $obj)
+{
+	if(attributeExists ("visibleWhenRendering", $obj) == 1){
+		deleteAttr ($obj + ".visibleWhenRendering");			
+	}	
+}
+
+//REMOVE FROM VISIBLE WHEN RENDERING
+//------------------------------------------------------
+global proc removeFromVisibleWhenRendering()
+{
+	global string $visWhenRen[];
+	string $sel[] = `ls -sl`;
+	int $i;
+	for($i=0;$i<`size $sel`;$i++){
+		int $found = stringArrayContains($sel[$i], $visWhenRen);	
+		if($found == 0){	
+			string $remove[] = { $sel[$i], "" };
+			$visWhenRen = stringArrayRemove($remove, $visWhenRen);		
+			deleteVisisbleWhenRenderingAttributeOnObject($sel[$i]);
+		}
+	}	
+}
+
+//ADD TURN ON SMOOTHING WHEN RENDERING EXPRESSION
+//=====================================================
+global proc addTurnOnSmoothingNodesWhenRenderingExpression()
+{
+	string $expName = "TurnOnSmoothingWhenRenderingExpression";
+	int $div = `intFieldGrp -q -v1 preRenderCommandsSmoothDivisionsIntFieldGrp`; 
+	
+	//Expression to turn smoothing on when rendering
+	string $exp = (	
+	"global proc turnOnSmoothingWhenRendering()\n"
+	+"{\n"
+	+"	string $smooth[] = `ls -type polySmoothFace`;\n"
+	+"	for($i=0;$i<`size $smooth`;$i++){\n"
+	+"		setAttr ($smooth[$i] + \".divisions\") " + $div + ";\n"
+	+"	}\n"
+	+"}\n"
+	);
+	
+	catchQuiet(`delete $expName`);
+	expression -s $exp -n $expName -ae false;
+	
+	//Expression to turn smoothing off after rendering
+	string $postExpName = "TurnOffSmoothingWhenRenderingExpression";
+	
+	string $postExp = (	
+	"global proc turnOffSmoothingAfterRendering()\n"
+	+"{\n"
+	+"	string $smooth[] = `ls -type polySmoothFace`;\n"
+	+"	for($i=0;$i<`size $smooth`;$i++){\n"
+	+"		setAttr ($smooth[$i] + \".divisions\") 0;\n"
+	+"	}\n"
+	+"}\n"
+	);
+	
+	catchQuiet(`delete $postExpName`);
+	expression -s $postExp -n $postExpName -ae false;
+	
+	string $preMel = "; turnOnSmoothingWhenRendering();";
+	addToPreMelPostMelCommands($preMel, "preMel");
+	string $postMel = "; turnOffSmoothingAfterRendering();";
+	addToPreMelPostMelCommands($postMel, "postMel");
+		
+}
+
+//REMOVE MAKE VISIBLE ONLY WHEN RENDERING EXPRESSION
+//------------------------------------------------------
+global proc removeMakeVisibleOnlyWhenRenderingExpression()
+{
+	catchQuiet(`delete "MakeVisibleOnlyWhenRendering"`);	
+	catchQuiet(`delete "InitVisibleWhenRenderingObjects"`);
+	string $allObj[] = `ls`;
+	global string $visWhenRen[];
+	clear $visWhenRen;
+	int $i;
+	for($i=0;$i<`size $allObj`;$i++){
+		if(attributeExists ("visibleWhenRendering", $allObj[$i]) == 1){
+			deleteAttr ($allObj[$i] + ".visibleWhenRendering");
+		}
+	}
+}
+
+//FIX FLUID CURRENT TIME EXPRESSION
+//=============================================================
+//ADD FIX FLUID CURRENT TIME EXPRESSION
+//------------------------------------------------
+global proc addFixFluidCurrentTimeExpression()
+{	
+	string $expName = "FixFluidCurrentTime";
+	string $exp = (	
+	"fixFluidCurrentTime();\n"
+	+"global proc fixFluidCurrentTime()\n"
+	+"{\n"
+	+"print(\"------------------TESTING FLUID UPDATING------------------\" + \"\\n\");\n"
+	+"string $fluids[] = `ls -typ \"fluidShape\"`;\n"
+	+"print(\"FOUND \" + `size $fluids` + \" FLUIDS\" + \"\\n\");\n"
+	+"int $i;\n"
+	+"float $curTime = `currentTime -q`;\n"
+	+"for($i=0;$i<`size $fluids`;$i++){\n"
+	+"	float $fluidTime = `getAttr ($fluids[$i] + \".currentTime\")`;\n"
+	+"	print(\"CurrentTime: \" + $curTime + \" || Fluid - CurrentTime: \" + $fluidTime + \"\\n\");\n"
+	+"	if($fluidTime != $curTime){\n"
+	+"		//warning \"***********Fluid is not Updating***********\";\n"
+	+"		//error \"***********QUIT BECAUSE FLUID IS NOT UPDATING***********\";\n"
+	+"		print(\"***********FLUID IS NOT UPDATING***********\" + \"\\n\");\n"
+	+"		setAttr ($fluids[$i] + \".currentTime\") $curTime;\n"
+	+"		$fluidTime = `getAttr ($fluids[$i] + \".currentTime\")`;\n"
+	+"		print(\"FIXED FLUID TIME: \" + $fluidTime + \"\\n\");\n"
+	+"	} else {\n"
+	+"		print(\"----------------FluidOK----------------\" + \"\\n\");\n"
+	+"	}\n"
+	+"}\n"
+	+"}\n"
+	);
+	
+	catchQuiet(`delete $expName`);
+	expression -s $exp -n $expName -ae true;
+
+}
+
+//TEST FLUID UPDATING
+//------------------------------------------
+global proc testFluidUpdating()
+{
+	string $fluids[] = `ls -typ "fluidShape"`;
+	int $i;
+	for($i=0;$i<`size $fluids`;$i++){
+		float $curTime = `currentTime`;
+		float $fluidTime = `getAttr ($fluids[$i] + ".currentTime")`;
+		if($fluidTime != $curTime){
+			print("Fluid is not Updating!" + "\n");
+		}
+	}	
+}
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			DIRMAP
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//====================================================================
+
+//ADD DIRMAP FLUID CACHE DIR TO PRE RENDER
+//-----------------------------------------------
+global proc addDirMapFluidCacheDirToPreRender()
+{
+	addDirmapFluidCacheScriptNode();
+	setAttr -type "string" defaultRenderGlobals.preMel "dirmapFluidCacheDir();";
+}
+
+//ADD DIRMAP FLUID CACHE SCRIPT NODE
+//-----------------------------------------------
+global proc addDirmapFluidCacheScriptNode()
+{
+	string $scriptFile = "testScriptNode.mel";
+	string $quote = "\"";
+	string $slash = "\\";
+	string $quoteString = $quote + $slash + $quote + $quote;
+	string $script = (
+	"global proc dirmapFluidCacheDir()\n"
+	+"{\n"
+	+"dirmap -en true;\n"
+	+"string $cacheFile[] = `ls -type \"cacheFile\"`;\n"
+	+"string $projDir = `workspace -q -rd`;\n"
+	+"string $projData = `workspace -q -fre translatorData`;\n"
+	+"string $destDir = $projDir + $projData;\n"
+	+"int $i;\n"
+	+"for($i=0;$i<`size $cacheFile`;$i++){\n"
+	+"	string $cachePath = getAttr ($cacheFile[$i] + \".cachePath\");\n"
+	+"	dirmap -m $cachePath $destDir;\n"
+	+"}\n"
+	+"string $allMappings[] = `dirmap -gam`;\n"
+	+"print(\"AllDirMappings: \");\n"
+	+"print $allMappings;\n"
+	+"print(\"\\n\");\n"
+	+"}\n"
+	+"\n"
+	+"global proc unmapDirmapFluidCacheDir()\n"
+	+"{\n"
+	+"string $cacheFile[] = `ls -type \"cacheFile\"`;\n"
+	+"string $projDir = `workspace -q -rd`;\n"
+	+"string $projData = `workspace -q -fre data`;\n"
+	+"string $destDir = $projDir + $projData;\n"
+	+"int $i;\n"
+	+"for($i=0;$i<`size $cacheFile`;$i++){\n"
+	+"	string $cachePath = getAttr ($cacheFile[$i] + \".cachePath\");\n"
+	+"	$cachePath = " + $quoteString + " + $cachePath + " + $quoteString + ";\n"
+	+"	dirmap -um $cachePath;\n"
+	+"}\n"
+	+"string $allMappings[] = `dirmap -gam`;\n"
+	+"print(\"AllDirMappings: \");\n"
+	+"print $allMappings;\n"
+	+"print(\"\\n\");\n"
+	+"dirmap -en false;\n"
+	+"}\n"
+	);
+	//"//END QUOTE
+	
+	string $nodeName = `scriptNode -st 0 -bs $script -n "DirMapFluidCacheDir"`;
+}
+
+//DIRMAP FLUID CACHE DIR
+//-----------------------------------------------
+global proc doDirmapFluidCacheDir()
+{
+	dirmap -en true;
+	string $cacheFile[] = `ls -type "cacheFile"`;
+	string $projDir = `workspace -q -rd`;
+	string $projData = `workspace -q -fre translatorData`;
+	string $destDir = $projDir + $projData;
+	int $i;
+	for($i=0;$i<`size $cacheFile`;$i++){
+		string $cachePath = getAttr ($cacheFile[$i] + ".cachePath");
+		dirmap -m $cachePath $destDir;	
+		//string $mappedDir = `dirmap -gmd $cachePath`;
+		//print("Mapped: " + $cachePath + " To ProjDir: " + $destDir + "\n");
+		//print("MappedDir: " + $mappedDir + "\n");
+	}
+	string $allMappings[] = `dirmap -gam`;
+	print("AllDirMappings: ");
+	print $allMappings;
+	print("\n");
+}
+
+//UNMAP DIRMAP FLUID CACHE DIR
+//-----------------------------------------------
+global proc doUnmapDirmapFluidCacheDir()
+{
+	string $cacheFile[] = `ls -type "cacheFile"`;
+	string $projDir = `workspace -q -rd`;
+	string $projData = `workspace -q -fre data`;
+	string $destDir = $projDir + $projData;
+	int $i;
+	for($i=0;$i<`size $cacheFile`;$i++){
+		string $cachePath = getAttr ($cacheFile[$i] + ".cachePath");
+		$cachePath = "\"" + $cachePath + "\"";
+		dirmap -um $cachePath;	
+	}
+	string $allMappings[] = `dirmap -gam`;
+	print("AllDirMappings: ");
+	print $allMappings;
+	print("\n");
+	dirmap -en false;
+}
+
+//FILE NAME PREFIX
+//==============================================================
+//SET FILE NAME PREFIX STRING
+//----------------------------------------
+global proc setFileNamePrefixString(int $templateNum)
+{
+	global string $MY_customFileNamePrefix;
+	global string $MY_setFileNamePrefix;
+	string $fileNamePrefix;
+	if($templateNum == 1){
+		$fileNamePrefix = `textFieldButtonGrp -q -text templateA`;	
+	}
+	
+	if($templateNum == 2){
+		$fileNamePrefix = `textFieldButtonGrp -q -text templateB`;	
+	}
+	
+	if($templateNum == 3){
+		$fileNamePrefix = `textFieldButtonGrp -q -text myFileNamePrefix`;	
+		$MY_customFileNamePrefix = $fileNamePrefix;
+	}
+	
+	text
+		-e
+		-l $fileNamePrefix
+		setFileNamePrefix
+		;
+		
+	$MY_setFileNamePrefix = $fileNamePrefix;
+	//print ("FileNamePrefix: " + $fileNamePrefix + "\n");
+
+}
+
+//SET RENDER DIRECTORY AND PREFIXES
+//----------------------------------------
+global proc setRenderDirectoryAndPrefixes()
+{
+	string $fileNamePrefix = `text -q -l setFileNamePrefix`;
+	print("Setting Render Globals File Name Prefix To:" +  $fileNamePrefix + "\n");
+	//renderSettings -ign $fileNamePrefix;
+	select -r defaultRenderGlobals;
+	setAttr ".imageFilePrefix" -type "string" $fileNamePrefix; 
+	select -clear;
+
+}
+
+//ADD DATE TO FILE NAME PREFIX
+//----------------------------------------
+global proc addDateToFileNamePrefix()
+{
+	select -r defaultRenderGlobals;
+	string $fileNamePrefix = `getAttr ".imageFilePrefix"`;
+	string $date = `date`;
+	$fileNamePrefix = $fileNamePrefix + $date;
+	setAttr ".imageFilePrefix" -type "string" $fileNamePrefix; 
+	select -clear;
+	
+	text
+		-e
+		-l $date
+		-ww true
+		//-bgc 0.0 0.0 0.0
+		currentTimeAndDate
+		;
+
+}
+
+//FORMAT EXTENSION
+//-----------------------------------
+global proc string formatExtension(string $ext)
+{
+	string $newExt = ".";
+	string $lower = `tolower $ext`;
+	$newExt = $newExt + $lower;
+	return $newExt;
+}
+
+//SCRIPT NODES
+//===============================================================
+//DELETE OLD SCRIPT NODE
+//-----------------------------------
+global proc deleteOldScriptNode(string $scriptName)
+{
+	catchQuiet(`delete $scriptName`);	
+
+}
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			BATCH RENDERING
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//====================================================================
+//BATCH RENDERS
+//======================================================================================
+
+//OUTPUT BATCH RENDER FILE
+//-------------------------------------
+global proc outputBatchRenderFile()
+{
+	string $file = `file -q -sn`;
+	if($file == ""){
+		error("The file must be saved before it can be added to the batch render file.\n");
+		return;
+	}
+	string $fileBn = basename ($file, ".mb");
+	string $fileBnEx = basename ($file, "");
+	string $fileType = getBatchFileTypeFromOS();
+	string $batFileName = $fileBn + "BatchRender" + $fileType;
+	/*
+	$useCurrentSettings = `checkBox -q -v useCurrentSettingsBatchFileOption`;
+	string $settings = "";
+	
+	//if($useCurrentSettings){
+	//	$settings = getCurrentRenderSettingsForBatchRenderFile();
+	//}	
+	
+	string $rcommand = "Render " + $settings + $file;
+	string $allResources = "-mr:art";
+	$rcommand = $rcommand + " " + $allResources;
+	
+	float $startEndTimes[] = getBatchRenderStartEnd();
+	string $startEnd = " -s " + $startEndTimes[0] + " -e " + $startEndTimes[1];
+
+
+	float $byFrameNum = `getAttr "defaultRenderGlobals.byFrameStep"`;
+	string $byFrame = " -b " + $byFrameNum;
+	
+	int $resX = `getAttr defaultResolution.width`;
+	string $resolutionX = " -x " + $resX;
+	int $resY = `getAttr defaultResolution.height`;
+	string $resolutionY = " -y " + $resY;
+	
+	
+	$rcommand = $rcommand + " " + $startEnd + $byFrame ;
+	*/
+	string $rcommand = getWizRenderCommands();
+	
+	string $fileFolder = `substitute $fileBnEx $file ""`;
+	
+	int $fileId=`fopen $batFileName "w"`;
+	fprint $fileId ($rcommand + "\n");
+	fclose $fileId;
+	
+	string $batFile = $fileFolder + $batFileName;
+	$delFile = `checkBox -q -v deleteBatchFileOption`;
+	if($delFile){
+		deleteBatchFileAfterRenderIsFinished($batFile);
+	}
+}
+
+//GET BATCH FILE TYPE FROM OS
+//---------------------------------------
+global proc string getBatchFileTypeFromOS()
+{
+	string $fileType;
+	string $os = `about -os`;
+	if($os == "nt" || $os == "win64"){
+		$fileType = ".bat";
+	} else if($os == "mac"){
+		$fileType = ".txt"; //Edit this to whatever it really should be!
+	} else if($os == "linux" || $os == "linux64"){
+		$fileType = ".txt"; //Edit this to whatever it really should be!
+	}
+	return $fileType;
+}
+
+//GET MAYA RENDERER PATH
+//---------------------------------------
+global proc string getMayaRendererPath()
+{
+	print("WIZ| renderingWiz : getMayaRendererPath : Appending Maya Path : Current Version is 2014\n");
+	string $os = `about -os`;
+	
+	string $mayaLoc = `getenv MAYA_LOCATION`;
+	
+	string $rp;
+	if($os == "nt" || $os == "win64"){
+		$rp = $mayaLoc + "\\bin\\maya";
+		return "C:\\Program Files\\Autodesk\\Maya2014\\bin\\maya";
+	} else if($os == "mac"){
+		$rp = $mayaLoc + "/Maya.app/Contents/bin/maya";
+		return "/Applications/Autodesk/maya2014/Maya.app/Contents/bin/maya";
+	}
+	
+}
+
+//DELETE BATCH FILE WHEN RENDER IS FINISHED
+//-----------------------------------------
+global proc deleteBatchFileAfterRenderIsFinished(string $file)
+{
+	//string $postCommand = "doDeleteBatchFile(" + $file + ")";
+	string $postCommand = "sysFile -del " + "\"" + $file + "\"" + ";";
+	string $postMel = `getAttr defaultRenderGlobals.postMel`;
+	if($postMel != $postCommand || $postMel == ""){
+		$postMel = $postMel + ";"+ $postCommand;
+	}
+	setAttr -type "string" defaultRenderGlobals.postMel $postMel;
+	//addDeleteBatchFileScriptNode();
+}
+
+//DELETE BATCH FILE
+//----------------------------------------
+global proc doDeleteBatchFile(string $file)
+{
+	sysFile -del $file;
+}
+
+//ADD DELETE BATCH FILE SCRIPT NODE
+//----------------------------------------
+global proc addDeleteBatchFileScriptNode()
+{
+	string $script = (
+	"doDeleteBatchFile(string $file)\n"
+	+"{\n"
+	+"sysFile -del $file;\n"
+	+"}\n"
+	);
+	string $nodeName = `scriptNode -st 0 -bs $script -n "DeleteBatchFileWhenRenderIsComplete"`;
+}
+
+//ASSIGN APPENDABLE BATCH RENDER FILE
+//----------------------------------------
+global proc assignAppendableBatchRenderFile()
+{
+	string $sel[] = `fileDialog2 -fileMode 1 -dialogStyle 2 -okCaption "OK"`;
+	textFieldButtonGrp -edit -text $sel[0] getAppendableBatchRenderFile;
+	global string $WIZ_batRenFile;
+	$WIZ_batRenFile = $sel[0];
+	optionVar -sv WIZ_batRenFile $WIZ_batRenFile;
+}
+
+//SELECT NEW BATCH RENDER FILE
+//----------------------------------------
+global proc selectNewBatchRenderFile()
+{
+	string $sel[] = `fileDialog2 -fileMode 0 -dialogStyle 2 -okCaption "OK"`;
+	textFieldButtonGrp -edit -text $sel[0] getNewBatchRenderFile;
+}
+
+//CREATE NEW BATCH RENDER FILE
+//----------------------------------------
+global proc createNewBatchRenderFile()
+{
+	string $sel[] = `fileDialog2 -fileMode 0 -dialogStyle 2 -okCaption "SAVE"`;
+	int $fileId =`fopen $sel[0] "w"`;
+	fclose $fileId;
+	textFieldButtonGrp -edit -text $sel[0] getAppendableBatchRenderFile;
+	global string $WIZ_batRenFile;
+	$WIZ_batRenFile = $sel[0];
+	optionVar -sv WIZ_batRenFile $WIZ_batRenFile;
+}
+
+//APPEND TO BATCH RENDER FILE
+//----------------------------------------
+global proc appendToBatchRenderFile( string $flags )
+{
+	int $crg;
+	string $w;
+	string $fileBn;
+	string $rcommand;
+	string $batFileName = `textFieldButtonGrp -q -text getAppendableBatchRenderFile`;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){				
+			case "-crg" : case "-currentRenderGlobals" :
+			$crg = 1;
+			break ;
+			
+			case "-tx" : case "-text" :
+			$rcommand = wizFlagString($tok, $i);
+			break ;
+
+			case "-rcf" : case "-renderCommandField" :
+			$rcommand = `scrollField -q -tx renderingWizRenderCommandScrollField`;			
+			break ;
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+		}
+	}
+		
+	if ($crg){
+		string $file = `file -q -sn`;
+		if ($file == ""){
+			error("The file must be saved before it can be added to the batch render file.\n");
+			return;
+		}
+		
+		$fileBn = basename ($file, ".mb");
+		string $fileBnEx = basename ($file, "");
+		string $batFileName = `textFieldButtonGrp -q -text getAppendableBatchRenderFile`;
+		
+		string $rcommand = getWizRenderCommands();
+		string $fileFolder = `substitute $fileBnEx $file ""`;
+	}
+	
+	
+	string $fileData[] = wizReadTextFileByLine($batFileName);
+				
+	if (`checkBox -q -v renderingWizHeaderInformation_checkBox`){		
+		string $date = wizDateStamp();
+		
+		string $rendererPath = getMayaRendererPath();
+		string $div = "\n=====================================================================\n";
+		string $header = $div + "*" + $fileBn + "*  [DATE : " + $date + "] : [STATUS : pending]" + $div + "\n" + $rendererPath + "\n";
+		
+		$w = $header + "\n" + $rcommand + "\n" + (stringArrayToString($fileData, ""));
+	} else {
+		$w = $rcommand + "\n" + (stringArrayToString($fileData, ""));
+	}
+
+	
+	wizlog ("[WRIGHTING] : " + $w + "\n[TO FILE] : " + $batFileName);
+	
+	int $fileId = `fopen $batFileName "w"`;
+	fprint $fileId ($w + "\n");
+	fclose $fileId;
+
+}
+
+global proc string wizDateStamp()
+{
+	string $wizDate = `date`;
+	return $wizDate;
+	
+}
+
+//GET SAVED BATCH RENDER FILE
+//-------------------------------------------
+global proc string getSavedBatchRenderFile()
+{
+	string $batRenFile;
+	if(`optionVar -ex WIZ_batRenFile`){
+		$batRenFile = `optionVar -q WIZ_batRenFile`;
+	}
+	return $batRenFile;
+
+}
+
+
+//RENDER GLOBALS
+//===================================================================================
+
+//GET CURRENT RENDER SETTINGS FOR BATCH RENDER FILE
+//--------------------------------------------------------
+
+//GET BATCH RENDER START END
+//---------------------------------------
+global proc float[] getBatchRenderStartEnd()
+{
+	float $startEnd[];
+	float $start = `getAttr "defaultRenderGlobals.startFrame"`;
+	float $end = `getAttr "defaultRenderGlobals.endFrame"`;
+	$startEnd[0] = $start;
+	$startEnd[1] = $end;
+	return $startEnd;
+}
+
+//GET BATCH RENDER DIMENSIONS
+//---------------------------------------
+global proc int[] getRenderDimensions()
+{
+	int $res[];
+	$res[0] = `getAttr defaultResolution.width`;
+	$res[1] = `getAttr defaultResolution.height`;
+	return $res;
+	
+	
+}
+
+
+global proc string getCurrentRenderSettingsForBatchRenderFile()
+{
+	string $curRen = `getAttr defaultRenderGlobals.currentRenderer`;
+	//string $allAttr[] = appendStringArray($drgAttr,$mrAttr,`size $mrAttr`);
+	string $settings;
+	string $drgAttr[];
+	string $drgFlags;
+	if($curRen == "mentalRay"){
+		//string $mrAttr[] = `listAttr -hd -se mentalrayGlobals`;
+		//string $mrFlags = getRenderFlagsForRenderer("mentalrayGlobals");
+		$drgAttr = `listAttr -hd -se defaultRenderGlobals`;
+		$drgFlags = getRenderFlagsForRenderer("defaultRenderGlobals");
+		//$settings = $drgFlags + $mrFlags;
+		$settings = $drgFlags;
+	} else {
+		$drgAttr = `listAttr -hd -se defaultRenderGlobals`;
+		$drgFlags = getRenderFlagsForRenderer("defaultRenderGlobals");
+		$settings = $drgFlags;
+	}
+	
+	return $settings;
+}
+
+/*
+//GET DEFAULT RENDER FLAGS FROM RENDER GLOBALS
+//--------------------------------------------------------
+global proc string getDefaultRenderFlagsFromRenderGlobals()
+{
+string $settings = "";	
+// Manually entered Settings
+
+float $startFrameNum = `getAttr defaultRenderGlobals.startFrame`;
+string $startFrame = " -s " + $startFrameNum;
+float $endFrameNum = `getAttr defaultRenderGlobals.endFrame`;
+string $endFrame = " -e " + $endFrameNum;
+float $byFrameNum = `getAttr defaultRenderGlobals.byFrameStep`;
+string $byFrame = " -b " + $byFrameNum;
+string $imageFileFormat = `getAttr -as defaultRenderGlobals.imageFormat`;
+if($imageFileFormat == "Maya IFF"){
+	$imageFileFormat = "IFF";	
+}
+$imageFileFormat = " -of " + $imageFileFormat;
+int $resX = `getAttr defaultResolution.width`;
+string $resolutionX = " -x " + $resX;
+int $resY = `getAttr defaultResolution.height`;
+string $resolutionY = " -y " + $resY;
+
+string $workspace = `workspace -q -fullName`;
+$workspace = " -proj " + $workspace + " ";
+
+$settings = ($startFrame + $endFrame + $byFrame + $imageFileFormat 
++ $resolutionX + $resolutionY + $workspace);
+
+
+return $settings;
+}
+*/
+/*
+//GET RENDER FLAGS FOR RENDERER
+//--------------------------------------------------------
+global proc string getRenderFlagsForRenderer(string $node)
+{
+string $attr[] = `listAttr -hd -se $node`;
+string $actFlag[] = getActivatedFlags();
+string $allVal[];
+string $renderFlags = "";
+int $i;
+print("Attributes For: " + $node + "\n");
+print("--------------------------------------" + "\n");
+for($i=0;$i<`size $attr`;$i++){
+	int $found = stringArrayContains($attr[$i],$actFlag);
+	if($found == 0){
+		continue;
+	}	
+	print("Attr: " + $attr[$i]);
+	getAttr -typ ($node + "." + $attr[$i]);
+	string $attrSn = `attributeQuery -node $node -sn $attr[$i]`;
+	string $val;
+	string $vals[];
+	float $fvals[];
+	if(catchQuiet($val = `getAttr ($node + "." + $attr[$i])`)){	
+		if(catchQuiet($vals = `getAttr ($node + "." + $attr[$i])`)){
+			$fvals = (`getAttr ($node + "." + $attr[$i])`);
+			$allVal = addFloatArrayToStringArrayAsString($allVal, $fvals);
+			print("*");
+		} else {
+			//$vals = (`getAttr ($node + "." + $attr[$i])`);
+			string $valsString = stringArrayToString($vals, " ");
+			$allVal[`size $allVal`] = $valsString; 
+			//appendStringArray($allVal,$vals,`size $vals`);
+			print("*");			
+		}
+	} else {
+		$val = `getAttr ($node + "." + $attr[$i])`;	
+		$allVal[`size $allVal`] = $val; 
+	}
+	string $flag = getRenderFlagForAttribute($attr[$i]);
+	if($flag != ""){
+		if($allVal[(`size $allVal` - 1)] != ""){
+			$flag = $flag + " " + $allVal[(`size $allVal` - 1)] + " ";
+			$renderFlags = $renderFlags + $flag;
+		}
+	}
+	print("                        | Val: " + $allVal[(`size $allVal` - 1)] + "\n");
+}
+print("--------------------------------------" + "\n");
+//return $allVal;
+print("RenderFlags: " + $renderFlags + "\n");
+return $renderFlags;
+}
+*/
+/*
+//GET RENDER FLAGS FOR ATTRIBUTE
+//--------------------------------------------------------
+global proc string getRenderFlagForAttribute(string $attr)
+{
+string $flag;
+switch($attr){
+	case "startFrame": $flag = "-s"; break;
+	case "endFrame": $flag = "-e"; break;
+	case "imageFilePrefix": $flag = "-im"; break;
+	case "byFrame": $flag = "-b"; break;
+	case "extensionPadding": $flag = "-pad"; break;
+	case "startExtension": $flag = "-rfs"; break;
+	case "byExtension": $flag = "-rfb"; break;
+	case "camera?": $flag = "-cam"; break;
+	case "alpha?": $flag = "-alpha"; break;
+	case "depth?": $flag = "-depth"; break;
+	case "x?": $flag = "-x"; break;
+	case "y?": $flag = "-y"; break;
+	case "smoothing?": $flag = "-eaa"; break;
+	//Add More Flags Here
+}
+return $flag;
+}
+*/
+
+//GET ACTIVE FLAGS
+//--------------------------------------------------------
+global proc string[] getActivatedFlags()
+{
+	string $flagAttr[];
+	string $itemArray[] = `menu -q -ia renderFlagsMenu`;
+	int $i;
+	for($i=0;$i<`size $itemArray`;$i++){
+		if(`menuItem -q -cb $itemArray[$i]` == 1){
+			$flagAttr[`size $flagAttr`] = `menuItem -q -ann $itemArray[$i]`;
+		}
+	}
+	return $flagAttr;
+}
+
+global proc string[] addFloatArrayToStringArray(string $string[], float $float[])
+{
+	int $i;
+	for($i=0;$i<`size $float`;$i++){
+		$string[`size $string`] = $float[$i]; 
+	}
+	return $string;
+}
+
+global proc string[] addFloatArrayToStringArrayAsString(string $string[], float $float[])
+{
+	string $allVal;
+	int $i;
+	for($i=0;$i<`size $float`;$i++){
+		$allVal = $allVal + $float[$i] + " "; 
+	}
+	$string[`size $string`] = $allVal;
+	return $string;
+}
+
+//NETWORKED COMPUTERS
+//==================================================================================
+//SELECT NETWORKED COMPUTER
+//--------------------------------------------------------
+global proc selectNetworkedComputer()
+{
+	string $sel[] = `fileDialog2 -fileMode 3 -dialogStyle 2 -okCaption "OK"`;
+	textFieldButtonGrp -edit -text $sel[0] getNetworkedComputerForBatchRenderCommands;
+}
+
+//SELECT FILE TO EXECUTE ON NETWORKED COMPUTER
+//--------------------------------------------------------
+global proc selectFileToExecuteOnNetworkedComputer()
+{
+	string $sel[] = `fileDialog2 -fileMode 1 -dialogStyle 2 -okCaption "OK"`;
+	textFieldButtonGrp -edit -text $sel[0] getFileToExecuteOnNetworkedComputerForBatchRenderCommands;
+}
+
+global proc createDisableSimulateCameraViewExpression()
+{
+	string $script = (
+	"disableCameraSimulateView();\n"
+	+"global proc disableCameraSimulateView(){\n"
+	+"string $allCams[] = `ls -ca`;\n"
+	+"string $cams[];\n"
+	+"int $i;\n"
+	+"for($i=0;$i<`size $allCams`;$i++){\n"
+	+"	string $camTransform[] = `listRelatives -p $allCams[$i]`;\n"
+	+"	$cams[`size $cams`] = $camTransform[0];\n"
+	+"}\n"
+	+"//print $cams;\n"
+	+"for($i=0;$i<`size $cams`;$i++){\n"
+	+"	if(attributeExists (\"SimulateView\", $cams[$i])== 1){\n"
+	+"		setAttr ($cams[$i] + \".SimulateView\") 0;\n"
+	+"	}\n"
+	+"}\n"
+	+"}\n"
+	);
+	catchQuiet(`delete "DisableSimulateCameraView"`);
+	expression -s $script -n "DisableSimulateCameraView" -ae false;
+	
+	string $preMel = "; disableCameraSimulateView();";
+	addToPreMelPostMelCommands($preMel, "preMel");
+
+}
+
+//PLANETARIUM FUNCTIONS
+//===============================================================================
+
+//ASSIGN PLANETARIUM PLAYER FILE
+//--------------------------------------------
+global proc assignPlanetariumPlayerFile()
+{
+	string $sel[] = `fileDialog2 -fileMode 1 -dialogStyle 2 -okCaption "OK"`;
+	textFieldButtonGrp -edit -text $sel[0] getPlanetariumPlayerFile;
+	global string $WIZ_planetariumPlayer;
+	$WIZ_planetariumPlayer = $sel[0];
+	optionVar -sv WIZ_planetariumPlayer $WIZ_planetariumPlayer;
+}	
+
+//OPEN IMAGE IN PLANETARIUM PLAYER
+//--------------------------------------------
+global proc openImageInPlanetariumPlayer(string $image)
+{
+	string $planetariumPlayer = `textFieldButtonGrp -q -text getPlanetariumPlayerFile`;
+	string $url = $planetariumPlayer + "?pp=" + $image;
+	string $link = ("<a href=\"" + $planetariumPlayer + "?pp=" + $image + "</a>"); //"
+	launch -web $url;
+
+}
+
+//RENDER TO PLANETARIUM
+//--------------------------------------------
+global proc rmbRenderToPlanetarium( string $object )
+{
+    renderToPlanetarium();
+}
+
+global proc renderToPlanetarium()
+{
+	//**********SETUP**********
+	//Get the settings from the planetarium menu	
+	int $renderWithSelectedCam = `checkBox -q -v renderWithSelectedCameraOption`;
+	
+	global int $WIZ_openInPlanetariumPlayer;
+	$WIZ_openInPlanetariumPlayer = `checkBox -q -v openInPlanetariumPlayerOption`;
+	optionVar -iv WIZ_openInPlanetariumPlayer $WIZ_openInPlanetariumPlayer;
+	
+	global int $WIZ_viewWithPlanetariumViewer;
+	$WIZ_viewWithPlanetariumViewer = `checkBox -q -v viewWithPlanetariumViewerOption`;
+	optionVar -iv WIZ_viewWithPlanetariumViewer $WIZ_viewWithPlanetariumViewer;
+	
+	int $increment = `checkBox -q -v saveAllPlanetariumImagesOption`;
+	
+	//Set up the camera
+	string $fullDomeCamera;
+	if($renderWithSelectedCam == 1){
+		string $fdCam[] = `ls -sl`;
+		$fullDomeCamera = $fdCam[0];
+	} else {
+		if(`objExists FullDomeCamera1`){
+			$fullDomeCamera = "FullDomeCamera1";
+		} else {
+			$fullDomeCamera = planetariumGetCurrentCamera();
+			print("Could not find a FullDomeCamera in the scene. Using active camera." + "\n");
+		}
+	}
+	
+	//Set up the planetarium view camera
+	string $planetariumCamera = "";
+	if($WIZ_viewWithPlanetariumViewer){
+		$planetariumCamera = "PlanetariumViewCamera1";
+	} else {
+		if(`objExists PlanetariumViewCamera1`){
+			$planetariumCamera = "PlanetariumViewCamera1";
+		} else {
+			$WIZ_viewWithPlanetariumViewer = 0;
+			checkBox -edit -v 0 viewWithPlanetariumViewerOption;
+			optionVar -iv WIZ_viewWithPlanetariumViewer $WIZ_viewWithPlanetariumViewer;
+			print("There is no Planetarium Viewer in the Scene. Planetarium Viewer will be disabled." + "\n");
+		}
+	}
+	
+	//**********FILENAME**********
+	//Set up the dir and name of the rendered file.
+	string $dir = `textFieldButtonGrp -q -text getPlanetariumRenderFolder`; //string $dir = "/Volumes/Workspace/SolarQuest-GJ/images/";
+	
+	//Set a default name prefix for the images
+	string $name = "PlanetariumImage";
+	
+	//Get frame padding
+	int $pad = `getAttr "defaultRenderGlobals.extensionPadding"`;
+	
+	//Get image extension
+	//Get the extension from render globals so we can reset it when we are done.
+	int $setExtension = `getAttr "defaultRenderGlobals.imageFormat"`;
+	//Set the extension to PNG(32) or something.
+	//IFFs are labeled Maya IFF so it messes it up because it will then add a .Maya IFF ext. Look into this issue.
+	//setAttr defaultRenderGlobals.imageFormat 32;
+	string $extension = `getAttr -as "defaultRenderGlobals.imageFormat"`;
+	if ($extension == "Custom Image Format"){
+		$extension = "3";
+	}
+	$extension = wizTranslateImageFileType("-ttex " + $extension);
+	$extension = formatExtension($extension);
+	
+	//Get Frame Number
+	float $frameNumber = `currentTime -q`;
+	//Get Scene Name
+	string $sceneFile = `file -q -sn -shn`;
+	$sceneFile = `basenameEx ($sceneFile)`;
+	
+	//Create a file name formatted correctly.
+	string $filename;
+	$filename = $name + "_scene_" + $sceneFile + "_frame_" + $frameNumber + "_";
+	if ($increment == 1){
+		$filename = createNewNumberedPlanetariumImageFile($dir, $filename, $extension);
+		$filename = $dir + $filename;
+	} else {
+		$filename = $dir + $filename;
+	}
+	//Note - Make sure we didn't add the extension yet. Maya will do that automatically.
+	//print("Filename: " + $filename + "\n");
+	
+	//**********RENDER**********
+	renderWindowRenderCamera "render" "" $fullDomeCamera;
+	renderWindowEditor -edit -writeImage $filename renderView;
+	
+	//**********DISPLAY*********
+	//Add the extension to the path so we can find it for our texture path name.
+	string $fullTexturePath = $filename + $extension;
+	
+	//Open planetarium viewer	
+	if($WIZ_viewWithPlanetariumViewer){
+		//Set the new image to the planetarium texture and activate the planetarium view.
+		setAttr PlanetariumTempRenderFile1.fileTextureName -type "string" $fullTexturePath;
+		setAttr ($fullDomeCamera + ".planetariumView") 1;
+		resetPlanetariumView();
+		string $panel = `playblast -activeEditor`;
+		lookThru $planetariumCamera $panel;
+	}
+	
+	//Open image in the planetariumPlayer
+	if($WIZ_openInPlanetariumPlayer == 1){
+		string $planetariumPlayer = `textFieldButtonGrp -q -text getPlanetariumPlayerFile`;
+		string $url = $planetariumPlayer + "?pp=" + $fullTexturePath;
+		string $link = ("<a href=\"" + $planetariumPlayer + "?pp=" + $fullTexturePath + "</a>"); //"
+		launch -web $url;
+		
+		textFieldButtonGrp -e -tx $fullTexturePath openImageInPlanetariumPlayerTextFieldButtonGrp;
+		
+	}
+	//**********RESET*********
+	//Reset the extension to whatever we had it in the first place.
+	setAttr defaultRenderGlobals.imageFormat $setExtension;
+
+}
+
+//PLANETARIUM GET CURRENT CAMERA
+//--------------------------------------------
+global proc string planetariumGetCurrentCamera()
+{	
+	if(getWizCurrentCameraEvalState() == 0){
+		print("WIZ| planetariumGetCurrentCamera : getWizCurrentCameraEval is turned OFF : Cannot Get Current Planetarium Camera\n");
+		return "";
+	}	
+	//string $currentPanel = `playblast -activeEditor`;
+	string $currentPanel = `getPanel -withFocus`;
+	string $cameraName = `modelPanel -q -cam $currentPanel`;
+	return $cameraName;
+
+}
+
+//TURN OFF PLANETARIUM
+//------------------------------------------
+global proc turnOffPlanetarium()
+	{
+	string $fullDomeCamera = "FullDomeCamera1";
+	setAttr ($fullDomeCamera + ".planetariumView") 0;
+	
+	if(getWizCurrentCameraEvalState() == 0){
+		print("WIZ| turnOffPlanetarium : getWizCurrentCameraEval is turned OFF : Cannot Turn Off Planetarium Camera\n");
+		return;
+	}
+	
+	string $panel = `playblast -activeEditor`;
+	lookThru $fullDomeCamera $panel;
+	resetPlanetariumView();
+}
+
+//TOGGLE PLANETARIUM
+//------------------------------------------
+global proc togglePlanetarium()
+{
+	global int $WIZ_viewWithPlanetariumViewer;
+	$WIZ_viewWithPlanetariumViewer = `checkBox -q -v viewWithPlanetariumViewerOption`;
+	
+	if($WIZ_viewWithPlanetariumViewer){
+		if(`objExists PlanetariumViewCamera1`){
+			string $fullDomeCamera = "FullDomeCamera1";
+			int $pView = `getAttr ($fullDomeCamera + ".planetariumView")`;
+			if($pView == 0){
+				renderToPlanetarium();		
+			} else {
+				turnOffPlanetarium();
+			}
+		} else {
+			$WIZ_viewWithPlanetariumViewer = 0;
+			checkBox -edit -v 0 viewWithPlanetariumViewerOption;
+			optionVar -iv WIZ_viewWithPlanetariumViewer $WIZ_viewWithPlanetariumViewer;
+			print("There is no Planetarium Viewer in the Scene. Planetarium Viewer will be disabled." + "\n");
+			renderToPlanetarium();
+		}
+	} else {
+		renderToPlanetarium();
+	}
+
+}
+
+//TOGGLE PLANETARIUM VIEW
+//------------------------------------------
+global proc togglePlanetariumView()
+{
+	if(getWizCurrentCameraEvalState() == 0){
+		print("WIZ| togglePlanetariumView : getWizCurrentCameraEval is turned OFF : Cannot Toggle Planetarium View\n");
+		return;
+	}
+	
+	string $fullDomeCamera = "FullDomeCamera1";
+	string $planetariumCamera = "PlanetariumViewCamera1";
+	int $pView = `getAttr ($fullDomeCamera + ".planetariumView")`;
+	string $panel = `playblast -activeEditor`;
+	resetPlanetariumView();
+	if($pView == 0){
+		setAttr ($fullDomeCamera + ".planetariumView") 1;
+		lookThru $planetariumCamera $panel;	
+	} else {
+		setAttr ($fullDomeCamera + ".planetariumView") 0;
+		lookThru $fullDomeCamera $panel;
+	}	
+}
+
+//RESET PLANETARIUM VIEW
+//------------------------------------------
+global proc resetPlanetariumView()
+{
+	string $planetariumCamera = "PlanetariumViewCamera1";
+	xform -a -ro 55 0 0 $planetariumCamera;
+}
+
+//ASSIGN PLANETARIUM FOLDER
+//------------------------------------------
+global proc assignPlanetariumRenderFolder()
+{
+	string $sel[] = `fileDialog2 -fileMode 3 -dialogStyle 2 -okCaption "OK"`;
+	$sel[0] = $sel[0] + "/";
+	textFieldButtonGrp -edit -text $sel[0] getPlanetariumRenderFolder;
+	optionVar -sv WIZ_planetariumFolder $sel[0];
+
+}
+
+//CREATE NEW NUMBERED PLANETARIUM IMAGE FILE
+//------------------------------------------
+global proc string createNewNumberedPlanetariumImageFile(string $dir, string $filename, string $extension)
+{
+	//To do this right use the code below.
+	/*
+	//Look in the directory to see if the filename exists already.
+	//string $searchDir = fromNativePath ($dir);
+	string $pImages[] = `getFileList -fld $dir -filespec "*.*"`;
+	int $pad = `getAttr "defaultRenderGlobals.extensionPadding"`;
+	
+	// Get File Extension
+	//string $extension = ".png";
+	// Remove Extension
+	string $fileNameNoExt ;
+	if($extension == ".png" ){	
+		// Tokenize Filename
+		string $buffer[];
+		tokenize $filename "." $buffer ;	
+		// Recompile Scenename Without Extension
+		for($i=0;$i<(size($buffer)-1); $i++) {
+			$fileNameNoExt = $fileNameNoExt + $buffer[$i] ;
+		}
+	} else {	
+		// Error Check
+		error "Current file isn't .png.  Please save before incrementing." ;
+	}
+	
+	// Extract Name And Current Version Using Regex
+	//string $nameWithNoVersion = `match ".*[^0-9]" $fileNameNoExt` ;
+	string $nameWithNoVersion = `match "*[^0-9]" $fileNameNoExt` ;
+	string $currentVersion = `match "[0-9]+$" $fileNameNoExt` ;
+	
+	// Check For Integer, Add One If None
+	if($currentVersion == "") $currentVersion = "00" ;
+	
+	// Increment Version
+	int $int = $currentVersion ;
+	$int++ ;
+	
+	// Pad Digits If Needed
+	int $beforeCount = size($currentVersion) ;
+	string $incVersion = $int ;
+	int $afterCount = size($incVersion) ;
+	if($beforeCount > $afterCount) {
+		while($beforeCount > $afterCount) {
+			$incVersion = ("0"+$incVersion) ;
+			$afterCount = size($incVersion) ;
+		}
+	}
+	// Make New Filename
+	//string $newFileName = ($nameWithNoVersion+$incVersion+"."+$extension);
+	string $newFileName = ($nameWithNoVersion+$incVersion);
+	return $newFileName;	
+	}
+	
+	*/
+	int $num;
+	if(`optionVar -ex WIZ_planetariumImageNum`){
+		$num = `optionVar -q WIZ_planetariumImageNum`;
+	} else {
+		$num = 0;
+		optionVar -iv WIZ_planetariumImageNum 0;
+	}
+	string $newFilename = $filename + $num;
+	$num++;
+	optionVar -iv WIZ_planetariumImageNum $num;
+	return $newFilename;
+		
+}
+
+//RENDER PLANETARIUM SEQUENCE
+//------------------------------------------
+global proc renderPlanetariumSequence()
+{
+	float $startFrame = `getAttr defaultRenderGlobals.startFrame`;
+	float $endFrame = `getAttr defaultRenderGlobals.endFrame`;
+	float $byFrame = `getAttr defaultRenderGlobals.byFrameStep`;
+	string $cam = `textFieldButtonGrp -q -text getPlanetariumRenderCamera`;
+	string $dir = `textFieldButtonGrp -q -text getPlanetariumRenderFolder`;
+	string $name = "";
+	//string $name = `getAttr defaultRenderGlobals.imageFilePrefix`;
+	
+	//Get frame padding - this isn't used yet~
+	int $pad = `getAttr "defaultRenderGlobals.extensionPadding"`;
+	
+	//Get image extension
+	string $extension = `getAttr -as "defaultRenderGlobals.imageFormat"`;
+	$extension = formatExtension($extension);
+	
+	//Get Scene Name ~ this isn't used yet
+	string $sceneFile = `file -q -sn -shn`;
+	$sceneFile = `basenameEx ($sceneFile)`;
+	
+	//$filename = $name + "_scene_" + $sceneFile + "_frame_" + $frameNumber + "_";
+	//string $filename = $name;
+	
+	playbackOptions -min $startFrame -max $endFrame;
+	print("Rendering Planetarium Sequence" + "\n");
+	print("***************************************\n");
+	print("StartFrame: " + $startFrame + " || EndFrame: " + $endFrame + " || ByFrame: " + $byFrame + "\n");
+	print("Camera: " + $cam + "\n");
+	print("Directory: " + $dir + " || Extension: " + $extension + " || SceneName: " + $sceneFile + "\n");
+	print("***************************************\n");
+	int $i;
+	for($i=$startFrame;$i<($endFrame + 1);$i = $i + $byFrame){
+		string $filename = "";
+		//Get Frame Number
+		currentTime $i;
+		float $frameNumber = `currentTime -q`;
+		//$filename = $sceneFile + "_frame_" + $frameNumber;
+		$filename = $sceneFile;
+		//$filename = $dir + "/" + $filename;
+		//$filename = createNewNumberedPlanetariumImageFile($dir, $filename, $extension);
+		string $framePad = willPadFrame(4,$frameNumber);
+		$filename = $filename + "." + $framePad;
+		$filename = $dir + $filename;
+		print("CurrentTime: " + $frameNumber + "\n");
+		print("FileName: " + $filename + "\n");
+		renderWindowRenderCamera "render" "" $cam;
+		renderWindowEditor -edit -writeImage $filename renderView;	
+		print(">>>>>>>>>>>>>>\n");	
+	}
+	
+	print("Planetarium Sequence Render Complete!");
+}
+
+global proc wizRenderFrameInRenderView( float $frameNumber )
+{
+	string $cam = `textFieldButtonGrp -q -text getPlanetariumRenderCamera`;
+	string $dir = `textFieldButtonGrp -q -text getPlanetariumRenderFolder`;
+	string $name = "";
+	//string $name = `getAttr defaultRenderGlobals.imageFilePrefix`;
+	
+	//Get frame padding - this isn't used yet~
+	int $pad = `getAttr "defaultRenderGlobals.extensionPadding"`;
+	
+	//Get image extension
+	string $extension = `getAttr -as "defaultRenderGlobals.imageFormat"`;
+	$extension = formatExtension($extension);
+	
+	//Get Scene Name ~ this isn't used yet
+	string $sceneFile = `file -q -sn -shn`;
+	$sceneFile = `basenameEx ($sceneFile)`;
+	
+	//$filename = $name + "_scene_" + $sceneFile + "_frame_" + $frameNumber + "_";
+	//string $filename = $name;
+	
+	//playbackOptions -min $startFrame -max $endFrame;
+	print("***************************************\n");
+	print("Render Frame: " + $frameNumber + "\n");
+	print("Camera: " + $cam + "\n");
+	print("Directory: " + $dir + " || Extension: " + $extension + " || SceneName: " + $sceneFile + "\n");
+	print("***************************************\n");
+
+	string $filename = "";
+
+	currentTime -e $frameNumber;
+
+	$filename = $sceneFile;
+
+	string $framePad = willPadFrame(4,$frameNumber);
+	$filename = $filename + "." + $framePad;
+	$filename = $dir + $filename;
+	print("CurrentTime: " + $frameNumber + "\n");
+	print("FileName: " + $filename + "\n");
+	renderWindowRenderCamera "render" "" $cam;
+	renderWindowEditor -edit -writeImage $filename renderView;	
+	print(">>>>>>>>>>>>>>\n");	
+	
+}
+
+//SELECT PLANETARIUM RENDER CAMERA
+//------------------------------------------
+global proc selectPlanetariumRenderCamera()
+{
+	string $sel[] = `ls -sl`;
+	textFieldButtonGrp -edit -text $sel[0] getPlanetariumRenderCamera;
+}
+
+//VUE
+//===========================================
+global proc disableVueRendering()
+{
+	if(`objExists vue_xStreamEnvMRShader` == 0){
+		error("WIZ| enableVueRendering : No vue_xStreamEnvMRShader Exists.\n");
+		return;	
+	}
+	
+	setAttr "vue_xStreamEnvMRShader.renderObjects" 0;
+	setAttr "vue_xStreamEnvMRShader.renderAtmosphere" 0;
+	setAttr "vue_xStreamEnvMRShader.renderSky" 0;
+	setAttr "vue_xStreamEnvMRShader.ignoreVueShaders" 1;
+
+/*
+	string $cams[] = `ls -ca`;
+	for($i = 0;$i<`size $cams`;$i++){
+		disconnectAttr vue_xStreamEnvMRShader.message ($cams[$i] + ".miVolumeShader");
+	}
+	*/
+
+	setAttr -type "string" defaultRenderGlobals.preMel "";
+	setAttr -type "string" defaultRenderGlobals.postMel "";
+	setAttr -type "string" defaultRenderGlobals.preRenderMel "";
+	setAttr -type "string" defaultRenderGlobals.postRenderMel "";
+
+
+}
+
+global proc enableVueRendering()
+{
+	if(`objExists vue_xStreamEnvMRShader` == 0){
+		error("WIZ| enableVueRendering : No vue_xStreamEnvMRShader Exists.\n");
+		return;	
+	}
+	
+	setAttr "vue_xStreamEnvMRShader.renderObjects" 1;
+	setAttr "vue_xStreamEnvMRShader.renderAtmosphere" 1;
+	setAttr "vue_xStreamEnvMRShader.renderSky" 1;
+	setAttr "vue_xStreamEnvMRShader.ignoreVueShaders" 0;
+	
+	/*
+	string $cams[] = `ls -ca`;
+	for($i = 0;$i<`size $cams`;$i++){
+		connectAttr vue_xStreamEnvMRShader.message ($cams[$i] + ".miVolumeShader");
+	}
+	*/
+	setAttr -type "string" defaultRenderGlobals.preMel "VueCommand -hide_proxies";
+	setAttr -type "string" defaultRenderGlobals.postMel "VueCommand -unhide_proxies";
+	setAttr -type "string" defaultRenderGlobals.preRenderMel "VueCommand -update_scene";
+	setAttr -type "string" defaultRenderGlobals.postRenderMel "VueCommand -post_render";
+}
+
+global proc addCloseVueOnOpenScriptNode()
+{
+	string $n = "CloseVueOnOpenScriptNode";
+	if(`objExists $n` == 1){
+		return;	
+	}
+	
+	string $script = ("VueCommand -id 79;");	
+	
+	scriptNode -st 1 -bs $script -n $n;
+	
+}
+
+//CREATE TURN VUE OFF AFTER RENDERING DEFAULT RENDER LAYER SCRIPT NODE
+//==========================================================================
+/*
+	USE THIS FOR USING RENDER LAYERS WITH VUE
+
+*/
+global proc createTurnVueOffAfterRenderingDefaultRenderLayerScriptNode()
+{
+	string $scriptNodeName = "TurnVueOffAfterRenderingDefaultRenderLayerScriptNode";
+	string $expName = "TurnVueOffAfterRenderingDefaultRenderLayerExpression";
+	
+	string $bs = ("int $jobNum = `scriptJob -kws -e renderLayerManagerChange \"closeVueAfterRenderingDefaultRenderLayer()\"`;");
+	
+	scriptNode -st 4 -bs $bs -n $scriptNodeName;
+	
+	//Expression proc below
+	string $s = (
+	"global proc closeVueAfterRenderingDefaultRenderLayer()" + "\n"
+	+"{" + "\n"
+	+"	string $rl = `editRenderLayerGlobals -q -currentRenderLayer`;" + "\n"
+	+"	if($rl != \"defaultRenderLayer\"){" + "\n"
+	+"		VueCommand -id 79;" + "\n"
+	+"	}" + "\n"
+	+"}");
+	
+	catchQuiet(`delete $expName`);
+	expression -s $s -n $expName -ae false;
+	
+	
+}
+
+global proc createTurnVueOffAfterRenderingDefaultRenderLayerPreRenderLayerMel()
+{
+	string $expName = "TurnVueOffAfterRenderingDefaultRenderLayerExpression";
+	
+	string $preRenderLayerMel = ("closeVueAfterRenderingDefaultRenderLayer();");
+	addToPreRenderLayerMelPostRenderLayerMelCommands($preRenderLayerMel, "pre");
+	
+	string $s = (
+	"global proc closeVueAfterRenderingDefaultRenderLayer()" + "\n"
+	+"{" + "\n"
+	+"	string $rl = `editRenderLayerGlobals -q -currentRenderLayer`;" + "\n"
+	+"	if($rl != \"defaultRenderLayer\"){" + "\n"
+	+"		VueCommand -id 79;" + "\n"
+	+"	}" + "\n"
+	+"}");
+	
+	catchQuiet(`delete $expName`);
+	expression -s $s -n $expName -ae false;
+	
+}
+
+/*
+global proc closeVueAfterRenderingDefaultRenderLayer()
+{
+	string $rl = `editRenderLayerGlobals -q -currentRenderLayer`;
+	
+	if($rl != "defaultRenderLayer"){
+		VueCommand -id 79;
+	} 
+	
+}
+*/
+
+
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			PROXYS
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+/*====================================================================
+
+Use the script node version to load original references inside maya
+Use the preMel version to load original references while batch rendering	
+
+====================================================================*/
+
+//ADD LOAD ORIGINAL REFERENCES BEFORE RENDERING SCRIPT NODE
+//===========================================================
+global proc addLoadOriginalReferencesBeforeRenderingScriptNode()
+{
+	/*
+	string $ref[] = `ls -type reference`;
+	for($i=0;$i<`size $ref`;$i++){
+		string $tag = `getAttr ($ref[$i] + ".proxyTag")`;
+		if($tag == "original"){
+			proxySwitch $ref[$i];
+		}
+	}
+	
+	string $ref[] = `ls -type reference`;
+	for($i=0;$i<`size $ref`;$i++){
+		if($ref[$i] == "sharedReferenceNode"){ continue; }
+		string $tag = `getAttr ($ref[$i] + ".proxyTag")`;
+		if($tag != "original"){
+			proxySwitch $ref[$i];
+		}
+	}
+	*/
+
+	string $name = "LoadOriginalReferencesBeforeRendering";
+	string $bs = (
+	"string $ref[] = `ls -type reference`;" + "\n"
+	+"for($i=0;$i<`size $ref`;$i++){" + "\n"
+	+"	string $tag = `getAttr ($ref[$i] + \".proxyTag\")`;" + "\n"
+	+"	if($tag == \"original\"){" + "\n"
+	+"		catchQuiet(`proxySwitch $ref[$i]`);" + "\n"
+	+"	}" + "\n"
+	+"}" + "\n"
+	);
+	
+	string $as = (
+	"string $ref[] = `ls -type reference`;" + "\n"
+	+"for($i=0;$i<`size $ref`;$i++){" + "\n"
+	+"	if($ref[$i] == \"sharedReferenceNode\"){ continue; }" + "\n"
+	+"	string $tag = `getAttr ($ref[$i] + \".proxyTag\")`;" + "\n"
+	+"	if($tag != \"original\"){" + "\n"
+	+"		catchQuiet(`proxySwitch $ref[$i]`);" + "\n"
+	+"	}" + "\n"
+	+"}" + "\n"
+	);
+	
+	if(`objExists $name`){
+		delete $name;	
+	}
+	scriptNode -st 4 -bs $bs -as $as -n $name;
+	print("WIZ| Added : LoadOriginalReferencesBeforeRendering Script Node\n");
+	
+}
+
+//ADD LOAD ORIGINAL REFERENCES BEFORE BATCH RENDERING PRE MEL
+//===========================================================
+global proc addLoadOriginalReferencesBeforeBatchRenderingPreMel()
+{
+	string $name = "LoadOriginalReferencesBeforeBatchRendering";
+	string $bs = (
+	"string $ref[] = `ls -type reference`;" + "\n"
+	+"for($i=0;$i<`size $ref`;$i++){" + "\n"
+	+"	string $tag = `getAttr ($ref[$i] + \".proxyTag\")`;" + "\n"
+	+"	if($tag == \"original\"){" + "\n"
+	+"		catchQuiet(`proxySwitch $ref[$i]`);" + "\n"
+	+"	}" + "\n"
+	+"}" + "\n"
+	);
+	if(`objExists $name`){
+		delete $name;	
+	}
+	scriptNode -st 0 -bs $bs -n $name;
+	
+	string $preMel = ("; scriptNode -eb LoadOriginalReferencesBeforeBatchRendering;");
+	addToPreMelPostMelCommands($preMel, "preMel");
+
+	print("WIZ| Added : LoadOriginalReferencesBeforeBatchRendering Script Node and preMel command\n");
+	
+}
+
+//GET REFERENCE PROXY TAGS
+//===========================================================
+global proc string[] getReferenceProxyTags()
+{
+	string $ref[] = `ls -type reference`;
+	print("WIZ| getReferenceProxyTags : ");
+	string $tags[];
+	for($i=0;$i<`size $ref`;$i++){
+		string $tag = `getAttr ($ref[$i] + ".proxyTag")`;
+		if(`size $tag` > 0){
+			$tags[`size $tags`] = $tag;
+			print($tag + ", ");
+		}
+		
+	}
+	print("\n");
+	return $tags;
+
+}
+
+//RENDER ARBITRARY FRAMES IN RENDER VIEW
+//===========================================================
+global proc renderArbitraryFramesInRenderView()
+{
+	print("***************************************\n");
+	print("WIZ| renderArbitraryFramesInRenderView : Render Started\n");
+	string $frameString = `textFieldButtonGrp -q -tx renderArbitraryFramesInRenderViewTextFieldButtonGrp`;
+	string $f[] = tokenizeString($frameString, ", ");
+	float $frames[] = stringArrayToFloatArray($f);
+	for ($i=0;$i<`size $frames`;$i++){
+		wizRenderFrameInRenderView($frames[$i]);
+		
+	}
+	print("WIZ| renderArbitraryFramesInRenderView : Render Complete\n");
+	print("***************************************\n");
+}
+
+global proc renderFullDomeCameraView()
+{
+	
+}
+
+//WIZ GET RENDER LAYERS
+//===========================================================
+global proc string[] wizGetRenderLayers()
+{
+	string $rl[] = `ls -typ renderLayer`;
+	string $rn[] = `ls -rn $rl`;
+	
+	//Get rid of render layers from referenced files
+	string $renderLayers[] = stringArrayRemove($rn, $rl);
+	
+	//print $renderLayers;
+	return $renderLayers;
+	
+}
+
+//WIZ GET RENDERABLE RENDER LAYERS
+//===========================================================
+global proc string[] wizGetRenderableRenderLayers()
+{
+	string $renderableRL[];
+	string $rl[] = wizGetRenderLayers();
+	for($i=0;$i<`size $rl`;$i++){
+		int $renderable = `getAttr ($rl[$i] + ".renderable")`;
+		if($renderable == 1){
+			$renderableRL[`size $renderableRL`] = $rl[$i];	
+		}
+	}
+	return $renderableRL;
+	
+}
+
+//ADD CACHE NHAIR BEFORE RENDERING PRE MEL
+//==========================================================
+global proc addCacheNHairBeforeRenderingPreMel()
+{
+	
+	string $preMel = ("cacheAllNHairBeforeRendering();");
+	addToPreMelPostMelCommands($preMel, "preMel");	
+	
+	string $exp = (
+	"global proc cacheAllNHairBeforeRendering()"+"\n"
+	+"{"+"\n"
+	+"	print (\"WIZ| Caching Hair Before Rendering\\n\");"+"\n"
+	+"	string $nHair[] = `listTransforms \"-type hairSystem\"`;"+"\n"
+	+"	string $cacheNHair[];"+"\n"
+	+"	print (\"CACHE LIST : \" + \"\\n\");"+"\n"
+	+"	for($i=0;$i<`size $nHair`;$i++){"+"\n"
+	+"		if(`attributeQuery -node $nHair[$i] -ex cacheDirectory`){"+"\n"
+	+"			print(\" - \" + $nHair[$i] + \"\\n\");"+"\n"
+	+"			$cacheNHair[`size $cacheNHair`] = $nHair[$i];"+"\n"
+	+"		}"+"\n"
+	+"	}"+"\n"
+	+"	createNCacheForSelected($cacheNHair);"+"\n"
+	+"}"+"\n"
+	+"\n"
+	+"global proc createNCacheForSelected( string $sel[] )"+"\n"
+	+"{"+"\n"
+	+"	string $fd;"+"\n"
+	+"	int $ctc;"+"\n"	
+	+"	for ($i = 0; $i < `size $sel` ; $i++){"+"\n"
+	+"		print(\" - CACHING : \" + $sel[$i] + \"\\n\");"+"\n"
+	+"		select -r $sel[$i];"+"\n"
+	+"		string $s[] = `listRelatives -type hairSystem $sel[$i]`;"+"\n"
+	+"		string $cache[] = `listConnections -type cacheFile $s`;"+"\n"
+	+"		if (`size $cache` > 0){ continue;}"+"\n"
+	+"		string $cacheDirectory = `getAttr ($sel[$i] + \".cacheDirectory\")`;"+"\n"
+	+"		string $cacheName = `getAttr ($sel[$i] + \".cacheName\")`;"+"\n"
+	+"		$usePrefix = `getAttr ($sel[$i] + \".usePrefix\")`;"+"\n"
+	+"		if($usePrefix){"+"\n"
+	+"			$up = 1;"+"\n"
+	+"		} else {"+"\n"
+	+"			$up = 0;"+"\n"
+	+"		}"+"\n"	
+	+"		int $cacheTimeRange = `getAttr ($sel[$i] + \".cacheTimeRange\")`;"+"\n"
+	+"		string $ctr = $cacheTimeRange;"+"\n"
+	+"		float $cacheStartFrame = `getAttr ($sel[$i] + \".cacheStartFrame\")`;"+"\n"
+	+"		float $cacheEndFrame = `getAttr ($sel[$i] + \".cacheEndFrame\")`;"+"\n"
+	+"		float $cacheByFrame = `getAttr ($sel[$i] + \".cacheByFrame\")`;"+"\n"
+	+"		int $saveEveryNEvaluations = `getAttr ($sel[$i] + \".saveEveryNEvaluations\")`;"+"\n"		
+	+"		int $fileDistribution = `getAttr ($sel[$i] + \".fileDistribution\")`;"+"\n"
+	+"		if($fileDistribution == 1){"+"\n"
+	+"			$fd = \"OneFile\";"+"\n"
+	+"		} else {"+"\n"
+	+"			$fd = \"OneFilePerFrame\";"+"\n"
+	+"		}"+"\n"	
+	+"		string $parent[] = `listRelatives -p $sel[$i]`;"+"\n"
+	+"		if (`size $parent` == 0){"+"\n"
+	+"			setAttr ($sel[$i] + \".inheritsTransform\") 1;"+"\n"
+	+"		}"+"\n"
+	+"		setAttr ($parent[0] + \".inheritsTransform\") 1;"+"\n"	
+	+"		doCreateNclothCache 5 { $ctr, $cacheStartFrame, $cacheEndFrame, $fd, \"1\", \"\",\"0\",\"\",\"0\", \"add\", \"0\", \"1\", \"1\",\"0\",\"1\",\"mcx\" } ;"+"\n"
+	+"		if (`size $parent` == 0){"+"\n"
+	+"			setAttr ($sel[$i] + \".inheritsTransform\") 0;"+"\n"
+	+"		}"+"\n"
+	+"		setAttr ($parent[0] + \".inheritsTransform\") 0;"+"\n"
+	+"		print(\" - COMPLETE\\n\");"+"\n"
+	+"	}"+"\n"
+	+"}"+"\n"
+	);
+	
+	string $expName = "CacheAllNHairBeforeRenderingExpression";
+	if(`objExists $expName`){
+		delete $expName;	
+	}
+	
+	expression -s $exp -n $expName -ae false;
+	
+}
+
+global proc cacheAllNHairBeforeRendering()
+{
+	print ("WIZ| Caching Hair Before Rendering\n");
+	string $nHair[] = `listTransforms "-type hairSystem"`;
+	string $cacheNHair[];
+	print ("CACHE LIST : " + "\n");
+	
+	for($i=0;$i<`size $nHair`;$i++){
+		if(`attributeQuery -node $nHair[$i] -ex cacheDirectory`){
+			print("	- " + $nHair[$i] + "\n");
+			$cacheNHair[`size $cacheNHair`] = $nHair[$i];
+			
+		}
+	}
+	createNCacheForSelected($cacheNHair);
+}
+
+global proc createNCacheForSelected( string $sel[] )
+{
+	string $fd;
+	int $ctc;	
+	for ($i = 0; $i < `size $sel` ; $i++){
+		print("	- CACHING : " + $sel[$i] + "\n");
+		select -r $sel[$i];		
+		string $s[] = `listRelatives -type hairSystem $sel[$i]`;
+		string $cache[] = `listConnections -type cacheFile $s`;
+		if (`size $cache` > 0){ continue;}
+
+		string $cacheDirectory = `getAttr ($sel[$i] + ".cacheDirectory")`;
+		string $cacheName = `getAttr ($sel[$i] + ".cacheName")`;
+		$usePrefix = `getAttr ($sel[$i] + ".usePrefix")`;
+		if($usePrefix){
+			$up = 1;
+		} else {
+			$up = 0;
+		}	
+		int $cacheTimeRange = `getAttr ($sel[$i] + ".cacheTimeRange")`;
+		string $ctr = $cacheTimeRange;
+		float $cacheStartFrame = `getAttr ($sel[$i] + ".cacheStartFrame")`;
+		float $cacheEndFrame = `getAttr ($sel[$i] + ".cacheEndFrame")`;
+		float $cacheByFrame = `getAttr ($sel[$i] + ".cacheByFrame")`;
+		int $saveEveryNEvaluations = `getAttr ($sel[$i] + ".saveEveryNEvaluations")`;		
+		int $fileDistribution = `getAttr ($sel[$i] + ".fileDistribution")`;
+		if($fileDistribution == 1){
+			$fd = "OneFile";
+		} else {
+			$fd = "OneFilePerFrame";
+		}
+		//Turn off inherit transforms after rendering?
+		/*
+		string $parent[] = `listRelatives -p $sel[$i]`;
+		if (`size $parent` == 0){
+			setAttr ($sel[$i] + ".inheritTransform") 1;
+		}
+		setAttr ($parent[0] + ".inheritTransform") 1;
+		*/
+		doCreateNclothCache 5 { $ctr, $cacheStartFrame, $cacheEndFrame, $fd, "1", "","0","","0", "add", "0", "1", "1","0","1","mcx" } ;
+		/*
+		if (`size $parent` == 0){
+			setAttr ($sel[$i] + ".inheritTransform") 0;
+		}
+		setAttr ($parent[0] + ".inheritTransform") 0;
+		*/
+		print(" - COMPLETE\n");
+
+	}
+}
+
+//WIZ SET RENDER PRESET
+//===============================================
+global proc wizSetRenderPreset( string $setting )
+{
+	string $fb[] = `ls -type mentalrayFramebuffer`;
+	//string $renderGlobals[] = defaultRenderGlobals;
+	switch ($setting){
+		case "exr16" :
+		setAttr "defaultRenderGlobals.imfPluginKey" -type "string" "exr";
+		setAttr ($fb[0] + ".datatype") 16;
+		break;
+		
+		case "png" :
+		setAttr "defaultRenderGlobals.imfPluginKey" -type "string" "exr";
+		setAttr ($fb[0] + ".datatype") 16;
+		break;
+		
+	}
+}
+
+//@ WIZ HOOK UP CAMERAS TO MR SUN
+//====================================================================
+global proc wizHookUpCamerasToMRSun( string $flags )
+{
+    string $ca[];
+    string $sky[] = `ls -typ mia_physicalsky`;
+    string $exposure[] = `ls -typ mia_exposure_simple`;
+
+	string $sel[];
+	int $all;
+	int $vol;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-all" : 
+			$all = 1;
+			break ;
+				
+			case "-vol" : case "-volume" :
+			$vol = 1;
+			break ;
+			
+		}
+	}
+	
+    if (`size $sky` > 1 || `size $exposure` > 1){
+        warning ("WIZ| wizHookUpCamerasToMRSun : More that one physical sky found in scene. Using : " + $sky[0] + " And : " + $exposure[0] + "\n");
+    }
+    if ($all){
+        $ca = `ls -ca`;
+        for ($i=0;$i<`size $ca`;$i++){    
+			if ($vol){
+				catchQuiet (`connectAttr -f ($sky[0] + ".message") ($ca[$i] + ".miVolumeShader")`);
+			} else {
+				catchQuiet (`connectAttr -f ($sky[0] + ".message") ($ca[$i] + ".miEnvironmentShader")`);
+			}
+            catchQuiet (`connectAttr -f ($exposure[0] + ".message") ($ca[$i] + ".miLensShader")`);
+
+        
+        }
+    }
+}
+
+//@ WIZ LOAD DEFAULT RENDER ENV
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-tag1 string] [-tag2 linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-tag1, -tag2
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName($string, 2);
+	
+	</code>
+*********************************************************************/
+global proc wizLoadDefaultRenderEnv( string $flags )
+{
+	wizLog("[@] wizLoadDefaultRenderEnv");
+	string $fa, $fb;
+	string $fc[];
+	int $removeAfterRender;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-rar" : case "-removeAfterRender" :
+			$removeAfterRender = 1;
+			break;
+						
+		}
+	}
+	
+	string $lights[] = `ls -lt`;
+	if (`size $lights` == 1){
+		wizLog("	[!] Scene has lights. Loading Default Render Env May Conflict. [!]");
+		return ;
+	
+	}
+	
+	
+	string $drenv = `optionVar -q WIZ_defaultRenderEnv`;
+	if ($drenv == ""){
+		wizLog("-e 		[!] No Default Render Environment Found [!]");
+	}
+	wizLog("	[+] Scene has no lights. Loading Default Render Environment : " + $drenv + " [+]");
+	string $newNodes[] = wizReferenceFileReturnNewNodes($drenv);
+	
+	if ($removeAfterRender == 1){
+		wizMGMT("-qc removeRenEnv", ("string $refQ = `referenceQuery -f " + $newNodes[0] + "`; file -f -rr $refQ ;"));
+	
+	}
+
+
+
+}
+
+
+//@ WIZ LOAD RENDER ENV
+//====================================================================
+/*****************************************************************//**
+	This loads a rendering environment.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-tag1 string] [-tag2 linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-tag1, -tag2
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	wizLoadRenderEnv("-rar -oi");
+	
+	</code>
+*********************************************************************/
+global proc wizLoadRenderEnv( string $flags )
+{
+	wizLog ("[@] wizLoadRenderEnv");
+	string $drenv = `optionVar -q WIZ_defaultRenderEnv`;
+	
+	string $fa, $fb;
+	string $fc[];
+	int $removeAfterRender;
+	int $remove;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-rar" : case "-removeAfterRender" :
+			$removeAfterRender = 1;
+			break ;
+			
+			case "-ai" : case "-assetIcon" :
+			$drenv = `optionVar -q WIZ_assetIconRenderEnv`;
+			break ;
+			
+			case "-rre" : case "-removeRenderEnv" :
+			$remove = 1;
+			break ;
+			
+			case "-oi" : case "-objectIcon" :
+			$drenv = `textFieldButtonGrp -q -tx wizObjectIconRenderEnv_textFieldButtonGrp`;
+			break ;
+	
+						
+		}
+	}
+	
+	string $lights[] = `ls -lt`;
+	if (`size $lights` == 1){
+		wizLog("	[!] Scene has lights. Loading Default Render Env May Conflict. [!]");
+		return ;
+	
+	}
+	
+	
+	
+	if ($drenv == ""){
+		wizLog("-e 		[!] No Default Render Environment Found [!]");
+	}
+	wizLog ("	[+] Scene has no lights. Loading Default Render Environment : " + $drenv + " [+]");
+	string $newNodes[] = wizReferenceFileReturnNewNodes($drenv);
+	
+	
+	/*
+	if ($removeAfterRender == 1){
+		//wizMGMT("-qc removeRenEnv", ("string $refQ = `referenceQuery -f " + $newNodes[0] + "`; file -f -rr $refQ ;"));
+		string $evalDef = ("file -f -rr \"" + $drenv + "\";");
+		evalDeferred -lp $evalDef;
+	
+	}
+
+	if ($remove){
+		file -f -rr $drenv;
+	}
+
+*/
+/*
+
+	if ($removeAfterRender == 1){
+		wizMGMT("-qc removeRenEnv", ("string $refFile = \"" + $drenv + "\"; file -f -rr $refFile ;"));
+	
+	}
+	*/
+	
+	evalDeferred("file -f -rr \"" + $drenv + "\"");
+}
+
+//@ EXECUTE BATCH RENDER COMMAND
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName("-obj someObject -q -sl");
+	
+	</code>
+*********************************************************************/
+global proc executeBatchRenderCommand( string $flags )
+{
+	string $obj, $command;
+	string $sel[];
+	int $edit;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-com" : case "-command" :
+			$command = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	system ($command);
+	
+
+}
+
+
+//@ WIZ RENDER OBJECT ICON
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $iconFile = wizRenderObjectIcon("-sl");
+	
+	</code>
+*********************************************************************/
+global proc string wizRenderObjectIcon( string $flags )
+{
+	string $obj, $type;
+	string $sel[];
+	int $edit;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			$sel[`size $sel`] = $obj;
+			break ;
+				
+			case "-typ" : case "-type" :
+			$type = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	wizLog("[@] wizRenderObjectIcon");
+	
+    global string $WIZ_wizObjectIconSuffix;
+	global int $WIZ_objectIconButtonSize;
+	
+	select -r $sel;
+	HideUnselectedObjects;
+	
+	float $bbox[] = `exactWorldBoundingBox -ii true $sel`;
+	
+	int $iconSize = `intFieldGrp -q -v1 objectIcon_iconSize_intFieldGrp`;
+	int $buttonIconSize = `intFieldGrp -q -v1 objectIcon_buttonIconSize_intFieldGrp`;
+	
+	string $iconFile = wizObjectSelectionGetIcon("-sl");
+	string $buttonIconFile = wizObjectSelectionGetIcon("-sl -bi");
+	
+	setCurrentRenderer mentalRay;
+	
+	if (`checkBox -q -v sceneThumbnailUseDefaultPreset_checkBox`){
+		loadPreferredRenderGlobalsPreset("mentalRay");
+    
+    }
+    
+    //Temporarily set the image format to png so we are always rendering png files
+    int $curImageFormat = `getAttr "defaultRenderGlobals.imageFormat"`;    
+    setAttr "defaultRenderGlobals.imageFormat" 32;
+    
+    /*
+	if (`checkBox -q -v objectIconFitObjectInView_checkBox`){
+		select -r $sel;
+		viewFit -an true -f 1;	
+		refresh -f;
+		//fitVisibleObjectsInView();
+	}
+	*/
+	
+	//_________________________________________
+	// Adjust Camera
+	string $camAngle = `optionMenuGrp -q -v objectIconCameraAngleOptionMenuGrp`;
+	int $fit = `checkBox -q -v objectIconFitObjectInView_checkBox`;
+	
+	wizMoveCamera("-pos " + $camAngle + " -sl -fit " + $fit);
+	
+	//_________________________________________
+	// Focal Length
+	string $curCam = getCurrentCamera();	
+	float $fl = `getAttr ($curCam + ".focalLength")`;
+
+	if (`checkBox -q -v objectIconUseFocalLength_checkBox`){			
+		float $thumbFl = `floatSliderGrp -q -v objectIconCameraFocalLength_floatSliderGrp`;
+		setAttr ($curCam + ".focalLength") $thumbFl;
+	}
+
+    wizlog ("	[#] Icon Image : " + $iconFile);
+    
+    //Do a single image playblast to get a thumbnail image
+    int $currentFrame = `currentTime -q`;
+    
+    string $tnType = `optionMenuGrp -q -v objectIconTypeOptionMenuGrp`;
+    wizLog("	[#] Thumbnail Type : " + $tnType);
+	
+	if (`checkBox -q -v objectIconLoadDefaultRenderEnv_checkBox` == 1){
+		// Load the default render environment - will only load if there are no ligths in scene.
+		wizLog("	[+] Load Default Render Environment [+]");		
+		wizLoadRenderEnv("-rre -oi");
+	}
+	
+    if ($tnType == "Draft"){
+        //playblast a single image
+        playblast
+            -frame $currentFrame 
+            -format image
+            -completeFilename $iconFile 
+            -clearCache 1 
+            -viewer 0 
+            -showOrnaments 0 
+            -os 
+            -percent 100 
+            -widthHeight $iconSize $iconSize
+            ;
+    
+		if (`checkBox -q -v objectIcon_renderButtonIcon_checkBox`){
+			playblast
+				-frame $currentFrame 
+				-format image
+				-completeFilename $buttonIconFile 
+				-clearCache 1 
+				-viewer 0 
+				-showOrnaments 0 
+				-os 
+				-percent 100 
+				-widthHeight $buttonIconSize $buttonIconSize
+				;
+		}
+    } else if ($tnType == "Render"){
+		// set render globals to render large sq image
+        int $h = `getAttr "defaultResolution.height"`;
+        int $w = `getAttr "defaultResolution.width"`;
+		int $al = `getAttr "defaultResolution.aspectLock"`;
+        setAttr "defaultResolution.height" $iconSize;
+        setAttr "defaultResolution.width" $iconSize;
+		setAttr "defaultResolution.aspectLock" 1;
+		
+        setTestResolutionVar(1);
+        print ("Rendering Icon : " + $iconFile + "\n");
+        RenderIntoNewWindow;
+        renderWindowEditor -edit -writeImage $iconFile renderView;
+		
+		if (`checkBox -q -v objectIcon_renderButtonIcon_checkBox`){
+			// render button icon
+			setAttr "defaultResolution.height" $buttonIconSize;
+			setAttr "defaultResolution.width" $buttonIconSize;
+			setAttr "defaultResolution.aspectLock" 1;
+			RenderIntoNewWindow;
+			renderWindowEditor -edit -writeImage $buttonIconFile renderView;
+        }
+		
+		// reset render settings to where they were
+        setAttr "defaultResolution.height" $h;
+        setAttr "defaultResolution.width" $w;
+		setAttr "defaultResolution.aspectLock" $al;
+		
+        setTestResolutionVar(4);
+    }
+    //Return render globals to previous state
+    setAttr "defaultRenderGlobals.imageFormat" $curImageFormat;
+	setAttr ($curCam + ".focalLength") $fl;
+	
+	//_________________________________________
+	// Make image plane
+	if (`checkBox -q -v objectIconCreateImagePlane_checkBox`){
+		string $planeName = $sel[0] + "_" + $camAngle + "_OBJImagePlane";
+		float $planeScale[];
+		
+		// Determine translation rotation and position for image plane
+		float $planeTranslate[] = getMidpointBetweenPoints({$bbox[0], $bbox[1], $bbox[2] }, {$bbox[3], $bbox[4], $bbox[5] });
+		float $planeRotate[];
+		if ($camAngle == "Top"){
+			$planeRotate = { 0.0, 0.0, 0.0 };
+			$planeScale = { (absDiff($bbox[0], $bbox[3])), (absDiff($bbox[2], $bbox[5])) };
+				
+		} else if ($camAngle == "Side"){
+			$planeRotate = { 0.0, 0.0, 90.0 };
+			$planeScale = { (absDiff($bbox[1], $bbox[4])), (absDiff($bbox[2], $bbox[5])) };
+		} else if ($camAngle == "Front"){
+			$planeRotate = { 90.0, 0.0, 0.0 };
+			$planeScale = { (absDiff($bbox[0], $bbox[3])), (absDiff($bbox[2], $bbox[5])) };
+		} else {
+			$planeRotate = { 0.0, 0.0, 0.0 };
+			$planeScale = { (absDiff($bbox[0], $bbox[3])), (absDiff($bbox[2], $bbox[5])) };
+		}
+		string $bboxString[] = floatArrayToStringArray($bbox);
+		//wizlog (niceArrayList("	[#] BBox Scale : ", $bboxString));	
+		//wizlog ("	[#] Plane Scale : " + $planeScale[0] + " " + $planeScale[1]);
+		
+		// Create a plane and material with the texture that was just rendered assigned
+		string $polyPlane[] = `polyPlane -w $planeScale[0] -h $planeScale[1] -sx 1 -sh 1 -cuv 1 -n $planeName`;
+		
+				
+		xform -ro $planeRotate[0] $planeRotate[1] $planeRotate[2] $polyPlane[0];
+		xform -ws -t $planeTranslate[0] $planeTranslate[1] $planeTranslate[2] $polyPlane[0];
+		
+		if ($camAngle == "Default" || $camAngle == "Persp") {
+			string $curCam = getCurrentCamera();
+			select -r $curCam;
+			select -add $polyPlane[0];
+			aimConstraint -offset 0 0 0 -weight 1 -aimVector 0 1 0 -upVector 0 0 -1 -worldUpType "scene";
+		} 
+		
+		string $shader[] = wizCreateNewShader(($planeName + "Lambert"), "lambert");
+		string $fileTex = wizNewFileTexture(($planeName + "File"));
+		
+		setAttr -type "string" ($fileTex + ".fileTextureName") $iconFile;
+		connectAttr ($fileTex + ".outColor") ($shader[0] + ".color");
+		connectAttr ($fileTex + ".outTransparency") ($shader[0] + ".transparency");
+		
+		select -r $shader[0];
+		select -add $polyPlane[0];
+		wizAssignMaterialToSelected("-mat " + $shader[0] + " -obj " + $polyPlane[0]);
+	}
+	// Remove the render env
+	//wizLog("	[-] Remove Default Render Environment [-]");	
+	//wizMGMT("-ex removeRenEnv","");
+	
+	ShowLastHidden;
+	
+	if (`checkBox -q -v objectIconHideObjects_checkBox`){
+		select -r $sel;
+		HideSelectedObjects;
+	}
+	
+    return $iconFile;
+	
+
+}
+
+global proc wizMoveCamera( string $flags )
+{
+	string $obj, $type;
+	int $fit = 1;
+	string $sel[];
+	string $camPos = "Default";
+	string $cam = "persp";
+	int $edit;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			$sel[`size $sel`] = $obj;
+			break ;
+				
+			case "-pos" : case "-position" :
+			$camPos = $tok[($i + 1)];
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -tr -v -sl`;
+			break ;			
+			
+			case "-cam" : case "-camera" :
+			lookThru $cam;
+			break ;
+			
+			case "-fit" : case "-fitVisible" :
+			$fit = int($tok[($i + 1)]);
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	select -r $sel;
+	
+	if ($camPos == "Default"){
+		xform -ws -t -500 0 500 $cam;
+		xform -ws -ro -20 -45 0 $cam;		
+		
+	}
+	
+	if ($camPos == "Top"){
+		lookThru top;
+		
+	}
+	
+	if ($camPos == "Bottom"){
+		lookThru top;
+		
+	}
+	
+	if ($camPos == "Side"){
+		lookThru side;
+		
+	}
+	
+	viewFit -an true -f 1.0;
+	refresh -f;
+}
+
+
+global proc string[] wizTileCamera( string $flags )
+{
+	int $div = 2;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-div" : case "-divisions" :
+			$div = int($tok[($i + 1)]);
+			break ;
+
+			
+		}
+	}
+	
+	
+	float $dev_aspect;
+	string $temp[];
+	
+	$dev_aspect = `getAttr defaultResolution.deviceAspectRatio`;
+
+	string $nodes[] = `selectedNodes`;
+	string $camnode = $nodes[0];
+	string $tileCams[];
+	int $i, $j;
+	string $newCams[];
+	for ($i=0;$i<$div;$i++){
+		for ($j=0;$j<$div;$j++){
+			$temp = `duplicate -rr $camnode`;
+			
+			int $i_name, $j_name;
+			$i_name = $i;
+			$j_name = $j;
+			string $tilecam_name = ("tileCam_x" + $i_name + "y" + $j_name);
+			rename $temp[0] $tilecam_name;
+			
+			$tileCams[`size $tileCams`] = $tilecam_name;
+			setAttr ($tilecam_name + ".preScale") $div;
+			
+			float $ftH = ($i - 1) - (($div - 1) / 2);
+			float $ftV = (($j - 1) - (($div - 1) / 2)) / $dev_aspect;
+			//setAttr ($tilecam_name + ".filmTranslateH") ($i*2.0-1.0);
+			//setAttr ($tilecam_name + ".filmTranslateV") (($j*-2.0+1.0)/$dev_aspect);
+			//float $ftH = ($i * 2.0 - 1.0);
+			//float $ftV = ($j * -2.0 + 1.0)/$dev_aspect;
+			wizlog ("filmTranslateH : " + $ftH + " filmTranslateV : " + $ftV);
+			setAttr ($tilecam_name + ".filmTranslateH") $ftH;
+			setAttr ($tilecam_name + ".filmTranslateV") $ftV;
+			
+			setAttr ($tilecam_name + ".renderable") 1;
+		
+			$newCams[`size $newCams`] = $tilecam_name;
+		}
+	}
+	
+	select -r $newCams;
+	string $camGroup = `group -n ($camnode + "TileCameras")`;
+	
+	select -r $camnode;
+	select -add $camGroup;
+
+	doCreateParentConstraintArgList 1 { "1","0","0","0","0","0","0","1","","1" };
+	parentConstraint -mo -weight 1;
+
+	return $tileCams;
+	
+	
+}
+
+
+
+
+global proc tile_camera_2x2()
+{ 
+	float $dev_aspect;
+	string $temp[];
+	
+	$dev_aspect = `getAttr defaultResolution.deviceAspectRatio`;
+
+    	string $nodes[] = `selectedNodes`;
+	string $camnode = $nodes[0];
+
+	int $i, $j;
+	for ($i = 0; $i < 2; $i++) 
+	{
+	  for($j = 0; $j < 2;$j++)
+	  {
+		$temp = `duplicate -rr $camnode`;
+		string $tilecam_name = ("tileCamera_" + $j + $i);
+		rename $temp[0] $tilecam_name;
+
+		setAttr ($tilecam_name + ".preScale") 2.0;
+
+		setAttr ($tilecam_name + ".filmTranslateH") ($i*2.0-1.0);
+		setAttr ($tilecam_name + ".filmTranslateV") (($j*-2.0+1.0)*1/$dev_aspect);
+		
+	  }
+	}
+}
+
+global proc tile_camera_3x3()
+{ 
+	float $dev_aspect;
+	string $temp[];
+	
+	$dev_aspect = `getAttr defaultResolution.deviceAspectRatio`;
+
+    	string $nodes[] = `selectedNodes`;
+	string $camnode = $nodes[0];
+
+	int $i, $j;
+	for ($i = -1; $i < 2; $i++) 
+	{
+	  for($j = -1; $j < 2;$j++)
+	  {
+		$temp = `duplicate -rr $camnode`;
+		int $i_name, $j_name;
+		$i_name = $i+1;
+		$j_name = $j+1;
+		string $tilecam_name = ("tileCamera_" + $j_name + $i_name);
+		rename $temp[0] $tilecam_name;
+
+		setAttr ($tilecam_name + ".preScale") 3.0;
+
+		setAttr ($tilecam_name + ".filmTranslateH") ($i*2.0);
+		setAttr ($tilecam_name + ".filmTranslateV") ($j*-2.0/$dev_aspect);
+		
+	  }
+	}
+}
+
+
+global proc tile_camera_4x4()
+{ 
+	float $dev_aspect;
+	string $temp[];
+	
+	$dev_aspect = `getAttr defaultResolution.deviceAspectRatio`;
+
+    	string $nodes[] = `selectedNodes`;
+	string $camnode = $nodes[0];
+
+	int $i, $j;
+	for ($i = -1; $i < 3; $i++) 
+	{
+	  for($j = -1; $j < 3;$j++)
+	  {
+		$temp = `duplicate -rr $camnode`;
+		int $i_name, $j_name;
+		$i_name = $i+1;
+		$j_name = $j+1;
+		string $tilecam_name = ("tileCamera_" + $j_name + $i_name);
+		rename $temp[0] $tilecam_name;
+
+		setAttr ($tilecam_name + ".preScale") 4.0;
+
+		setAttr ($tilecam_name + ".filmTranslateH") ($i*2.0-1.0);
+		setAttr ($tilecam_name + ".filmTranslateV") (($j*-2.0+1.0)/$dev_aspect);
+		
+	  }
+	}
+}
+
+
+global proc tile_camera_5x5()
+{ 
+	float $dev_aspect;
+	string $temp[];
+	
+	$dev_aspect = `getAttr defaultResolution.deviceAspectRatio`;
+
+    	string $nodes[] = `selectedNodes`;
+	string $camnode = $nodes[0];
+
+	int $i, $j;
+	for ($i = -2; $i < 3; $i++) 
+	{
+	  for($j = -2; $j < 3;$j++)
+	  {
+		$temp = `duplicate -rr $camnode`;
+		int $i_name, $j_name;
+		$i_name = $i+2;
+		$j_name = $j+2;
+		string $tilecam_name = ("tileCamera_" + $j_name + $i_name);
+		rename $temp[0] $tilecam_name;
+
+		setAttr ($tilecam_name + ".preScale") 5.0;
+
+		setAttr ($tilecam_name + ".filmTranslateH") ($i*2.0);
+		setAttr ($tilecam_name + ".filmTranslateV") (($j*-2.0)/$dev_aspect);
+		
+	  }
+	}
+}
+
+
+
+global proc tile_camera_6x6()
+{ 
+	float $dev_aspect;
+	string $temp[];
+	
+	$dev_aspect = `getAttr defaultResolution.deviceAspectRatio`;
+
+    	string $nodes[] = `selectedNodes`;
+	string $camnode = $nodes[0];
+
+	int $i, $j;
+	for ($i = -2; $i < 4; $i++) 
+	{
+	  for($j = -2; $j < 4;$j++)
+	  {
+		$temp = `duplicate -rr $camnode`;
+		int $i_name, $j_name;
+		$i_name = $i+2;
+		$j_name = $j+2;
+		string $tilecam_name = ("tileCamera_" + $j_name + $i_name);
+		rename $temp[0] $tilecam_name;
+
+		setAttr ($tilecam_name + ".preScale") 6.0;
+
+		setAttr ($tilecam_name + ".filmTranslateH") (($i*2.0)-1.0);
+		setAttr ($tilecam_name + ".filmTranslateV") (($j*-2.0+1.0)/$dev_aspect);
+		
+	  }
+	}
+}
+
+global proc tile_camera_7x7()
+{ 
+	float $dev_aspect;
+	string $temp[];
+	
+	$dev_aspect = `getAttr defaultResolution.deviceAspectRatio`;
+
+    	string $nodes[] = `selectedNodes`;
+	string $camnode = $nodes[0];
+
+	int $i, $j;
+	for ($i = -3; $i < 4; $i++) 
+	{
+	  for($j = -3; $j < 4;$j++)
+	  {
+		$temp = `duplicate -rr $camnode`;
+		int $i_name, $j_name;
+		$i_name = $i+3;
+		$j_name = $j+3;
+		string $tilecam_name = ("tileCamera_" + $j_name + $i_name);
+		rename $temp[0] $tilecam_name;
+
+		setAttr ($tilecam_name + ".preScale") 7.0;
+
+		setAttr ($tilecam_name + ".filmTranslateH") ($i*2.0);
+		setAttr ($tilecam_name + ".filmTranslateV") (($j*-2.0)/$dev_aspect);
+		
+	  }
+	}
+}
+
+
+
+
+
+global proc tile_camera_8x8()
+{ 
+	float $dev_aspect;
+	string $temp[];
+	
+	$dev_aspect = `getAttr defaultResolution.deviceAspectRatio`;
+
+    	string $nodes[] = `selectedNodes`;
+	string $camnode = $nodes[0];
+
+	int $i, $j;
+	for ($i = -3; $i < 4; $i++) 
+	{
+	  for($j = -3; $j < 4;$j++)
+	  {
+		$temp = `duplicate -rr $camnode`;
+		int $i_name, $j_name;
+		$i_name = $i+3;
+		$j_name = $j+3;
+		string $tilecam_name = ("tileCamera_" + $j_name + $i_name);
+		rename $temp[0] $tilecam_name;
+
+		setAttr ($tilecam_name + ".preScale") 8.0;
+
+		setAttr ($tilecam_name + ".filmTranslateH") (($i*2.0)-1.0);
+		setAttr ($tilecam_name + ".filmTranslateV") (($j*-2.0+1.0)/$dev_aspect);
+		
+	  }
+	}
+}
+
+//@ WIZ IGNORE FIT VIEW SET
+//====================================================================
+/*****************************************************************//**
+	Creates a set that will be ignored when auto selecting visisble objects.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $newSet[] = wizIgnoreFitViewSet("-sl");
+	wizIgnoreFitViewSet("-deselect");
+	
+	</code>
+*********************************************************************/
+global proc string[] wizIgnoreFitViewSet( string $flags )
+{
+	//wizlog ("[@] wizIgnoreFitViewSet");
+	string $obj, $type;
+	string $sel[];
+	int $edit;
+	int $ds;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-typ" : case "-type" :
+			$type = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+			case "-ds" : case "-deselect" :
+			$ds = 1;
+			break ;
+			
+		}
+	}
+
+	string $ignoreSet[] = `ls -r true ("*ignoreFitViewSet")`;
+	
+	if ($ds){
+		for ($i=0;$i<`size $ignoreSet`;$i++){	
+			string $desel[] = `sets -q $ignoreSet[$i]`;
+			//wizlog (niceArrayList("Deselect Objects : ", $desel));
+			select -d $desel;
+			
+				
+		}
+		
+		string $return[] = `ls -sl`;
+		return $return;
+		
+	}
+
+	string $newSet = addSelectedObjectsToSet($sel, "ignoreFitViewSet");
+	return {$newSet};
+	
+
+}
+
+//@ WIZ SURFACE SAMPLER
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = wizSurfaceSampler("-s someObj -t anotherObject -mo normals -mo displacement");
+	
+	</code>
+*********************************************************************/
+global proc string[] wizSurfaceSampler( string $flags )
+{
+	string $obj, $type;
+	string $name;
+	string $ext;
+	string $sel[];
+	string $src[];
+	string $tar[];
+	string $mo[];
+	int $edit;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-typ" : case "-type" :
+			$type = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+			case "-s" : case "-source" :
+			$src = wizFlagArray($tok, $i);
+			break ;
+			
+			case "-t" : case "-target" :
+			$tar = wizFlagArray($tok, $i);
+			break ;
+			
+			case "-mo" : case "-mapOutput" :
+			$mo[`size $mo`] = $tok[($i + 1)];
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	for ($i=0;$i<`size $mo`;$i++){
+
+		string $fn[] = wizCraftGetFileOutputPaths("-n " + $name + " -ext " + $ext);
+		surfaceSampler
+			-mapOutput $mo[$i]
+			-filename $fn[0]
+			-fileFormat $ext
+			-source (stringArrayToString($src, " ")) 
+			-target (stringArrayToString($tar, " ")) 
+			-uv "map1";
+			
+	}
+	
+	return {""};
+
+}
+
+global string $WIZ_artImagesFolderName;
+$WIZ_artImagesFolderName = "Artwork";
+
+global proc wizSaveRenderToArtImages()
+{
+	global string $WIZ_artImagesFolderName;
+	//Get Project Directory
+	string $wizProjectDir = `optionVar -q WIZ_wizProjectDirectory`;
+	
+	//Get the active workspace
+	string $act = `workspace -q -act`;	
+		
+	//Get the images folder
+	string $imagesFolder = `workspace -q -fre "images"`;
+	
+	string $artImagesDir = wizMakeDir(($wizProjectDir + $act + "/" + $imagesFolder + "/" + $WIZ_artImagesFolderName + "/"));
+	string $sceneFile = `file -q -sn` ;
+	string $splice[] = wizSpliceFilePath($sceneFile, "-fnnv");
+	string $artFile = $artImagesDir + $splice[0];
+	string $newFile = getIncrementedFileVersionName($artFile);
+	/*
+	string $curFileType = `getAttr "defaultRenderGlobals.imageFormat"`;
+	//string $ext = wizTranslateImageFileType("-ttex " + $curFileType);
+	string $ext = "png";
+	*/
+	string $ext = `getAttr -as "defaultRenderGlobals.imageFormat"`;
+	if ($ext == "Custom Image Format"){
+		$ext = "3";
+	}
+	$ext = wizTranslateImageFileType("-ttex " + $ext);
+	
+	//$ext = formatExtension($ext);
+	
+	$newFile = $newFile + $ext;
+	
+	string $name[] = `renderSettings -firstImageName -leaveUnmatchedTokens -fullPath`;
+	
+	copyFileFromTo($name[0], $newFile);
+	
+	/*
+	string $editor = `renderWindowEditor -q -editorName`;
+	
+	//_________________________________________
+	// Get the rendered image from the current workspace
+	/*
+	string $workspace = `workspace -q -rd -act`;	
+	string $images = `workspace -q -fre images $workspace`;	
+	//Load the image that was just rendered to /textComp.0001.iff
+	string $loadImage = $workspace + $images + "/testComp.0001.iff";	
+	renderWindowEditor -edit -loadImage $loadImage $editor;
+	*/
+	
+	wizlog ("Saving Image To File : " + $newFile);
+	/*
+	//renderWindowMenuCommand saveImage renderView;
+	python("import maya.app.general.createImageFormats as createImageFormats\n"
+	+"formatManager = createImageFormats.ImageFormats()\n"
+	+"formatManager.pushRenderGlobalsForDesc(" + "\"" + $ext + "\"" + ")\n"
+	+"formatManager.popRenderGlobals()\n");
+	updateMayaSoftwareTargetFilePreview;
+	*/
+/*
+	//renderWindowEditor -edit -writeImage $newFile $editor;
+	renderWindowEditor -e -writeImage $newFile $editor;
+*/
+}
+
+
+global proc wizRenderLayerReferenceLoader( string $flags )
+{
+	string $sel[];
+	int $recursive;
+	int $edit;
+	string $rl;
+	string $ref[];
+	
+	string $tok[] = tokenizeString($flags, " ");	
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-sel" : case "-selected" :
+			$sel = `ls -sl`;
+			$ref = `ls -sl -type reference`;
+			break;
+			
+			case "-r" : case "-recursive" :
+			$recursive = 1;			
+			break;
+			
+			case "-rl" : case "-renderLayer" :
+			$rl = $tok[($i+1)];
+			break ;
+			
+			case "-e" : case "-edit" :
+			$edit = 1;			
+			break;
+			
+			case "-wiz" :
+			$rl = `textFieldGrp -q -tx renderWiz_RLRLRenderLayer_textFieldGrp`;
+			$recursive = `checkBox -q -v renderWiz_RLRLLoadRecursively_checkBox`;
+			$ref = `ls -sl -type reference`;
+			break ;
+		}
+		
+		
+	}
+	
+
+		if (`objExists $rl` == 0){
+			wizlog ("[!] No Render Layer Named : " + $rl + " Exists [!]");
+			return ;
+		}
+
+	
+	//===============
+	// Create Expression for loading references recursively so we can call this with our scriptNode
+	
+	if (`objExists "WizRenderLayerReferenceLoaderExpression"` == 0){
+		string $recursiveRefLoadScript = ("global proc wizLoadChildRefRecursively( string $ref[] )"+"\n"
+		+"{"+"\n"
+		+"	string $ch[];"+"\n"
+		+"	string $return[];"+"\n"
+		+"	for ($i=0;$i<`size $ref`;$i++){"+"\n"
+		+"		int $il = `referenceQuery -il $ref[$i]`;"+"\n"
+		+"		if ($il == 0){"+"\n"
+		+"			file -lr $ref[$i];"+"\n"
+		+"		}"+"\n"		
+		+"		$ch = `referenceQuery -ch -rfn $ref[$i]`;"+"\n"
+		+"		appendStringArray($return, $ch, `size $ch`);"+"\n"
+		+"		for ($c=0;$c<`size $ch`;$c++){"+"\n"
+		+"			file -lr $ch[$c];"+"\n"
+		+"		}"+"\n"			
+		+"	}"+"\n"
+		+"	if (`size $return` > 0){"+"\n"
+		+"		select -r $ch;"+"\n"
+		+"		wizLoadChildRefRecursively($return);"+"\n"	
+		+"	}"+"\n"
+		+"}"+"\n"
+		);
+		
+		expression -s $recursiveRefLoadScript -n "WizRenderLayerReferenceLoaderScriptNode";
+		
+	}
+
+	//===============
+	// Create a scriptNode to load and unload references 
+		
+	string $editCom;
+	string $n = $rl + "RefLoadScriptNode";
+
+	
+	string $bs = ("string $curRenLay = `editRenderLayerGlobals -q -currentRenderLayer `;"+"\n"
+	+"if ($curRenLay == \"" + $rl + "\"){"+"\n"
+	);
+		
+	for ($i=0;$i<`size $ref`;$i++){			
+
+		if ($recursive){
+			$bs = $bs + "	wizLoadChildRefRecursively({\"" + $ref[$i] + "\"});" + "\n";
+
+		} else {
+			$bs = $bs + "	file -lr " + $ref[$i] + ";" + "\n";
+
+		}
+	
+	}
+	//	+"print (\"[RENDER LAYER CHANGED] : \" + $curRenLay + \"\\n\");"+"\n"
+	//			$bs = $bs + "	print (\"[RENDER LAYER LOADING REFERENCE] : " + $ref[$i] + "\n\");"+"\n";
+	
+	$bs = $bs + "} else {"+"\n";
+	for ($i=0;$i<`size $ref`;$i++){
+		$bs = $bs + "	file -ur " + $ref[$i] + ";"+"\n";
+	
+	}
+	$bs = $bs + "}"+"\n";
+	
+	if (`objExists $n`){
+		string $addToScript = `expression -q -s $n`;
+		wizlog ("[RenderLayerReferenceLoader Script] : \n " + $bs);
+		scriptNode -e -n $n -bs ($addToScript + $bs);
+	} else {
+		scriptNode -n $n -bs $bs;
+	}
+	
+	//===============
+	// Create a scriptNode that starts a scriptJob that checks when the render layers is changed, when the scene is opened
+	
+	scriptNode -n ($rl + "ScriptJobInitScriptNode") -bs ("scriptJob -kws -e renderLayerManagerChange (\"scriptNode -eb " + $n + ";\");");
+	
+	//===============
+	// Run the scriptJob
+	scriptJob -kws -e renderLayerManagerChange ("scriptNode -eb " + $n + ";");
+}
+
+//=====================================
+/*
+    GUIRen.mel
+    
+    Run a local render within the GUI
+    Was doRen.mel
+    
+    Sometimes, this is the only way to successfully render particles, fluids,
+      and other dynamics.
+    
+    
+    NOTES:
+        Source script to run over animation timeline range
+        Frames can be renamed in Windows cmd with:
+            rename \\name\name\project\Maya_db\work\CB\images\filename.*.sgi snowSpray10s.*.sgi
+
+    TODO:
+        +ESC doesn't abort with mental ray renders
+          mental ray seems to catch ESC and not pass it to Maya
+          problem seems to be that mental ray renders use the main progress bar as well, so it was
+            clobbering my usage of it.
+          fixed by changing when progress bar appears, so as not to conflict with render.
+        +Write images to current project
+        +Add GUI for run-up, step, img name, output dir, frame range ...
+        +Check/Change output image format to SGI/TGA/...
+        -Supress overwrite confirm dialog (???)
+        Variable frame number padding
+        List of frames, rather than range
+        Sometimes, following abort, Submit aborts immediately
+*/
+//=====================================
+
+
+global proc wizGUIRen( string $parent )  
+{
+    chdir "C:";
+    string $dir = `workspace -q -rd` + "images";
+    string $hn = strip(system("hostname"));
+    string $fn = "render_" + $hn;
+    
+    int $start = `playbackOptions -q -min`;
+    int $end = `playbackOptions -q -max`;
+    int $step = 1;
+    int $doRunup = 1;
+    int $runup = `playbackOptions -q -ast`;
+    
+    string $fi[];
+    $fi = `fileInfo -q "GRDirectory"`; if ($fi[0] != "") $dir = $fi[0];
+    $fi = `fileInfo -q "wizGRFileName"`; if ($fi[0] != "") $fn = $fi[0];
+    $fi = `fileInfo -q "wizGRStart"`; if ($fi[0] != "") $start = $fi[0];
+    $fi = `fileInfo -q "wizGREnd"`; if ($fi[0] != "") $end = $fi[0];
+    $fi = `fileInfo -q "wizGRStep"`; if ($fi[0] != "") $step = $fi[0];
+    $fi = `fileInfo -q "wizDoRunup"`; if ($fi[0] != "") $doRunup = $fi[0];
+    $fi = `fileInfo -q "wizGRRunup"`; if ($fi[0] != "") $runup = $fi[0];
+    
+        
+    if (`window -q -ex GRwin`) deleteUI GRwin;
+    if (`windowPref -q -ex GRwin`) windowPref -remove GRwin;
+
+
+   string $frameLayout = `frameLayout
+		-l "GUI Rendering"
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10				
+		-cll true
+		-cl true		
+		-parent $parent
+		`;
+	
+    string $tfbg = wizTextFieldButtonGrp(
+		"-l Output Directory "
+		+"-bl Browse "
+		+"-ann Select the directory the images will be saved to. "
+		+"-bc ad "
+		+"-n wizGUIRen_outputDir_textFieldButtonGrp");
+	
+		
+	wizTextFieldGrp(
+		"-l Image Name "
+		+"-tx ImageName "
+		+"-ann Enter in just the prefix of the image name e.g. MyImage "
+		+"-n wizGUIRen_fileName_textFieldGrp");
+		
+	wizFloatFieldGrp(
+		"-l Start: "
+		+"-v 1.0 "
+		+"-ann What frame to start rendering at. "
+		+"-n wizGUIRen_startFrame_floatFieldGrp");	
+	
+	wizFloatFieldGrp(
+		"-l End: "
+		+"-v 10.0 "
+		+"-ann What frame to end rendering at. "
+		+"-n wizGUIRen_endFrame_floatFieldGrp");	
+	
+	wizFloatFieldGrp(
+		"-l Step: "
+		+"-v 1.0 "
+		+"-ann How Many Steps Per Frame. "
+		+"-n wizGUIRen_step_floatFieldGrp");	
+			
+	wizCheckBox(
+		"-l Do Runup "
+		+"-v 1 "
+		+"-n wizGUIRen_doRunup_checkBox");
+			
+	wizFloatFieldGrp(
+		"-l Runup Start: "
+		+"-v 1.0 "
+		+"-ann What frame to start runup from. "
+		+"-n wizGUIRen_runupStart_floatFieldGrp");	
+
+		
+	wizCheckBox(
+		"-l Render All Render Layers "
+		+"-v 0 "
+		+"-n wizGUIRen_renderAllRenderLayers_checkBox"
+		);
+		
+	wizCheckBox(
+		"-l Render All Renderable Cameras "
+		+"-v 0 "
+		+"-n wizGUIRen_renderAllRenderableCameras_checkBox"
+		);
+		/*
+		TODO Option for file format
+	string $ffomg[] = { "exr", "png" };
+	string $omg = wizOptionMenuGrpMenuItems("File Format", "wizGUIRen_fileFormat_optionMenuGrp", $ffomg);
+	string $val = `optionMenuGrp -q -v wizGUIRen_fileFormat_optionMenuGrp`;
+	
+		*/
+		
+    string $rc3 = `rowColumnLayout -nc 2 -cw 1 80 -cw 2 80`;
+        button -l "Render" -c "wizDoGUIRen;";
+        button -l "Cancel" -c "deleteUI GRwin;";
+    setParent ..;
+
+    
+}
+
+global proc wizDoGUIRen()  
+{
+    string $dir = `textFieldButtonGrp -q -text wizGUIRen_outputDir_textFieldButtonGrp`;
+    if (`filetest -e $dir` == 0){
+		sysFile -makeDir $dir;	
+	}
+	if (`filetest -e $dir` == 0){
+        error ("WIZ| wizMakeDir : Could Not Make Directory : " + $dir + "\n");
+		return ;
+	} 
+    
+    string $fn = `textFieldGrp -q -text wizGUIRen_fileName_textFieldGrp`;
+    float $start = `floatFieldGrp -q -v1 wizGUIRen_startFrame_floatFieldGrp`;
+    float $end = `floatFieldGrp -q -v1 wizGUIRen_endFrame_floatFieldGrp`;
+    float $step = `floatFieldGrp -q -v1 wizGUIRen_step_floatFieldGrp`;
+    int $doRunup = `checkBox -q -v wizGUIRen_doRunup_checkBox`;
+    float $runup = `floatFieldGrp -q -v1 wizGUIRen_runupStart_floatFieldGrp`;
+    int $i, $j, $abort;
+    
+    if ($runup > $start) $runup = $start;
+    
+    fileInfo "GRDirectory" $dir;
+    fileInfo "wizGRFileName" $fn;
+    fileInfo "wizGRStart" $start;
+    fileInfo "wizGREnd" $end;
+    fileInfo "wizGRStep" $step;
+    fileInfo "wizDoRunup" $doRunup;
+    fileInfo "wizGRRunup" $runup;
+
+    global string $gMainProgressBar;  // This is defined on maya startup
+    
+    if ($doRunup && $runup < $start)  {
+        progressBar -edit -beginProgress -isInterruptable true -status "Runup..." -min $runup -max $start $gMainProgressBar;
+        $abort = 0;
+        for ($i = (int($runup)); $i < (int($start)); ++$i)  {
+            if (`progressBar -query -isCancelled $gMainProgressBar`) { $abort = 1; break; }
+            currentTime $i;
+            progressBar -e -step 1 $gMainProgressBar;
+        }
+        progressBar -edit -endProgress $gMainProgressBar;
+        if ($abort)  {
+            print("*** GUIRen: ABORT!!!\n");
+            return;
+        }
+    }
+    
+    //setAttr defaultRenderGlobals.imageFormat 5;        // SGI
+    setAttr "defaultRenderGlobals.imageFormat" 40; //EXR
+    
+    currentTime $start;
+    int $cf = $start;
+    $abort = 0;
+    
+    // Render layers
+    string $renLayers[];
+    int $renderAllRenderLayers = `checkBox -q -v wizGUIRen_renderAllRenderLayers_checkBox`;
+    if ($renderAllRenderLayers == 0){
+    	$renLayers[0] = `editRenderLayerGlobals -q -crl`;	
+    } else {
+    	$renLayers = guiRenGetRenderableRenderLayers();
+    }
+    
+    // Renderable Cameras
+    int $renderAllRenderableCameras = `checkBox -q -v wizGUIRen_renderAllRenderableCameras_checkBox`;
+    string $renCams[];
+    
+    string $currentPanel = `getPanel -withFocus`;
+    string $curCam = `modelPanel -q -cam $currentPanel`;
+    	
+    if ($renderAllRenderableCameras){
+    	string $allCameras[] = `ls -ca`;
+    	for ($i=0;$i<`size $allCameras`;$i++){
+    		int $renderable = `getAttr ($allCameras[$i] + ".renderable")`;
+    		if ($renderable == 1){
+    			$renCams[`size $renCams`] = $allCameras[$i];	
+    		}
+		}
+    } else {    	
+    	$renCams[0] = $curCam;	
+    }
+    
+    
+    for ($c=0;$c<`size $renCams`;$c++){
+    	string $camName;
+    	if (`size $renCams` > 1){
+    		lookThru $renCams[$c] $currentPanel;	
+    		$camName = "_" + $renCams[$c];
+    	}
+		for ($rl=0;$rl<`size $renLayers`;$rl++){
+			
+			editRenderLayerGlobals -currentRenderLayer $renLayers[$rl];
+			for ($i = (int($start)); $i <= (int($end)); $i += (int($step)))  {
+			
+				for ($j = $cf+1; $j <= $i; ++$j)
+					currentTime $j;
+				$cf = $i;
+				
+				if ($i == (int($start)))
+					RenderIntoNewWindow;
+				else
+					renderWindowRender redoPreviousRender renderView;
+					
+				progressBar -edit -beginProgress -isInterruptable true -status "Saving..."  -min $start -max ($start+1) $gMainProgressBar;
+				if (`progressBar -query -isCancelled $gMainProgressBar`) { $abort = 1; break; }
+				
+				string $i4 = $i;
+				if ($i < 10) $i4 = "000" + $i;
+				else if ($i < 100) $i4 = "00" + $i;
+				else if ($i < 1000) $i4 = "0" + $i;
+				renderWindowSaveImageCallback "renderView" ($dir+"/"+$fn+"_"+$renLayers[$rl] + $camName + "."+$i4+".exr") "EXR";
+				
+				if (`progressBar -query -isCancelled $gMainProgressBar`) { $abort = 1; break; }
+				progressBar -edit -endProgress $gMainProgressBar;
+				
+				clearCache -all;
+			}
+		}
+    }
+    
+    progressBar -edit -endProgress $gMainProgressBar;
+    if ($abort)  {
+        print("*** GUIRen: ABORT!!!\n");
+    } else    
+        print("*** GUIRen: DONE!\n");
+     
+
+}
+
+//GET RENDER LAYERS
+//===========================================================
+global proc string[] guiRenGetRenderLayers()
+{
+	string $rl[] = `ls -typ renderLayer`;
+	string $rn[] = `ls -rn $rl`;
+	
+	//Get rid of render layers from referenced files
+	string $renderLayers[] = stringArrayRemove($rn, $rl);
+	
+	//print $renderLayers;
+	return $renderLayers;
+	
+}
+
+//GET RENDERABLE RENDER LAYERS
+//===========================================================
+global proc string[] guiRenGetRenderableRenderLayers()
+{
+	string $renderableRL[];
+	string $rl[] = guiRenGetRenderLayers();
+	for($i=0;$i<`size $rl`;$i++){
+		int $renderable = `getAttr ($rl[$i] + ".renderable")`;
+		if($renderable == 1){
+			$renderableRL[`size $renderableRL`] = $rl[$i];	
+		}
+	}
+	return $renderableRL;
+	
+}
+
+global proc wizRenderHieghtmapTiles( string $flags )
+{
+	string $sel[];
+	int $tilesSq;
+	float $tileSize;
+	string $hCam;
+	
+	string $tok[] = tokenizeString($flags, " ");	
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-sel" : case "-selected" :
+			$sel = `ls -sl`;
+			break;
+
+			
+			case "-wiz" :
+			$tilesSq = `intFieldGrp -q -v1 renderWiz_heightmapTilesNumTilesSq_intFieldGrp`;
+			$tileSize = `floatFieldGrp -q -v1 renderWiz_heightmapTilesTileSize_floatFieldGrp`;
+			$hCam = `textFieldButtonGrp -q -tx renderWiz_heightmapTilesCamera_textFieldButtonGrp`;
+			break ;
+			
+		}
+		
+		
+	}
+	
+	// Start Progress Bar
+	global string $gMainProgressBar;
+	int $abort;
+	progressBar -edit -beginProgress -isInterruptable true -status "Runup..." -min 0 -max ($tilesSq * $tilesSq) $gMainProgressBar;
+	
+	wizlog ("Rendering - " + ($tilesSq * $tilesSq) + " - Heightmap Tiles");
+	
+	//Set up Render Globals
+	setAttr "defaultRenderGlobals.imageFormat" 40; //EXR
+	//setAttr "defaultRenderGlobals.imageFormat" 4; // Tiff
+	
+	//Move Camera into start position
+	float $xStart = 0 - ((($tileSize * $tilesSq) * 0.5) - ($tileSize * 0.5));
+	float $zStart = $xStart;
+	float $xPos = $xStart;
+	float $zPos = $xStart;
+	
+	wizlog ("[START CAMERA POSITION] : X: " + $xStart + " Z: " + $zStart);
+	select -r $hCam;
+	string $s[] = `listRelatives -c $hCam`;
+	
+	lookThru $s[0];
+	float $camPos[] = `xform -q -ws -t $hCam`;
+	xform -ws -t $xStart $camPos[1] $zStart $hCam;
+	
+	
+	
+	for ($vi=0;$vi<($tilesSq);$vi++){
+		for ($ui=0;$ui<($tilesSq);$ui++){			
+			
+			// Filename
+			// 
+			string $tilename = "TerrainTile" + "_u" + $ui + "_v" + $vi;
+			string $filename[] = wizCraftGetFileOutputPaths(("-typ " + $tilename + " -ext exr"));
+			//string $filename[] = wizCraftGetFileOutputPaths(("-typ " + $tilename + " -ext tif"));
+			
+			if ($ui == 0 && $vi == 0){
+				RenderIntoNewWindow;	
+			} else {
+				renderWindowRender redoPreviousRender renderView;
+			}
+			
+			wizlog ("xform -ws -t " + $xPos + " " + $camPos[1] + " " + $zPos);
+			
+			//Move the camera in X
+			
+			$xPos = $xPos + $tileSize;
+			
+			xform -ws -t $xPos $camPos[1] $zPos $hCam; 
+					
+			
+			progressBar -e -step 1 -status ("Rendering Tile - U " + $ui + " - V " + $vi + " - ") $gMainProgressBar;
+			if (`progressBar -query -isCancelled $gMainProgressBar`) { $abort = 1; break; }
+			
+			renderWindowSaveImageCallback "renderView" ($filename[0]) "EXR";
+			refresh -f ;
+			refreshAE;
+		}
+		// Reset X pos and Move Camera in Z
+		$xPos = $xStart;
+		$zPos = $zPos + $tileSize;
+		xform -ws -t $xPos $camPos[1] $zPos $hCam;
+		
+		refresh -f ;
+		refreshAE;
+			
+	}
+	
+	wizlog ("[*] Rendering Complete [*]");
+	progressBar -edit -endProgress $gMainProgressBar;
+	
+	select -r $hCam;
+	xform -a -t $camPos[0] $camPos[1] $camPos[2] $hCam;
+	
+	select -cl;
+}
+

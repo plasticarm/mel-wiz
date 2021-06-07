@@ -1,0 +1,749 @@
+// Copyright (C) 1997-2014 Autodesk, Inc., and/or its licensors.
+// All rights reserved.
+//
+// The coded instructions, statements, computer programs, and/or related
+// material (collectively the "Data") in these files contain unpublished
+// information proprietary to Autodesk, Inc. ("Autodesk") and/or its licensors,
+// which is protected by U.S. and Canadian federal copyright law and by
+// international treaties.
+//
+// The Data is provided for use exclusively by You. You have the right to use,
+// modify, and incorporate this Data into other products for purposes authorized 
+// by the Autodesk software license agreement, without fee.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. AUTODESK
+// DOES NOT MAKE AND HEREBY DISCLAIMS ANY EXPRESS OR IMPLIED WARRANTIES
+// INCLUDING, BUT NOT LIMITED TO, THE WARRANTIES OF NON-INFRINGEMENT,
+// MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, OR ARISING FROM A COURSE 
+// OF DEALING, USAGE, OR TRADE PRACTICE. IN NO EVENT WILL AUTODESK AND/OR ITS
+// LICENSORS BE LIABLE FOR ANY LOST REVENUES, DATA, OR PROFITS, OR SPECIAL,
+// DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES, EVEN IF AUTODESK AND/OR ITS
+// LICENSORS HAS BEEN ADVISED OF THE POSSIBILITY OR PROBABILITY OF SUCH DAMAGES.
+
+//
+// paintRuntimeFunc
+//
+// This is provided to users as a template for users to modify.
+// It can be used to shape and color tubes, or apply custom forces.
+// New tubes or branches can also be generated.
+// This sample function applies a simple noise force to the tubes
+// and creates two leafs at the start of the tubes.
+// If one toggles on "Tubes" and types the name of this
+// script into the field "runtime script"(under User Mel Scripts)
+// then this mel function gets applied at the end of the normal tube step
+// routine(C code) for that brush.
+// Maya assumes that this function has the exact arguments
+// listed here. The inputs arguments define the current particle
+// tube segment, which can then be modified. The modified tube segment 
+// and any newly created tubes ( a bit like emitted particles )
+// are passed back to maya by returning an array of values. 
+// The very first element of the return array is a boolean
+// to indicate whether to do anything at all. If it is false
+// then the rest of the array does not need to be filled.
+// Otherwise the first section of this array should contain the modified segment.
+// If any new tubes are to be generated from this segment, then
+// the next part of the return array begins with the number of tubes
+// to generate, followed by a set of parameters for each tube.
+
+global proc float []
+wizPaintRuntimeFunc(
+
+// current segment count on base brushstroke
+int	  $step,
+// this next variable is true if this is the first segment created 
+int   $isStartTube,
+
+// The following 3 vectors define a coordinate system
+// for the brushstroke, in a similar fashion to a matrix
+// One can use them to create forces and offsets that
+// are in the "brushstroke space"
+// Unlike a normal coordinate frame, these vectors change
+// along the brushstroke, and will mirror any deformations to
+// the base brushstroke( or curve on surface ).
+
+// vector in direction of brushstroke 
+float $vX, float $vY, float $vZ,
+// surface normal at current brushstroke segment
+float $nX, float $nY, float $nZ,
+// vector across direction of brushstroke ( crossProduct of v and n above )
+float $uX, float $uY, float $uZ,
+
+// a random seed that is unique for this tube 
+int   $randSeed,
+
+// the growth section: 0 branch, 1 twig, 2 leaf, 3 flower
+int	  $tubeType,	
+
+int	  $maxSegments,		// the number of segments the longest tubes have	
+int	  $segments,		// the number of segments this tube has	
+int	  $remainingSegments, // the number of segments yet to be created	
+int	  $branchDepth,		// The branching level this segment is on( 0 is the base )
+int   $branchId,        // Index for the segment, each segment on each level is unique (0..n)
+int   $parentId,        // BranchID for the parent of this segment
+int   $siblingCnt,      // The number of sibling segments at this level, n-1
+
+// the start and end points of the current tube segment in worldspace
+float $sX, float $sY, float $sZ,	     
+float $eX, float $eY, float $eZ,	     
+
+// the current length per segment
+float $segmentLength,
+
+// the start and end widths of the current tube segment in worldspace
+float $startWidth, float $endWidth,
+
+float $flatness, // current flatness of tube
+// current twist vector perpendicular to tube segment
+float $twistX, float $twistY, float $twistZ,
+
+// color, transparency, and incandescence of current tube segment
+float $colorR, float $colorG, float $colorB,
+float $transparencyR, float $transparencyG, float $transparencyB,
+float $incandescenceR, float $incandescenceG, float $incandescenceB,
+                                                                                            
+// name of brush and stroke
+string $brushName, string $strokeName
+)
+{
+	string $locId = ($tubeType + $step + $isStartTube + $branchDepth + $branchId + $parentId + $siblingCnt + $remainingSegments);
+    float $tubes[];
+
+	if ($isStartTube){
+		print ("<<<<<<<<<<<<<<<--- StartTube --->>>>>>>>>>>>>>>>>\n");
+		/*
+		//string $locName = $brushName + "_Locator_" + $locId;
+		string $cursloc[] = `ls ("*" + $brushName + "_TwigLocator_Start_*")`;		
+		select -r $cursloc;
+		catchQuiet(`delete $cursloc`);
+		string $cureloc[] = `ls ("*" + $brushName + "_TwigLocator_End_*")`;		
+		select -r $cureloc;
+		catchQuiet(`delete $cureloc`);
+		*/
+		
+		//_________________________________________
+		// Remove all joints and bMeshes
+		string $brushJoints[] = `ls ("*" + $brushName + "Joint*")`;
+		string $brushBMesh[] = `ls ("*" + $brushName + "BMeshMesh*")`;
+		if (`size $brushJoints` > 0){
+			delete $brushJoints;
+			print ("[-] Removing All Brush Joints [-]\n");
+		}
+		if (`size $brushBMesh` > 0){
+			delete $brushBMesh;
+			print ("[-] Removing All Brush B Meshes [-]\n");
+		}
+		
+	}
+	
+	string $tubeInfo = (
+	"TubeType : " + $tubeType + " - "
+	+"Step : " + $step + " - "
+	+"IsStartTube : " + $isStartTube + " - "
+	+"MaxSegments : " + $maxSegments + " - "
+	+"Segments : " + $segments + " - "
+	+"RemainingSegments : " + $remainingSegments + " - "
+	+"BranchDepth : " + $branchDepth + " - "
+	+"BranchID : " + $branchId + " - "
+	+"SiblingCount : " + $siblingCnt + " - "
+	+"ParentID : " + $parentId + " - "
+	+"LocID : " + $locId + "\n"
+	//+"Start Point : " + $sX + " " + $sY + " " + $sZ + " - End Point : " + $eX + " " + $eY + " " + $eZ
+	);
+	
+	/*
+	if (`attributeExists "refreshBMesh" $brushName` == 0){
+		addAttr -ln "refreshBMesh" -at bool $brushName;
+	} else {
+		int $refresh = `getAttr ($brushName + ".refreshBMesh")`;
+		if ($refresh == 1){
+		
+	*/
+
+	print ($tubeInfo + "\n\n");
+	
+	string $brushJoints[] = `ls ("*" + $brushName + "Joint*")`;
+	string $brushBMesh[] = `ls ("*" + $brushName + "BMeshMesh*")`;
+	
+	//_________________________________________
+	// Remove all joints and bMeshes
+	
+	//_________________________________________
+		// Remove all joints and bMeshes
+	if ($step == 0){
+		print ("<<<<<<<<<<<<<<<--- Step 0 --->>>>>>>>>>>>>>>>>\n");
+		string $brushJoints[] = `ls ("*" + $brushName + "Joint*")`;
+		string $brushBMesh[] = `ls ("*" + $brushName + "BMeshMesh*")`;
+		if (`size $brushJoints` > 0){
+			delete $brushJoints;
+			print ("[-] Removing All Brush Joints [-]\n");
+		}
+		if (`size $brushBMesh` > 0){
+			delete $brushBMesh;
+			print ("[-] Removing All Brush B Meshes [-]\n");
+		}
+		
+	}
+		
+	if ($tubeType == 0 || $tubeType == 1){
+		//_________________________________________
+		// Name the joint after the start and end positions
+		// Match the name of the start joint and the end joint to connect joints.
+		// constrain the position value to 0.001 so that the floating point precision errors don't make mistakes
+		
+		//string $newJoint = `joint -p $sX $sY $sZ -n ($brushName + "Joint" + $locId)`;
+		//string $newJoint = `joint -p $sX $sY $sZ -n ($brushName + "Joint_" + $sX + $sY + $sZ + "_" + $eX + $eY + $eZ)`;
+		string $sJointName = ($brushName + "Joint_" + (constrainValue( 0.001 ,999999.00, 0.001, $sX)) + "_" + (constrainValue( 0.001 ,999999.00, 0.001, $sY)) + "_" + (constrainValue( 0.001 ,999999.00, 0.001, $sZ)));
+	
+		$sJointName = substituteAllString($sJointName, ".", "_");
+		$sJointName = substituteAllString($sJointName, "-", "_");
+		string $eJointName = ($brushName + "Joint_" + (constrainValue( 0.001 ,999999.00, 0.001, $eX)) + "_" + (constrainValue( 0.001 ,999999.00, 0.001, $eY)) + "_" + (constrainValue( 0.001 ,999999.00, 0.001, $eZ)));
+		$eJointName = substituteAllString($eJointName, ".", "_");
+		$eJointName = substituteAllString($eJointName, "__", "_");
+		
+		int $connectJoints;
+			
+		for ($i=0;$i<`size $brushJoints`;$i++){			
+			if ($brushJoints[$i] == $sJointName){
+				string $eJoint;
+				if (`objExists $eJointName` == 0){
+					select $brushName;
+					
+					$eJoint = `joint -p $eX $eY $eZ -n ($eJointName)`;
+					
+				}
+				if (`objExists $eJoint` == 0){
+					select -r $eJoint;
+				}
+				select -add $brushJoints[$i];				
+				parent ;
+				
+				
+				
+				$connectJoints = 1;
+				if (`attributeExists "bmeshRadius" $eJoint`){
+					setAttr ($eJoint + ".bmeshRadius") $endWidth;
+				} else {
+					setAttr ($eJoint + ".radius") $endWidth;
+				}
+				
+			}
+		}
+		if ($connectJoints == 0){
+			string $sJoint;
+			if (`objExists $sJointName` == 0){	
+				select $brushName;
+				$sJoint = `joint -p $sX $sY $sZ -n $sJointName`;				
+				select $brushName;
+			}
+			string $eJoint;
+			if (`objExists $eJointName` == 0){				
+				$eJoint = `joint -p $eX $eY $eZ -n $eJointName`;
+				
+			}			 
+			select -r $eJoint;
+			select -add $sJoint;				
+			parent ;
+			
+			if ($step == 0){
+				select -r $sJoint;
+				if (`objExists ($brushName + "BMesh")` == 0){
+					string $bmesh = python ("bmesh_SOuP().create()");
+					string $bmeshNode = `rename $bmesh ($brushName + "BMesh")` ; 
+					
+					string $bmeshMesh[] = smartSelectObjectsOfType({$bmeshNode}, "-type mesh");
+					string $tr[] = `listTransforms $bmeshMesh[0]`;
+					string $bmeshMeshObj = `rename $tr[0] ($brushName + "BMeshMesh")`;
+					
+				}				
+			}
+			
+			if (`attributeExists "bmeshRadius" $sJoint`){
+				setAttr ($sJoint + ".bmeshRadius") $startWidth;
+			} else {
+				setAttr ($sJoint + ".radius") $startWidth;
+			}
+			
+			if (`attributeExists "bmeshRadius" $eJoint`){
+				setAttr ($eJoint + ".bmeshRadius") $endWidth;
+			} else {
+				setAttr ($eJoint + ".radius") $endWidth;
+			}
+			
+			
+		}
+		
+		/*
+			setAttr ($brushName + ".refreshBMesh") 0;
+		
+			}
+		}
+		*/
+		
+		
+		/*
+		select -cl;
+		string $endJoint = `joint -p $eX $eY $eZ -n ($brushName + "Joint_" + $sX + $sY + $sZ)`;
+		select -r $endJoint;
+		select -add $newJoint;
+		parent ;
+		*/
+
+		
+
+		
+		/*
+		string $brushJoints[] = `ls ("*" + $brushName + "Joint*")`;
+		string $nameMatch = ($brushName + "Joint_" + $sX + $sY + $sZ);
+		$nameMatch = substituteAllString($nameMatch, ".", "_");
+		$nameMatch = substituteAllString($nameMatch, "-", "_");
+		//print ("Name Match : " + $nameMatch);
+		for ($i=0;$i<`size $brushJoints`;$i++){
+			if ($brushJoints[$i] == $nameMatch){
+				print ("Name Match : " + $nameMatch);
+				select -r $newJoint;
+				select -add $nameMatch;
+				
+				parent ;
+			}
+			
+		}
+		*/
+		//global string $lastBrushJoint;
+		//$lastBrushJoint = $newJoint;
+		/*
+		
+		if ($siblingCnt >= 2){
+			//int $parentId = ((int($locId)) - ((int($branchId)) + ((int($siblingCnt)) - 1)));
+			//select -r ($brushName + "Joint" + $parentId);
+			select -r $lastBrushJoint;
+			select -add ($brushName + "Joint" + $locId);
+			parent ;
+		}
+		*/
+	}
+	
+	/*
+	string $slName = ($brushName + "_Start_" + $locId);
+	string $sl[] = `spaceLocator -n $slName`;
+	
+	xform -ws -t $sX $sY $sZ $sl[0];	
+	//annotate -tx $tubeInfo -p $sX $sY $sZ $sl[0];
+
+
+	string $elName = ($brushName + "_End_" + $locId);
+	string $el[] = `spaceLocator -n $elName`;
+	xform -ws -t $eX $eY $eZ $elName;
+	//annotate -tx $tubeInfo -p $eX $eY $eZ $el[0];
+	
+	select -r $slName;
+	select -add $elName;
+	group -n ($slName + $elName);
+	*/
+	
+	select -r $brushName;
+
+	// We set the outputs for the current segment.
+	// Note that all these values must be set here, not
+	// only the modified ones.
+    $tubes[0] = 1; // 1 indicates that we have modified the segment 
+	$tubes[1] = $tubeType; 
+	$tubes[2] = $segments; 
+	$tubes[3] = $remainingSegments; // set this to zero to terminate a tube
+	$tubes[4] = $sX;
+	$tubes[5] = $sY;
+	$tubes[6] = $sZ;
+	$tubes[7] = $eX;
+	$tubes[8] = $eY;
+	$tubes[9] = $eZ;
+	$tubes[10] = $endWidth;
+	$tubes[11] = $segmentLength;
+	$tubes[12] = $flatness;
+	$tubes[13] = $twistX;
+	$tubes[14] = $twistY;
+	$tubes[15] = $twistZ;
+	$tubes[16] = $colorR;
+	$tubes[17] = $colorG;
+	$tubes[18] = $colorB;
+	$tubes[19] = $transparencyR;
+	$tubes[20] = $transparencyG;
+	$tubes[21] = $transparencyB;
+	$tubes[22] = $incandescenceR;
+	$tubes[23] = $incandescenceG;
+	$tubes[24] = $incandescenceB;
+   
+    return( $tubes );
+
+}
+
+/*
+global proc float []
+wizPaintRuntimeFunc(
+
+// current segment count on base brushstroke
+int	  $step,
+// this next variable is true if this is the first segment created 
+int   $isStartTube,
+
+// The following 3 vectors define a coordinate system
+// for the brushstroke, in a similar fashion to a matrix
+// One can use them to create forces and offsets that
+// are in the "brushstroke space"
+// Unlike a normal coordinate frame, these vectors change
+// along the brushstroke, and will mirror any deformations to
+// the base brushstroke( or curve on surface ).
+
+// vector in direction of brushstroke 
+float $vX, float $vY, float $vZ,
+// surface normal at current brushstroke segment
+float $nX, float $nY, float $nZ,
+// vector across direction of brushstroke ( crossProduct of v and n above )
+float $uX, float $uY, float $uZ,
+
+// a random seed that is unique for this tube 
+int   $randSeed,
+
+// the growth section: 0 branch, 1 twig, 2 leaf, 3 flower
+int	  $tubeType,	
+
+int	  $maxSegments,		// the number of segments the longest tubes have	
+int	  $segments,		// the number of segments this tube has	
+int	  $remainingSegments, // the number of segments yet to be created	
+int	  $branchDepth,		// The branching level this segment is on( 0 is the base )
+int   $branchId,        // Index for the segment, each segment on each level is unique (0..n)
+int   $parentId,        // BranchID for the parent of this segment
+int   $siblingCnt,      // The number of sibling segments at this level, n-1
+
+// the start and end points of the current tube segment in worldspace
+float $sX, float $sY, float $sZ,	     
+float $eX, float $eY, float $eZ,	     
+
+// the current length per segment
+float $segmentLength,
+
+// the start and end widths of the current tube segment in worldspace
+float $startWidth, float $endWidth,
+
+float $flatness, // current flatness of tube
+// current twist vector perpendicular to tube segment
+float $twistX, float $twistY, float $twistZ,
+
+// color, transparency, and incandescence of current tube segment
+float $colorR, float $colorG, float $colorB,
+float $transparencyR, float $transparencyG, float $transparencyB,
+float $incandescenceR, float $incandescenceG, float $incandescenceB,
+                                                                                            
+// name of brush and stroke
+string $brushName, string $strokeName
+)
+{
+	string $locId = ($tubeType + $step + $isStartTube + $branchDepth + $branchId + $parentId + $siblingCnt + $remainingSegments);
+	if ( $tubeType == 2 )
+	{
+	
+	}
+    float $tubes[];
+	float $dir[3];
+	int   $i, $j;
+
+	if( $tubeType == 3 )
+	{
+		// we don't apply the noise to flowers so return here
+		// The first element of $tubes must be zero on an early return
+		$tubes[0] = 0;
+		return( $tubes );
+	}
+	
+	if( $tubeType == 1 )
+	{
+		print ("======= TWIG =======\n\n");
+
+		print ("TubeType : " + $tubeType + "\n");
+		print ("Step : " + $step + "\n");
+		print ("IsStartTube : " + $isStartTube + "\n");
+		print ("MaxSegments : " + $maxSegments + "\n");
+		print ("Segments : " + $segments + "\n");
+		print ("RemainingSegments : " + $remainingSegments + "\n");
+		print ("BranchDepth : " + $branchDepth + "\n");
+		print ("BranchID : " + $branchId + "\n");
+		print ("ParentID : " + $parentId + "\n");
+		print ("SiblingCount : " + $siblingCnt + "\n");
+
+	}
+	// We seed the rand function so that the tubes generated do
+	// not change every time they are drawn. The passed in
+	// seed is unique for each tube. We add $remainingSegments to it
+	// so that it will be different for each segment.
+	seed( $randSeed + $remainingSegments * 1000 );
+	rand(1);
+
+	
+	if( $tubeType == 1)
+	{
+		string $slName = ($brushName + "_TwigLocator_Start_" + $locId);
+		string $sl[] = `spaceLocator -n $slName`;
+
+		xform -ws -t $sX $sY $sZ $slName;
+		
+		
+		string $elName = ($brushName + "_LeafLocator_End_" + $locId);
+		string $el[] = `spaceLocator -n $elName`;
+
+		xform -ws -t $eX $eY $eZ $elName;
+	}
+
+	if( $tubeType == 2 )
+	{
+		$eY -= $segmentLength * .25; // curve leaves downward
+	}
+	else
+	{
+		// add a random worldspace offset relative to the segment length
+		$eX += rand( -1,1 )*$segmentLength;
+		$eY += rand( -1,1 )*$segmentLength;
+		$eZ += rand( -1,1 )*$segmentLength;
+	}
+	
+	// do a random scale of the segment brightness for branches
+	if( $tubeType == 0 )
+	{
+
+		float $crand = rand( 1 );
+		$colorR = $crand;
+		$colorG = $crand;
+		$colorB = $crand;
+	}
+
+	// We set the outputs for the current segment.
+	// Note that all these values must be set here, not
+	// only the modified ones.
+    $tubes[0] = 1; // 1 indicates that we have modified the segment 
+	$tubes[1] = $tubeType; 
+	$tubes[2] = $segments; 
+	$tubes[3] = $remainingSegments; // set this to zero to terminate a tube
+	$tubes[4] = $sX;
+	$tubes[5] = $sY;
+	$tubes[6] = $sZ;
+	$tubes[7] = $eX;
+	$tubes[8] = $eY;
+	$tubes[9] = $eZ;
+	$tubes[10] = $endWidth;
+	$tubes[11] = $segmentLength;
+	$tubes[12] = $flatness;
+	$tubes[13] = $twistX;
+	$tubes[14] = $twistY;
+	$tubes[15] = $twistZ;
+	$tubes[16] = $colorR;
+	$tubes[17] = $colorG;
+	$tubes[18] = $colorB;
+	$tubes[19] = $transparencyR;
+	$tubes[20] = $transparencyG;
+	$tubes[21] = $transparencyB;
+	$tubes[22] = $incandescenceR;
+	$tubes[23] = $incandescenceG;
+	$tubes[24] = $incandescenceB;
+
+// If you are not interested in branching off new
+// tubes you can replace the rest of this routine with:
+// 	$tubes[25] = 0;
+// 	return( $tubes );
+// }
+
+
+	// If we are the first segment of the tube
+	// then continue to create 2 simple leaves, otherwise
+	// we simply return here.
+	if( !$isStartTube )
+	{
+		$tubes[25] = 0; // no new tubes
+		return( $tubes );
+	}
+
+
+	float $leafStartWidth = $startWidth * 3;
+	float $leafEndWidth = $startWidth * .5;
+	int   $numSegments = 10;
+
+	$tubes[25] = 2; // create 2 leaves
+    for( $i = 0; $i < 2; $i++ )
+    {
+		if( $i == 0 )
+		{
+			// one leaf goes one way..
+			$dir[0] = ($uX + $nX) * .5;
+			$dir[1] = ($uY + $nY) * .5;
+			$dir[2] = ($uZ + $nZ) * .5;
+		}
+		else
+		{
+			// the other leaf goes the other way
+			$dir[0] = (-$uX + $nX) * .5;
+			$dir[1] = (-$uY + $nY) * .5;
+			$dir[2] = (-$uZ + $nZ) * .5;
+		}
+
+		// there are 25 base parameters for the modified segment
+		// and 36 parameters used to create a new tube:
+		$j = 25  + $i * 36;
+
+		// fill out the array tubes for each new tube
+        $tubes[$j+1] = 2; // type: 0 branch, 1 twig, 2 leaf, 3 flower
+        $tubes[$j+2] = $randSeed++; // seed to use for noise,etc on tube
+        $tubes[$j+3] = $numSegments; // max segments for tubes
+		$tubes[$j+4] = $numSegments; // segments for this tube
+
+		$tubes[$j+5] = $eX; // start position of tube( x,y,z)
+		$tubes[$j+6] = $eY;
+		$tubes[$j+7] = $eZ;
+
+		// make the leaves 4 times as long as they are wide
+		$tubes[$j+8] = ($leafStartWidth * 4)/$numSegments; // length per segment
+
+		$tubes[$j+9] = $dir[0]; // start direction of tube( x,y,z ) 
+		$tubes[$j+10] = $dir[1];
+		$tubes[$j+11] = $dir[2];
+
+		$tubes[$j+12] = $leafStartWidth; // width of tube
+
+		// change in width each segment 
+		$tubes[$j+13] = ($leafEndWidth-$leafStartWidth)/$numSegments;
+
+		$tubes[$j+14] = $twistX;       // twist Vector (x,y,z)  
+		$tubes[$j+15] = $twistY;  
+		$tubes[$j+16] = $twistZ; 
+		$tubes[$j+17] = 0.0;        // spiral along tube 
+		$tubes[$j+18] = .9;		  // flatness
+
+		$tubes[$j+19] = .2;	  // start color( r,g,b )
+		$tubes[$j+20] = .5;	
+		$tubes[$j+21] = .4;	
+
+		 // change in color each segment( r,g,b)
+		$tubes[$j+22] = 0;	
+		$tubes[$j+23] = 0;	
+		$tubes[$j+24] = 0;	
+
+		$tubes[$j+25] = 0; // start transparency( r,g,b )
+		$tubes[$j+26] = 0;	
+		$tubes[$j+27] = 0;	
+		$tubes[$j+28] = 0; // change in transparency each segment( r,g,b)
+		$tubes[$j+29] = 0;	
+		$tubes[$j+30] = 0;	
+
+		$tubes[$j+31] = 0; // start incandescence( r,g,b )
+		$tubes[$j+32] = 0;	
+		$tubes[$j+33] = 0;	
+		$tubes[$j+34] = 0; // change in incandescence each segment( r,g,b)
+		$tubes[$j+35] = 0;	
+		$tubes[$j+36] = 0;	
+    }
+    return( $tubes );
+
+}
+*/
+
+
+global proc float []
+wizTestPaintRuntimeFunc(
+int	  $step,
+int   $isStartTube,
+float $vX, float $vY, float $vZ,
+float $nX, float $nY, float $nZ,
+float $uX, float $uY, float $uZ,
+int   $randSeed,
+int	  $tubeType,
+int	  $maxSegments,	
+int	  $segments,
+int	  $remainingSegments,
+int	  $branchDepth,	
+int   $branchId,
+int   $parentId,        
+int   $siblingCnt,     
+float $sX, float $sY, float $sZ,	     
+float $eX, float $eY, float $eZ,	     
+float $segmentLength,
+float $startWidth, float $endWidth,
+float $flatness,
+float $twistX, float $twistY, float $twistZ,
+float $colorR, float $colorG, float $colorB,
+float $transparencyR, float $transparencyG, float $transparencyB,
+float $incandescenceR, float $incandescenceG, float $incandescenceB,
+string $brushName, string $strokeName
+)
+{
+	float $tubes[];
+
+	global int $paintTubeSerialNum;
+	
+	string $tubeInfo = (
+	"TubeType : " + $tubeType + " - "
+	+"Step : " + $step + " - "
+	+"IsStartTube : " + $isStartTube + " - "
+	+"MaxSegments : " + $maxSegments + " - "
+	+"Segments : " + $segments + " - "
+	+"RemainingSegments : " + $remainingSegments + " - "
+	+"BranchDepth : " + $branchDepth + " - "
+	+"BranchID : " + $branchId + " - "
+	+"SiblingCount : " + $siblingCnt + " - "
+	+"ParentID : " + $parentId + " - "
+	+"SerialNum : " + $paintTubeSerialNum + " - "
+	+"StartWidth : " + $startWidth + " - EndWidth : " + $endWidth
+	//+"Start Point : " + $sX + " " + $sY + " " + $sZ + " - End Point : " + $eX + " " + $eY + " " + $eZ
+	);
+	
+	if ($step == 0){
+		$paintTubeSerialNum = 0;
+	}
+	
+	string $slName = ($brushName + "_Start_" + $paintTubeSerialNum);
+	string $sl[] = `spaceLocator -n $slName`;	
+	xform -ws -t $sX $sY $sZ $sl[0];	
+	addNotesToObject($slName,$tubeInfo);
+	//setAttr ($sl[0] + ".notes") $tubeInfo;
+	//annotate -tx $tubeInfo -p $sX $sY $sZ $sl[0];
+
+
+	string $elName = ($brushName + "_End_" + $paintTubeSerialNum);
+	string $el[] = `spaceLocator -n $elName`;
+	xform -ws -t $eX $eY $eZ $elName;
+	//setAttr ($el[0] + ".notes") $tubeInfo;
+	addNotesToObject($elName,$tubeInfo);
+	//annotate -tx $tubeInfo -p $eX $eY $eZ $el[0];
+	
+	select -r $slName;
+	select -add $elName;
+	//group -n ($slName + $elName);
+	
+	$paintTubeSerialNum++;
+	
+	select -r $brushName;
+	
+	// We set the outputs for the current segment.
+	// Note that all these values must be set here, not
+	// only the modified ones.
+    $tubes[0] = 1; // 1 indicates that we have modified the segment 
+	$tubes[1] = $tubeType; 
+	$tubes[2] = $segments; 
+	$tubes[3] = $remainingSegments; // set this to zero to terminate a tube
+	$tubes[4] = $sX;
+	$tubes[5] = $sY;
+	$tubes[6] = $sZ;
+	$tubes[7] = $eX;
+	$tubes[8] = $eY;
+	$tubes[9] = $eZ;
+	$tubes[10] = $endWidth;
+	$tubes[11] = $segmentLength;
+	$tubes[12] = $flatness;
+	$tubes[13] = $twistX;
+	$tubes[14] = $twistY;
+	$tubes[15] = $twistZ;
+	$tubes[16] = $colorR;
+	$tubes[17] = $colorG;
+	$tubes[18] = $colorB;
+	$tubes[19] = $transparencyR;
+	$tubes[20] = $transparencyG;
+	$tubes[21] = $transparencyB;
+	$tubes[22] = $incandescenceR;
+	$tubes[23] = $incandescenceG;
+	$tubes[24] = $incandescenceB;   
+    return( $tubes );
+
+}

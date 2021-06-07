@@ -1,0 +1,510 @@
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//|||||||||||||||||||||||||:::WIZ:::||||||||||||||||||||||||||||||||||
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+/*====================================================================
+Author: Glen Johnson
+Email: plasticarm@gmail.com
+Website: plasticarm.com / hrpictures.com
+----------------------------------------------------------
+Summary:
+
+
+
+====================================================================*/
+
+global int $WIZ_fullDomeCameraHudButton;
+
+global proc cameraWiz()
+{
+	//fullDomeCameraWizHudMenu();
+	cameraWizDock();
+}
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			WINDOW
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+
+global proc cameraWizDock()
+{
+	int $floating = 0;
+	
+	if(`optionVar -exists WIZ_fullDomeCameraWizFloatingState`){
+		$floating = `optionVar -q WIZ_fullDomeCameraWizFloatingState`;
+	} else{
+		optionVar -intValue WIZ_fullDomeCameraWizFloatingState $floating;
+	}
+	
+	string $window = "CameraWiz";
+	string $dock = "CameraWiz";
+	
+	if(`window -exists $window` == 1){ 
+		deleteUI $window;
+	}
+	
+	if(`dockControl -exists $dock` == 1){ 
+		deleteUI $dock;
+	}
+	
+	window -title "Camera Wiz" -s 0 -rtf 1 -in "CameraWiz" -mnb 1 -mxb 1 $window;	
+	
+	cameraWizLayout();
+
+	setParent..;
+	
+	dockControl
+		-label "CameraWiz"
+		-content $window
+		-floating $floating
+		-floatChangeCommand "cameraWizFloatStateSwitch"
+		-area "right"
+		-allowedArea "left"
+		-allowedArea "right"
+		$dock
+		;
+	
+	//dockControl  -area "right" -allowedArea "right" -label "Ninja Rename" -w 300 -content WizRenameUI WizRename_Dock ;
+
+	//showWindow $window;
+
+}
+
+global proc cameraWizFloatStateSwitch()
+{
+	if ( `optionVar -q WIZ_fullDomeCameraWizFloatingState` == 1 )
+		optionVar -intValue WIZ_fullDomeCameraWizFloatingState 0;
+	else
+		optionVar -intValue WIZ_fullDomeCameraWizFloatingState 1;
+}
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			LAYOUTS
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+
+global proc cameraWizLayout()
+{
+	frameLayout -bv false -lv false cameraWizFrameLayout;
+	columnLayout ;
+	
+	button
+		-l "Refresh Viewport FullDome"
+		-c ("updateFullDomeViewport();")
+		cameraWizRefreshViewportFullDome
+		;	
+		
+	button
+		-l "Render To Planetarium Player"
+		-c ("renderToPlanetarium();")
+		cameraWizRenderToPlanetariumPlayer
+		;	
+	
+	button
+		-l "Dome Lense"
+		-c ("setWizCameraLense(\"dome\");")
+		cameraWizRenderToPlanetariumPlayer
+		;	
+	
+}
+
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			MENUS
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+
+global proc togglePivotAsLocalSpaceOnAllCameras()
+{
+	string $cameras[] = `ls -ca`;
+	int $i = 0;
+	for($i=0;$i<`size $cameras`;$i++){
+		int $up = 0;
+		$up = `getAttr ($cameras[$i] + ".usePivotAsLocalSpace")`;
+		if($up == 1){
+			setAttr ($cameras[$i] + ".usePivotAsLocalSpace") 0;
+		} else {
+			setAttr ($cameras[$i] + ".usePivotAsLocalSpace") 1;
+		}
+	}
+}
+
+global proc turnOffPivotAsLocalSpaceOnAllCameras()
+{
+	string $cameras[] = `ls -ca`;
+	int $i = 0;
+	for($i=0;$i<`size $cameras`;$i++){
+		setAttr ($cameras[$i] + ".usePivotAsLocalSpace") 0;
+	}
+}
+
+global proc turnOnPivotAsLocalSpaceOnAllCameras()
+{
+	string $cameras[] = `ls -ca`;
+	int $i = 0;
+	for($i=0;$i<`size $cameras`;$i++){
+		setAttr ($cameras[$i] + ".usePivotAsLocalSpace") 1;
+	}
+}
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			FUNCTIONS
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+
+//CURRENT CAMERA SCRIPT JOB
+//=====================================================================================================	
+
+global int $WIZ_currentCameraAttachmentScriptJob;
+
+global proc setWizCameraLense( string $lense )
+{
+	switch($lense){
+		case "dome" :
+		connectFullDomeCameraLensePerOS();
+		break;
+		
+		case "fisheye" : 
+		
+		break;
+	}
+}
+
+global proc currentCameraAttachmentMenuItems()
+{
+	
+	menuItem -l "Run Current Camera Attachment Script Job" -cb false -c ("startCurrentCameraAttachmentScriptJob();") runCurrentCameraAttachmentScriptJobMenuItem;
+	
+}
+
+
+
+global proc toggleCurrentCameraAttachmentScriptJob()
+{
+	int $enabled = `menuItem -q -v runCurrentCameraAttachmentScriptJobMenuItem`;
+	if($enabled){
+		stopCurrentCameraAttachmentScriptJob();	
+	} else {
+		startCurrentCameraAttachmentScriptJob();
+	}
+}
+
+//START CURRENT CAMERA ATTACHMENT SCRIPT JOB
+//===================================================
+global proc startCurrentCameraAttachmentScriptJob()
+{
+	menuItem -e -cb true toggleGetWizCurrentCameraEvalMenuItem;
+	string $script = ("updateCurrentCameraAttachment();");
+	int $id = `scriptJob -e "modelEditorChanged" $script`;
+	global int $WIZ_currentCameraAttachmentScriptJob;
+	$WIZ_currentCameraAttachmentScriptJob = $id;
+}
+
+global proc stopCurrentCameraAttachmentScriptJob()
+{
+	global int $WIZ_currentCameraAttachmentScriptJob;
+	if($WIZ_currentCameraAttachmentScriptJob != 0){
+		scriptJob -k $WIZ_currentCameraAttachmentScriptJob;
+		menuItem -e -cb false toggleGetWizCurrentCameraEvalMenuItem;
+	}
+	
+}
+
+//UPDATE CURRENT CAMERA ATTACHMENT
+//===================================================
+global proc updateCurrentCameraAttachment()
+{
+	
+	string $cca = "CurrentCameraAttachment";
+	string $ccapc = "CurrentCameraParentConstraint";
+	if(`objExists $cca` == 0){
+		spaceLocator -n $cca;
+		string $notes = (
+		"CURRENT CAMERA ATTACHMENT<br>"
+		+"------------------------------------<br>"
+		+"To Enable GoTo - WIZ / Transform / Run Current Camera Attachment Script Job"
+		+"When the Current Camera Attachment Script Job is running the locator named - CurrentCameraAttachment"
+		+" - Will automatically be attached (parent constrained) To the Active Viewport Camera<br>"
+		+"Parent Constrain whatever you may need to be constrained to the current camera<br>"
+		);
+		setAttr ($cca + ".notes") -type "string" $notes;
+		
+	}
+	//string $cc = getCurrentCamera();
+	string $cc = getWizCurrentCamera();
+	if(`objExists $ccapc` == 0){
+		parentConstraint -n $ccapc $cc $cca;	
+	} else {
+		delete $ccapc;
+		parentConstraint -n $ccapc $cc $cca;
+	}
+	
+	print("WIZ| Switching Current Camera To: " + $cc + "\n");
+}
+
+global proc connectFullDomeCameraLensePerOS()
+{
+	string $os = `about -os`;
+
+	if ($os == "mac"){
+		if(`isConnected MACdomeAFL_FOV.message MainCameraShape.miLensShader` == 0){
+			connectAttr -force MACdomeAFL_FOV.message.message MainCameraShape.miLensShader;
+			print("WIZ| FULL DOME CAMERA SET TO OS - FullDomeCamera : OS : MAC : MACdomeAFL_FOV" + "\n");
+		} else {
+			print("WIZ| FULL DOME CAMERA ALREADY SET TO OS - FullDomeCamera : OS : MAC : MACdomeAFL_FOV" + "\n");
+		}
+	} else if($os == "nt" || $os == "win64"){
+		if(`isConnected WINDome_FOV.message MainCameraShape.miLensShader` == 1){
+			connectAttr -force WINDome_FOV.message MainCameraShape.miLensShader;
+			print("WIZ| FULL DOME CAMERA SET TO OS - FullDomeCamera : OS : PC : PCDome_FOV1" + "\n");
+		} else {
+			print("WIZ| FULL DOME CAMERA ALREADY SET TO OS - FullDomeCamera : OS : PC : PCDome_FOV1" + "\n");
+		}
+	} else if($os == "linux" || $os == "linux64"){
+		print("WIZ| WHAT?\n YOU ARE ON LINUX?\n WHO THE FUCK ARE YOU?\n You are going to have to do something else before you can use the full dome camera!" + "\n");
+	}
+	
+}
+
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			CLIPPING PLANES
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+
+global proc wizClipPlanesSize(int $size)
+{
+	
+	switch($size){
+		case 0 :
+		setAllCamerasClipPlanes(0.001, 100.0);
+		break;
+		
+		case 1 :
+		setAllCamerasClipPlanes(0.01, 1000.0);
+		break;
+		
+		case 2 :
+		setAllCamerasClipPlanes(0.1, 100000.0);
+		break;
+		
+		case 3 :
+		setAllCamerasClipPlanes(1, 10000000.0);
+		break;
+		
+		case 4 :
+		setAllCamerasClipPlanes(10, 1000000000.0);
+		break;
+		
+		case 5 :
+		setAllCamerasClipPlanes(100, 100000000000.0);
+		break;
+		
+		case 6 :
+		setAllCamerasClipPlanes(0.1, 100000000.0);
+		break;
+	}
+}
+
+global proc setAllCamerasClipPlanes(float $near, float $far)
+{
+	string $cams[] = `ls -ca`;
+	for($i=0;$i<`size $cams`;$i++){
+		//catchQuiet(`setAttr ($cams[$i] + ".nearClipPlane") $near;`);	
+		//catchQuiet(`setAttr ($cams[$i] + ".farClipPlane") $far;`);	
+		setAttr ($cams[$i] + ".nearClipPlane") $near;	
+		setAttr ($cams[$i] + ".farClipPlane") $far;	
+	}
+}
+
+//ARCHIVE
+/*
+
+global proc fullDomeViewportModelEditorWindow()
+{
+		//    Create a window with a model editor and some buttons that
+	//    change the editor's display of objects in the scene.
+	//
+	string $cam = "FullDomeViewportCamera";
+	string $fdViewportWindow = "fullDomeViewportWindow";
+
+	if(`window -exists $fdViewportWindow`){
+		deleteUI $fdViewportWindow;
+	}
+	
+	string $winTitle = "Full Dome Viewport View";
+	
+	string $window = `window
+		-t $winTitle		
+		-w 512
+		-h 512
+		-s true
+		$fdViewportWindow
+		`;
+		
+	menuBarLayout;
+	
+	menu -l "Options";
+		menuItem -l "Update Full Dome View" -c ("updateFullDomeViewport();");
+		menuItem -cb true -l "Auto Refresh Full Dome View";
+		
+	
+	string $form = `formLayout
+		-bgc 0 0 0
+		fdvForm
+		`;	
+	
+	string $pane = `paneLayout
+		-w 512
+		-h 512
+		fdvPaneLayout
+		`;
+	
+	string $mp = `modelPanel
+		-mbv false
+		-cam $cam
+		-p $pane
+		`;
+		
+	setParent $form;
+	
+	//string $editor = `modelEditor`;
+	
+	//modelPanel -e -cam $cam $mp;
+	
+	/*
+	string $column = `columnLayout -adjustableColumn true`;
+
+
+	//    Create some buttons that will alter the display appearance of
+	//    objects in the model editor, eg. wireframe vs. shaded mode.
+	//
+	int $h = 20;
+	int $w = 100;
+	button -label "Wireframe"
+		-w $w
+		-h $h
+		-command ("modelEditor -edit -displayAppearance wireframe " + $editor);
+	button -label "Points"
+		-w $w
+		-h $h
+		-command ("modelEditor -edit -displayAppearance points " + $editor);
+	button -label "Bounding Box"
+		-w $w
+		-h $h
+		-command ("modelEditor -edit -displayAppearance boundingBox " + $editor);
+	button -label "Smooth Shaded"
+		-w $w
+		-h $h
+		-command ("modelEditor -edit -displayAppearance smoothShaded " + $editor);
+	button -label "Flat Shaded"
+		-w $w
+		-h $h
+		-command ("modelEditor -edit -displayAppearance flatShaded " + $editor);
+	button -label "Textures"
+		-w $w
+		-h $h
+		-command ("modelEditor -edit -dtx true" + $editor);
+	button
+		-l "All Lights On"
+		-w $w
+		-h $h
+		-c ("modelEditor -edit -dl \"all\"" + $editor)
+		;
+	button
+		-l "All Lights Off"
+		-w $w
+		-h $h
+		-c ("modelEditor -edit -dl \"none\"" + $editor)
+		;	
+
+	//    Set up the window layout attachments.
+	//
+	
+	// tear off panel
+	// tearOffCopyItemCmd modelPanel modelPanel4;
+	
+	formLayout -edit
+		-attachForm    $column "top"    0
+		-attachForm    $column "left"   0
+		-attachNone    $column "bottom"
+		-attachNone    $column "right"
+		-attachForm    $editor "top"    0
+		-attachControl $editor "left"   0 $column
+		-attachForm    $editor "bottom" 0
+		-attachForm    $editor "right"  0
+		$form
+		;
+
+		*/
+	//    Create a camera for the editor.  This particular camera will
+	//    have a close up perspective view of the centre of the ground plane.
+	//
+
+	//select -r "FullDomeViewportCamera";
+
+		
+	//    Attach the camera to the model editor.
+	//
+	
+	/*
+	modelEditor
+		-edit
+		-camera	$cam
+		-dl "all"
+		-sel false
+		-udm false		
+		$editor;
+
+	showWindow $window;
+	  
+
+	string $fdViewportWindow = "fullDomeViewportWindow";
+
+	if(`window -exists $fdViewportWindow`){
+		deleteUI $fdViewportWindow;
+	}
+	
+	string $winTitle = "Full Dome Viewport View";
+	
+	string $window = `window
+		-t $winTitle
+		-s false
+		-w 612
+		-h 512
+		$fdViewportWindow
+		`;
+		
+	paneLayout;
+	string $mp = `modelPanel` ;
+	modelPanel -e -cam "FullDomeViewportCamera" ;
+	
+	showWindow $window;
+	*/
+	  /*
+	string $window = `window
+	-t "Full Dome Viewport View"
+	-s false
+	-w 612
+	-h 512
+	fullDomeViewportWindow
+	`;  
+	tearOffCopyItemCmd modelPanel modelPanel4;
+	string $mp = "fdvModelPanel";
+	createModelPanelMenu $mp;
+	ModelEdMenu  $mp;
+	updateModelPanelBar $mp;
+	showWindow fullDomeViewportWindow;
+
+}
+*/
+
+global proc fitWizCamerasToViewSelectedObject( )
+{
+    string $sel[] = `ls -sl`;
+    
+}

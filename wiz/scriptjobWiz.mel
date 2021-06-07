@@ -1,0 +1,117 @@
+
+global proc scriptJobWizLayout(string $parent)
+{
+	string $layout = `frameLayout
+		-l "Script Job Wiz"	
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $parent
+		`;
+			
+	scriptJobBuilderLayout($layout);
+	
+		
+}
+
+global proc scriptJobBuilderLayout(string $parent)
+{
+	
+	string $events[] = `scriptJob -le`;
+	
+/*
+	string $eOMGcc = (
+	"string $event = `textFieldGrp -q -tx scriptJobBuilderCommandTextFieldGrp`;" + "\n"
+	+"string $print = (\"print(\" - \"" + $event + \"" - \");\"" + "\n"
+	+"textFieldGrp -e -tx $print scriptJobBuilderCommandTextFieldGrp;" + "\n"
+	);
+	//"
+	*/
+	
+	string $eventsOMG = `optionMenuGrp
+		-l "Event"
+		scriptJobBuilderEventsOptionMenuGrp
+		//-cc $eOMGcc
+		`;	
+	
+	for($i=0;$i<`size $events`;$i++){
+		menuItem -l $events[$i] -p ($eventsOMG + "|OptionMenu");		
+	}
+
+
+		
+	
+	string $textField = `textFieldGrp
+		-l "Command"
+		-tx ("print(\"Time Changed - Script Job Triggered!\\n\");")
+		scriptJobBuilderCommandTextFieldGrp
+		`;		
+
+	button
+		-l "Start Script Job"
+		-c ("startScriptJobBuilderScriptJob();")
+		;
+	
+	
+}
+
+global proc startScriptJobBuilderScriptJob()
+{
+	string $event = `optionMenuGrp -q -v scriptJobBuilderEventsOptionMenuGrp`;
+	string $c = `textFieldGrp -q -tx scriptJobBuilderCommandTextFieldGrp`;
+	int $jn = `scriptJob -kws -e $event $c`;
+	
+	print("WIZ| ScriptJobBuilder : scriptJob -kws -e " + $event + " " + $c + ";\nJobNum: " + $jn + "\n");
+	
+}
+
+
+global proc string wizScriptJob( string $flags )
+{
+	string $tok[] = tokenizeString($flags, " ");
+	string $sj;
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+						
+			case "-asma" : case "-autoSaveMayaAscii" :
+			$sj = "scriptJob -kws -e SceneSaved (\"wizExport(\\\"-cd -cfn -type mayaAscii -ext ma\\\");\")";
+			break;
+		
+			
+		}
+	}
+	return "";
+}
+
+/*
+script node - before script
+
+int $jobNum = `scriptJob -kws -ct "renderLayerManagerChange" "setErosScale()"`;
+global int $WIZ_setErosScaleJobNum;
+$WIZ_setErosScaleJobNum = $jobNum;
+
+
+*/
+
+/*
+script node - before script
+
+int $jobNum = `scriptJob -kws -ac "mCamera.lenseShader" "setCameraLenseShader()"`;
+global int $WIZ_setLenseShaderJobNum;
+$WIZ_setLenseShaderJobNum = $jobNum;
+
+
+*/
+
+/*
+string $c = ("print(\"Script Job : glFrameTrigger!\\n\");");
+int $jn = `scriptJob -kws -e glFrameTrigger $c`;
+print($jn + "\n");
+*/

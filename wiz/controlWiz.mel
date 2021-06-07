@@ -1,0 +1,2433 @@
+global proc controlWiz()
+{
+	
+}
+
+//TEMPLETED CONTROLS
+//=============================================================================
+//TEXT
+//================================================================
+//WIZ TEXT
+//------------------------------------
+global proc wizText(string $label)
+{
+	text -al "left"	-ww true -l $label;
+}
+
+/*****************************************************************//**
+*	This adds a head text element with bold text.
+*
+*********************************************************************/
+//@ WIZ HEADER TEXT
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = wizHeaderText("A Header");
+	
+	</code>
+*********************************************************************/
+global proc wizHeaderText( string $flags )
+{
+	string $al;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-al" : case "-align" :
+			$al = $tok[($i + 1)];
+			break;
+			
+			case "-c" :
+			$al = "center";
+			break;
+			
+			case "-l" :
+			$al = "left";
+			break;
+			
+			case "-r" :
+			$al = "right";
+			break;
+		}
+	}
+	string $l = wizFlagStringTrail($flags);
+	
+	text
+    	-l $l
+    	-fn "boldLabelFont"
+    	-h 30
+    	-al $al
+    	;
+}
+
+//WIZ STANDARD TEXT
+//------------------------------------
+global proc string wizStandardText(string $label, string $name)
+{
+	/* USAGE:	 
+	string $text = wizStandardText("Label", "uniqueTextName_text");
+	*/
+	text
+		-al "left"
+		-ww true
+		-l $label
+		$name
+		;
+	return $name;
+}
+
+//BUTTONS
+//================================================================
+//STANDARD ACTION BUTTON
+//------------------------------------
+global proc string wizStandardActionButton(string $label, string $command, string $name)
+{
+	/*
+	USAGE: 
+	string $button = wizStandardActionButton("Label", "Command", "uniqueButtonName_button");
+	*/
+	float $bgc[] = getWizColor("doButtonColor");
+	button
+		-label $label
+		-bgc $bgc[0] $bgc[1] $bgc[2]
+		-command $command
+		$name
+		;	
+		
+	return $name;
+}
+
+//WIZ BUTTON
+//--------------------------------------
+global proc string wizButton(string $label, string $command, string $name, string $type)
+{
+	/* USAGE: 	
+	string $button = wizButton("Label", "Command", "uniqueButtonNameButton", "type");
+	*/
+	string $button = "button";
+	
+	float $bgc[];
+	int $resetBGC = 0;
+	
+	//The -fla tag is not supported in maya version < 2014
+	string $flat = " -fla false";
+	if(getApplicationVersionAsFloat() < 2014) {
+		$flat = "";
+	}
+	//Define the type and add some tags
+	switch($type){
+		case "options" :
+		$bgc = getWizColor("optionsButtonColor");
+		break;
+		
+		case "cancel" :
+		$bgc = getWizColor("cancelButtonColor");
+		break;
+		
+		case "danger" :
+		$bgc = getWizColor("dangerButtonColor");
+		break;
+		
+		case "action" :
+		$bgc = getWizColor("doButtonColor");
+		break;	
+		
+		case "help" :
+		$bgc = getWizColor("helpButtonColor");
+		break;	
+		
+		case "inspect" :
+		$button = "iconTextButton ";	
+		$button = $button + " -i \"wiz/inspect1.png\" -st \"iconAndTextHorizontal\" "+ $flat;
+		//$bgc = getWizColor("defaultGrey");
+		break;
+		
+		case "wizButton" :
+		$button = "iconTextButton ";	
+		$button = $button + " -i \"wiz/magicIcon1.png\" -st \"iconAndTextHorizontal\" "+ $flat;
+		break;
+		
+		case "manualProcess" :
+		$button = "iconTextButton ";	
+		$button = $button + " -i \"wiz/manualProcess1.png\" -st \"iconAndTextHorizontal\" "+ $flat;
+		//$bgc = getWizColor("defaultGrey");
+		break;
+		
+		case "cancelIconTextButton" :
+		$button = "iconTextButton ";	
+		$button = $button + " -i \"wiz/cancel1.png\" -st \"iconAndTextHorizontal\" "+ $flat;
+		break;
+		
+		case "exportIconTextButton" :
+		$button = "iconTextButton ";	
+		$button = $button + " -i \"wiz/export1.png\" -st \"iconAndTextHorizontal\" "+ $flat;
+		break;
+		
+		case "none" : case "generic" :
+		$bgcTag = "";
+		clear $bgc;
+		break;	
+		
+	}
+		
+	//Add the label
+	if($label != ""){
+		$button = $button + " -l " + "\"" + $label + "\"" + " ";
+	
+	}
+	
+	//Add back ground color
+	if(`size $bgc` > 0){
+		$button = $button + " -bgc " + $bgc[0] + " " + $bgc[1] + " " + $bgc[2];	
+	}
+	
+	//Add command
+	if($command != ""){ 
+		$button = $button + " -c " + "(\"" + $command + "\")";
+	}
+	
+	//Add name
+	if($name != ""){ 
+		$button = $button + " " + "\"" + $name + "\"" + ";";
+	} else {
+		string $bname = substituteAllString($label, " ", "");
+		$bname = $bname + "Button";
+		$button = $button + " " + "\"" + $bname + "\"" + ";";
+	}
+	
+	//Eval and create the button
+	$name = `eval($button)`;		
+	
+	return $name;
+}
+
+//EXECUTE ICON TEXT BUTTON
+//------------------------------------
+global proc string wizExecuteIconTextButton(string $label, string $command, string $name)
+{
+	/* USAGE: 	
+	string $button = wizStandardActionButton("Label", "Command", "uniqueButtonName_button");
+	*/
+	float $bgc[] = getWizColor("doButtonColor");
+	iconTextButton
+		-label $label
+		//-bgc $bgc[0] $bgc[1] $bgc[2]
+		//-olb 0 0 0 .25
+		//-style "iconAndTextHorizontal"
+		-style "iconAndTextHorizontal"
+		-image "wiz/CMD-Key-icon.png"
+		-command $command
+		$name
+		;	
+		
+	return $name;
+}
+
+//INT SLIDERS
+//====================================================================================
+//STANDARD INT SLIDER GRP
+//------------------------------------
+global proc string wizStandardIntSliderGrp(string $label, string $name)
+{
+	/* USAGE:	 
+	string $isg = wizStandardIntSliderGrp("Label", "uniqueIntSliderGrpName_intSliderGrp");
+	*/
+	string $name = `intSliderGrp 
+		-l $label 
+		-minValue 0		
+		-value 1 
+		-fmn 1
+		-fmx 10
+		-field true	
+		-adj 1
+		-cl3 "left" "left" "left"
+		$name			
+		`;
+		
+	return $name;
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//			MIN MAX SLIDERS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//FLOAT SLIDERS
+//====================================================================================
+//WIZ MIN MAX FLOAT SLIDERS
+//------------------------------------
+/*
+	This create two float sliders that prevent each other from going above or below each other
+	USAGE : 
+	string $fs2 = wizMinMaxFloatSliders("-l1 Min U -l2 Min V -min 0 -max 10 -pc1 posControl1 -pc2 posControl2 -v1 1 -v2 10 -cw3 150 50 90 -adj 3 -pre 2 -f 1 minMaxFloatSlider2");
+		
+*/
+global proc string wizMinMaxFloatSliders( string $tags )
+{
+	string $fs2Name;	
+	string $label, $label1, $label2, $pc1, $pc2, $cc1, $cc2;
+	float $min, $max, $fieldMin, $fieldMax, $v1, $v2;
+	int $pre = 1;
+	int $pol, $adj;
+	int $cw[];
+	int $f = 1;
+    
+    int $hasMin, $hasMax;
+    
+	//Break tags up to read them individually
+	string $tok[] = tokenizeString($tags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-l" : case "-label" :
+			$label = $tok[($i + 1)];
+			break;
+			case "-l1" : case "-label1" :
+			$label1 = getStringFromCurrentIndexToNextTagIndex($tok, ($i + 1));
+			break;
+			case "-l2" : case "-label2" :
+			$label2 = getStringFromCurrentIndexToNextTagIndex($tok, ($i + 1));
+			break;
+			case "-min" : case "-minValue" :
+			$min = float($tok[($i + 1)]);
+            $hasMin = 1;
+			break;
+			
+			case "-max" : case "-maxValue" :
+			$max = float($tok[($i + 1)]);
+            $hasMax = 1;
+			break;
+			
+			case "-pc1" : case "-positionControl1" : case "-fs1" :
+			$pc1 = $tok[($i + 1)];
+			break;
+			case "-pc2" : case "-positionControl2" : case "-fs2" :
+			$pc2 = $tok[($i + 1)];
+			break;
+			case "-v1" : case "-value1" :
+			$v1 = float($tok[($i + 1)]);
+			break;
+			case "-v2" : case "-value2" :
+			$v2 = float($tok[($i + 1)]);
+			break;
+			case "-pol" : case "-polarity" :
+			$pol = int($tok[($i + 1)]);
+			break;
+			case "-pre" : case "-precision" :
+			$pre = int($tok[($i + 1)]);
+			break;
+			case "-cw3" : 
+			$cw = { int($tok[($i + 1)]), int($tok[($i + 2)]), int($tok[($i + 3)]) };
+			$i = $i + 2;
+			break;
+			case "-adj" : 
+			$adj = int($tok[($i + 1)]);
+			break;
+			case "-f" : 
+			$f = int($tok[($i + 1)]);
+			break;
+		}
+		if ($i==(`size $tok` - 1)){
+			$fs2Name = $tok[$i];
+		}
+	}
+	/*
+	string $ff1 = `floatField
+		-min $min
+		-max $max
+		-v $v1 
+		$pc1			
+		`;
+	string $ff2 = `floatField
+		-min $min
+		-max $max
+		-v $v2 
+		$pc2				
+		`;	
+		
+	string $fs2 = `floatSlider2
+		-pc1 $ff1
+		-pc2 $ff2
+		-min $min
+		-max $max
+		-pol $pol
+		-cc1 $cc1
+		-cc2 $cc2
+		$fs2Name
+		`;
+	*/
+	string $dc = (
+	"float $fsv1 = `floatSliderGrp -q -v " + $pc1 + "`;"+"\n"
+	+"float $fsv2 = `floatSliderGrp -q -v " + $pc2 + "`;"+"\n"
+	+"if ($fsv2 <= $fsv1){"+"\n"
+	+"	$fsv2 = $fsv1 + 0.01;"+"\n"
+	+"	floatSliderGrp -e -v $fsv2 " + $pc2 + ";"+"\n"
+	+"}"+"\n"
+	);
+	
+	rowLayout
+		-nc 2
+		;
+		
+	string $fsgrp1 = `floatSliderGrp
+		-l $label1
+		-v $v1
+		-f $f
+		-pre $pre
+		-cal 1 "left"
+		-cw3 $cw[0] $cw[1] $cw[2]
+		-adj $adj
+		-cc $cc1
+		-dc $dc
+		$pc1
+		`;
+	   
+	string $fsgrp2 = `floatSliderGrp
+		-l $label2
+		-v $v2
+		-f $f
+		-pre $pre
+		-cal 1 "left"
+		-cw3 $cw[0] $cw[1] $cw[2]
+		-adj $adj
+		-cc $cc2
+		-dc $dc
+		$pc2
+		`;	
+	
+    
+    if ($hasMin == 1){
+        floatSliderGrp
+            -e
+            -min $min
+            $fsgrp1
+            ;
+            
+        floatSliderGrp
+            -e
+            -min $min
+            $fsgrp2
+            ;
+    } else {
+        floatSliderGrp
+            -e
+            -fmn -99999999.0
+            $fsgrp1
+            ;
+            
+        floatSliderGrp
+            -e
+            -fmn -99999999.0
+            $fsgrp2
+            ;
+    }
+    
+    if ($hasMax == 1){
+        floatSliderGrp
+            -e
+            -max $max
+            $fsgrp1
+            ;
+            
+        floatSliderGrp
+            -e
+            -max $max
+            $fsgrp2
+            ;
+    } else {
+        floatSliderGrp
+            -e
+            -fmx 9999999999.0
+            $fsgrp1
+            ;
+            
+        floatSliderGrp
+            -e
+            -fmx 9999999999.0
+            $fsgrp2
+            ;
+    }
+    
+	setParent..;
+	return "";
+	
+}
+
+//INT SLIDERS
+//====================================================================================
+//WIZ MIN MAX INT SLIDERS
+//------------------------------------
+/*======================| SUMMARY |===================================
+	This create two int sliders that prevent each other from going
+    above or below each other.
+    
+/*======================| USAGE |=====================================
+	string $minMaxUWaveSliders = (
+        "-l1 Min U Wave -l2 Max U Wave "
+        +"-min 0 -max 1 "
+        +"-is1 ranomizeRampsMinUWaveIntSliderGrp "
+        +"-is2 ranomizeRampsMaxUWaveIntSliderGrp "
+        +"-v1 1 -v2 10 "
+        +"-cw3 50 50 50 -adj 3 -f 1 "
+        +"ranomizeRampsMinMaxUWave");
+        
+    wizMinMaxIntSliders($minMaxUWaveSliders); 
+    
+====================================================================*/
+global proc string wizMinMaxIntSliders( string $tags )
+{
+	string $intSlidersName;	
+	string $label, $label1, $label2, $is1, $is2, $cc1, $cc2;
+	int $min, $max, $fieldMin, $fieldMax, $v1, $v2;
+    int $hasMin, $hasMax;
+	int $pre = 1;
+	int $pol, $adj;
+	int $cw[];
+	int $f = 1;
+	//Break tags up to read them individually
+	string $tok[] = tokenizeString($tags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-l" : case "-label" :
+			$label = $tok[($i + 1)];
+			break;
+			case "-l1" : case "-label1" :
+			$label1 = getStringFromCurrentIndexToNextTagIndex($tok, ($i + 1));
+			break;
+			case "-l2" : case "-label2" :
+			$label2 = getStringFromCurrentIndexToNextTagIndex($tok, ($i + 1));
+			break;			
+			case "-min" : case "-minValue" :
+			$min = int($tok[($i + 1)]);
+            $hasMin = 1;
+			break;
+			case "-max" : case "-maxValue" :
+			$max = int($tok[($i + 1)]);
+            $hasMax = 1;
+			break;
+			case "-is1" :
+			$is1 = $tok[($i + 1)];
+			break;
+			case "-is2" :
+			$is2 = $tok[($i + 1)];
+			break;
+			case "-v1" : case "-value1" :
+			$v1 = int($tok[($i + 1)]);
+			break;
+			case "-v2" : case "-value2" :
+			$v2 = int($tok[($i + 1)]);
+			break;	
+			case "-cw3" : 
+			$cw = { int($tok[($i + 1)]), int($tok[($i + 2)]), int($tok[($i + 3)]) };
+			$i = $i + 2;
+			break;
+			case "-adj" : 
+			$adj = int($tok[($i + 1)]);
+			break;
+			case "-f" : 
+			$f = int($tok[($i + 1)]);
+			break;
+		}
+		if ($i==(`size $tok` - 1)){
+			$intSlidersName = $tok[$i];
+		}
+	}
+	
+	string $dc = (
+	"float $isv1 = `intSliderGrp -q -v " + $is1 + "`;"+"\n"
+	+"float $isv2 = `intSliderGrp -q -v " + $is2 + "`;"+"\n"
+	+"if ($isv2 <= $isv1){"+"\n"
+	+"	$isv2 = $isv1 + 0.01;"+"\n"
+	+"	intSliderGrp -e -v $isv2 " + $is2 + ";"+"\n"
+	+"}"+"\n"
+	);
+	
+	rowLayout
+		-nc 2
+        ($intSlidersName + "RowLayout")
+		;
+		
+        string $fsgrp1 = `intSliderGrp
+            -l $label1
+            -v $v1
+            -f $f
+            -cal 1 "left"
+            -cw3 $cw[0] $cw[1] $cw[2]
+            -adj $adj
+            -cc $cc1
+            -dc $dc
+            $is1
+            `;
+		
+        
+        string $fsgrp2 = `intSliderGrp
+            -l $label2
+            -v $v2
+            -f $f
+            -cal 1 "left"
+            -cw3 $cw[0] $cw[1] $cw[2]
+            -adj $adj
+            -cc $cc2
+            -dc $dc
+            $is2
+            `;	
+	
+        if ($hasMin){
+            intSliderGrp
+                -e
+                -min $min
+                $fsgrp1
+                ;
+                
+            intSliderGrp
+                -e
+                -min $min
+                $fsgrp2
+                ;
+        }
+        if ($hasMax){
+            intSliderGrp
+                -e
+                -max $max
+                $fsgrp1
+                ;
+                
+            intSliderGrp
+                -e
+                -max $max
+                $fsgrp2
+                ;
+        }
+	setParent..;
+	return "";
+	
+}
+
+//TEXT FIELD BUTTONS
+//===================================================================================
+//STANDARD FILE TEXT FIELD BUTTON GRP
+//------------------------------------
+global proc string wizStandardFileTextFieldButtonGroup(string $label, string $name)
+{
+	/* USAGE: 	
+	string $tfbg = wizStandardFileTextFieldButtonGroup("Label", "uniqueNameTextFieldButtonGrp");
+	*/
+	string $tfbg = `textFieldButtonGrp
+		-l $label
+		-cal 1 "left"
+		-bl "Select"
+		-bc ("assignFileToTextFieldButtonGrp(" + "\"" + $name + "\"" + ")")
+		$name
+		`;
+		
+	return $tfbg;
+}
+
+//WIZ NEW FILE TEXT FIELD BUTTON GRP
+//------------------------------------
+//@ PROC NAME
+//====================================================================
+/*****************************************************************//**
+	Create a textFieldButtonGrp that is already configured to open a dialog
+	to select a new file.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-tag1 string] [-tag2 linear] <br>
+	Automatically saves the file name in an option var by the name 
+	(WIZ_ + $name)
+	
+	<b>Return value</b><br>
+	string the name of the textFieldButtonGrp
+	
+	<b>Flags</b><br>
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	string $tfbgName = "uniqueName";
+	string $tfbg = wizNewFileTextFieldButtonGrp("A Label", $tfbgName);
+	optionVar -q (WIZ_ + $tfbgName);
+	
+	</code>
+*********************************************************************/
+global proc string wizNewFileTextFieldButtonGrp( string $label, string $name)
+{
+	// add suffix "_textFieldButtonGrp"
+	string $tfbgName;
+	if ((endsWith($name, "_textFieldButtonGrp")) == 0){
+		$tfbgName = $name + "_textFieldButtonGrp";
+	}
+	// get option var text value
+	string $ovName = ("WIZ_" + $name);
+	string $tx = "";
+	if (`optionVar -ex $ovName`){
+		$tx = `optionVar -q ("WIZ_" + $name)`;
+	}
+	
+	string $bc = (
+	"string $newFile = wizGetAnyFile();"+"\n"
+	+"textFieldButtonGrp -e -tx $newFile " + $tfbgName + ";"+"\n"
+	+"optionVar -sv " + $ovName + " $newFile;"+"\n"	
+	);
+	
+	string $tfbg = `textFieldButtonGrp
+		-l $label
+		-tx $tx
+		-cal 1 "left"
+		-bl "Select"
+		-bc $bc
+		$tfbgName
+		`;
+			
+	return $tfbg;	
+}
+
+//WIZ GET DIRECTORY TEXT FIELD BUTTON GRP
+//------------------------------------
+global proc string wizGetDirectoryTextFieldButtonGrp(string $label, string $bc, string $bl, string $name)
+{
+	/* USEAGE: 	
+	string $tfbg = wizGetDirectoryTextFieldButtonGrp("Label", "uniqueNameTextFieldButtonGrp");
+	*/
+	if($bc == ""){
+		$bc = ("string $dir = wizGetDirectory(); textFieldButtonGrp -e -tx $dir " + $name + ";");	
+	}
+	if($bl == ""){
+		$bl = "Select";	
+	}
+	string $tfbg = `textFieldButtonGrp
+		-l $label
+		-cal 1 "left"
+		-bl $bl
+		-bc $bc
+		$name
+		`;
+		
+	return $tfbg;	
+}
+
+//ASSIGN OBJECT TO TEXT FIELD BUTTON GRP
+//---------------------------------------
+global proc assignObjectToTextFieldButtonGrp(string $tfbg)
+{
+	string $sel[] = `ls -sl`;
+	textFieldButtonGrp -e -tx $sel[0] $tfbg;
+}
+
+//OPTIONS MENU GRP
+//====================================================================================
+
+//OPTION MENU GRP
+//------------------------------------
+global proc string wizOptionMenuGrp( string $label, string $name)
+{
+	/* USEAGE:	 
+	string $omg = wizOptionMenuGrp("Label", "uniqueNameOptionMenuGrp");
+	*/
+	string $optionMenuGrp;
+	
+	string $v;
+	
+	string $ovName = "WIZ_" + $name;
+	
+	string $cc = ("string $sv = `optionMenuGrp -q -v " + $name + "`;"+"\n"
+	+"optionVar -sv " + $ovName + " $sv;"+"\n");
+	
+	if (`optionVar -ex $ovName`){
+		$v = `optionVar -q $ovName`;
+		wizlog ("[wizOptionMenuGrp] : " + $ovName + " -v " + $v);
+	}
+	
+	
+	
+	if($name == ""){
+		$optionMenuGrp = `optionMenuGrp -l $label -cal 1 "left" -cal 2 "left" -cc $cc`;
+	} else {
+		$optionMenuGrp = `optionMenuGrp -l $label -cal 1 "left" -cal 2 "left" -cc $cc $name`;
+	}
+	
+	/*
+	if (`size $v` > 0){
+		optionMenuGrp -e -v $v $name;
+	}
+	*/
+	/*
+	optionMenuGrp 
+		-edit
+		-label $label
+		-cal 1 "left"
+		-cal 2 "left"
+		$optionMenuGrp
+		;
+	*/
+	return $optionMenuGrp;
+}
+
+//OPTION MENU GRP ITEMS
+//------------------------------------
+global proc string wizOptionMenuGrpMenuItems( string $label, string $name, string $menuItemLabel[])
+{
+	/* USAGE:
+	string $menuItemLabels[] = { "None", "X", "Y", "Z" };
+	string $omg = wizOptionMenuGrpMenuItems("Label", "SomeNameOptionMenuGrp", $menuItemLabels);
+	string $val = `optionMenuGrp -q -v SomeNameOptionMenuGrp`;
+	*/	
+	
+	string $v;
+	
+	string $ovName = "WIZ_" + $name;
+	
+	string $cc = ("string $sv = `optionMenuGrp -q -v " + $name + "`;"+"\n"
+	+"optionVar -sv " + $ovName + " $sv;"+"\n");
+	
+	if (`optionVar -ex $ovName`){
+		$v = `optionVar -q $ovName`;
+		wizlog ("[wizOptionMenuGrp] : " + $ovName + " -v " + $v);
+	}
+	
+	
+	string $omg = wizOptionMenuGrp($label,$name);
+	for($i=0;$i<`size $menuItemLabel`;$i++){
+		menuItem -l $menuItemLabel[$i] -p ($omg + "|OptionMenu");
+		
+	}
+	
+	if (`size $v` > 0){
+		optionMenuGrp -e -v $v $name;
+	}
+	
+	return $omg;
+}
+
+//@ WIZ CHECK BOX
+//====================================================================
+/*****************************************************************//**
+	Makes a checkBox that is saved when changed.
+	<hr>
+	<b>Synopsis</b><br>
+	wizCheckBox [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-label(-l) <br>
+	-annotation(-ann) <br>
+	-value(-v) <br>
+	-parent(-p) <br>
+	-edit(-e) <br>
+	-name(-n) <br>
+	
+	<hr>
+	<b>Related</b><br>
+	wizIntFieldGrp(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $cb = wizCheckBox(
+		"-l Some Label "
+		+"-ann This does something "
+		+"-v 1 "
+		+"-n someName_checkBox");
+	
+	</code>
+*********************************************************************/
+global proc string wizCheckBox( string $flags )
+{
+	string $name;
+	string $p, $l, $ann;
+	int $v;
+	string $editCom;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-l" : case "-label" :
+			$l = wizFlagString($tok, $i);
+			break ;			
+			
+			case "-ann" : case "-annotation" :
+			$ann = wizFlagString($tok, $i);
+			break ;
+
+			case "-v" : case "-value" :
+			$v = int($tok[($i + 1)]);
+			break ;
+			
+			$editCom = wizFlagString($tok, $i);
+			break ;
+			
+			case "-p" : case "-parent" :		
+			$p = $tok[($i + 1)];
+			break ;			
+						
+			case "-n" : case "-name" :		
+			$name = $tok[($i + 1)];
+			break ;	
+			
+		}
+	}
+	string $ovName = "WIZ_" + $name;
+	
+	string $cc = ("int $cbv = `checkBox -q -v " + $name + "`;"+"\n"
+	+"optionVar -iv " + $ovName + " $cbv;"+"\n");
+	
+	if (`optionVar -ex $ovName`){
+		$v = `optionVar -q $ovName`;
+	}
+	
+	//_________________________________________
+	// Create checkBox
+	if (`checkBox -q -ex $name` == 0){
+		checkBox
+			-l $l
+			-ann $ann
+			-v $v
+			-cc $cc
+			$name
+			;
+			
+		if (`size $p` > 0){
+			checkBox
+				-e 
+				-p $p
+				$name
+				;
+		}
+		
+	}
+	
+	//_________________________________________
+	// Edit checkBox
+	if (`size $editCom` > 0){
+		string $e = "checkBox -e " + $editCom + ";";
+		eval($e);
+			
+	} 
+		
+	return $name;	
+	
+	
+}
+
+
+//@ WIZ MENU ITEM
+//====================================================================
+/*****************************************************************//**
+	Makes a menuItem that is saved when changed.
+	<hr>
+	<b>Synopsis</b><br>
+	wizCheckBox [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-label(-l) <br>
+	-annotation(-ann) <br>
+	-checkBox(-cb) <br>
+	-parent(-p) <br>
+	-edit(-e) <br>
+	-name(-n) <br>
+	
+	<hr>
+	<b>Related</b><br>
+	wizIntFieldGrp(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $mi = wizMenuItem("-l Some Label -ann This does something -v 1 -n someName_menuItem");
+	
+	</code>
+*********************************************************************/
+global proc string wizMenuItem( string $flags )
+{
+	string $name;
+	string $p, $l, $ann;
+	int $cb;
+	int $ob;
+	string $obc;
+	string $editCom, $changeCommand;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-l" : case "-label" :
+			$l = wizFlagString($tok, $i);
+			break ;			
+			
+			case "-ann" : case "-annotation" :
+			$ann = wizFlagString($tok, $i);
+			break ;
+
+			case "-cb" : case "-checkBox" :
+			$cb = int($tok[($i + 1)]);
+			break ;
+			
+			case "-e" : case "-edit" :
+			$editCom = wizFlagString($tok, $i);
+			break ;
+			
+			case "-cc" : case "-changeCommand" :
+			$changeCommand = wizFlagString($tok, $i);
+			break ;
+			
+			case "-p" : case "-parent" :		
+			$p = $tok[($i + 1)];
+			break ;			
+						
+			case "-n" : case "-name" :		
+			$name = $tok[($i + 1)];
+			break ;	
+			
+			case "-ob" : case "-optionBox" :
+			$ob = 1;
+			$obc = wizFlagString($tok, $i);
+			break ;
+		}
+	}
+	string $ovName = "WIZ_" + $name;
+	
+	string $c = ("int $v = `menuItem -q -cb " + $name + "`;"+"\n"
+	+"optionVar -iv " + $ovName + " $v;"+"\n");
+	
+	if (`size $changeCommand` > 0){
+		$changeCommand = $changeCommand + ";" + $c;
+	}
+	
+	if (`optionVar -ex $ovName`){
+		$cb = `optionVar -q $ovName`;
+	}
+	
+	//_________________________________________
+	// Create menuItem
+	if (`menuItem -q -ex $name` == 0){
+		menuItem
+			-l $l
+			-ann $ann
+			-cb $cb
+			-c $c
+			$name
+			;
+			
+		if (`size $p` > 0){
+			menuItem
+				-e 
+				-p $p
+				$name
+				;
+		}
+		
+		if ($ob){
+			menuItem
+				-ob true
+				-c $obc
+				$name
+				;
+		}
+		
+	}
+	
+	//_________________________________________
+	// Edit menuItem
+	if (`size $editCom` > 0){
+		string $e = "menuItem -e " + $editCom + ";";
+		eval($e);
+			
+	} 
+		
+	return $name;	
+	
+	
+}
+
+
+
+
+//@ WIZ FLOAT SLIDER GRP
+//================================================================================
+global proc string wizFloatSliderGrp( string $flags )
+{
+	string $name;
+	string $p, $l, $ann;
+	float $v;
+	float $min = 0.0;
+	float $max = 1.0;
+	float $fmn = -999999999.99;
+	float $fmx = 999999999.99;
+	string $editCom;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-l" : case "-label" :
+			$l = wizFlagString($tok, $i);
+			break ;			
+			
+			case "-ann" : case "-annotation" :
+			$ann = wizFlagString($tok, $i);
+			break ;
+
+			case "-v" : case "-value" :
+			$v = float($tok[($i + 1)]);
+			break ;
+			
+			case "-min" : case "-minimum" :
+			$min = float($tok[($i + 1)]);
+			break ;
+			
+			case "-max" : case "-maximum" :
+			$max = float($tok[($i + 1)]);
+			break ;
+			
+			case "-fmn" : case "-fieldMinimum" :
+			$fmn = float($tok[($i + 1)]);
+			break ;
+			
+			case "-fmx" : case "-fieldMaximum" :
+			$fmx = float($tok[($i + 1)]);
+			break ;
+			
+			case "-e" : case "-edit" :
+			$editCom = wizFlagString($tok, $i);
+			break ;
+			
+			case "-p" : case "-parent" :		
+			$p = $tok[($i + 1)];
+			break ;			
+						
+			case "-n" : case "-name" :		
+			$name = $tok[($i + 1)];
+			break ;	
+			
+			case "-lc" : case "-layoutCommands" :		
+			$lc = wizFlagString($tok, $i);
+			break ;	
+			
+		}
+	}
+	string $ovName = "WIZ_" + $name;
+	
+	string $cc = ("float $fv = `floatSliderGrp -q -v " + $name + "`;"+"\n"
+	+"optionVar -fv " + $ovName + " $fv;"+"\n");
+	
+	if (`optionVar -ex $ovName`){
+		$v = `optionVar -q $ovName`;
+		//wizlog ("[wizFloatSliderGrp] : " + $ovName + " -v " + $v);
+	}
+	
+	//_________________________________________
+	// Create floatSliderGrp
+	if (`floatSliderGrp -q -ex $name` == 0){
+		floatSliderGrp
+			-l $l
+			-ann $ann
+			-cal 1 "left"
+			-f true
+			-v $v
+			-min $min
+			-max $max
+			-fmn $fmn
+			-fmx $fmx
+			-cc $cc
+			$name
+			;
+			
+		if (`size $p` > 0){
+			floatSliderGrp
+				-e 
+				-p $p
+				$name
+				;
+		}
+		
+	}
+	
+	//_________________________________________
+	// Edit checkBox
+	if (`size $editCom` > 0){
+		string $e = "floatSliderGrp -e " + $editCom + ";";
+		eval($e);
+			
+	} 
+		
+	return $name;	
+	
+	
+}
+
+
+//@ WIZ FLOAT SLIDER GRP
+//================================================================================
+global proc string wizFloatSliderButtonGrp( string $flags )
+{
+	string $name;
+	string $p, $l, $ann;
+	float $v;
+	float $min = 0.0;
+	float $max = 1.0;
+	float $fmn = -999999999.99;
+	float $fmx = 999999999.99;
+	string $editCom;
+	string $bc, $bl;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-l" : case "-label" :
+			$l = wizFlagString($tok, $i);
+			break ;			
+			
+			case "-ann" : case "-annotation" :
+			$ann = wizFlagString($tok, $i);
+			break ;
+
+			case "-v" : case "-value" :
+			$v = float($tok[($i + 1)]);
+			break ;
+			
+			case "-min" : case "-minimum" :
+			$min = float($tok[($i + 1)]);
+			break ;
+			
+			case "-max" : case "-maximum" :
+			$max = float($tok[($i + 1)]);
+			break ;
+			
+			case "-fmn" : case "-fieldMinimum" :
+			$fmn = float($tok[($i + 1)]);
+			break ;
+			
+			case "-fmx" : case "-fieldMaximum" :
+			$fmx = float($tok[($i + 1)]);
+			break ;
+			
+			case "-e" : case "-edit" :
+			$editCom = wizFlagString($tok, $i);
+			break ;
+			
+			case "-p" : case "-parent" :		
+			$p = $tok[($i + 1)];
+			break ;			
+						
+			case "-n" : case "-name" :		
+			$name = $tok[($i + 1)];
+			break ;	
+			
+			case "-lc" : case "-layoutCommands" :		
+			$lc = wizFlagString($tok, $i);
+			break ;	
+			
+			case "-bl" : case "-buttonLabel" :
+			$bl = wizFlagString($tok, $i);
+			break ;	
+			
+			case "-bc" : case "-buttonCommand" :
+			$bc = wizFlagString($tok, $i);
+			break ;	
+			
+			
+		}
+	}
+	string $ovName = "WIZ_" + $name;
+	
+	string $cc = ("float $fv = `floatSliderButtonGrp -q -v " + $name + "`;"+"\n"
+	+"optionVar -fv " + $ovName + " $fv;"+"\n");
+	
+	if (`optionVar -ex $ovName`){
+		$v = `optionVar -q $ovName`;
+		//wizlog ("[wizFloatSliderButtonGrp] : " + $ovName + " -v " + $v);
+	}
+	
+	//_________________________________________
+	// Create floatSliderButtonGrp
+	if (`floatSliderGrp -q -ex $name` == 0){
+		floatSliderButtonGrp
+			-l $l
+			-ann $ann
+			-cal 1 "left"
+			-f true
+			-v $v
+			-min $min
+			-max $max
+			-fmn $fmn
+			-fmx $fmx
+			-cc $cc
+			$name
+			;
+			
+		if (`size $p` > 0){
+			floatSliderButtonGrp
+				-e 
+				-p $p
+				$name
+				;
+		}
+		
+		if (`size $bl` > 0 && `size $bc` > 0){
+			floatSliderButtonGrp
+				-e 
+				-bl $bl
+				-bc $bc
+				$name
+				;
+		}
+	}
+	
+	//_________________________________________
+	// Edit checkBox
+	if (`size $editCom` > 0){
+		string $e = "floatSliderButtonGrp -e " + $editCom + ";";
+		eval($e);
+			
+	} 
+		
+	return $name;	
+	
+	
+}
+
+//@ WIZ INT SLIDER GRP
+//================================================================================
+global proc string wizIntSliderGrp( string $flags )
+{
+	string $name;
+	string $p, $l, $ann;
+	int $v;
+	int $min = 0;
+	int $max = 1;
+	int $fmn = -999999999;
+	int $fmx = 999999999;
+	string $editCom;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-l" : case "-label" :
+			$l = wizFlagString($tok, $i);
+			break ;			
+			
+			case "-ann" : case "-annotation" :
+			$ann = wizFlagString($tok, $i);
+			break ;
+
+			case "-v" : case "-value" :
+			$v = int($tok[($i + 1)]);
+			break ;
+			
+			case "-min" : case "-minimum" :
+			$min = int($tok[($i + 1)]);
+			break ;
+			
+			case "-max" : case "-maximum" :
+			$max = int($tok[($i + 1)]);
+			break ;
+			
+			case "-fmn" : case "-fieldMinimum" :
+			$fmn = int($tok[($i + 1)]);
+			break ;
+			
+			case "-fmx" : case "-fieldMaximum" :
+			$fmx = int($tok[($i + 1)]);
+			break ;
+			
+			case "-e" : case "-edit" :
+			$editCom = wizFlagString($tok, $i);
+			break ;
+			
+			case "-p" : case "-parent" :		
+			$p = $tok[($i + 1)];
+			break ;			
+						
+			case "-n" : case "-name" :		
+			$name = $tok[($i + 1)];
+			break ;	
+			
+		}
+	}
+	string $ovName = "WIZ_" + $name;
+	
+	string $cc = ("int $iv = `intSliderGrp -q -v " + $name + "`;"+"\n"
+	+"optionVar -iv " + $ovName + " $iv;"+"\n");
+	
+	if (`optionVar -ex $ovName`){
+		$v = `optionVar -q $ovName`;
+		//wizlog ("[wizintSliderGrp] : " + $ovName + " -v " + $v);
+	}
+	
+	//_________________________________________
+	// Create intSliderGrp
+	if (`intSliderGrp -q -ex $name` == 0){
+		intSliderGrp
+			-l $l
+			-ann $ann
+			-cal 1 "left"
+			-f true
+			-v $v
+			-min $min
+			-max $max
+			-fmn $fmn
+			-fmx $fmx
+			-cc $cc
+			$name
+			;
+			
+		if (`size $p` > 0){
+			intSliderGrp
+				-e 
+				-p $p
+				$name
+				;
+		}
+		
+	}
+	
+	//_________________________________________
+	// Edit checkBox
+	if (`size $editCom` > 0){
+		string $e = "intSliderGrp -e " + $editCom + ";";
+		eval($e);
+			
+	} 
+		
+	return $name;	
+	
+	
+}
+
+//@ WIZ INT FIELD GRP
+//================================================================================
+global proc string wizFloatFieldGrp( string $flags )
+{
+	string $name;
+	string $p, $l, $ann;
+	float $v[];
+	int $nf = 1;
+	string $editCom;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-l" : case "-label" :
+			$l = wizFlagString($tok, $i);
+			break ;			
+			
+			case "-ann" : case "-annotation" :
+			$ann = wizFlagString($tok, $i);
+			break ;
+			
+			case "-nf" : case "-numberOfFields" :
+			$nf = int($tok[($i + 1)]);
+
+			case "-v" : case "-value" :
+			string $vString[] = wizFlagArray($tok, $i);
+			$v = stringArrayToFloatArray($vString);
+			break ;
+				
+			case "-e" : case "-edit" :
+			$editCom = wizFlagString($tok, $i);
+			break ;
+			
+			case "-p" : case "-parent" :		
+			$p = $tok[($i + 1)];
+			break ;			
+						
+			case "-n" : case "-name" :		
+			$name = $tok[($i + 1)];
+			break ;	
+			
+		}
+	}
+	if (`size $name` == 0){
+		$name = $tok[(`size $tok` - 1)];
+		
+	}
+	
+	string $ovName = "WIZ_" + $name;
+	
+	string $cc = (
+	"float $fva[] = `floatFieldGrp -q -v " + $name + "`;"+"\n"
+	+"optionVar -ca " + $ovName + ";"+"\n"
+	+"for ($i=0;$i<`size $fva`;$i++){"+"\n"
+	+"	optionVar -fva " + $ovName + " $fva[$i];"+"\n"
+	+"}"+"\n"
+	);
+	
+	if (`optionVar -ex $ovName`){
+		$v = `optionVar -q $ovName`;
+	}
+	
+	//_________________________________________
+	// Create floatFieldGrp
+	if (`floatFieldGrp -q -ex $name` == 0){
+		
+		string $ifgCom = (
+		"floatFieldGrp "
+			+"-l \"" + $l + "\""
+			+" -nf " + $nf);			
+		
+		for ($i=0;$i<`size $v`;$i++){
+			$ifgCom = $ifgCom + "-v" + ($i + 1) + " " + $v[$i] + " ";
+		}
+
+		$ifgCom = ($ifgCom + " " + $name + ";");		
+		eval ($ifgCom);
+		
+		if (`size $ann` > 0){
+			floatFieldGrp
+				-e
+				-ann $ann
+				$name
+				;
+		}
+		
+		floatFieldGrp
+			-e
+			-cal 1 "left"
+			-cc $cc
+			$name
+			;
+			
+		if (`size $p` > 0){
+			floatFieldGrp
+				-e 
+				-p $p
+				$name
+				;
+		}
+		
+	}
+	
+	//_________________________________________
+	// Edit floatFieldGrp
+	if (`size $editCom` > 0){
+		string $e = "floatFieldGrp -e " + $editCom + ";";
+		eval($e);
+	} 
+		
+	return $name;	
+	
+	
+}
+
+//@ WIZ INT FIELD GRP
+//================================================================================
+//@ PROC NAME
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName("-obj someObject -q -sl");
+	
+	</code>
+*********************************************************************/
+global proc string wizIntFieldGrp( string $flags )
+{
+	string $name;
+	string $p, $l, $ann;
+	int $v[];
+	int $nf = 1;
+	string $editCom;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-l" : case "-label" :
+			$l = wizFlagString($tok, $i);
+			break ;			
+			
+			case "-ann" : case "-annotation" :
+			$ann = wizFlagString($tok, $i);
+			break ;
+			
+			case "-nf" : case "-numberOfFields" :
+			$nf = int($tok[($i + 1)]);
+
+			case "-v" : case "-value" :
+			string $vString[] = wizFlagArray($tok, $i);
+			$v = stringArrayToIntArray($vString);
+			break ;
+				
+			case "-e" : case "-edit" :
+			$editCom = wizFlagString($tok, $i);
+			break ;
+			
+			case "-p" : case "-parent" :		
+			$p = $tok[($i + 1)];
+			break ;			
+						
+			case "-n" : case "-name" :		
+			$name = $tok[($i + 1)];
+			break ;	
+			
+		}
+	}
+	if (`size $name` == 0){
+		$name = $tok[(`size $tok` - 1)];
+		
+	}
+	
+	string $ovName = "WIZ_" + $name;
+	
+	string $cc = (
+	"int $iva[] = `intFieldGrp -q -v " + $name + "`;"+"\n"
+	+"optionVar -ca " + $ovName + ";"+"\n"
+	+"for ($i=0;$i<`size $iva`;$i++){"+"\n"
+	+"	optionVar -iva " + $ovName + " $iva[$i];"+"\n"
+	+"}"+"\n"
+	);
+	
+	if (`optionVar -ex $ovName`){
+		$v = `optionVar -q $ovName`;
+		//wizlog ("[wizIntFieldGrp] : " + $ovName + " -v " + $v);
+	}
+	
+	//_________________________________________
+	// Create intFieldGrp
+	if (`intFieldGrp -q -ex $name` == 0){
+		
+		string $ifgCom = (
+		"intFieldGrp "
+			+"-l \"" + $l + "\""
+			+" -nf " + $nf);
+
+			
+		
+		for ($i=0;$i<`size $v`;$i++){
+			$ifgCom = $ifgCom + "-v" + ($i + 1) + " " + $v[$i] + " ";
+		}
+		
+		//$ifgCom = ($ifgCom + " -cc " + $cc + $name);
+		//$ifgCom = ($ifgCom + " -cc " + $cc + " " + $name);
+		$ifgCom = ($ifgCom + " " + $name + ";");
+		//wizlog($ifgCom);
+		
+		eval ($ifgCom);
+		
+		if (`size $ann` > 0){
+			intFieldGrp
+				-e
+				-ann $ann
+				$name
+				;
+		}
+		
+		intFieldGrp
+			-e
+			-cal 1 "left"
+			-cc $cc
+			$name
+			;
+			
+		if (`size $p` > 0){
+			intFieldGrp
+				-e 
+				-p $p
+				$name
+				;
+		}
+		
+	}
+	
+	//_________________________________________
+	// Edit intFieldGrp
+	if (`size $editCom` > 0){
+		string $e = "intFieldGrp -e " + $editCom + ";";
+		eval($e);
+	} 
+		
+	return $name;	
+	
+	
+}
+
+
+//@ WIZ TEXT FIELD BUTTON GRP
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $tfbg = wizTextFieldButtonGrp(
+		"-l Some Label "
+		+"-bl Button Label "
+		+"-ann Some Helpful Annotation "
+		+"-bc ao "
+		+"-n someName_textFieldButtonGrp");
+	
+	</code>
+*********************************************************************/
+global proc string wizTextFieldButtonGrp( string $flags )
+{
+	string $name;
+	string $p, $l, $ann;
+	string $tx;
+	string $bl, $bc;
+
+	string $editCom;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-l" : case "-label" :
+			$l = wizFlagString($tok, $i);
+			break ;			
+			
+			case "-bl" : case "-buttonLabel" :
+			$bl = wizFlagString($tok, $i);
+			break ;	
+			
+			case "-bc" : case "-buttonCommand" :
+			$bc = wizFlagString($tok, $i);
+			break ;	
+			
+			case "-ann" : case "-annotation" :
+			$ann = wizFlagString($tok, $i);
+			break ;
+
+			case "-tx" : case "-text" :
+			$tx = wizFlagString($tok, $i);
+			break ;	
+			
+			case "-e" : case "-edit" :
+			$editCom = wizFlagString($tok, $i);
+			break ;
+			
+			case "-p" : case "-parent" :		
+			$p = $tok[($i + 1)];
+			break ;			
+						
+			case "-n" : case "-name" :		
+			$name = $tok[($i + 1)];
+			break ;	
+			
+			
+		}
+	}
+	string $ovName = "WIZ_" + $name;
+	
+	string $bsc = ("string $tf = `textFieldButtonGrp -q -tx " + $name + "`;"+"\n"
+	+"optionVar -sv " + $ovName + " $tf;"+"\n");
+	
+	if (`optionVar -ex $ovName`){
+		$tx = `optionVar -q $ovName`;
+		//wizlog ("[wizFloatSliderGrp] : " + $ovName + " -v " + $v);
+	}
+	
+	//_________________________________________
+	// Simple command short cuts
+	
+	if ($bc == "AssignObject" || $bc == "ao"){
+		$bc = (
+		"string $sel[] = `ls -sl`;"+"\n"
+		+"textFieldButtonGrp -e -tx $sel[0] " + $name + ";"+"\n"
+		+ $bsc);
+	}
+	
+	if ($bc == "AssignFile" || $bc == "af"){
+		$bc = ("assignFileToTextFieldButtonGrp(" + "\"" + $name + "\"" + ");") + $bsc;
+	}
+	
+	if ($bc == "NewFile" || $bc == "nf"){
+		$bc = (
+		"string $newFile = wizGetAnyFile();"+"\n"
+		+"textFieldButtonGrp -e -tx $newFile " + $name + ";"+"\n"
+		+ $bsc);
+	}
+	
+	if ($bc == "AssignDirectory" || $bc == "ad"){
+		$bc = (
+		"string $wizDir = wizGetDirectory();"+"\n"
+		+"textFieldButtonGrp -e -tx $wizDir " + $name + ";"+"\n"
+		+ $bsc);
+	}
+	
+	
+	
+	
+	//_________________________________________
+	// Create floatSliderGrp
+	if (`textFieldButtonGrp -q -ex $name` == 0){
+		textFieldButtonGrp
+			-l $l
+			-bl $bl
+			-ann $ann
+			-cal 1 "left"
+			-tx $tx
+			-bc $bc
+			$name
+			;
+			
+		if (`size $p` > 0){
+			textFieldButtonGrp
+				-e 
+				-p $p
+				$name
+				;
+		}
+		
+	}
+	
+	//_________________________________________
+	// Edit checkBox
+	if (`size $editCom` > 0){
+		string $e = "textFieldButtonGrp -e " + $editCom + ";";
+		eval($e);
+			
+	} 
+		
+	return $name;	
+	
+	
+}
+
+
+//@ WIZ TEXT FIELD GRP
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $tfg = wizTextFieldGrp(
+		"-l Some Label "
+		+"-tx some text "
+		+"-ann Some Helpful Annotation "
+		+"-n someName_textFieldGrp");
+	
+	</code>
+*********************************************************************/
+global proc string wizTextFieldGrp( string $flags )
+{
+	string $name;
+	string $p, $l, $ann;
+	string $tx;
+	string $editCom;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-l" : case "-label" :
+			$l = wizFlagString($tok, $i);
+			break ;			
+
+			case "-ann" : case "-annotation" :
+			$ann = wizFlagString($tok, $i);
+			break ;
+
+			case "-tx" : case "-text" :
+			$tx = wizFlagString($tok, $i);
+			break ;	
+			
+			case "-e" : case "-edit" :
+			$editCom = wizFlagString($tok, $i);
+			break ;
+			
+			case "-p" : case "-parent" :		
+			$p = $tok[($i + 1)];
+			break ;			
+						
+			case "-n" : case "-name" :		
+			$name = $tok[($i + 1)];
+			break ;	
+			
+			
+		}
+	}
+	string $ovName = "WIZ_" + $name;
+	
+	string $cc = ("string $tf = `textFieldGrp -q -tx " + $name + "`;"+"\n"
+	+"optionVar -sv " + $ovName + " $tf;"+"\n");
+	
+	if (`optionVar -ex $ovName`){
+		$tx = `optionVar -q $ovName`;
+	}
+	
+	//_________________________________________
+	// Create textFieldGrp
+	if (`textFieldGrp -q -ex $name` == 0){
+		textFieldGrp
+			-l $l
+			-ann $ann
+			-cal 1 "left"
+			-tx $tx
+			-cc $cc
+			$name
+			;
+			
+		if (`size $p` > 0){
+			textFieldGrp
+				-e 
+				-p $p
+				$name
+				;
+		}
+		
+	}
+	
+	//_________________________________________
+	// Edit textFieldGrp
+	if (`size $editCom` > 0){
+		string $e = "textFieldGrp -e " + $editCom + ";";
+		eval($e);
+			
+	} 
+		
+	return $name;	
+	
+}
+
+
+//@ WIZ TEXT FIELD BUTTON GRP
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $tfbg = wizTextScrollList(
+		"-l Some Label "
+		+"-bl Button Label "
+		+"-ann Some Helpful Annotation "
+		+"-bc ao "
+		+"-n someName_textFieldButtonGrp");
+	
+	</code>
+*********************************************************************/
+global proc string wizTextScrollList( string $flags )
+{
+	string $name;
+	string $p, $l, $ann;
+	string $tx;
+	string $bl, $bc;
+
+	string $editCom;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-l" : case "-label" :
+			$l = wizFlagString($tok, $i);
+			break ;			
+			
+			case "-bl" : case "-buttonLabel" :
+			$bl = wizFlagString($tok, $i);
+			break ;	
+			
+			case "-bc" : case "-buttonCommand" :
+			$bc = wizFlagString($tok, $i);
+			break ;	
+			
+			case "-ann" : case "-annotation" :
+			$ann = wizFlagString($tok, $i);
+			break ;
+
+			case "-tx" : case "-text" :
+			$tx = wizFlagString($tok, $i);
+			break ;	
+			
+			case "-e" : case "-edit" :
+			$editCom = wizFlagString($tok, $i);
+			break ;
+			
+			case "-p" : case "-parent" :		
+			$p = $tok[($i + 1)];
+			break ;			
+						
+			case "-n" : case "-name" :		
+			$name = $tok[($i + 1)];
+			break ;	
+			
+			
+		}
+	}
+	string $ovName = "WIZ_" + $name;
+	
+	string $bsc = ("string $tf = `textFieldButtonGrp -q -tx " + $name + "`;"+"\n"
+	+"optionVar -sv " + $ovName + " $tf;"+"\n");
+	
+	string $cc = (
+	"float $fva[] = `floatFieldGrp -q -v " + $name + "`;"+"\n"
+	+"optionVar -ca " + $ovName + ";"+"\n"
+	+"for ($i=0;$i<`size $fva`;$i++){"+"\n"
+	+"	optionVar -fva " + $ovName + " $fva[$i];"+"\n"
+	+"}"+"\n"
+	);
+	
+	if (`optionVar -ex $ovName`){
+		$tx = `optionVar -q $ovName`;
+		//wizlog ("[wizFloatSliderGrp] : " + $ovName + " -v " + $v);
+	}
+	
+	//_________________________________________
+	// Simple command short cuts
+	
+	if ($bc == "AssignObject" || $bc == "ao"){
+		$bc = (
+		"string $sel[] = `ls -sl`;"+"\n"
+		+"textFieldButtonGrp -e -tx $sel[0] " + $name + ";"+"\n"
+		+ $bsc);
+	}
+	
+	if ($bc == "AssignFile" || $bc == "af"){
+		$bc = ("assignFileToTextFieldButtonGrp(" + "\"" + $name + "\"" + ");") + $bsc;
+	}
+	
+	if ($bc == "NewFile" || $bc == "nf"){
+		$bc = (
+		"string $newFile = wizGetAnyFile();"+"\n"
+		+"textFieldButtonGrp -e -tx $newFile " + $name + ";"+"\n"
+		+ $bsc);
+	}
+	
+	if ($bc == "AssignDirectory" || $bc == "ad"){
+		$bc = (
+		"string $dir = wizGetDirectory();"+"\n"
+		+"textFieldButtonGrp -e -tx $dir " + $name + ";"+"\n"
+		+ $bsc);
+	}
+	
+	
+	
+	
+	//_________________________________________
+	// Create floatSliderGrp
+	if (`textFieldButtonGrp -q -ex $name` == 0){
+		if (`size $l` > 0){
+			text -l $l -fn "boldLabelFont" -h 20 -al "left";
+		}
+		textScrollList
+			-bl $bl
+			-ann $ann
+			-cal 1 "left"
+			-tx $tx
+			-bc $bc
+			$name
+			;
+			
+		if (`size $p` > 0){
+			textFieldButtonGrp
+				-e 
+				-p $p
+				$name
+				;
+		}
+		
+	}
+	
+	//_________________________________________
+	// Edit checkBox
+	if (`size $editCom` > 0){
+		string $e = "textFieldButtonGrp -e " + $editCom + ";";
+		eval($e);
+			
+	} 
+		
+	return $name;	
+	
+	
+}
+
+global proc string wizRadioButtonGrp( string $flags )
+{
+	return "";
+
+}
+
+//GRADIENTS AND RAMP CONTROL
+//=================================================================================
+//WIZ RAMP CONTROL
+//------------------------------------------------
+global proc string wizRampControl(string $parent, string $name)
+{
+	string $ramp = `createNode -n $name ramp`;
+	string $columnLayout = `columnLayout -p $parent`;
+	
+	string $rampColorPort = `rampColorPort 
+		-node $ramp 
+		-p $columnLayout
+		($name + "RampColorPort")
+		`;
+		
+	return $ramp;	
+
+}
+
+//WIZ RAMP COLOR PORT
+//------------------------------------------------
+global proc string wizRampColorPort(string $parent, string $node)
+{
+	string $columnLayout = `columnLayout -p $parent`;
+	string $rampColorPort = `rampColorPort 
+		-node $node 
+		-p $columnLayout
+		($node + "RampColorPort")
+		`;
+		
+	return $rampColorPort;		
+}
+
+//WIZ GRADIENT CONTROL
+//=======================================================
+global proc string wizGradientControl(string $parent, string $obj, string $attr)
+{
+	/* USAGE:
+	string $remapIndexColor = createStarColorIndexRemapValue();
+	string $gradientControl = wizGradientControl($parent, $remapIndexColor, "color");
+	*/
+	string $columnLayoutName = $obj + (capitalizeString($attr)) + "WizGradientControlColumnLayout";
+	if(`columnLayout -q -ex $columnLayoutName`){
+		deleteUI -lay $columnLayoutName;	
+	}
+	
+	columnLayout -p $parent $columnLayoutName;
+	
+	string $colorControlName = $obj + (capitalizeString($attr)) + "ColorControl";
+	string $gradientControlName = $obj + (capitalizeString($attr)) + "GradientControl";
+	string $colorControl = `attrColorSliderGrp -label "Gradient Color" -cal 1 "left" `;
+	
+	string $gradientControl = `gradientControl
+		-w 420
+		-at ($obj + "." + $attr)
+		-selectedColorControl $colorControl 
+		$gradientControlName
+		`;
+	
+	setParent..;
+	return $gradientControl;
+
+}
+
+//GET CONTROL
+//====================================================================================
+//GET CONTROL FOR ATTRIBUTE TYPE
+//---------------------------------------------------
+global proc string getControlForAttributeType( string $attr )
+{
+	string $attrType = `getAttr -type $attr`;
+	string $controlType;
+	string $minmax;
+	float $min, $max, $smn, $smx;
+	if(`attributeQuery -mne $attr`){
+		$min = `attributeQuery -min $attr`;
+		if(`attributeQuery -sme $attr`){
+			$minmax += " -fmn " + $min;
+		} else {
+			$minmax += " -min " + $min;
+		}
+	}
+	if(`attributeQuery -mxe $attr`){
+		$max = `attributeQuery -max $attr`;
+		if(`attributeQuery -sme $attr`){
+			$minmax += " -fmx " + $max;
+		} else {
+			$minmax += " -max " + $max;
+		}
+	}
+	if(`attributeQuery -sme $attr`){
+		$smn = `attributeQuery -smn $attr`;
+		$minmax += " -min " + $smn;
+	}
+	if(`attributeQuery -sxe $attr`){
+		$smx = `attributeQuery -smx $attr`;
+		$minmax += " -max " + $smx;
+	}
+	
+	string $control;
+	switch($attrType){
+		case "doubleLinear" : case "doubleAngle" : case "double" : 
+		$controlType = "floatSliderGrp";
+		$control = $controlType + $minmax;
+		
+		case "double3" : case "float3" :
+		$controlType = "floatFieldGrp";
+		$control = $controlType + $minmax;
+		
+		case "bool" :
+		$controlType = "checkBox";
+		
+		case "string" :
+		$controlType = "textField";
+		
+		case "enum" :
+		$controlType = "optionMenuGrp";
+		
+		case "TdataCompound" :
+		$controlType = "";
+		
+		//case "matix" :
+		//$controlType = "matrix";
+		
+		case "time" :
+		$controlType = "";
+		
+	}
+	
+	return $control;
+}
+
+//DRAG AND DROP
+//==========================================================================================
+global proc dropText(string $drag, string $drop, string $msgs[], int $x, int $y, int $type)
+{
+	if(`control -q -ex $drop`){
+		if(`text -q -ex $drop`){
+			text -e -l $msgs[0] $drop;	
+		} else if(`textField -q -ex $drop`){
+			textField -e -tx $msgs[0] $drop;	
+		} else if(`textFieldGrp -q -ex $drop`){
+			textFieldGrp -e -tx $msgs[0] $drop;	
+		}
+	}
+}
+
+//@ MULTI SELECTION TEXT FIELD BUTTON GRPS
+//====================================================================
+/*======================| SUMMARY |===================================
+
+/*=======================| USAGE |====================================	
+    string $tfbg[] = multiSelectionTextFieldButtonGrps("-n1 someNameTextFieldButtonGrp -l1 Some Label -tx1 Some Text");
+====================================================================*/
+
+global proc string[] multiSelectionTextFieldButtonGrps( string $tags )
+{
+    string $name;
+    string $tx[] = { "", "", "", "" };
+    string $names[];
+    string $l[] = { "", "", "", "" };
+    string $p;
+	//Break tags up to read them individually
+	string $tok[] = tokenizeString($tags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+	
+			case "-l1" : case "-label1" :
+			$l[0] = getStringFromCurrentIndexToNextTagIndex($tok, ($i + 1));
+			break ;
+			case "-l2" : case "-label2" :
+			$l[1] = getStringFromCurrentIndexToNextTagIndex($tok, ($i + 1));
+			break ;
+            case "-l3" : case "-label3" :
+			$l[2] = getStringFromCurrentIndexToNextTagIndex($tok, ($i + 1));
+			break ;
+            case "-l4" : case "-label4" :
+			$l[3] = getStringFromCurrentIndexToNextTagIndex($tok, ($i + 1));
+			break ;
+            
+			case "-n" : case "-name" :
+			$name = $tok[($i + 1)];
+			break ;
+            
+			case "-n1" : case "-name1" :
+			$names[0] = $tok[($i + 1)];
+			break ;
+            
+            case "-n2" : case "-name2" :
+			$names[1] = $tok[($i + 1)];
+			break ;
+            
+            case "-n3" : case "-name3" :
+			$names[2] = $tok[($i + 1)];
+			break ;
+            
+            case "-n4" : case "-name4" :
+			$names[3] = $tok[($i + 1)];
+			break ;
+            
+            case "-tx1" : case "-text1" :
+            $tx[0] = getStringFromCurrentIndexToNextTagIndex($tok, ($i + 1));
+            break ;
+            
+            case "-tx2" : case "-text2" :
+            $tx[0] = getStringFromCurrentIndexToNextTagIndex($tok, ($i + 1));
+            break ;
+            
+            case "-tx3" : case "-text3" :
+            $tx[0] = getStringFromCurrentIndexToNextTagIndex($tok, ($i + 1));
+            break ;
+            
+            case "-tx4" : case "-text4" :
+            $tx[0] = getStringFromCurrentIndexToNextTagIndex($tok, ($i + 1));
+            break ;
+            
+            case "-p" : case "-parent" :
+            $p = $tok[($i + 1)];
+            break ;
+            
+		}
+		
+	}
+	
+    string $tfbg[];
+	
+    /*
+	rowColumnLayout
+        -p $p
+        ($name + "RowColumnLayout")
+		;
+		*/
+        for ($i=0;$i<`size $names`;$i++){
+            $tfbg[$i] = `textFieldButtonGrp
+                -l $l[$i]
+                -tx $tx[$i]
+                ($names[$i])
+                `;
+                
+        }
+	
+	setParent $p;
+	return $tfbg;
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         TEMPLATES
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//@ DEFINE WIZ TEMPLATES
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-fa string] [-fb linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-fa, -fb
+	
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName("-fa aString -fb anotherString");
+	
+	</code>
+*********************************************************************/
+global proc defineWizTemplates()
+{
+	/*
+	checkBox
+		-dt "wizCheckBox"
+		-cc ""
+		;
+	*/
+	//wiz_floatSliderGrp();
+	
+}
+
+/*
+global proc string wiz_floatSliderGrp( string $flags )
+{
+	string $fsgc = ("floatSliderGrp "
+		+ " -cal 1 left -adj 3 -f true " + $flags
+		+ ";");
+	
+	string $fsg = eval($fsgc);
+		
+	return $fsg;
+}
+*/
+
+/*
+global proc string[] ctrlChangeCommand( string $ctrl )
+{
+	
+}
+*/

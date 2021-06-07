@@ -1,0 +1,1918 @@
+global proc animationExpressionsWiz()
+{
+/*
+global string $animationExpressionsWizWindow;
+$animationExpressionsWizWindow = "animationExpressionsWiz";
+if(`window -exists $animationExpressionsWizWindow`){
+	deleteUI $animationExpressionsWizWindow;
+}
+
+window
+	-title "Animation Expressions Wiz"
+	-widthHeight 400 200
+	-menuBar on
+	-menuBarVisible on
+	-minimizeButton on
+	-maximizeButton on
+	-sizeable on		
+	-resizeToFitChildren off
+	-titleBar on
+	$animationExpressionsWizWindow;
+	
+	string $masterLayout = `scrollLayout
+		//-adjustableColumn true
+		masterLayout
+		`;
+	animationExpressionsLayout($masterLayout);
+	
+	showWindow $animationExpressionsWizWindow;
+*/
+}
+
+global proc animationModule(string $parent)
+{		
+/*
+	string $animationLayout = `frameLayout
+			-l "Animation"	
+			-ann ""
+			-bv true
+			-la "center"
+			-li 10
+			-lv true
+			-mw 10
+			-mh 10		
+			
+			-cll true
+			-cl true
+			-parent $parent
+			`;
+*/			
+	animationExpressionsLayout();
+	
+}
+
+
+global proc animationExpressionsLayout()
+{
+	string $animationExpressionsLayout = `frameLayout
+		-l "Animation Expressions"	
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		//-parent $parent		
+		`;
+		
+		animationExpressionsMenu($animationExpressionsLayout);
+		
+		text
+			-l "Objects/Components"
+			;
+			
+		textScrollList
+			-w 80
+			-h 90
+			-ams true
+			-dkc "removeAnimationExpressionObjects"
+			getAnimationExpressionObjects
+			;
+		rowLayout
+			-numberOfColumns 2
+			-p $animationExpressionsLayout
+			;	
+			button
+				-label "Select Object(s)"
+				-command ("assignAnimationExpressionObjects " + $animationExpressionsLayout)
+				;
+			button
+				-label "Clear List"
+				-command "clearAnimationExpressionObjectsList"
+				;
+			setParent..;
+		
+		text
+			-l "Attributes"
+			;
+			
+		textScrollList
+			-w 80
+			-h 90
+			-ams true
+			-sc "generateAnimationExpressionNames"
+			attributeToAddExpressionAnimationTo
+			;
+			
+		rowLayout
+			-numberOfColumns 2
+			-p $animationExpressionsLayout
+			;	
+			button
+				-label "Sort List"
+				-command "sortAttributeToAddExpressionAnimationToList"
+				;			
+			setParent..;
+			
+	string $onOffAnimationExpressionsLayout = `frameLayout
+		-l "On Off Animation Expressions"	
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl false
+		-parent $animationExpressionsLayout		
+		`;
+		/*
+		checkBox 
+			-l "Trigger"
+			-v false
+			onOffAnimationExpressionTriggerOption
+			;
+		*/
+		
+		checkBox 
+			-l "Trigger"
+			-v false
+			onOffAnimationExpressionTriggerOption
+			;
+			
+		button
+			-label "Create On/Off Expression"
+			-command "createOnOffExpression"
+			;
+			
+		textFieldGrp
+			-ed true
+			-label "Expression Name"
+			-text  ""
+			onOffAnimationExpressionName
+			;
+			
+		setParent..;
+
+	string $linearAnimationExpressionsLayout = `frameLayout
+		-l "Linear Animation Expressions"	
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl false
+		-parent $animationExpressionsLayout		
+		`;
+		/*
+		button
+			-label "Create Linear Expression"
+			-command "createSimpleLinearAttributeAnimationExpression"
+			;
+		*/
+		button
+			-label "Create Linear Expression"
+			-command "createLinearAttributeAnimationExpression"
+			;
+			
+		textFieldGrp
+			-ed true
+			-label "Expression Name"
+			-text  ""
+			linearAnimationExpressionName
+			;
+		setParent..;
+		
+	string $randomAnimationExpressionsLayout = `frameLayout
+		-l "Random Animation Expressions"	
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl false
+		-parent $animationExpressionsLayout		
+		`;
+		
+		checkBox 
+			-l "Min Max Values"
+			-v false
+			randomAnimationExpressionMinMaxOption
+			;
+			
+		checkBox 
+			-l "Use Same Value For All Attributes"
+			-v false
+			randomAnimationExpressionUseSameValuesOption
+			;
+		
+		checkBox 
+			-l "Seed"
+			-v true
+			randomAnimationExpressionSeedOption
+			;
+		
+		checkBox 
+			-l "Component Object"
+			-v false
+			randomAnimationExpressionComponentObjectOption
+			;
+			
+		textFieldGrp
+			-ed true
+			-label "Expression Name"
+			-text  ""
+			smoothRandomAnimationExpressionName
+			;
+			
+		button
+			-label "Create Smooth Random Expression"
+			-command "createSmoothRandomAttributeAnimationExpression"
+			;
+			
+	string $randomAttributeAtTimeExpressionsLayout = `frameLayout
+		-l "Random Attribute At Time Expressions"	
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl false
+		-parent $animationExpressionsLayout		
+		`;
+			
+		textFieldGrp
+			-ed true
+			-label "Expression Name"
+			-text ""
+			randomizeAttributeAtTimeAnimationExpressionName
+			;
+			
+		checkBox 
+			-l "Link Evaluate To Smooth Random Animation Expression"
+			-v false
+			linkEvaluateToSmoothRandomAnimationExpressionOption
+			;
+			
+		button
+			-label "Create Randomize Attribute At Time Expression"
+			-command "createRandomizeAttributeAtTimeExpression"
+			;
+			
+		
+		setParent..;
+		
+}
+
+global proc animationExpressionsMenu(string $parent)
+{
+	string $animationExpressionsMenuBarLayout = `menuBarLayout
+	-p $parent
+	animationExpressionsMenuBarLayout	
+	`;
+	
+	string $animationExpressionsMenu = `menu
+		-label "Main"
+		`;
+		
+		menuItem			
+			-label "Enable Expressions"
+			-command "turnOnEvaluateExpressions"
+			-p $animationExpressionsMenu			
+			;
+			
+		menuItem			
+			-label "Disable Expressions"
+			-command "turnOffEvaluateExpressions"
+			-p $animationExpressionsMenu			
+			;	
+}
+
+global proc turnOnEvaluateExpressions()
+{
+	setState "expression" off;
+}
+
+global proc turnOffEvaluateExpressions()
+{
+	setState "expression" off;
+}
+
+
+global proc assignAnimationExpressionObject(string $parent)
+{
+	string $sel[]=`ls -sl`;
+	//string $attr[] = `listAttr -k $sel[0]`;
+	//string $attr[] = `listAttr $sel[0]`;
+	string $attr[] = `listAttr -sa -m $sel[0]`;
+	//string $attrSn[] = sort(`listAttr -sa -m -lf $sel[0]`);
+
+	if(`size $sel`==0){
+		error "Nothing is selected.";
+		return;
+
+	}
+
+	textFieldButtonGrp 
+		-e
+		-text $sel[0]
+		getAnimationExpressionObject;
+
+	textScrollList
+		-edit
+		-ra
+		attributeToAddExpressionAnimationTo
+		;
+		
+	int $i;	
+	for($i = 0; $i<`size $attr`; $i++){
+		textScrollList
+			-edit
+			-a $attr[$i]
+			attributeToAddExpressionAnimationTo
+			;
+	}
+}
+
+global proc assignAnimationExpressionObjects(string $parent)
+{
+	string $sel[]=`ls -sl`;
+	if(`size $sel`==0){
+		error "Nothing is selected.";
+		return;
+	}
+	int $i;
+	string $attr[];
+	string $attrSel[];
+	for($i=0;$i<`size $sel`;$i++){
+		$attrSel = `listAttr -sa -m $sel[$i]`;
+		appendStringArray($attr, $attrSel, `size $attrSel`);
+	}
+	$attr = stringArrayRemoveDuplicates($attr);
+
+	for($i=0;$i<`size $sel`;$i++){
+		textScrollList 
+			-e
+			-a $sel[$i]
+			getAnimationExpressionObjects;		
+	}
+	textScrollList
+		-edit
+		-ra
+		attributeToAddExpressionAnimationTo
+		;
+
+	for($i = 0; $i<`size $attr`; $i++){
+		textScrollList
+			-edit
+			-a $attr[$i]
+			attributeToAddExpressionAnimationTo
+			;
+	}
+
+	generateAnimationExpressionNames();
+		
+}
+
+global proc generateAnimationExpressionNames()
+{
+	string $obj[] = `textScrollList -q -ai getAnimationExpressionObjects`;
+	string $attr[] = `textScrollList -q -si attributeToAddExpressionAnimationTo`;
+	string $controlObj;
+	string $maeObj;
+	$addObjName = false;
+	$addAttrName = false;
+	string $objName = "";
+	string $attrName = "";
+	string $expName;
+	if(`size $obj` == 1){
+		$objName = removeIllegalCharactersFromName($obj[0]);
+		$addObjName = true;
+	}
+	if(`size $attr` == 1){
+		$attrName = removeIllegalCharactersFromName($attr[0]);
+		$addAttrName = true;
+	}
+
+	if($addObjName){
+		$expName = $expName + $objName;
+	} else {
+		$expName = $expName + "MultiObj";
+		$maeObj = getMasterAnimationExpressionObject();
+	}
+	if($addAttrName){
+		$expName = $expName + $attrName;
+	} else {
+		$expName = $expName + "MultiAttr";
+	}
+
+	string $sraExp = $expName + "SmoothRandomAnimation";
+	string $laExp = $expName + "LinearAnimation";
+	string $ooExp = $expName + "OnOffAnimation";
+	string $raatExp = $expName + "RandomizeAttributeAtTime";
+	if($maeObj == "MasterAnimationExpressionObj"){
+		$controlObj = "MasterAnimationExpressionObj";
+	} else {
+		$controlObj = $obj[0];
+	}
+	$sraExp = generateUniqueAnimationExpressionName($sraExp, $controlObj);
+	$laExp = generateUniqueAnimationExpressionName($laExp, $controlObj);
+	$ooExp = generateUniqueAnimationExpressionName($ooExp, $controlObj);
+	$raatExp = generateUniqueAnimationExpressionName($raatExp, $controlObj);
+
+	textFieldGrp
+		-edit
+		-text  $sraExp
+		smoothRandomAnimationExpressionName
+		;
+		
+	textFieldGrp
+		-edit
+		-text $laExp
+		linearAnimationExpressionName
+		;
+		
+	textFieldGrp
+		-edit
+		-text $ooExp
+		onOffAnimationExpressionName
+		;
+		
+	textFieldGrp
+		-edit
+		-text $raatExp
+		randomizeAttributeAtTimeAnimationExpressionName
+		;
+		
+}
+
+global proc clearAnimationExpressionObjectsList()
+{
+	textScrollList
+		-edit
+		-ra
+		getAnimationExpressionObjects
+		;
+	textScrollList
+		-edit
+		-ra
+		attributeToAddExpressionAnimationTo
+		;
+}
+
+global proc removeAnimationExpressionObjects()
+{
+	string $sel[] = `textScrollList -q -si getAnimationExpressionObjects`;
+	int $i;
+	for($i=0;$i<`size $sel`;$i++){
+		textScrollList
+			-edit
+			-ri $sel[$i]
+			getAnimationExpressionObjects
+			;
+	}
+	updateAnimationExpressionObjectAttributeList();
+}
+
+global proc updateAnimationExpressionObjectAttributeList()
+{
+	string $sel[] = `textScrollList -q -ai getAnimationExpressionObjects`;
+	int $i;
+	string $attr[];
+	string $attrSel[];
+	for($i=0;$i<`size $sel`;$i++){
+		$attrSel = `listAttr -sa -m $sel[$i]`;
+		appendStringArray($attr, $attrSel, `size $attrSel`);
+	}
+	$attr = stringArrayRemoveDuplicates($attr);
+
+	textScrollList
+		-edit
+		-ra
+		attributeToAddExpressionAnimationTo
+		;
+
+	for($i = 0; $i<`size $attr`; $i++){
+		textScrollList
+			-edit
+			-a $attr[$i]
+			attributeToAddExpressionAnimationTo
+			;
+	}
+	generateAnimationExpressionNames();
+}
+
+global proc sortAttributeToAddExpressionAnimationToList()
+{
+	string $attr[] = `textScrollList -q -ai attributeToAddExpressionAnimationTo`;
+	string $sortedList[] = `sort $attr`;
+
+	textScrollList
+		-edit
+		-ra
+		attributeToAddExpressionAnimationTo
+		;
+		
+	int $i;
+	for($i = 0; $i<`size $sortedList`; $i++){
+		textScrollList
+			-edit
+			-a $sortedList[$i]
+			attributeToAddExpressionAnimationTo
+			;
+	}
+
+}
+
+global proc createSimpleOnOffExpression()
+{
+	$useTrigger = `checkBox -q -v onOffAnimationExpressionTriggerOption`;
+	if($useTrigger){
+		createTriggeredOnOffExpression();
+		return;
+	}
+	string $objs[] = `textScrollList -q -ai getAnimationExpressionObjects`;	
+	string $obj = $objs[0];
+	string $attrs[] = `textScrollList -q -si attributeToAddExpressionAnimationTo`;
+	string $attr = $attrs[0];
+
+	string $attrName = $attr + "Animation";
+	string $startName = $attr + "StartTime";
+	string $maxName = $attr + "MaxTime";
+	string $maxEndName = $attr + "MaxEndTime";
+	string $endName = $attr + "EndTime";
+	string $startValueName = $attr + "StartValue";
+	string $maxValueName = $attr + "EndValue";
+	string $loopName = $attr + "Loop";
+
+	if (attributeExists ($startValueName, $obj)==0){
+		addAttr -ln $startValueName -at double -k 1 -min -1000000 -max 1000000 -smn 0 -smx 1000 -dv 100 $obj;
+	}
+
+	if (attributeExists ($maxValueName, $obj)==0){
+		addAttr -ln $maxValueName -at double -k 1 -min -1000000 -max 1000000 -smn 0 -smx 1000 -dv 100 $obj;
+	}
+
+	if (attributeExists ($startName, $obj)==0){
+		addAttr -ln $startName -at double -k 1 -min -1000000 -max 1000000 -smn 0 -smx 100 -dv 1 $obj;
+	}
+
+	if (attributeExists ($maxName, $obj)==0){
+		addAttr -ln $maxName -at double -k 1 -min -1000000 -max 1000000 -smn 0 -smx 100 -dv 10 $obj;
+	}
+
+	if (attributeExists ($maxEndName, $obj)==0){
+		addAttr -ln $maxEndName -at double -k 1 -min -1000000 -max 1000000 -smn 0 -smx 100 -dv 90 $obj;
+	}
+
+	if (attributeExists ($endName, $obj)==0){
+		addAttr -ln $endName -at double -k 1 -min -1000000 -max 1000000 -smn 0 -smx 100 -dv 100 $obj;
+	}
+
+	if (attributeExists ($loopName, $obj)==0){
+		addAttr -ln $loopName -at bool -k 1 -dv 0 $obj;
+	}
+
+	string $quotes="\"";
+	string $objVar = "string $obj = " + $quotes + $obj + $quotes;
+	string $attrVar = "string $attr = " + $quotes + $attr + $quotes;
+	string $endLine = "\"\n\"";
+
+	//_______________________________________________
+
+	// The actual expression
+	expression -s (
+	"animate" + $attr + "Expression();\n"
+	+"global proc animate" + $attr + "Expression()\n"
+	+"{\n"
+	+ $objVar + " ;\n"
+	+ $attrVar + " ;\n"
+	+"float $startAT = " + $startName + ";\n"
+	+"float $maxAT = " + $maxName + ";\n"
+	+"float $maxAET = " + $maxEndName + ";\n"
+	+"float $endAT = " + $endName + ";\n"
+	+"float $startVal = " + $startValueName + ";\n"
+	+"float $maxVal = " + $maxValueName + ";\n"
+	+"float $maxVal = " + $maxValueName + ";\n"
+	+"$loop = " + $loopName + ";\n"
+	+"float $curRate = 0;\n"
+	+"float $currentTime = `currentTime -q`;\n"
+	+"float $startLength = $maxAT - $startAT;\n"
+	+"float $endLength = $endAT - $maxAET;\n"
+	+"\n"
+	+"if($currentTime >= $startAT && $currentTime < $maxAT){\n"
+	+"	$curRate = $maxVal - ((($maxAT - $currentTime) / $startLength ) * $maxVal);\n"
+	+"} else if($currentTime >= $maxAT && $currentTime < $maxAET){\n"
+	+"	$curRate = $maxVal;\n"
+	+"} else if($currentTime > $maxAET && $currentTime < $endAT){\n"
+	+"	$curRate = $maxVal - ((($endLength - ($endAT - $currentTime)) / $endLength) * $maxVal);\n"
+	+"}\n"
+	+"setAttr ($obj + \"." + $attr + "\") $curRate;\n"
+	+"}\n"
+	) -o $obj -n ($obj + $attr + "OnOffExpression"); // end of the expression
+	}
+
+	global proc createOnOffExpression()
+	{
+	string $obj[] = `textScrollList -q -ai getAnimationExpressionObjects`;	
+	string $attr[] = `textScrollList -q -si attributeToAddExpressionAnimationTo`;
+	string $expName = `textFieldGrp -q -text onOffAnimationExpressionName`;
+	string $attrGroupName = $expName + "Group";
+	$useToggle = `checkBox -q -v onOffAnimationExpressionTriggerOption`;
+	string $startTimeName = $expName + "StartTime";
+	string $stNn = "StartTime";
+	//string $maxTimeName = $expName + "MaxTime";
+	//string $maxNn = "MaxTime";
+	string $endTimeName = $expName + "EndTime";
+	string $etNn = "EndTime";
+	string $toggleName = $expName + "Toggle";
+	string $tgNn = "Toggle";
+	string $inLengthName = $expName + "InLength";
+	string $ilNn = "InLength";
+	string $outLengthName = $expName + "OutLength";
+	string $olNn = "OutLength";
+	string $maxValueName = $expName + "MaxValue";
+	string $mvNn = "MaxValue";
+	//string $loopName = $expName + "Loop";
+	//string $loopNn = "Loop";
+
+	string $controlObj = getAnimationExpressionControlObject($obj);
+	string $objAttrLink[] = createObjectAttributeLinks($obj, $attr);
+	string $objAttrSn[] = removeIllegalCharactersFromNames($objAttrLink);
+	string $initValueName[] = createInitValueNamesForObjectAttributeLinks($objAttrSn, "OnOffAnimInitValue");
+	string $attrType[] = getObjectAttributeTypesFromObjectAttributeLink($objAttrLink);
+
+	string $toggleVar = "";
+	string $startEndVar = "";
+	string $startCondStatement = "";
+	string $endCondStatement = "";
+
+	if ((attributeExists ($attrGroupName, $controlObj)) == 0){
+		addAttr -ln $attrGroupName -multi $controlObj;
+	}
+
+	if($useToggle){
+		if (attributeExists ($toggleName, $controlObj)==0){
+			addAttr -ln $toggleName -nn $tgNn -at bool -k 1 -dv 0 $controlObj;
+		}
+		$toggleVar = "$toggle = " + $toggleName + ";\n";
+		$startCondStatement = "	if($toggle == true && $curVal[$i] < $maxVal){\n";
+		$endCondStatement = "	} else if($toggle == false && $curVal[$i] > $initVal[$i]){\n";	
+		if (attributeExists ($maxValueName, $controlObj)==0){
+			addAttr -ln $maxValueName -nn $mvNn -at double -k 1 -min -1000000 -max 1000000 -smn 0 -smx 1000 -dv 100 $controlObj;
+		}
+		if (attributeExists ($inLengthName, $controlObj)==0){
+			addAttr -ln $inLengthName -nn $ilNn -at double -k 1 -min -1000000 -max 1000000 -smn 0 -smx 100 -dv 10 $controlObj;
+		}
+		if (attributeExists ($outLengthName, $controlObj)==0){
+			addAttr -ln $outLengthName -nn $olNn -at double -k 1 -min -1000000 -max 1000000 -smn 0 -smx 100 -dv 10 $controlObj;
+		}
+	} else {
+		if (attributeExists ($startTimeName, $controlObj)==0){
+			addAttr -ln $startTimeName -nn $stNn -at double -k 1 -smn 0 -smx 1000 -dv 1 $controlObj;
+		}
+		if (attributeExists ($inLengthName, $controlObj)==0){
+		addAttr -ln $inLengthName -nn $ilNn -at double -k 1 -min -1000000 -max 1000000 -smn 0 -smx 100 -dv 10 $controlObj;
+		}
+			if (attributeExists ($maxValueName, $controlObj)==0){
+		addAttr -ln $maxValueName -nn $mvNn -at double -k 1 -min -1000000 -max 1000000 -smn 0 -smx 1000 -dv 100 $controlObj;
+		}
+		if (attributeExists ($endTimeName, $controlObj)==0){
+			addAttr -ln $endTimeName -nn $etNn -at double -k 1 -smn 0 -smx 1000 -dv 100 $controlObj;
+		}
+		if (attributeExists ($outLengthName, $controlObj)==0){
+		addAttr -ln $outLengthName -nn $olNn -at double -k 1 -min -1000000 -max 1000000 -smn 0 -smx 100 -dv 10 $controlObj;
+		}
+		$startEndVar = (
+		"float $startTime = " + $startTimeName + ";\n"
+		+"float $endTime = " +  $endTimeName + ";\n"
+		);
+		$startCondStatement = "	if($currentTime >= $startTime && $curVal[$i] < $maxVal && $currentTime < $endTime){\n";
+		$endCondStatement = "	} if($currentTime >= $endTime && $curVal[$i] > $initVal[$i]){\n";
+	}
+
+	/*
+	if (attributeExists ($loopName, $controlObj)==0){
+		addAttr -ln $loopName -nn $loopNn -at bool -k 1 -dv 0 $controlObj;
+	}
+	*/
+	for($i=0;$i<`size $initValueName`;$i++){
+		if (attributeExists ($initValueName[$i], $controlObj)==0){
+			addAttr -ln $initValueName[$i] -at $attrType[$i] -h 1 $controlObj;
+		}
+	}
+	string $initAttrLink[] = createInitAttributeLinks($objAttrLink, $controlObj, $initValueName);
+
+	string $allObjAttrLinks = createStringFormatedStringArray($objAttrLink);
+	string $allInitAttrLinks = createStringFormatedStringArray($initAttrLink);
+
+	expression -s (
+	$expName + "();\n"
+	+"global proc " + $expName + "()\n"
+	+"{\n"
+	+"string $objAttrLink[] = " + $allObjAttrLinks +";\n"
+	+"string $initAttrLink[] = " + $allInitAttrLinks + ";\n"
+	+"float $initVal[];\n"
+	+"float $curVal[];\n"
+	+ $toggleVar
+	+ $startEndVar
+	+"float $inLength = " + $inLengthName + ";\n"
+	+"float $outLength = " + $outLengthName + ";\n"
+	+"float $maxVal = " + $maxValueName + ";\n"
+	+"int $i;\n"
+	+"for($i=0;$i<`size $initVal`;$i++){\n"
+	+"	if($maxVal < $initVal[$i]){\n"
+	+"		$curVal[$i] = invertCurVal($curVal[$i]);\n"
+	+"	}\n"
+	+"}\n"
+	+"float $currentTime = `currentTime -q`;\n"
+	+"\n"
+	+"for($i=0;$i<`size $initAttrLink`;$i++){\n"
+	+"	$initVal[$i] = `getAttr ($initAttrLink[$i])`;\n"
+	+"}\n"
+	+"for($i=0;$i<`size $objAttrLink`;$i++){\n"
+	+"	$curVal[$i] = `getAttr ($objAttrLink[$i])`;\n"
+	+"}\n"
+	+"int $cont = maintainInitialValuesForObjectAttributesLinks($objAttrLink,$initAttrLink,$initVal);\n"
+	+"if($cont == 0){ return; }\n"
+	+"for($i=0;$i<`size $objAttrLink`;$i++){\n"
+	+"	float $newVal;\n"
+	+ $startCondStatement
+	+"		$newVal = $curVal[$i] + ($maxVal / $inLength);\n"
+	+"		catchQuiet(`setAttr ($objAttrLink[$i]) $newVal`);\n"
+	+ $endCondStatement
+	+"		$newVal = $curVal[$i] - ($maxVal / $outLength);\n"
+	+"		catchQuiet(`setAttr ($objAttrLink[$i]) $newVal`);\n"
+	+"	}\n"	
+	+"	//print(\"ObjAttrLink: \" + $objAttrLink[$i] + \" NewVal: \" + $newVal + \"\\n\");\n"
+	+"}\n"
+	+"}\n"
+	+"\n"
+	+"global proc float invertCurVal(float $curVal)\n"
+	+"{\n"
+	+"$curVal = 0 - $curVal;\n"
+	+"return $curVal;\n"
+	+"}\n"
+	) -o $controlObj -n ($expName);
+
+}
+
+
+global proc createTriggeredOnOffExpression()
+{
+	string $objs[] = `textScrollList -q -ai getAnimationExpressionObjects`;	
+	string $obj = $objs[0];
+	string $attrs[] = `textScrollList -q -si attributeToAddExpressionAnimationTo`;
+	string $attr = $attrs[0];
+	$useTrigger = `checkBox -q -v onOffAnimationExpressionTriggerOption`;
+	string $attrName = $attr + "Animation";
+	string $onTriggerLengthName = $attr + "OnTriggerLength";
+	string $offTriggerLengthName = $attr + "OffTriggerLength";
+	string $startValueName = $attr + "StartValue";
+	string $maxValueName = $attr + "EndValue";
+	string $triggerName = $attr + "Trigger";
+	string $stateName = $attr + "State";
+
+	if (attributeExists ($startValueName, $obj)==0){
+		addAttr -ln $startValueName -at double -k 1 -smn 0 -smx 1000 -dv 100 $obj;
+	}
+
+	if (attributeExists ($maxValueName, $obj)==0){
+		addAttr -ln $maxValueName -at double -k 1 -smn 0 -smx 1000 -dv 100 $obj;
+	}
+
+	if (attributeExists ($onTriggerLengthName, $obj)==0){
+		addAttr -ln $onTriggerLengthName -at double -k 1 -smn 0 -smx 100 -dv 10 $obj;
+	}
+
+	if (attributeExists ($offTriggerLengthName, $obj)==0){
+		addAttr -ln $offTriggerLengthName -at double -k 1 -smn 0 -smx 100 -dv 10 $obj;
+	}
+
+	if (attributeExists ($stateName, $obj)==0){
+		addAttr -ln $stateName -at byte -k 1 -h 0 -dv 0 $obj;
+	}
+
+	if (attributeExists ($triggerName, $obj)==0){
+		addAttr -ln $triggerName -at bool -k 1 -dv 0 $obj;
+	}
+
+	string $quotes="\"";
+	string $objVar = "string $obj = " + $quotes + $obj + $quotes;
+	string $attrVar = "string $attr = " + $quotes + $attr + $quotes;
+	string $endLine = "\"\n\"";
+	string $stateVarName = $stateName;
+
+	expression -s (
+	"animate" + $attr + "Expression();\n"
+	+"global proc animate" + $attr + "Expression()\n"
+	+"{\n"
+	+ $objVar + " ;\n"
+	+ $attrVar + " ;\n"
+	+"float $onLength = " + $onTriggerLengthName + ";\n"
+	+"float $offLength = " + $offTriggerLengthName + ";\n"
+	+"float $startVal = " + $startValueName + ";\n"
+	+"float $maxVal = " + $maxValueName + ";\n"
+	+"int $state = " + $stateName + ";\n"
+	+"$trigger = " + $triggerName + ";\n"
+	+"float $curVal = `getAttr ($obj + \"." + $attr + "\")`;\n"
+	+"if($trigger == true || $state >= 1){\n"
+	+"	print(\"Triggered\" + \"\\n\");\n"
+	+"	if($state == 0){\n"
+	+"		$state = 1;\n"
+	+"		setAttr (" + $stateName + ") 1;\n"
+	+"	}\n"
+	+"	if($curVal < $maxVal && $state == 1){\n"
+	+"		$curVal = $curVal + ($maxVal * ($onLength / 30));\n"
+	+"	}\n"
+	+"	if($curVal >= $maxVal && $state == 1){\n"
+	+"		$curVal = $maxVal;\n"
+	+"		$state = 2;\n"
+	+"		setAttr (" + $stateName + ") 2;\n"
+	+"	}\n"
+	+"	if($trigger == true && $state == 2){\n"
+	+"		$curVal = $curVal - ($maxVal * ($onLength / 30));\n"
+	+"	}\n"		
+	+"	if($state == 2 && $curVal <= $startVal ){\n"
+	+"		$state = 0;\n"
+	+"		setAttr (" + $stateName + ") 0;\n"
+	+"	}\n"
+	+"}\n"
+	+"setAttr ($obj + \"." + $attr + "\") $curVal;\n"
+	+"}\n"
+	) -o $obj -n ($obj + $attr + "TriggerOnOffExpression"); // end of the expression
+	}
+
+
+	global proc createSimpleLinearAttributeAnimationExpression()
+	{
+	string $objs[] = `textScrollList -q -ai getAnimationExpressionObjects`;	
+	string $obj = $objs[0];
+	string $attrs[] = `textScrollList -q -si attributeToAddExpressionAnimationTo`;
+	string $attr = $attrs[0];
+	string $animationSpeedName = $attr + "AnimationSpeed";
+	string $startValueName = $attr + "StartValue";
+	string $dirName = $attr + "Direction";
+
+
+	if (attributeExists ($animationSpeedName, $obj)==0){
+		addAttr -ln $animationSpeedName -at double -k 1 -min -10000 -max 10000 -smn 0 -smx 2 -dv 1 $obj;
+	}
+
+	if (attributeExists ($startValueName, $obj)==0){
+		addAttr -ln $startValueName -at double -h 0 -k 1 -min -100000 -max 100000 -smn 0 -smx 100 -dv 0 $obj;
+	}
+
+	if (attributeExists ($dirName, $obj)==0){
+		addAttr -ln $dirName -at enum -en "up=0:down=1" $obj;
+	}
+
+	string $quotes="\"";
+	string $objVar = "string $obj = " + $quotes + $obj + $quotes;
+	string $attrVar = "string $attr = " + $quotes + $attr + $quotes;
+	string $endLine = "\"\n\"";
+
+	//_______________________________________________
+
+	// The actual expression
+	expression -s (
+	$attr + "LinearAnimationExpression();\n"
+	+"global proc " + $attr + "LinearAnimationExpression()\n"
+	+"{\n"
+	+ $objVar + " ;\n"
+	+ $attrVar + " ;\n"
+	+"float $speed = " + $animationSpeedName + " ;\n"
+	+"int $dir = " + $dirName + " ;\n"
+	+"float $dirVal;\n"
+	+"if($dir == 0){\n"
+	+"	$dirVal = 1;\n"
+	+"} else { \n"
+	+"	$dirVal = -1;\n"
+	+"}\n"
+	+"\n"
+	+"if(frame == 1){\n"
+	+"	float $resetVal = `getAttr ($obj + \"." + $startValueName + "\")`;\n"
+	+"	float $val = `getAttr ($obj + \"." + $attr + "\")`;\n"
+	+"	//print(\"ResetVal: \" + $resetVal + \" Val: \" + $val + \"\\n\");\n"
+	+"	if($val != $resetVal){\n"
+	+"		setAttr ($obj + \"." + $attr + "\") $resetVal;\n"
+	+"		//setAttr ($obj + \"." + $startValueName + "\") $val;\n"
+	+"	}\n"
+	+"	return;\n"
+	+"}\n"
+
+	+"float $newVal = `getAttr ($obj + \"." + $attr + "\")`;\n"
+	+"$newVal = $newVal + ($speed * $dirVal);\n"
+	+"setAttr ($obj + \"." + $attr + "\") $newVal;\n"
+	+"}\n"
+	) -o $obj -n ($obj + $attr + "LinearExpression"); // end of the expression
+		
+}
+
+
+global proc createLinearAttributeAnimationExpression()
+{
+	string $obj[] = `textScrollList -q -ai getAnimationExpressionObjects`;	
+	string $attr[] = `textScrollList -q -si attributeToAddExpressionAnimationTo`;
+	string $expName = `textFieldGrp -q -text linearAnimationExpressionName`;
+	string $attrGroupName = $expName + "Group";
+	string $animationSpeedName = $expName + "AnimationSpeed";
+	string $asNn = "LinearAnimSpeed";
+	string $dirName = $expName + "Direction";
+	string $dirNn = "LinearAnimDir";
+
+	string $controlObj = getAnimationExpressionControlObject($obj);
+	string $objAttrLink[] = createObjectAttributeLinks($obj, $attr);
+	string $objAttrSn[] = removeIllegalCharactersFromNames($objAttrLink);
+	string $initValueName[] = createInitValueNamesForObjectAttributeLinks($objAttrSn, "LinearAnimInitValue");
+	string $attrType[] = getObjectAttributeTypesFromObjectAttributeLink($objAttrLink);
+
+	if (attributeExists ($attrGroupName, $controlObj)==0){
+		addAttr -ln $attrGroupName -multi $controlObj;
+	}
+
+	if (attributeExists ($animationSpeedName, $controlObj)==0){
+		addAttr -ln $animationSpeedName -nn $asNn -at double -k 1 -min -10000 -max 10000 -smn 0 -smx 2 -dv 1 $controlObj;
+	}
+
+	if (attributeExists ($dirName, $controlObj)==0){
+		addAttr -ln $dirName -nn $dirNn -at enum -en "up=0:down=1" $controlObj;
+	}
+
+	for($i=0;$i<`size $initValueName`;$i++){
+		if (attributeExists ($initValueName[$i], $controlObj)==0){
+			addAttr -ln $initValueName[$i] -at $attrType[$i] -h 1 $controlObj;
+		}
+	}
+	string $initAttrLink[] = createInitAttributeLinks($objAttrLink, $controlObj, $initValueName);
+
+	string $allObjAttrLinks = createStringFormatedStringArray($objAttrLink);
+	string $allInitAttrLinks = createStringFormatedStringArray($initAttrLink);
+	//Note : Set Limits for attributes with min and max values~
+	//_______________________________________________
+	string $exp = (
+	$expName + "();\n"
+	+"global proc " + $expName + "()\n"
+	+"{\n"
+	+"string $objAttrLink[] = " + $allObjAttrLinks +";\n"
+	+"string $initAttrLink[] = " + $allInitAttrLinks + ";\n"
+	+"float $initVal[];\n"
+	+"float $curVal[];\n"
+	+"float $speed = " + $animationSpeedName + ";\n"
+	+"int $dir = " + $dirName + ";\n"
+	+"float $dirVal;\n"
+	+"if($dir == 0){\n"
+	+"	$dirVal = 1;\n"
+	+"} else { \n"
+	+"	$dirVal = -1;\n"
+	+"}\n"
+	+"\n"
+	+"int $i;\n"
+	+"for($i=0;$i<`size $initAttrLink`;$i++){\n"
+	+"	$initVal[$i] = `getAttr ($initAttrLink[$i])`;\n"
+	+"}\n"
+	+"for($i=0;$i<`size $objAttrLink`;$i++){\n"
+	+"	$curVal[$i] = `getAttr ($objAttrLink[$i])`;\n"
+	+"}\n"
+	+"int $cont = maintainInitialValuesForObjectAttributesLinks($objAttrLink,$initAttrLink,$initVal);\n"
+	+"if($cont == 0){ return; }\n"
+	+"for($i=0;$i<`size $curVal`;$i++){\n"
+	+"	float $newVal;\n"
+	+"	$newVal = $curVal[$i] + ($speed * $dirVal);\n"
+	+"	setAttr ($objAttrLink[$i]) $newVal;\n"
+	+"}\n"
+	+"}\n"
+	);
+	print($exp + "\n");
+	expression -s ($exp) -o $controlObj -n ($expName); // end of the expression
+	addMaintainInitialValuesForObjectAttributesLinksToExpressions();
+	addConnectDisconnectObjAttrLinksToExpressions();
+}
+
+
+global proc createSmoothRandomAttributeAnimationExpression()
+{
+	string $obj[] = `textScrollList -q -ai getAnimationExpressionObjects`;
+	string $attr[] = `textScrollList -q -si attributeToAddExpressionAnimationTo`;
+	string $expName = `textFieldGrp -q -text smoothRandomAnimationExpressionName`;
+	$useSameVal = `checkBox -q -v randomAnimationExpressionUseSameValuesOption`;
+	$useMinMax = `checkBox -q -v randomAnimationExpressionMinMaxOption`;
+	$useSeed = `checkBox -q -v randomAnimationExpressionSeedOption`;
+	$checkComponent = `checkBox -q -v randomAnimationExpressionComponentObjectOption`;
+
+	float $curTime = `currentTime -q`;
+	float $startTime = `playbackOptions -q -min`;
+	currentTime -edit $startTime;
+
+	int $multiObj = 0;
+	int $multiAttr = 0;
+	if(`size $obj` > 1){
+		$multiObj = 1;
+	}
+	if(`size $attr` > 1){
+		$multiAttr = 1;
+	}
+
+	int $i, $p;
+	/*
+	for($i=0;$i<`size $obj`;$i++){	
+		for($p=0;$p<`size $attr`;$p++){
+			print("Creating Random Animation Expression For: " + $obj[$i] + "." + $attr[$i] + "\n");
+		}
+	}
+	*/
+
+	// Determin if this is an object or a component 
+	// If it is a component then we must add attributes to the component's parent object.
+	int $component = 0;
+	string $controlObj = $obj[0];
+	if($checkComponent){
+		$component = areObjectsComponentObjects($obj);
+		if($component == 1){
+			print("This is a Component Object." + "\n");
+			$controlObj = getComponentObjectsParent($obj);
+			clear $obj;
+			$obj[0] = $controlObj;
+		}
+	}
+	//Create links for convience in expression
+	string $objAttrLink[];
+	string $objAttrArray[];
+	string $oObj[]; // Ordered Objects
+	string $oAttr[]; //Ordered Attributes 
+	for ($i=0;$i<`size $obj`;$i++){	
+		for($p=0;$p<`size $attr`;$p++){
+			print("Checking if Attribute Exists > Attr: " + $attr[$p] + " Obj: " + $obj[$i] + "\n");
+			if(`attributeExists $attr[$p] $obj[$i]`){
+				$objAttrArray[`size $objAttrArray`] = $obj[$i];
+				$objAttrArray[`size $objAttrArray`] = $attr[$p];
+				$objAttrLink[`size $objAttrLink`] = $obj[$i] + "." + $attr[$p];
+				$oObj[`size $oObj`] = $obj[$i];
+				$oAttr[`size $oAttr`] = $attr[$p];
+				print("Adding To Obj Attribute Links - Obj: " + $obj[$i] + " Attr: " + $attr[$p] + "\n");
+			}
+		}
+	}
+
+
+	//Create a Master Animation Expression Object if this is a Multi Obj expression
+	string $maeObj;
+	if($multiObj == 1){
+		$maeObj = createMasterAnimationExpressionObject();
+		$controlObj = $maeObj;
+	}
+
+	//Create short names for all the objects and attribute in case they have illegal characters.
+	string $attrAlias[];
+	string $objSn[] = removeIllegalCharactersFromNames($oObj);
+	string $attrSn[] = removeIllegalCharactersFromNames($oAttr);
+
+	if($multiObj == 1 || $multiAttr == 1 ){
+		for($i=0;$i<`size $oAttr`;$i++){
+			$attrAlias[$i] = $objSn[$i] + $attrSn[$i];
+		}
+	} else {
+		$attrAlias[0] = $objSn[0] + $attrSn[0];
+	}
+
+	if(`size $oAttr` < 1){ //If we don't have any ordered attributes then we must have serialized attributes
+		//print("No Attributes Were Found in Initial Pass.Looking Further..." + "\n");
+		string $cAttr[] = removeIllegalCharactersFromNames($attr);
+		for($i=0;$i<`size $cAttr`;$i++){
+			$attrAlias[$i] = $cAttr[$i];
+			for($p=0;$p<`size $obj`;$p++){
+				//print("Looking At: " + $obj[$p] + " Size of Obj: " + `size $obj` + "\n");
+				if(catch(`aliasAttr $attrAlias[$i] ($obj[$p] + "." + $attr[$i])`)){
+					//print("Object Does Not Contain Attribute: " + $obj[$p] + " || " + $attr[$i] + "\n");
+				} else {
+					$oAttr[`size $oAttr`] = $attrAlias[$i];
+					$oObj[`size $oObj`] = $obj[$p];				
+					//print("Creating Alias: " + $attrAlias[$i] + " > For Attribute: " + $obj[$p] + "." + $attr[$i] + "\n");
+					if($component == 1){
+						$objAttrLink[`size $objAttrLink`] = $obj[$p] + "." + $attr[$i];
+					} else {
+						$objAttrLink[`size $objAttrLink`] = $obj[$p] + "." + $attrAlias[$i];
+						//print("Adding : " + $objAttrLink[(`size $objAttrLink` -1)] + " To Object Attribute Links." + "\n");
+					}
+				}
+			}
+		}
+	$objSn = removeIllegalCharactersFromNames($oObj);
+	$attrSn = removeIllegalCharactersFromNames($oAttr);
+
+	}
+
+	// Create an alias for the attributes so we can get information about the attribute.
+	int $skipMinMax = 0;
+	if($multiObj == 0 || $multiAttr == 0 ){
+		if(catchQuiet(`aliasAttr $attrAlias ($obj[0] + "." + $attr[0])`)){
+			if(catchQuiet(`aliasAttr $attrAlias ($controlObj + "." + $attr[0])`)){
+				$skipMinMax = 1;
+				print("Cannot Set Min Max Values on Attribute." + "\n");
+			}
+		} else {
+			//aliasAttr $attrAlias ($obj + "." + $attr);
+		}
+	}
+
+	//Set the names of the variables for the expression.
+	string $attrGroupName = $expName;
+	string $evaluateName, $animationSpeedName, $randomAmountName, $frequencytName, $minName, $maxName, $seedName;
+	$evaluateName = $expName + "EvaluateRandomAnimationExpression";
+	$animationSpeedName = $expName + "AnimationSpeed";
+	$randomAmountName = $expName + "RandomAmount";
+	$frequencytName = $expName + "Frequency";
+	$minName = $expName + "Min";
+	$maxName = $expName + "Max";
+	$seedName = $expName + "Seed";
+	string $asNn, $raNn, $fNn, $seedNn, $evalNn;
+	$evalNn = "on";
+	$asNn = "speed";
+	$raNn = "randomAmount";
+	$fNn = "frequency";
+	$minNn = "min";
+	$maxNn = "max";
+	$seedNn = "seed";
+	string $initValueName[]; // We need a unique name for each object attribute combination for the init values.
+	for($i=0;$i<`size $attrSn`;$i++){	
+		$initValueName[$i] = $objSn[$i] + $attrSn[$i] + "RandomAnimInitValue";
+	}
+
+	// Set Min and Max values for attributes with min and max ranges
+	float $attrMin[], $attrMax[];
+	$attrMinEx = false;
+	$attrMaxEx = false;
+	string $minAttrVar = "";
+	string $maxAttrVar = "";
+	string $minClampStatement = "";
+	string $maxClampStatement = "";
+	float $dRanVal = 1;
+	float $smnRan = 0;
+	float $smxRan = 5;
+	if($multiObj == 0 && $multiAttr == 0){	
+		if($skipMinMax == 0){
+			if(`attributeQuery -mne -node $obj[0] $attrAlias[0]`){
+				$attrMinEx = true;
+				$attrMin = `attributeQuery -min -node $obj[0] $attrAlias[0]`;	
+				$minAttrVar = "float $attrMin = " + $attrMin[0] + ";\n";
+				$minClampStatement = "if($newVal < " + $attrMin[0] + "){\n" + "		$newVal = $curVal[$i];\n" + "}\n";
+				$smnRan = $attrMin[0];
+			}
+			if(`attributeQuery -mxe -node $obj[0] $attrAlias`){
+				$attrMaxEx = true;
+				$attrMax = `attributeQuery -max -node $obj[0] $attrAlias[0]`;
+				$maxAttrVar = "float $attrMax = " + $attrMax[0] + ";\n";
+				$maxClampStatement = "if($newVal > " + $attrMax[0] + "){\n" + "		$newVal = $curVal[$i];\n" + "}\n";
+				$smxRan = $attrMax[0];
+			}
+		}
+	}
+
+	//We need to know the attribute type of each attribute for the initial values connection
+	string $attrType[];
+	for($i=0;$i<`size $objAttrLink`;$i++){
+		if($multiObj){
+			$attrType[$i] = `getAttr -typ $objAttrLink[$i]`;
+		} else {
+			$attrType[$i] = `getAttr -typ ($controlObj + "." + $oAttr[$i])`;
+		}
+	}
+
+	if (attributeExists ($attrGroupName, $controlObj)==0){
+		addAttr -ln $attrGroupName -multi $controlObj;
+	}
+
+	if (attributeExists ($evaluateName, $controlObj)==0){
+		addAttr -ln $evaluateName -nn $evalNn -at bool -k 1 -dv 1 $controlObj;
+	}
+
+	if (attributeExists ($randomAmountName, $controlObj)==0){
+		addAttr -ln $randomAmountName -nn $raNn -at double -k 1 -smn $smnRan -smx $smxRan -dv $dRanVal $controlObj;
+	}
+
+	if (attributeExists ($animationSpeedName, $controlObj)==0){
+		addAttr -ln $animationSpeedName -nn $asNn -at double -k 1 -smn 0 -smx 5 -dv 1 $controlObj;
+	}
+
+	if (attributeExists ($frequencytName, $controlObj)==0){
+		addAttr -ln $frequencytName -nn $fNn -at double -k 1 -smn 0 -smx 100 -dv 10 $controlObj;
+	}
+	if($useMinMax){
+		if (attributeExists ($minName, $controlObj)==0){
+			addAttr -ln $minName -nn $minNn -at double -k 1 -smn -100 -smx 0 -dv 0 $controlObj;
+		}
+		if (attributeExists ($maxName, $controlObj)==0){
+			addAttr -ln $maxName -nn $maxNn -at double -k 1 -smn 0 -smx 100 -dv 10 $controlObj;
+		}
+	}
+
+	string $seedSet = "";
+	string $seedVar = "";
+	if($useSeed){
+		if (attributeExists ($seedName, $controlObj)==0){
+			int $ranSeed = floor(rand(1, 100));
+			addAttr -ln $seedName -nn $seedNn -at byte -k 1 -smn 0 -smx 100 -dv $ranSeed $controlObj;		
+		}
+	}
+
+	for($i=0;$i<`size $initValueName`;$i++){
+		if (attributeExists ($initValueName[$i], $controlObj)==0){
+			addAttr -ln $initValueName[$i] -at $attrType[$i] -h 1 $controlObj;
+		}
+	}
+
+	//Connect the attribute to the initValue so that we can change the objects attr value and set the init value at the same time.
+	string $initAttrLink[];
+	for($i=0;$i<`size $objAttrLink`;$i++){
+		if($multiObj == 1 || $component == 1){
+			$initAttrLink[$i] = $controlObj + "." + $initValueName[$i];
+			if(`isConnected $objAttrLink[$i] $initAttrLink[$i]` == 0){
+				connectAttr -f $objAttrLink[$i] $initAttrLink[$i];
+				//print("MultiObject - Connected: " + $objAttrLink[$i] + " To: " + $initAttrLink[$i] + "\n");
+			}		
+		} else {
+			$initAttrLink[$i] = $oObj[$i] + "." + $initValueName[$i];
+			if(`isConnected $objAttrLink[$i] $initAttrLink[$i]` == 0){
+				connectAttr -f $objAttrLink[$i] $initAttrLink[$i];
+				//print("SoloObject - Connected: " + $objAttrLink[$i] + " To: " + $initAttrLink[$i] + "\n");
+			}		
+		}
+	}
+
+	//Create some convient string for the creation of the expression.
+	string $allObjAttrLinks = createStringFormatedStringArray($objAttrLink);
+	string $allInitAttrLinks = createStringFormatedStringArray($initAttrLink);
+	string $allObjs = createStringFormatedStringArray($obj);
+	string $allAttrs = createStringFormatedStringArray($attr);
+	string $allInitVals = createStringFormatedStringArray($initValueName);
+	string $quotes= "\"";
+	string $objAttrLinkVar = "string $objAttrLink[] = " + $allObjAttrLinks;
+	string $initAttrLinkVar = "string $initAttrLink[] = " + $allInitAttrLinks;
+	string $objVar = "string $obj[] = " + $allObjs;
+	string $controlObjVar = "string $controlObj = " + $quotes + $controlObj + $quotes;
+	string $attrVar = "string $attr[] = " + $allAttrs;
+	string $initValNamesVar = "string $initValNames[] = " + $allInitVals;
+	string $randomChangeTime = "$" + $expName + "RandomChangeTime";
+	string $ranVar = "$" + $expName + "RandomVal";
+	string $endLine = "\"\n\"";
+	string $ranVarArray = "[" + `size $objAttrLink` + "]";
+	string $rvi = "[$i]";
+	string $ri = "[$i]";
+	string $ranStreamName = $expName + "RandomStream";
+	if($useSeed){
+		$seedVar = "int $seed = " + $seedName + ";\n";
+		$seedSet = "	seed " + $ranStreamName + " $seed;\n";
+	}
+	string $randomExpression = "	float $newVal = $curVal[$i] + (($speed * " + $ranVar + $rvi + ") * ((rand($ranStream, $smoothTime[$i])) * 0.1));\n";
+	if($useSameVal){
+		$ranVarArray = "";
+		$rvi = "";
+		$ri = "[0]";
+		$randomExpression = "	float $newVal = $curVal[0] + (($speed * " + $ranVar + $rvi + ") * ($smoothTime[0] * 0.1));\n";
+	}
+	string $minMaxArg = "";
+	string $minVar = "";
+	string $maxVar = "";
+	string $minSet = "";
+	string $maxSet = "";
+	if($useMinMax){
+		$minVar = "float $min = " + $minName + ";\n";
+		$maxVar = "float $max = " + $maxName + ";\n";
+		$minSet = "$min = $initVal" + $ri + " + $min;\n";
+		$maxSet = "$max = $initVal" + $ri + " + $max;\n";
+		$minMaxArg = "	if($newVal < ($initVal" + $ri + " - $min) || $newVal > ($initVal" + $ri + " + $max)){\n" + "			$newVal = $curVal[$i];\n" + "}\n";
+		
+	}
+
+	// Note: We need to Disconnect the init val if the user is scrubbing through the timeline.
+
+	// The expression
+	string $exp = (
+	"global float " + $randomChangeTime + "[" + `size $objAttrLink` + "];\n"
+	+"global float " + $ranVar + $ranVarArray + ";\n"
+	+"$eval = " + $evaluateName + ";\n"
+	+"if($eval){\n"	
+	+ 	$expName + "();\n"
+	+"}\n"
+	+"proc " + $expName + "()\n"
+	+"{\n"
+	+"string $objAttrLink[] = " + $allObjAttrLinks + ";\n"
+	+"string $initAttrLink[] = " + $allInitAttrLinks + ";\n"
+	+"global float " + $randomChangeTime + "[" + `size $objAttrLink` + "];\n"
+	+"global float " + $ranVar + $ranVarArray + ";\n"
+	+"float $speed = " + $animationSpeedName + ";\n"
+	+"float $ran = " + $randomAmountName + ";\n"
+	+"float $freq = " + $frequencytName + ";\n"
+	+"string $ranStream = \"" + $ranStreamName + "\";\n"
+	+ $seedVar
+	+"float $initVal[];\n"
+	+"float $curVal[];\n"
+	+"int $i;\n"
+	+"int $p;\n"
+	+"for($i=0;$i<`size $initAttrLink`;$i++){\n"
+	+"	$initVal[$i] = `getAttr ($initAttrLink[$i])`;\n"
+	+"}\n"
+	+"for($i=0;$i<`size $objAttrLink`;$i++){\n"
+	+"	$curVal[$i] = `getAttr ($objAttrLink[$i])`;\n"
+	+"}\n"
+	+ $minVar
+	+ $maxVar
+	+ $minAttrVar 
+	+ $maxAttrVar
+	+"float $curTime = `currentTime -q`;\n"
+	+"float $startTime = `playbackOptions -q -min`;\n"
+	+"int $isPlaying = `play -q -state`;\n"
+	+"float $smoothTime[];\n"
+	+"for($i=0;$i<`size " + $randomChangeTime + "`;$i++){\n"
+	+"	$smoothTime[$i] = " + $randomChangeTime + "[$i] - $curTime;\n"
+	+"}\n"
+	+"//If this is the first frame of the time range then reset. \n"
+	+"if($curTime == $startTime){ //Reset the attr to the init value and reconnect the initVal to the attr. \n"
+	+"	//print(\"StartFrame>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\" + \"\\n\");\n" 
+	+	$seedSet
+	+"	for($i=0;$i<`size $objAttrLink`;$i++){\n"
+	+"		" + $randomChangeTime + "[$i] = 0;\n"	
+	+"		" + $ranVar + $rvi + " = 0;\n"
+	+"		setAttr ($objAttrLink[$i]) $initVal[$i];\n"
+	+"		//print(\"ObjAttrLink: \" + $objAttrLink[$i] + \"InitVal: \" + $initVal[$i] + \"\\n\");\n"
+	+"		if(`isConnected $objAttrLink[$i] $initAttrLink[$i]` == 0){\n"
+	+"			connectAttr -f $objAttrLink[$i] $initAttrLink[$i];\n"
+	+"			//print(\"Connected: \" + $objAttrLink[$i] + \" To: \" + $initAttrLink[$i] + \"\\n\");\n"
+	+"		}\n"
+	+"	}\n"
+	+"	return;\n"
+	+"}\n"
+	+"//If this is the second frame of the time range then we are playing. \n"
+	+"float $approxFirstFrame = equivalentTol($curTime, $startTime, 2);\n"
+	+"if($approxFirstFrame == 1){ //Disconnect the initVal from the attr. \n"
+	+"	//print(\"FisrtFrame>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\" + \"\\n\");\n" 
+	+"	disconnectObjAttrLinks($objAttrLink, $initAttrLink);\n"
+	+"}\n"
+	+"if($curTime > $startTime && !$isPlaying){ //Disconnect the initVal from the attr. \n"
+	+"	disconnectObjAttrLinks($objAttrLink, $initAttrLink);\n"
+	+"}\n"
+	+"//If it's time to change the random number... \n"
+	+"for($i=0;$i<`size $curVal`;$i++){\n"
+	+"	if($curTime >= " + $randomChangeTime + $ri + "){\n"
+	+"		" + $randomChangeTime + "[$i] = (" + $randomChangeTime + "[$i] + rand($ranStream, $freq));\n"
+	+"		" + $ranVar + $rvi + " = rand($ranStream, 0 - $ran,0 + $ran);\n"
+	+"	}\n"
+	+"}\n"
+	+"//Change the attributes value. \n"
+	+"for($i=0;$i<`size $curVal`;$i++){\n"
+	+ 	$randomExpression
+	+	$minMaxArg
+	+ 	$minClampStatement
+	+ 	$maxClampStatement
+	+"	if(catchQuiet(`setAttr ($objAttrLink[$i]) $newVal`)){\n"
+	+"		$newVal = $curVal" + $ri + ";\n"
+	+"	}\n"
+	+"	setAttr ($objAttrLink[$i]) $newVal;\n"
+	+"}\n"
+	+"}\n"
+	+"\n"
+	+"global proc disconnectObjAttrLinks(string $objAttrLink[], string $initAttrLink[])\n"
+	+"{\n"
+	+"for($i=0;$i<`size $objAttrLink`;$i++){\n"
+	+"	if(`isConnected $objAttrLink[$i] $initAttrLink[$i]`){\n"
+	+"		disconnectAttr $objAttrLink[$i] $initAttrLink[$i];\n"
+	+"		//print(\"Disconnected: \" + $objAttrLink[$i] + \" To: \" + $initAttrLink[$i] + \"\\n\");\n"
+	+"	}\n"
+	+"}\n"
+	+"}\n"
+	);
+	//print($exp + "\n");
+	expression -s ($exp) -o $controlObj -n ($expName); // end of the expression	
+	print ($expName + " Was Created!" + "\n");
+}
+
+global proc string createMasterAnimationExpressionObject()
+{
+	string $maeObjName = "MasterAnimationExpressionObj";
+	if(`objExists $maeObjName`){
+		return $maeObjName;
+	}
+
+	spaceLocator -p 0 0 0 -n $maeObjName;
+	return $maeObjName;
+}
+
+global proc string getMasterAnimationExpressionObject()
+{
+	string $maeObjName = "MasterAnimationExpressionObj";
+	if(`objExists $maeObjName`){
+		return $maeObjName;
+	} else {
+		return "";
+	}	
+}
+
+global proc int areObjectsComponentObjects(string $obj[])
+{
+	int $component = 0;
+	for($i=0;$i<`size $obj`;$i++){
+		$objType = `objectType $obj[$i]`;
+		if(`objectType -isa $objType $obj[$i]` == 1){		
+			string $rel[] = `listRelatives -ap $obj[$i]`;
+			if(`size $rel` > 0){			
+				$component = 1;
+				print("Selected Object is Component Objects.\n");
+				break;
+			} 		
+		}
+	}
+	return $component;
+}
+
+global proc string getComponentObjectsParent(string $obj[])
+{
+	string $parent = "";
+	for($i=0;$i<`size $obj`;$i++){	
+		string $rel[] = `listRelatives -ap $obj[$i]`;
+		if(`size $rel` > 0){
+			$parent = $rel[0];
+		} else {
+			$parent = "";
+		}		
+
+	}
+	return $parent;
+}
+
+global proc string generateUniqueAnimationExpressionName(string $expName, string $controlObj)
+{
+	$ok = false;
+	string $returnName = "";
+	int $i = 0;
+	while($ok == false){
+		string $tempName = $expName + $i;
+		if(`attributeExists $tempName $controlObj`){
+			$i++;
+		} else {
+			$expName = $tempName;
+			$returnName = $expName;
+			$ok = true;
+		}
+		
+	}
+	return $returnName;
+
+}
+
+global proc int maintainInitialValuesForObjectAttributesLinks(string $objAttrLink[], string $initAttrLink[], float $initVal[])
+{
+	float $curTime = `currentTime -q`;
+	float $startTime = `playbackOptions -q -min`;
+	int $isPlaying = `play -q -state`;
+	//If this is the first frame of the time range then reset.
+	if($curTime == $startTime){ //Reset the attr to the init value and reconnect the initVal to the attr. 
+		//print("StartFrame>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" + "\n");
+		connectObjAttrLinks($objAttrLink, $initAttrLink, $initVal);
+		return 0;
+	}
+	//If this is the second frame of the time range then we are playing.
+	float $approxFirstFrame = equivalentTol($curTime, $startTime, 2);
+	if($approxFirstFrame == 1){ //Disconnect the initVal from the attr. 
+		disconnectObjAttrLinks($objAttrLink, $initAttrLink);
+	}
+	if($curTime > $startTime && !$isPlaying){ //Disconnect the initVal from the attr.
+		disconnectObjAttrLinks($objAttrLink, $initAttrLink);
+	}
+	return 1;
+}
+
+global proc addMaintainInitialValuesForObjectAttributesLinksToExpressions()
+{
+	string $expName = "MaintainInitialValuesForObjectAttributesLinks";
+	string $exp = (
+	"global proc int maintainInitialValuesForObjectAttributesLinks(string $objAttrLink[], string $initAttrLink[], float $initVal[])\n"
+	+"{\n"
+	+"float $curTime = `currentTime -q`;\n"
+	+"float $startTime = `playbackOptions -q -min`;\n"
+	+"int $isPlaying = `play -q -state`;\n"
+	+"//If this is the first frame of the time range then reset. \n"
+	+"if($curTime == $startTime){ //Reset the attr to the init value and reconnect the initVal to the attr. \n"
+	+"	//print(\"StartFrame>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\" + \"\\n\");\n"
+	+"	connectObjAttrLinks($objAttrLink, $initAttrLink, $initVal);\n"
+	+"	return 0;\n"
+	+"}\n"
+	+"//If this is the second frame of the time range then we are playing. \n"
+	+"float $approxFirstFrame = equivalentTol($curTime, $startTime, 2);\n"
+	+"if($approxFirstFrame == 1){ //Disconnect the initVal from the attr. \n"
+	+"	disconnectObjAttrLinks($objAttrLink, $initAttrLink);\n"
+	+"}\n"
+	+"if($curTime > $startTime && !$isPlaying){ //Disconnect the initVal from the attr. \n"
+	+"	disconnectObjAttrLinks($objAttrLink, $initAttrLink);\n"
+	+"}\n"
+	+"return 1;\n"
+	+"}\n"
+	);
+	catchQuiet(`delete $expName`);
+	expression -s ($exp) -n ($expName);
+}
+
+global proc disconnectObjAttrLinks(string $objAttrLink[], string $initAttrLink[])
+{
+	for($i=0;$i<`size $objAttrLink`;$i++){
+		if(`isConnected $objAttrLink[$i] $initAttrLink[$i]`){
+			disconnectAttr $objAttrLink[$i] $initAttrLink[$i];		
+		}
+	}
+}
+
+global proc connectObjAttrLinks(string $objAttrLink[], string $initAttrLink[], float $initVal[])
+{
+	for($i=0;$i<`size $objAttrLink`;$i++){
+		setAttr ($objAttrLink[$i]) $initVal[$i];
+		if(`isConnected $objAttrLink[$i] $initAttrLink[$i]`== 0){
+			connectAttr $objAttrLink[$i] $initAttrLink[$i];		
+		}
+		//print("ObjAttrLink: " + $objAttrLink[$i] + "InitVal: " + $initVal[$i] + "\n");
+	}
+}
+
+global proc addConnectDisconnectObjAttrLinksToExpressions()
+{
+	string $expName = "ConnectDisconnectAttributesLinks";
+	string $exp = (
+	"global proc connectObjAttrLinks(string $objAttrLink[], string $initAttrLink[], float $initVal[])\n"
+	+"{\n"
+	+"for($i=0;$i<`size $objAttrLink`;$i++){\n"
+	+"	setAttr ($objAttrLink[$i]) $initVal[$i];\n"
+	+"	if(`isConnected $objAttrLink[$i] $initAttrLink[$i]`== 0){\n"
+	+"		connectAttr $objAttrLink[$i] $initAttrLink[$i];\n"	                                  
+	+"	}\n"
+	+"	//print(\"ObjAttrLink: \" + $objAttrLink[$i] + \"InitVal: \" + $initVal[$i] + \"\\n\");\n"
+	+"}\n"
+	+"}\n"
+	+"\n"
+	+"global proc disconnectObjAttrLinks(string $objAttrLink[], string $initAttrLink[])\n"
+	+"{\n"
+	+"for($i=0;$i<`size $objAttrLink`;$i++){\n"
+	+"	if(`isConnected $objAttrLink[$i] $initAttrLink[$i]`){\n"
+	+"		disconnectAttr $objAttrLink[$i] $initAttrLink[$i];\n"		
+	+"	}\n"
+	+"}\n"
+	+"}\n"
+	);
+	catchQuiet(`delete $expName`);
+	expression -s ($exp) -n ($expName);
+}
+
+global proc string getAnimationExpressionControlObject(string $obj[])
+{
+	string $controlObj = $obj[0];
+	if(`size $obj` > 1){
+		$controlObj = createMasterAnimationExpressionObject();
+	}
+	// Determin if this is an object or a component 
+	// If it is a component then we must add attributes to the component's parent object.
+	// This does not work correctly yet~
+	/*
+	int $component = 0;
+	$component = areObjectsComponentObjects($obj);
+	if($component == 1){
+		$controlObj = getComponentObjectsParent($obj);
+	}
+	*/
+	return $controlObj;
+
+}
+
+global proc string[] createObjectAttributeLinks(string $obj[], string $attr[])
+{
+	//Create links for convience in expression
+	string $objAttrLink[];
+	string $oObj[]; // Ordered Objects
+	string $oAttr[]; //Ordered Attributes
+	for($i=0;$i<`size obj`;$i++){
+		for($p=0;$p<`size attr`;$p++){
+			if(`attributeExists $attr[$p] $obj[$i]`){
+				$objAttrLink[`size $objAttrLink`] = $obj[$i] + "." + $attr[$p];
+				$oObj[`size $oObj`] = $obj[$i];
+				$oAttr[`size $oAttr`] = $attr[$p];
+				//print("Adding To Obj Attribute Links - Obj: " + $obj[$i] + " Attr: " + $attr[$p] + "\n");
+			}
+		}
+	}
+
+	string $attrAlias[];
+	string $objSn[] = removeIllegalCharactersFromNames($oObj);
+	string $attrSn[] = removeIllegalCharactersFromNames($oAttr);
+	int $component = 0;
+	$component = areObjectsComponentObjects($obj);
+
+	for($i=0;$i<`size $oAttr`;$i++){
+		$attrAlias[$i] = $objSn[$i] + $attrSn[$i];
+	}
+
+	if(`size $oAttr` < 1){ //If we don't have any ordered attributes then we must have serialized attributes
+		string $cAttr[] = removeIllegalCharactersFromNames($attr);
+		for($i=0;$i<`size $cAttr`;$i++){
+			$attrAlias[$i] = $cAttr[$i];
+			for($p=0;$p<`size $obj`;$p++){
+				//print("Looking At: " + $obj[$p] + " Size of Obj: " + `size $obj` + "\n");
+				if(catch(`aliasAttr $attrAlias[$i] ($obj[$p] + "." + $attr[$i])`)){
+					//print("Object Does Not Contain Attribute: " + $obj[$p] + " || " + $attr[$i] + "\n");
+				} else {
+					$oAttr[`size $oAttr`] = $attrAlias[$i];
+					$oObj[`size $oObj`] = $obj[$p];				
+					//print("Creating Alias: " + $attrAlias[$i] + " > For Attribute: " + $obj[$p] + "." + $attr[$i] + "\n");
+					if($component == 1){
+						$objAttrLink[`size $objAttrLink`] = $obj[$p] + "." + $attr[$i];
+					} else {
+						$objAttrLink[`size $objAttrLink`] = $obj[$p] + "." + $attrAlias[$i];
+						//print("Adding : " + $objAttrLink[(`size $objAttrLink` -1)] + " To Object Attribute Links." + "\n");
+					}
+				}
+			}
+		}
+	//$objSn = removeIllegalCharactersFromNames($oObj);
+	//$attrSn = removeIllegalCharactersFromNames($oAttr);
+	}
+	return $objAttrLink;
+}
+
+global proc string[] createInitValueNamesForObjectAttributeLinks(string $objAttrSn[], string $suffix)
+{
+	string $initValueName[];
+	for($i=0;$i<`size $objAttrSn`;$i++){	
+		$initValueName[$i] = $objAttrSn[$i] + $suffix;
+	}
+	return $initValueName;
+}
+
+global proc string[] getObjectAttributeTypesFromObjectAttributeLink(string $objAttrLink[])
+{
+	string $attrType[];
+	for($i=0;$i<`size $objAttrLink`;$i++){
+			$attrType[$i] = `getAttr -typ $objAttrLink[$i]`;
+	}
+	return $attrType;
+}
+
+global proc string[] createInitAttributeLinks(string $objAttrLink[], string $controlObj, string $initValueName[])
+{
+	//Connect the attribute to the initValue so that we can change the objects attr value and set the init value at the same time.
+	string $initAttrLink[];
+	for($i=0;$i<`size $objAttrLink`;$i++){
+		$initAttrLink[$i] = $controlObj + "." + $initValueName[$i];
+		if(`isConnected $objAttrLink[$i] $initAttrLink[$i]` == 0){
+			connectAttr -f $objAttrLink[$i] $initAttrLink[$i];
+		}	
+	}
+	return $initAttrLink;
+}
+
+global proc createRandomizeAttributeAtTimeExpression()
+{
+	string $obj[] = `textScrollList -q -ai getAnimationExpressionObjects`;	
+	string $attr[] = `textScrollList -q -si attributeToAddExpressionAnimationTo`;
+	string $expName = `textFieldGrp -q -text randomizeAttributeAtTimeAnimationExpressionName`;
+
+	$linkExp = `checkBox -q -v linkEvaluateToSmoothRandomAnimationExpressionOption`;
+	string $sraexpName = `textFieldGrp -q -text smoothRandomAnimationExpressionName`;
+	string $disEvalArg = "";
+	string $enEvalArg = "";
+	if($linkExp){
+		$disEvalArg = ("	expression -edit -ae false " + $sraexpName + ";\n");
+		$enEvalArg = ("		expression -edit -ae true " + $sraexpName + ";\n");
+	}
+	string $randomAmountName = $expName + "RandomAmount";
+	string $raNn = "RandomAmount";
+	string $timeName = $expName + "Time";
+	string $timeNn = "Time";
+	string $repeatIntervalName = $expName + "RepeatInterval";
+	string $riNn = "RepeatInterval";
+
+	string $controlObj = getAnimationExpressionControlObject($obj);
+	string $objAttrLink[] = createObjectAttributeLinks($obj, $attr);
+	string $objAttrSn[] = removeIllegalCharactersFromNames($objAttrLink);
+	string $initValueName[] = createInitValueNamesForObjectAttributeLinks($objAttrSn, "LinearAnimInitValue");
+	string $attrType[] = getObjectAttributeTypesFromObjectAttributeLink($objAttrLink);
+
+	if (attributeExists ($randomAmountName, $controlObj)==0){
+		addAttr -ln $randomAmountName -nn $raNn -at double -k 1 -min -999999999 -max 999999999 -smn 0 -smx 1000 -dv 100 $controlObj;
+	}
+
+	if (attributeExists ($timeName, $controlObj)==0){
+		addAttr -ln $timeName -nn $timeNn -at double -k 1 -min -999999999 -max 999999999 -smn 0 -smx 100 -dv 10 $controlObj;
+	}
+
+	if (attributeExists ($repeatIntervalName, $controlObj)==0){
+		addAttr -ln $repeatIntervalName -nn $riNn -at long -k 1 -min -999999999 -max 999999999 -smn 0 -smx 100 -dv 100 $controlObj;
+	}
+
+	for($i=0;$i<`size $initValueName`;$i++){
+		if (attributeExists ($initValueName[$i], $controlObj)==0){
+			addAttr -ln $initValueName[$i] -at $attrType[$i] -h 1 $controlObj;
+		}
+	}
+	string $initAttrLink[] = createInitAttributeLinks($objAttrLink, $controlObj, $initValueName);
+
+	string $allObjAttrLinks = createStringFormatedStringArray($objAttrLink);
+	string $allInitAttrLinks = createStringFormatedStringArray($initAttrLink);
+	string $timeIntVar = "$" + $expName + "TimeInt";
+	//Note : Set Limits for attributes with min and max values~
+	//_______________________________________________
+	string $exp = (
+	"global float " + $timeIntVar + ";\n"
+	+ $expName + "();\n"
+	+"global proc " + $expName + "()\n"
+	+"{\n"
+	+ $enEvalArg
+	+"string $objAttrLink[] = " + $allObjAttrLinks +";\n"
+	+"string $initAttrLink[] = " + $allInitAttrLinks + ";\n"
+	+"float $initVal[];\n"
+	+"float $curVal[];\n"
+	+"float $ran = " + $randomAmountName + ";\n"
+	+"float $time = " + $timeName + ";\n"
+	+"float $repeatInterval = " + $repeatIntervalName + ";\n"
+	+"float $currentTime = `currentTime -q`;\n"
+	+"string $ranStream = \"" + $expName + "RandomStream\";\n"
+	+"global float " + $timeIntVar + ";\n"
+	+"if(" + $timeIntVar + " == 0){\n"
+	+"	" + $timeIntVar + " = $time;\n"
+	+"}\n"
+	+"\n"
+	+"int $i;\n"
+	+"for($i=0;$i<`size $initAttrLink`;$i++){\n"
+	+"	$initVal[$i] = `getAttr ($initAttrLink[$i])`;\n"
+	+"}\n"
+	+"for($i=0;$i<`size $objAttrLink`;$i++){\n"
+	+"	$curVal[$i] = `getAttr ($objAttrLink[$i])`;\n"
+	+"}\n"
+	+"int $cont = maintainInitialValuesForObjectAttributesLinks($objAttrLink,$initAttrLink,$initVal);\n"
+	+"if($cont == 0){ " + $timeIntVar + " = $time; seed $ranStream 15; return; }\n"
+	+"if($currentTime == $time || $currentTime == " + $timeIntVar + "){\n"
+	+ $disEvalArg
+	+"	for($i=0;$i<`size $curVal`;$i++){\n"
+	+"		$newVal = rand($ranStream,($curVal[$i] - $ran),($curVal[$i] + $ran));\n"
+	+"		setAttr ($objAttrLink[$i]) $newVal;\n"
+	+"	}\n"
+	+"	" + $timeIntVar + " = floor(" + $timeIntVar + " + $repeatInterval);\n"
+	+"	//print(\"TimeInt: \" + " + $timeIntVar + " + \"\\n\");\n"
+	+"}\n"
+	+"}\n"
+	);
+	print($exp + "\n");
+	expression -s ($exp) -o $controlObj -n ($expName); // end of the expression
+	addMaintainInitialValuesForObjectAttributesLinksToExpressions();
+	addConnectDisconnectObjAttrLinksToExpressions();
+}
+
+/*
+global proc smoothRandomAnimation()
+{
+	string $objAttrLink[] = { "place2dTexture3.rotateFrame"};
+	string $initAttrLink[] = { "place2dTexture3.place2dTexture3rotateFrameRandomAnimInitValue"};
+	global float $place2dTexture3rotateFrameSmoothRandomAnimation0RandomChangeTime[1];
+	global float $place2dTexture3rotateFrameSmoothRandomAnimation0RandomVal[1];
+	float $speed = place2dTexture3.place2dTexture3rotateFrameSmoothRandomAnimation0AnimationSpeed;
+	float $ran = place2dTexture3.place2dTexture3rotateFrameSmoothRandomAnimation0RandomAmount;
+	float $freq = place2dTexture3.place2dTexture3rotateFrameSmoothRandomAnimation0Frequency;
+	string $ranStream = "place2dTexture3rotateFrameSmoothRandomAnimation0RandomStream";
+	int $seed = place2dTexture3.place2dTexture3rotateFrameSmoothRandomAnimation0Seed;
+	float $initVal[];
+	float $curVal[];
+	int $i;
+	int $p;
+	for($i=0;$i<`size $initAttrLink`;$i++){
+		$initVal[$i] = `getAttr ($initAttrLink[$i])`;
+	}
+	for($i=0;$i<`size $objAttrLink`;$i++){
+		$curVal[$i] = `getAttr ($objAttrLink[$i])`;
+	}
+	float $min = place2dTexture3.place2dTexture3rotateFrameSmoothRandomAnimation0Min;
+	float $max = place2dTexture3.place2dTexture3rotateFrameSmoothRandomAnimation0Max;
+	float $curTime = `currentTime -q`;
+	float $startTime = `playbackOptions -q -min`;
+	int $isPlaying = `play -q -state`;
+	float $smoothTime[];
+	for($i=0;$i<`size $place2dTexture3rotateFrameSmoothRandomAnimation0RandomChangeTime`;$i++){
+		$smoothTime[$i] = $place2dTexture3rotateFrameSmoothRandomAnimation0RandomChangeTime[$i] - $curTime;
+	}
+	//If this is the first frame of the time range then reset. 
+	if($curTime == $startTime){ //Reset the attr to the init value and reconnect the initVal to the attr. 
+		//print("StartFrame>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" + "\n");
+		seed place2dTexture3rotateFrameSmoothRandomAnimation0RandomStream $seed;
+		for($i=0;$i<`size $objAttrLink`;$i++){
+			$place2dTexture3rotateFrameSmoothRandomAnimation0RandomChangeTime[$i] = 0;
+			$place2dTexture3rotateFrameSmoothRandomAnimation0RandomVal[$i] = 0;
+			setAttr ($objAttrLink[$i]) $initVal[$i];
+			//print("ObjAttrLink: " + $objAttrLink[$i] + "InitVal: " + $initVal[$i] + "\n");
+			if(`isConnected $objAttrLink[$i] $initAttrLink[$i]` == 0){
+				connectAttr -f $objAttrLink[$i] $initAttrLink[$i];
+				//print("Connected: " + $objAttrLink[$i] + " To: " + $initAttrLink[$i] + "\n");
+			}
+		}
+		return;
+	}
+	//If this is the second frame of the time range then we are playing. 
+	float $approxFirstFrame = equivalentTol($curTime, $startTime, 2);
+	if($approxFirstFrame == 1){ //Disconnect the initVal from the attr. 
+		//print("FisrtFrame>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" + "\n");
+		disconnectObjAttrLinks($objAttrLink, $initAttrLink);
+	}
+	if($curTime > $startTime && !$isPlaying){ //Disconnect the initVal from the attr. 
+		disconnectObjAttrLinks($objAttrLink, $initAttrLink);
+	}
+	//If it's time to change the random number... 
+	for($i=0;$i<`size $curVal`;$i++){
+		if($curTime >= $place2dTexture3rotateFrameSmoothRandomAnimation0RandomChangeTime[$i]){
+			$place2dTexture3rotateFrameSmoothRandomAnimation0RandomChangeTime[$i] = ($place2dTexture3rotateFrameSmoothRandomAnimation0RandomChangeTime[$i] + rand($ranStream, $freq));
+			$place2dTexture3rotateFrameSmoothRandomAnimation0RandomVal[$i] = rand($ranStream, 0 - $ran,0 + $ran);
+		}
+	}
+	//Change the attributes value. 
+	for($i=0;$i<`size $curVal`;$i++){
+		float $newVal = $curVal[$i] + (($speed * $place2dTexture3rotateFrameSmoothRandomAnimation0RandomVal[$i]) * ((rand($ranStream, $smoothTime[$i])) * 0.1));
+		if($newVal < ($initVal[$i] - $min) || $newVal > ($initVal[$i] + $max)){
+				$newVal = $curVal[$i];
+	}
+		if(catchQuiet(`setAttr ($objAttrLink[$i]) $newVal`)){
+			$newVal = $curVal[$i];
+		}
+		setAttr ($objAttrLink[$i]) $newVal;
+	}
+	}
+
+	global proc disconnectObjAttrLinks(string $objAttrLink[], string $initAttrLink[])
+	{
+	for($i=0;$i<`size $objAttrLink`;$i++){
+		if(`isConnected $objAttrLink[$i] $initAttrLink[$i]`){
+			disconnectAttr $objAttrLink[$i] $initAttrLink[$i];
+			//print("Disconnected: " + $objAttrLink[$i] + " To: " + $initAttrLink[$i] + "\n");
+		}
+	}
+}
+*/
+
+
+global proc wizPlay()
+{
+	nextOrPreviousFrame next;
+	/*
+	float $curTime = `currentTime -q`;
+	float $minTime = `playbackOptions -q -min`;
+	float $maxTime = `playbackOptions -q -max`;
+	float $pr = ($maxTime / ($curTime + 0.0001)) * 100;
+	*/
+	
+	/*
+	progressWindow
+		-t "Playback"
+		-ii 1
+		-pr 0
+		;
+		
+	//play -f true;
+	nextOrPreviousFrame next;
+	while($pr < 100.0){
+		$curTime = `currentTime -q`;
+		$pr = ($maxTime / ($curTime + 0.0001)) * 100;
+		int $progress = int($pr);
+		progressWindow
+			-e 
+			-pr $progress
+			;
+			
+		//play -forward false;
+		nextOrPreviousFrame next;
+		
+		int $canceled = `progressWindow -q -ic`;
+		if ($canceled){
+			progressWindow -ep;
+			return;
+		}
+		//play -forward true;
+		
+	}
+	*/
+	
+}
+
+
+global proc wizStopPlayback()
+{
+	play -st false;
+	
+}

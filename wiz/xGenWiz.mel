@@ -1,0 +1,307 @@
+/*
+// Export Command
+
+mayapy "C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/xmaya/xgmArchiveExportBatch.py" 0 0 0 1.0 1.0 -destName ["'NitrogenCrystals2'"] -destDir ["'C:/Users/Glen/Documents/maya/projects/SolarSystem/xgen/archives/'"] -sourceFiles ["'C:/Users/Glen/Documents/maya/projects/SolarSystem/scenes/Sets/Planetiods/Pluto/Features/NitrogenCrystalsA/NitrogenCrystalsA2_files/NitrogenCrystalA2.mb'"] -scriptPaths ["'C:/Program Files/Autodesk/Maya2015\\plug-ins\\xgen\\scripts'"] -loadPlugins ["'AbcExport'", "'Mayatomr'", "'xgenMR.py'"]
+*/
+
+global proc xGenWizMainMenu()
+{
+	menu -l "xGen" -to true;
+		menuItem -sm true -l "Archives" -to true;
+		xGenWizArchivesMenuItems();
+		
+	setParent -menu..;
+
+}
+
+global proc xGenWizArchivesMenuItems()
+{
+	menuItem -l "Render Archive Icon" -c ("wizXgenThumbnailImage(\"\");");
+			menuItem -ob true -c ("openCurrentOptionsLayout(\"xgenArchiveThumbnailOptions\");");
+
+}
+
+//@ WIZ BAKE X GEN P TEX
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = wizBakeXGenPTex("-sl -dp");
+	
+	</code>
+*********************************************************************/
+global proc wizBakeXGenPTex( string $flags )
+{
+	/*
+	int $startFrame = 1;
+	int $endFrame = 10;
+	for ($i=$startFrame; $i<=$endFrame; $i++) {
+	currentTime $i;
+	python("import maya.cmds as cmds; cmds.ptexBake( inMesh='pPlane1', o='Z:/proj/xgen/collections/collection3/description3/paintmaps/width/', bt='file1', tpu=100)");
+	renderWindowRender redoPreviousRender renderView;
+	}
+*/
+
+	//C:\Users\Glen\Documents\maya\projects\Assets\xgen\collections\Testing\terrain\paintmaps\length
+	//pPlane1.ptx
+
+	string $obj, $type;
+	string $fn;
+	string $dir;
+	string $sel[];
+	int $edit;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-fn" : case "-fileName" :
+			$fn = $tok[($i + 1)];
+			break ;
+			
+			case "-dir" : case "-directory" :
+			$dir = $tok[($i + 1)];
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+			case "-dp" : case "-directoryPrompt" :
+			string $dp = wizGetAnyFile();
+			string $splice[] = wizSpliceFilePath($dp, "-dir -fn");
+			$dir = $splice[0];
+			$fn = $splice[1];
+			wizlog ("[#] XGen PTex : Directory : " + $dir + " : Filename : " + $fn);
+			break ;
+			
+		}
+	}
+	/*
+	python("import maya.cmds as cmds; import xgenm.xgGlobal as xgg; cmds.ptexBake( inMesh='" + $sel[0] + "', o='" + $dir + "', bt='" + $fn + "', tpu=100)");
+	import maya.cmds as cmds
+	import xgenm/xmaya/xgmArchiveExportBatch.py as xgg
+	*/
+}
+
+
+/*
+"C:/Program Files/Autodesk/Maya2016\bin\mayapy" "C:/Program Files/Autodesk/Maya2016/plug-ins/xgen/scripts/xgenm/xmaya/xgmArchiveExportBatch.py" 0 0 0 1.0 1.0 -destName ["''"] -destDir ["'C:/Users/Glen/Documents/xgen/archives/'"] -sourceFiles ["'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA300.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA301.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA302.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA303.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA304.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA305.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA306.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA307.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA308.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA309.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA310.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA311.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA312.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA313.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA314.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA315.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA316.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA317.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA318.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA319.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA320.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA321.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA322.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA323.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA324.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA325.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA326.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA327.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA328.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA329.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA330.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA331.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA332.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA333.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA334.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA335.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA336.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA337.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA338.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA339.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA340.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA341.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA342.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA343.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA344.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA345.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA346.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA347.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA348.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA349.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA350.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA351.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA352.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA353.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA354.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA355.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA356.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA357.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA358.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA359.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA360.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA361.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA362.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA363.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA364.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA365.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA366.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA367.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA368.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA369.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA370.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA371.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA372.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA373.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA374.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA375.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA376.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA377.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA378.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA379.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA380.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA381.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA382.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA383.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA384.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA385.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA386.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA387.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA388.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA389.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA390.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA391.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA392.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA393.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA394.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA395.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA396.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA397.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA398.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA399.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA400.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA401.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA402.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA403.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA404.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA405.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA406.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA407.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA408.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA409.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA410.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA411.ma'", "'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA412.ma'"]  -scriptPaths ["'C:/Program Files/Autodesk/Maya2016\\plug-ins\\xgen\\scripts'"] -loadPlugins ["'AbcExport'", "'Mayatomr'", "'xgenMR.py'"]
+
+"C:/Program Files/Autodesk/Maya2016\bin\mayapy" "C:/Program Files/Autodesk/Maya2016/plug-ins/xgen/scripts/xgenm/xmaya/xgmArchiveExportBatch.py" 0 0 0 1.0 1.0 -destName ["''"] -destDir ["'C:/Users/Glen/Documents/xgen/archives/'"] -sourceFiles ["'C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Foliage/Trees/Deciduous/pfxTreesA/pfxTreeA300.ma'"] -scriptPaths ["'C:/Program Files/Autodesk/Maya2016\\plug-ins\\xgen\\scripts'"] -loadPlugins ["'AbcExport'", "'Mayatomr'", "'xgenMR.py'"]
+
+
+*/
+
+/*
+
+LOD
+========================================
+To fix it so rendering uses all lod levels, put in all three lod slots
+--------------------------------------
+$aIndex*$aMul + $aLOD + 3
+
+To use only medium and low models in viewport :
+--------------------------------------
+$aIndex*$aMul + clamp($aLOD,1,2)
+
+SIMPLE RANDOM
+========================================
+$min = 0.1;
+$max = 1.0;
+rand($min, $max)
+
+$min = 0.0;
+$max = 360.0;
+rand($min, $max)
+
+NOISE
+========================================
+$freq_fine = 0.5650; #0.00,1.00
+$freq_coarse = 3; # 0,100
+$X = 1.0000; #0.00,10.00
+$Y = 1.0000; #0.00,10.00
+$Z = 1.0000; #0.00,10.00
+$frequency = ($freq_fine+$freq_coarse) * [$X,$Y,$Z];
+$Strength=1.0000;
+$Contrast = 0.7550;
+$Color = 0; #0,1
+
+$Cnew = choose($Color, noise($P*$frequency), cnoise($P*$frequency)) 
+	-> contrast($Contrast);
+mix($Cs,$Cnew,$Strength)
+
+ON SLOPE IN HEIGHT RANGE WITH NOISE
+====================================================
+
+$freq_fine =0.5; #0.00,1.00
+$freq_coarse = 1; # 0,100
+$X = 1.0; #0.00,10.00
+$Y = 1.0; #0.00,10.00
+$Z = 1.0; #0.00,10.00
+$frequency = ($freq_fine+$freq_coarse) * [$X,$Y,$Z];
+$Strength = 1.0000;
+$Contrast = 0.90;
+$Color = 0; #0,1
+$Type=1; #1,5
+$Jitter=1.0000;
+$fbmScale=1.0000;
+$fbmOctaves=2; #1,32
+$fbmLacunarity=8.0000; #1.00,8.00
+$fbmGain=1.0000;
+$slope_threshold = 0.7000;
+$invertSlope = 0; #0,1
+$onFlat = $invertSlope ? ($Nrefg[1]<$slope_threshold) : ($Nrefg[1]>$slope_threshold);
+
+#Limit Height
+$loHeight =0.0;
+$hiHeight =100.0;
+$in_height_range = invert(linearstep($Pg[1],$loHeight,$hiHeight));
+$invertHeight = 1; #0,1
+$in_height_range = $invertHeight ? (1 - $in_height_range) : ($in_height_range);
+
+$Cnew = choose($Color, 
+	voronoi($Pg*$frequency,$Type,$Jitter,$fbmScale,$fbmOctaves,$fbmLacunarity,$fbmGain),
+	cvoronoi($Pg*$frequency,$Type,$Jitter,$fbmScale,$fbmOctaves,$fbmLacunarity,$fbmGain))
+	-> contrast($Contrast);
+$Cnew = mix($Cs,$Cnew,(($in_height_range * $onFlat) * $Strength));
+$minimum = 0.01;
+
+clamp ($Cnew, $minimum, $Strength)
+
+
+FOLIAGE PICKER
+====================================================
+pick(rand(),0,$aCount-1)
+------------------------------------
+
+$freq_fine = 0.0950; #0.00,1.00
+$freq_coarse = 0; # 0,100
+$X = 1.000; #0.00,10.00
+$Y = 1; #0.00,10.00
+$Z = 1; #0.00,10.00
+$frequency = ($freq_fine+$freq_coarse) * [$X,$Y,$Z];
+$Strength=5.0000;
+$Contrast = 0.962;
+$Color = 0.000; #0,1
+
+$Cnew = choose($Color, noise($P*$frequency), cnoise($P*$frequency)) 
+	-> contrast($Contrast);
+mix($Cs,$Cnew,$Strength)
+
+-----------------------------------
+
+$freq_fine = 0.0000; #0.00,1.00
+$freq_coarse = 1; # 0,100
+$X = 1; #0.00,10.00
+$Y = 1; #0.00,10.00
+$Z = 1.0000; #0.00,10.00
+$frequency = ($freq_fine+$freq_coarse) * [$X,$Y,$Z];
+
+
+$Contrast = 0.9550;
+
+
+$Cnew = (0 ? ccellnoise($P*$frequency): cellnoise($P*$frequency)) 
+	-> contrast($Contrast);
+
+
+$amount=--5.39267;#-10.0,10.0
+
+
+$ELo=1.0000;
+$EHi=1.0000;
+$CLo=1;
+$CHi=1;
+
+$Cnew2=$Cnew*((hash($objectId))->compress($ELo,$EHi))*(($Cs)->compress($CLo,$CHi)); 
+mix($Cs,$Cnew2,$amount)
+
+--------------------------------------
+
+$freq_fine = 0.0750; #0.00,1.00
+$freq_coarse = 0; # 0,100
+$X = 1.000; #0.00,10.00
+$Y = 1; #0.00,10.00
+$Z = 1; #0.00,10.00
+$frequency = ($freq_fine+$freq_coarse) * [$X,$Y,$Z];
+$Strength = ($aCount-1); # This is the max index
+$Contrast = 0.9700;
+$Color =0; #0,1
+$fbmOctaves=5; #1,32
+$fbmLacunarity=8.0000; #1.00,8.00
+$fbmGain=0.7900;
+
+$Cnew = ($Color ?
+	cfbm($P*$frequency,$fbmOctaves,$fbmLacunarity,$fbmGain) :
+	fbm($P*$frequency,$fbmOctaves,$fbmLacunarity,$fbmGain))
+	-> contrast($Contrast);
+mix($Cs,$Cnew,$Strength)
+
+-------------------------------------
+DISTANCE FROM WORLD ORIGIN
+
+
+$freq_fine = 0.0350; #0.00,1.00
+$freq_coarse = 0; # 0,100
+$X = 1.0000; #0.00,10.00
+$Y = 1.0000; #0.00,10.00
+$Z = 1.0000; #0.00,10.00
+$frequency = ($freq_fine+$freq_coarse) * [$X,$Y,$Z];
+$Strength = 0.8700;
+$Contrast = 1.0000;
+$Color =0; #0,1
+$fbmOctaves=2; #1,32
+$fbmLacunarity=6.9050; #1.00,8.00
+$fbmGain=0.8950;
+$falloffDistance = 80.0000;
+$maxDistance = 100.0000;
+$disFromCenter = sqrt (((0.0 - $Pgw[0]) * (0.0 - $Pgw[0])) + ((0.0 - $Pgw[1]) * (0.0 - $Pgw[1])) + ((0.0 - $Pgw[2]) * (0.0 - $Pgw[2]))); 
+$fade = $disFromCenter > $falloffDistance ? (1-(1/($maxDistance - $disFromCenter))) : 0;
+$Cnew = ($Color ?
+	cfbm($P*$frequency,$fbmOctaves,$fbmLacunarity,$fbmGain) :
+	fbm($P*$frequency,$fbmOctaves,$fbmLacunarity,$fbmGain))
+	-> contrast(($Contrast * $fade));
+$mixed = mix($Cs,$Cnew,$Strength);
+$mixed - $fade
+
+=======================================
+GENERAL
+=======================================
+POINT UPWARDS
+---------------------------------------
+tiltU
+------------
+(90 - acosd(dot(norm($dPdu),[0,1,0]))) / 90
+
+tiltV
+-----------
+(90 - acosd(dot(norm($dPdv),[0,1,0]))) / 90
+
+*/

@@ -1,0 +1,4492 @@
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//|||||||||||||||||||||||||:::WIZ:::||||||||||||||||||||||||||||||||||
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//                         XBLDR WIZ
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+/*====================================================================
+Author: Glen Johnson
+Email: plasticarm@gmail.com
+Website: plasticarm.com / hrpictures.com
+----------------------------------------------------------
+Summary:
+
+
+
+====================================================================*/
+
+//====================================================================
+//			GLOBAL VARS
+
+global string $WIZ_xBldrSrcType;
+$WIZ_xBldrSrcType = "wiz";
+
+global string $WIZ_deltaType[];
+$WIZ_deltaType = { "everyIteration", "everyDuplicate", "everyNthStep" };
+
+global string $WIZ_stepType[];
+$WIZ_stepType = { "random", "linear", "exponential", "sine" };
+
+//====================================================================
+//========================================================================================================
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//                     LAYOUTS
+///////////////////                  /////////////////////////////////////////////////////////////////////
+
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//========================================================================================================
+
+//X BUILDER LAYOUT
+//=======================================================
+global proc cBldrLayout( string $parent)
+{
+	string $layout = `frameLayout
+		-l "cBldr"	
+		-ann "Duplicates objects along a curve with many options."
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $parent		
+		cBldr_frameLayout
+		`;
+		
+	cBldrMainMenuBarLayout();
+	//-----------------------------
+    wizSeparator();
+    //-----------------------------	
+	
+	checkBox
+		-l "Enable Duplication"
+		-v true
+		cBldr_EnableDuplication_checkBox
+		;
+	
+	
+	string $dupType[] = { "Copy", "Instance", "Reference Copy" };
+	string $dupTypeOmg = wizOptionMenuGrpMenuItems("Duplicate Type", "cBldr_DuplicateType_optionMenuGrp", $dupType);
+	//int $dupTypeVal = `optionMenuGrp -q -v cBldrDuplicateTypeOptionMenuGrp`;
+	
+	string $spacMeth[] = { "Count", "CurvePercent", "WorldDistance", "BoundingBoxFit" };
+	string $dupTypeOmg = wizOptionMenuGrpMenuItems("Spacing Method", "cBldr_SpacingMethod_optionMenuGrp", $spacMeth);
+	//int $spacMethVal = `optionMenuGrp -q -v cBldrSpacingMethodOptionMenuGrp`;
+	
+    //-----------------------------
+    wizSeparator();
+    //-----------------------------
+	/*
+	intFieldGrp
+		-l "Duplicate Count"
+		-cal 1 "left"
+		-nf 1
+		-v1 5
+		cBldr_DuplicateCount_intFieldGrp
+		;
+	*/
+	intSliderGrp
+		-l "Duplicate Count"
+		-cal 1 "left"
+		-f true
+		-min 1
+		-max 50
+		-fmn 1
+		-fmx 99999999
+		-v 5
+		cBldr_DuplicateCount_intSliderGrp
+		;
+		
+	floatSliderGrp
+		-l "Spacing"
+		//-nf 1
+		-f true
+		-cal 1 "left"
+		-v 10
+		cBldr_Spacing_floatSliderGrp
+		;
+	
+	floatSliderGrp
+		-l "Offset U"
+		//-nf 1
+		-f true
+		-cal 1 "left"
+		-v 0
+		cBldr_OffsetU_floatSliderGrp
+		;
+	
+    //-----------------------------
+    wizSeparator();
+    //-----------------------------
+    
+	checkBox
+		-l "Randomize Spacing"
+		-v false
+		cBldr_RandomizeSpacing_checkBox
+		;
+		
+	floatFieldGrp
+		-l "Random Amount"
+		-nf 2
+		-cal 1 "left"
+		-cw1 80
+		-v1 5.0
+		cBldr_RandomAmount_floatFieldGrp
+		;
+	
+    //-----------------------------
+    wizSeparator();
+    //-----------------------------
+	checkBox
+		-l "Follow Path"
+		-v true
+		cBldr_FollowPath_checkBox
+		;
+	
+	string $frontAxis[] = { "x", "y", "z" };
+	string $frontAxisOmg = wizOptionMenuGrpMenuItems("Front Axis", "cBldr_FollowPathFrontAxis_optionMenuGrp", $frontAxis);
+	optionMenuGrp -e -sl 2 cBldr_FollowPathFrontAxis_optionMenuGrp;
+	
+	checkBox
+		-l "Inverse Front"
+		-v false
+		cBldr_InverseFront_checkBox
+		;
+		
+	string $upAxis[] = { "x", "y", "z" };
+	string $upAxisOmg = wizOptionMenuGrpMenuItems("Up Axis", "cBldr_FollowPathUpAxis_optionMenuGrp", $upAxis);
+	optionMenuGrp -e -sl 3 cBldr_FollowPathUpAxis_optionMenuGrp;
+	
+	checkBox
+		-l "Inverse Up"
+		-v false
+		cBldr_InverseUp_checkBox
+		;	
+		
+	checkBox
+		-l "Parametric Length"
+		-v false
+		cBldr_ParametricLength_checkBox
+		;	
+		
+	//-----------------------------
+    wizSeparator();
+    //-----------------------------
+
+	
+	checkBox
+		-l "Flow Path"
+		-v false
+		cBldr_FlowPath_checkBox
+		;
+		
+    intFieldGrp
+        -nf 3
+        -l "Lattice Divisions"
+        -v1 10
+        -v2 10
+        -v3 10
+        -cal 1 "left"
+        -adj 1
+        cBldr_LatticeDivisions_intFieldGrp
+        ;
+		
+	
+    //-----------------------------
+    wizSeparator();
+    //-----------------------------   
+
+	checkBox
+		-l "Surface Normal Constraint"
+		-v false
+		cBldr_SurfaceNormalConstraint_checkBox
+		;
+	
+	textFieldButtonGrp
+		-l "Surface Normal Object"
+		-cal 1 "left"
+		-bl "Select"
+		-bc ("assignObjectToTextFieldButtonGrp(\"cBldrCurveTextFieldButtonGrp\");")
+		cBldr_SurfaceNormalObject_textFieldButtonGrp
+		;
+
+	floatFieldGrp
+		-nf 3
+		-l "Aim Vector"
+		-v1 0
+		-v2 0
+		-v3 1
+		cBldr_AimVector_floatFieldGrp
+		;
+	
+	floatFieldGrp
+		-nf 3
+		-l "Up Vector"
+		-v1 0
+		-v2 1
+		-v3 0
+		cBldr_UpVector_floatFieldGrp
+		;
+		
+	
+	//-----------------------------
+    wizSeparator();
+    //-----------------------------   
+	
+	checkBox
+		-l "Group Duplicates"
+		-v true
+		cBldr_GroupDuplicates_checkBox
+		;
+	
+	checkBox
+		-l "Use Sets"
+		-v false
+		cBldr_UseSets_checkBox
+		;	
+	//-----------------------------
+    wizSeparator();
+    //-----------------------------
+	checkBox
+		-l "Always Cap"
+		-v false
+		cBldr_AlwaysCap_checkBox
+		;
+		
+    checkBox
+		-l "Scale To Fill"
+		-v false
+		cBldr_ScaleToFill_checkBox
+		;
+		
+	checkBox
+		-l "Use CV Objects"
+		-v false
+		cBldr_useCVObjects_checkBox
+		;
+		
+	floatSliderGrp
+		-l "Min CV Angle"
+		-v 10
+		cBldr_minCVAngle_floatSliderGrp
+		;
+    
+	floatSliderGrp
+		-l "Max CV Angle"
+		-v 90
+		cBldr_maxCVAngle_floatSliderGrp
+		;
+		
+	textFieldButtonGrp
+		-l "CV Objects"
+		-ann "This is only used for cBldr Assets."		
+		-cal 1 "left"
+		-bl "Select"
+		-bc ("assignObjectToTextFieldButtonGrp(\"cBldr_cvObjects_textFieldButtonGrp\");")
+		cBldr_cvObjects_textFieldButtonGrp
+		;	
+		
+	checkBox
+		-l "Use Replacement Curves"
+		-v false
+		cBldr_UseReplacementCurves_checkBox
+		;	
+		
+			
+	textFieldButtonGrp
+		-l "Replacement Curves"
+		-ann "This is only used for cBldr Assets."		
+		-cal 1 "left"
+		-bl "Select"
+		-bc ("assignObjectToTextFieldButtonGrp(\"cBldr_ReplacementCurves_textFieldButtonGrp\");")
+		cBldr_ReplacementCurves_textFieldButtonGrp
+		;		
+		
+    //-----------------------------
+    wizSeparator();
+    //-----------------------------
+	string $setOrdering[] = { "sequence", "random", "headSequence", "sequenceTail", "headSequenceTail", "headRandom", "randomTail", "headRandomTail" };
+	string $setOrderOmg = wizOptionMenuGrpMenuItems("Set Order", "cBldr_SetOrder_optionMenuGrp", $setOrdering);
+
+	//int $spacMethVal = `optionMenuGrp -q -v cBldrSpacingMethodOptionMenuGrp`;
+	
+	textFieldButtonGrp
+		-l "Duplicate Object"
+		-ann "Use this field to select the objects to duplicate on the selected curve."		
+		-cal 1 "left"
+		-bl "Select"
+		-bc ("assignObjectToTextFieldButtonGrp(\"cBldr_DuplicateObject_textFieldButtonGrp\");")
+		cBldr_DuplicateObject_textFieldButtonGrp
+		;
+	
+	textFieldButtonGrp
+		-l "Curve"
+		-ann "Use this field to select the curve to duplicate on.\nSelect the curve that you would like the actions menu to perform operations on."
+		-cal 1 "left"
+		-bl "Select"
+		-bc ("assignObjectToTextFieldButtonGrp(\"cBldr_Curve_textFieldButtonGrp\");")
+		cBldr_Curve_textFieldButtonGrp
+		;
+	
+	checkBox
+		-l "Cord Build"
+		-v false
+		cBldr_cordBuild_checkBox
+		;
+		
+	textFieldButtonGrp
+		-l "Extrusion Profile"
+		-ann "..."		
+		-cal 1 "left"
+		-bl "Select"
+		-bc ("assignObjectToTextFieldButtonGrp(\"cBldr_extrusionProfile_textFieldButtonGrp\");")
+		cBldr_extrusionProfile_textFieldButtonGrp
+		;
+        
+    //-----------------------------
+    wizSeparator();
+    //-----------------------------  
+    
+	button 
+        -l "Create cBldr Asset " 
+        -ann "This will create an asset with controls for duplicating objects on the selected curve"
+        -c ("wizCreateCBldrAsset(`ls -sl`);");
+	
+    button
+		-l "Update Current Curve"
+		-ann "This will update the curve from the above curve field."
+		-c ("string $curCurve = `textFieldButtonGrp -q -tx cBldrCurveTextFieldButtonGrp`;updateDuplicatesOnCurve($curCurve);")
+		;
+		
+}	
+
+//@ X BUILDER MAIN MENU BAR LAYOUT
+//======================================================
+global proc cBldrMainMenuBarLayout()
+{
+	string $menuBarLayout = `menuBarLayout cBldrMainMenuBarLayout`;	
+	   
+    menu -l "Actions" -to true;
+		cBldrActionsMenuItems();
+	setParent -menu..;
+    
+}
+
+global proc cBldrActionsMenuItems()
+{
+	menuItem -l "Update Current Curve" -c ("updateDuplicatesOnCurve($curCurve);");
+	menuItem -l "Replace cBldr Curve And Build" -c ("cBldrSetSourceCurveAndBuild(`ls -sl`);");
+	menuItem -l "Select Duplicates" -c ("selectDuplicateOnCurveDuplicates(\"duplicates\");");
+	menuItem -l "Select Motion Paths" -c ("selectDuplicateOnCurveDuplicates(\"motionPaths\");");
+	
+	menuItem -l "Delete Duplicates" -c ("removeDuplicateOnCurveDuplicates(\"duplicates\");");
+	menuItem -l "Delete Motion Paths" -c ("removeDuplicateOnCurveDuplicates(\"motionPaths\");");
+
+}
+
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         C BUILDER
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//WIZ CREATE DUPLICATE ON CURVE RIG
+//=====================================================
+global proc string wizCreateCBldrAsset( string $sel[] )
+{
+	wizLog("[@] wizCreateCBldrAsset");
+	
+	// To Do
+    if (`size $sel` == 0){
+		$sel[0] = `textFieldButtonGrp -q -tx cBldr_DuplicateObject_textFieldButtonGrp`;
+		$sel[1] = `textFieldButtonGrp -q -tx cBldr_Curve_textFieldButtonGrp`;
+	}
+	
+	/*
+	string $s[] = `listRelatives -type nurbsCurve $sel[0]`;
+	
+	string $curveShape = $s[0];
+	if (`size $s` == 0){
+		$s = `listRelatives -type nurbsCurve $sel[1]`;
+		if (`size $s` == 0){
+			string $curve = $sel[0];
+			$sel[0] = $sel[1];
+			$sel[1] = $curve;
+			wizLog("	[!] No curve selected to add to cBldrAsset. Dont forget to add a curve [!]");
+			return "";
+		}
+	}
+	*/
+	
+	string $nc[] = smartSelectObjectsOfType($sel, "-type nurbsCurve");
+	if (`size $nc` == 0){
+		wizlog ("[!] You Must Select A Curve To Create A cBldr! [!]");
+		return "";
+	}
+	
+	string $lt[] = `listTransforms $nc[0]`;
+	string $curve = $lt[0];
+	
+	string $dupObjs[] = stringArrayRemove({$curve}, $sel);
+	
+    string $assetName = ($curve + "cBldr");
+    string $addContents[] = { $curve };
+
+    //Create an asset to control the duplication values
+    //string $cBldr = `container -n $assetName -type dagContainer -ind "inputs" -includeHierarchyBelow -includeShapes -includeTransform -force -addNode $addContents`;
+	string $cBldr = `container -n $assetName -type dagContainer -ind "inputs" -includeHierarchyBelow -includeShapes -includeTransform `;
+	addWizAssetTypeAttributeToSelectedAsset($cBldr, "cBldrAsset");
+    //Add the assetWiz command to the asset
+    setAttr -type "string" ($cBldr + ".rmbCommand") "assetWiz";
+    
+	//Make arcLengthDimension to get length of curve
+	addCurveMeasuringToSelectedCurve({$curve});
+
+	//string $name = $sel[1] + "StartCurveLengthChangeScriptJob";
+    string $name = $cBldr + "StartCurveLengthChangeScriptJob";
+	$name = makeNiceName($name);
+
+	//string $selName = removeAllSpaces($sel[1]);
+    string $selName = removeAllSpaces($cBldr);
+    
+	string $curveLengthAttr = $curve + ".curveLength";
+    
+	string $cDupCount = $selName + ".duplicateCount";
+	string $cSpac = $selName + ".spacing";
+	string $spacMethName = $selName + ".spacingMethod";
+
+	
+	
+	//Create a scriptNode that executes a scriptJob when opening scene so we can monitor when curve attr are changed.
+
+	/*
+	string $bs = (
+	"string $cBldrs[] = `ls (" + "\"*" + $cBldr + "\")`;\n"
+	
+	+"scriptJob -kws -ac " + $cDupCount + " (\"updateDuplicatesOnCurve(\\\"" + $cBldrs[0] + "\\\");\");\n"
+	+"scriptJob -kws -ac " + $cSpac + " (\"updateDuplicatesOnCurve(\\\"" + $cBldrs[0] + "\\\");\");"+"\n"
+	+"scriptJob -kws -ac " + $spacMethName + " (\"updateDuplicatesOnCurve(\\\"" + $cBldrs[0] + "\\\");\");"+"\n"
+	+"scriptJob -kws -ac " + $curveLengthAttr + " (\"updateDuplicatesOnCurve(\\\"" + $cBldrs[0] + "\\\");\");"+"\n"
+	);	//"
+*/
+
+	
+	string $bs = (
+	"scriptJob -kws -ac " + $cDupCount + " (\"updateDuplicatesOnCurve(" + "\\\"" + $cBldr + "\\\"" + ");\");"+"\n"
+	+"scriptJob -kws -ac " + $cSpac + " (\"updateDuplicatesOnCurve(" + "\\\"" + $cBldr + "\\\"" + ");\");"+"\n"
+	+"scriptJob -kws -ac " + $spacMethName + " (\"updateDuplicatesOnCurve(" + "\\\"" + $cBldr + "\\\"" + ");\");"+"\n"
+	+"scriptJob -kws -ac " + $curveLengthAttr + " (\"updateDuplicatesOnCurve(" + "\\\"" + $cBldr + "\\\"" + ");\");"+"\n"
+	);
+	
+	/*
+	createObjAttributesFromGUIObjectsInLayout($cBldr, "cBldr_frameLayout", "-sm");	
+	*/
+	
+	//<ToDoWiz!> Implement This
+
+	createObjAttributesFromGUIObjectsInLayout($cBldr, "cBldr_frameLayout", "-sm");	
+	
+	string $cSet = createSetFromSelection({$curve}, ($assetName + "CurveSet"));
+	string $sSet = createSetFromSelection($dupObjs, ($assetName + "ObjectSet"));	
+	//string $cvoSet = createSetFromSelection({$sel[0]}, ($assetName + "CVObjectSet"));
+	string $cvoSet = `sets -em -n ($assetName + "CVObjectSet")`;
+	string $snoSet = `sets -em -n ($assetName + "SurfaceConstraintSet")`;
+	string $exProSet = `sets -em -n ($assetName + "ExtrusionProfileSet")`;
+	connectAttr ($cSet + ".message") ($cBldr + ".curve");
+	connectAttr ($sSet + ".message") ($cBldr + ".duplicateObject");
+	connectAttr ($cvoSet + ".message") ($cBldr + ".cvObjects");
+	connectAttr ($snoSet + ".message") ($cBldr + ".surfaceNormalObject");
+	connectAttr ($exProSet + ".message") ($cBldr + ".extrusionProfile");
+	
+	string $allSets = createSetFromSelection({$cSet,$sSet,$snoSet,$cvoSet, $exProSet}, ($assetName + "Sets"));
+	
+	wizlog ("	[+] Put Curve Objects Into Set : " + $cSet + " [+]");
+	wizlog ("	[+] Put Duplicate Objects Into Set : " + $sSet + " [+]");
+	
+	wizlog ("	[+] Put Surface Normal Constraint Objects Into Set : " + $snoSet + " [+]");
+	wizlog ("	[+] Put CV Objects Into Set : " + $cvoSet + " [+]");
+
+	
+	
+	if (`attributeExists "lastCurveLength" $cBldr` == 0){
+		addAttr -ln "lastCurveLength" -at double -h true $cBldr;
+		wizlog ("	[+] addAttr -ln \"lastCurveLength\" -at double -h true " + $cBldr + ";"); 
+	}
+	
+	/*
+	setAttr ($cBldr + ".duplicateObject") -type "string" $sel[0];
+	*/
+	
+	if (`objExists $name`){
+		delete $name;
+	}
+	
+	
+	scriptNode -st 1 -bs $bs -n $name;
+	
+	//Run the scriptJob now.
+	eval($bs);   
+   
+	  
+	updateDuplicatesOnCurve($cBldr);
+	
+	wizLog ("	[+] Attributes For Changing The Duplicate On Curve Parameters Were Added To : " + $cBldr + "\n");
+	wizLog ("	[#] The Duplicates Will Update If The Length Of The Curve Changes, Or If The Spacing Attribute Changes.\n"+wizDiv("se")+"\n");
+	
+	string $notes = ("cBldr\n"
+	+"============================================\n"
+	+"- cBldr will auto update as long as you have enableDuplication checked and you change either the length of the curve or the number of duplicates.\n\n"
+	+"- To Manually Build, Right click on the cBldr asset and choose Asset>Update Duplicates On Curve\n\n"
+	+"- To Make a Cord, Check cordBuild. If you want to extrude along a profile, add the profile curve to the ExtrusionProfileSet.\n"
+	+"Then you should also only have two objects in the ObjectSet, the head object and the tail object.\n"
+	+"- If you put an object into the cBldrSurfaceConstraintSet and you check surfaceNormalConstraint, cBldr will attempt to add normal constraints to the\n"
+	+" Duplicated Objects\n"
+	+"- Do Not Rename Objects Created By cBldr Or Auto Updating Will Not Work Properly."
+	);
+	
+	addNotesToObjects({$cBldr}, $notes);
+	
+	return $cBldr;
+}
+
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         CBLDR BUILD
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//@ C BLDR SET SOURCE CURVE AND BUILD
+//====================================================================
+/*****************************************************************//**
+	Use this to replace the curve that is in a cBldr asset with 
+	another curve before building.
+	<hr>
+	<b>Synopsis</b><br>
+	cBldrSetSourceCurveAndBuild [string $sel[]] <br>
+	This does not actually replace the curve inside asset but
+	just sets an override (useReplacementCurves) to true and
+	sets the attribute (replacementCurves) to contain the curve
+	passed to this command.
+	
+	<b>Return value</b><br>
+	none.
+	
+	<b>Flags</b><br>
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	cBldrSetSourceCurveAndBuild(`ls -sl`);  // the cBldr asset and a curve selection
+	
+	</code>
+*********************************************************************/
+global proc cBldrSetSourceCurveAndBuild( string $sel[] )
+{
+	string $dc[] = `ls -typ dagContainer $sel`;
+	string $cBldr = $dc[0];
+	string $c[] = stringArrayRemove($cBldr, $sel);
+	string $curve = $c[0];
+	
+	string $reCurve = `getAttr ($cBldr + ".replacementCurves")`;
+	$reCurve = $reCurve + $curve;
+	setAttr ($cBldr + ".replacementCurves") $reCurve;
+	setAttr ($cBldr + ".useReplacementCurves") 1;
+	updateDuplicatesOnCurve($cBldr);
+}
+//><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><
+
+
+/*
+string $sel[] = `ls -sl`;
+string $cBldr = $sel[0];
+string $assContents[] = `container -q -nl $cBldr`;
+string $curveShapes[] = `ls -typ nurbsCurve $assContents`;
+string $curves[] = `listTransforms $curveShapes[0]`;
+string $curve = $curves[0];
+print("Curve : " + $curve + "\n");
+    
+*/
+//UPDATE DUPLICATES ON CURVE
+//=========================================================
+global proc wizUpdateDuplicatesOnOnCurve( string $object )
+{
+    string $sel[] = `ls -sl`;
+    for ($i=0;$i<`size $sel`;$i++){
+        updateDuplicatesOnCurve($sel[$i]);
+    
+    }
+}
+
+//UPDATE DUPLICATE ON CURVE
+//=========================================================
+global proc updateDuplicatesOnCurve( string $cBldr )
+{
+	wizlog ("[@] updateDuplicatesOnCurve");
+	
+	
+    if ($cBldr == ""){
+		wizlog ("[WARNING] : No cBldr Selected");
+        string $sel[] = `ls -sl`;
+        $cBldr = $sel[0];
+    }
+	
+	wizlog ("[UPDATING CBLDR] : " + $cBldr);
+	string $curves[] = getXCurveBuilderCurves({$cBldr});
+	wizlog (niceArrayList(" [#] Curves [#] ", $curves));
+	
+	/*
+	string $curves[];	
+	// First look for the curve attribute for curves
+	string $curveString;
+	if (`objExists $cBldr`){
+		$curveString = `getAttr ($cBldr + ".curve")`;
+		if (`size $curveString` > 0){
+			$curves = tokenizeString($curveString, " ");
+		}
+	}
+	*/
+	
+	/*
+	
+	if (`objExists $cBldr`){
+		string $con[] = `listConnections ($cBldr + ".curve")`;
+		if (`size $con` > 0){
+			$curves = `sets -q $con[0]`;
+			
+		}
+	}
+	
+
+	
+	// Then look in the asset hierarchy for curves
+	if (`size $curves` == 0){
+		string $assContents[] = `container -q -nl $cBldr`;
+		string $curveShapes[] = `ls -typ nurbsCurve $assContents`;		
+		for ($i=0;$i<`size $curveShapes`;$i++){
+			string $crvs[] = `listTransforms $curveShapes[$i]`;
+			appendStringArray($curves, $crvs, `size $crvs`);
+		}
+		
+	}
+    
+	// Then look for replacement curves
+    string $curve = $curves[0];
+	if (`getAttr ($cBldr + ".useReplacementCurves")` == 1){
+		string $reCurve = `getAttr ($cBldr + ".replacementCurves")`;
+		if (`size $reCurve` > 0){
+			$curves = tokenizeString($reCurve, " ");
+		}
+	}
+	
+	$curves = stringArrayRemoveDuplicates($curves);
+	
+	*/
+	
+	wizlog ("	[#] Building On : " + `size $curves` + " Curves");
+	/*
+	if (`objExists $cBldr` == 1 && `size $curveString` == 0){
+		setAttr ($cBldr + ".curve") -type "string" (stringArrayToString($curves, " "));
+	}
+	*/
+	
+	for ($i=0;$i<`size $curves`;$i++){
+		if (`attributeExists "curveLength" $curves[$i]` == 0){
+			addCurveMeasuringToSelectedCurve({$curves[$i]});
+		}
+		updateCurveObjects($curves[$i], $cBldr);	
+		
+	}
+	
+}
+	
+global proc updateCurveObjects( string $curve , string $cBldr )
+{
+	wizlog ("[@] updateCurveObjects");
+	string $dbl = "-dmi UpdateDuplicatesOnCurveDebugMenuItem -t Update Duplicates On Curve";
+	int $dbc = 1;
+	string $dbm = "add";
+	menuItem -e -cb true UpdateDuplicatesOnCurveDebugMenuItem;
+
+	//debugListString($dbl,(" * Updating Duplicates On Curve : " + $curve + " *"), $dbc, $dbm);
+	
+	wizlog ("Updating Curve Duplicates : " + $curve + "\nOn cBldr : " + $cBldr + "\n-------------------\n");
+	
+	/*
+	int $enabled = `getAttr ($cBldr + ".enableDuplication")`;
+	if ($enabled == 0){ return; }
+	string $curSel[] = `ls -sl`;
+	float $arcLength = `getAttr ($curve + ".curveLength")`;
+	float $lastCurveLength = `getAttr ($cBldr + ".lastCurveLength")`;
+	
+	//print ("Curve Length : " + $arcLength + "\n");
+	debugListString($dbl,(" - Curve Length : " + $arcLength), $dbc, $dbm);
+	
+	int $dupType = `getAttr ($cBldr + ".duplicateType")`;
+
+	string $obj[];
+	string $source = `getAttr ($cBldr + ".duplicateName")`;
+	if (`referenceQuery -inr $cBldr`){
+		string $ns = `referenceQuery -ns $cBldr`;
+		$source = $ns + ":" + $source;
+		
+	}
+
+	int $useSets = `getAttr ($cBldr + ".useSets")`;
+	string $nodeType = `nodeType $source`;
+	if ($nodeType == "objectSet"){
+		$obj = `sets -q $source`;
+	} else {
+		$obj[0] = $source;
+	}
+
+	int $dupCount = `getAttr ($cBldr + ".duplicateCount")`;
+	float $spacing = `getAttr ($cBldr + ".spacing")`;
+	int $spaMeth = `getAttr ($cBldr + ".spacingMethod")`;
+	int $fracMode = `getAttr ($cBldr + ".parametricLength")`;
+	int $randomize = `getAttr ($cBldr + ".randomizeSpacing")`;
+	float $ran = `getAttr ($cBldr + ".randomAmount")`;
+	float $offsetU = `getAttr ($cBldr + ".offsetU")`;
+	if ($fracMode == 1){
+		$fracMode = 0;
+	} else {
+		$fracMode = 1;
+	}
+	
+	// Follow Path Options
+	int $follow = `getAttr ($cBldr + ".followPath")`;
+	//string $frontAxis = `optionMenuGrp -q -v cBldrFollowPathFrontAxisOptionMenuGrp`;
+	//string $upAxis = `optionMenuGrp -q -v cBldrFollowPathUpAxisOptionMenuGrp`;
+	string $frontAxis = `getAttr -as ($cBldr + ".frontAxis")`;
+	int $inverseFront = `getAttr -as ($cBldr + ".inverseFront")`;
+	string $upAxis = `getAttr -as ($cBldr + ".upAxis")`;
+	int $inverseUp = `getAttr -as ($cBldr + ".inverseUp")`;
+    //Flow path options
+    int $flow = `getAttr ($cBldr + ".flowPath")`;
+    int $flowLatDiv[] = `getAttr ($cBldr + ".flowLatticeDivisions")`;
+    
+	int $alwaysCap = `getAttr -as ($cBldr + ".alwaysCap")`;
+    int $scaleToFill = `getAttr -as ($cBldr + ".scaleToFill")`;
+	
+	//string $dup[] = `ls -tr ($source + "CurveDuplicateObject*")`;
+    string $dup[] = getXCurveBuilderDuplicateObjects({$cBldr, $curve});
+    
+	debugListString($dbl,(" - Existing Duplicates : " + `size $dup`), $dbc, $dbm);
+	//print ("Existing Duplicates : " + `size $dup` + "\n");
+	
+	
+	// Grouping 
+	int $groupDup = `getAttr ($cBldr + ".groupDuplicates")`;
+	string $groupName = ($cBldr + "_" + $curve + "_DuplicateObjectGroup");
+	string $group[] = `ls -tr ($groupName + "*")`;
+	if ($groupDup == 1 && `size $group` == 0){
+		$group[0] = `group -em -n $groupName`;
+	}
+		
+	//print ("Objects To Duplicate : " + stringArrayToString($obj, ", ") + "\n");
+	debugListArray($dbl, " - Objects To Duplicate : ", $obj, $dbc, $dbm, "NEXT", 100);
+	
+	//_________________________________________
+	// Generate a indice array
+	
+	string $setOrdering = `getAttr -as ($cBldr + ".setOrdering")`;
+		
+		
+	*/
+		
+	if (`objExists $cBldr` == 0){
+		$cBldr = "cBldr";
+	}
+	
+	int $enabled = int(getWizAttr("-obj " + $cBldr + " -attr EnableDuplication -typ checkBox"));
+	if ($enabled == 0){ return; }
+	string $curSel[] = `ls -sl`;
+	
+	float $arcLength = `getAttr ($curve + ".curveLength")`;
+	float $lastCurveLength = `getAttr ($cBldr + ".lastCurveLength")`;
+	
+	//print ("Curve Length : " + $arcLength + "\n");
+	debugListString($dbl,(" - Curve Length : " + $arcLength), $dbc, $dbm);
+	
+	string $dupType = getWizAttr("-obj " + $cBldr + " -attr DuplicateType -typ optionMenuGrp");
+
+	/*
+	string $obj[];
+	string $source = getWizAttr("-obj " + $cBldr + " -attr DuplicateObject -typ textFieldButtonGrp");
+	
+	if (`referenceQuery -inr $cBldr`){
+		string $ns = `referenceQuery -ns $cBldr`;
+		$source = $ns + ":" + $source;
+		
+	}
+
+	int $useSets = int(getWizAttr("-obj " + $cBldr + " -attr UseSets -typ checkBox"));
+	string $nodeType = `nodeType $source`;
+	if ($nodeType == "objectSet"){
+		$obj = `sets -q $source`;
+	} else {
+		$obj[0] = $source;
+	}
+	*/
+	
+	string $obj[] = getXCurveBuilderSourceObjects({$cBldr});
+	
+	int $dupCount = int(getWizAttr("-obj " + $cBldr + " -attr DuplicateCount -typ intSliderGrp"));
+	float $spacing = float(getWizAttr("-obj " + $cBldr + " -attr Spacing -typ floatSliderGrp"));
+	string $spaMeth = getWizAttr("-obj " + $cBldr + " -attr SpacingMethod -typ optionMenuGrp");
+	
+	int $fracMode = int(getWizAttr("-obj " + $cBldr + " -attr ParametricLength -typ checkBox"));
+	int $randomize = int(getWizAttr("-obj " + $cBldr + " -attr RandomizeSpacing -typ checkBox"));
+	
+	
+	string $ranAmount = getWizAttr("-obj " + $cBldr + " -attr RandomAmount -typ floatFieldGrp");
+	float $ran[] = stringToFloatArray($ranAmount);
+	
+	float $offsetU = float(getWizAttr("-obj " + $cBldr + " -attr OffsetU -typ floatSliderGrp"));
+	if ($fracMode == 1){
+		$fracMode = 0;
+	} else {
+		$fracMode = 1;
+	}
+	
+	// Follow Path Options
+	int $follow = int(getWizAttr("-obj " + $cBldr + " -attr FollowPath -typ checkBox"));
+	//string $frontAxis = `optionMenuGrp -q -v cBldrFollowPathFrontAxisOptionMenuGrp`;
+	//string $upAxis = `optionMenuGrp -q -v cBldrFollowPathUpAxisOptionMenuGrp`;
+	string $frontAxis = getWizAttr("-obj " + $cBldr + " -attr FollowPathFrontAxis -typ optionMenuGrp");
+	int $inverseFront = int(getWizAttr("-obj " + $cBldr + " -attr InverseFront -typ checkBox"));
+	string $upAxis = getWizAttr("-obj " + $cBldr + " -attr FollowPathUpAxis -typ optionMenuGrp");
+	int $inverseUp = int(getWizAttr("-obj " + $cBldr + " -attr InverseUp -typ checkBox"));
+    //Flow path options
+    int $flow = int(getWizAttr("-obj " + $cBldr + " -attr FlowPath -typ checkBox"));
+	string $flowLatDivString = getWizAttr("-obj " + $cBldr + " -attr LatticeDivisions -typ intFieldGrp");
+    int $flowLatDiv[] = stringToIntArray($flowLatDivString);
+    
+	// Normal Constraint Options
+	int $normAlign = int(getWizAttr("-obj " + $cBldr + " -attr SurfaceNormalConstraint -typ checkBox"));
+	string $surNormObj = getWizAttr("-obj " + $cBldr + " -attr SurfaceNormalObject -typ textFieldButtonGrp");
+	string $normAimString = getWizAttr("-obj " + $cBldr + " -attr AimVector -typ floatFieldGrp");
+    float $aimVector[] = stringToFloatArray($normAimString);
+    string $normUpString = getWizAttr("-obj " + $cBldr + " -attr UpVector -typ floatFieldGrp");
+    float $upVector[] = stringToFloatArray($normUpString);
+    
+	
+	
+	int $alwaysCap = int(getWizAttr("-obj " + $cBldr + " -attr AlwaysCap -typ checkBox"));
+    int $scaleToFill = int(getWizAttr("-obj " + $cBldr + " -attr ScaleToFill -typ checkBox"));
+	
+	//string $dup[] = `ls -tr ($source + "CurveDuplicateObject*")`;
+    string $dup[] = getXCurveBuilderDuplicateObjects($curve, $cBldr);
+    
+	debugListString($dbl,(" - Existing Duplicates : " + `size $dup`), $dbc, $dbm);
+	//print ("Existing Duplicates : " + `size $dup` + "\n");
+	
+	
+	// Grouping 
+	int $groupDup = int(getWizAttr("-obj " + $cBldr + " -attr GroupDuplicates -typ checkBox"));
+	string $groupName = ($cBldr + "_" + $curve + "_DuplicateObjectGroup");
+	string $group[] = `ls -tr ($groupName + "*")`;
+	if ($groupDup == 1 && `size $group` == 0){
+		$group[0] = `group -em -n $groupName`;
+	}
+		
+	//print ("Objects To Duplicate : " + stringArrayToString($obj, ", ") + "\n");
+	debugListArray($dbl, " - Objects To Duplicate : ", $obj, $dbc, $dbm, "NEXT", 100);
+	
+	//_________________________________________
+	// Generate a indice array
+	
+	string $setOrdering = getWizAttr("-obj " + $cBldr + " -attr SetOrder -typ optionMenuGrp");		
+	
+	int $cordBuild ;
+	if (`attributeExists "cordBuild" $cBldr` == 1){
+		$cordBuild = int(getWizAttr("-obj " + $cBldr + " -attr CordBuild -typ checkBox"));	
+	}
+	
+	float $objSize[];
+	
+	float $uVal[];
+	clear $uVal;
+	if ($spaMeth == "count"){	
+		$uVal[0] = 1.0 / ($dupCount - 1);
+	} else if ($spaMeth == "curvePercent"){	
+		$uVal[0] = 1.0 * ($spacing + $offsetU);
+		$dupCount = 1.0 / ($spacing + $offsetU);
+	} else if ($spaMeth == "worldDistance"){
+		$uVal[0] = (1.0 / $arcLength) * ($spacing + $offsetU);	
+		$dupCount = $arcLength / ($spacing + $offsetU);
+	} else if ($spaMeth == "boundingBoxFit"){
+		wizlog ("	[#] Spacing Method : bboxFit");
+		// get the smallest object and estimate our duplication count from that
+		float $objMinSize = 999999999.99;
+		for ($i=0;$i<`size $obj`;$i++){
+			float $bboxSize[] = `getAttr ($obj[$i] + ".boundingBoxSize")`;
+			float $bboxp;
+			switch ($frontAxis){
+				case "x" :
+				$bboxp = $bboxSize[0];
+				break;
+				
+				case "y" :
+				$bboxp = $bboxSize[1];
+				break;
+				
+				case "z" :
+				$bboxp = $bboxSize[2];
+				break;
+				
+			}
+			if ($bboxp < $objMinSize){
+				$objMinSize = $bboxp;	
+			}
+			$objSize[$i] = $bboxp;
+			wizlog ("	[#] BBox Fit Size : " + $objMinSize);
+			
+		}
+		
+		$dupCount = $arcLength / ($objMinSize + $offsetU);
+		wizlog ("	[#] Duplication Count : " + $dupCount + " = ");
+		wizlog ("	[#] ArcLength : " + $arcLength + " / ( ObjMinSize : " + $objMinSize + " + OffsetU : " + $offsetU + " )");
+		
+	}
+	
+	//_________________________________________
+	// CordBuild?
+	int $cordExtrude;
+	if ($cordBuild){
+		//$setOrdering = "headSequenceTail";
+				
+
+		string $cordCurve[];
+		string $con[] = `listConnections ($cBldr + ".extrusionProfile")`;
+		if (`size $con` > 0){
+			$cordCurve = `sets -q $con[0]`;			
+		}
+		if (`size $cordCurve` > 0){		
+			$dupCount = 2;
+			$cordExtrude = 1;
+		} else {
+			$flow = 1;
+		}
+		
+		if ($cordExtrude){			
+			
+			string $extrusion[];
+			$extrusion = `ls -tr ("*" + $cBldr + "_" + $curve + "_Extrusion")`;
+			if (`size $extrusion` == 0){
+				$extrusion = `extrude -n ($cBldr + "_" + $curve + "_Extrusion") -ch true -rn false -po 1 -et 2 -ucp 1 -fpt 1 -upn 1 -rotation 0 -scale 1 -rsp 1 $cordCurve $curve `;
+			}
+		} 
+
+	}
+	
+	
+	// calculate how many objects fit on curve and how much scaling is need to get a precise fit
+	int $so[] = wizIndiceSequence(("-c " + $dupCount + " -as " + `size $obj` + " -st " + $setOrdering));
+	//wizlog ("	[+] Indice Sequence : ");
+	
+	
+	float $scaleFactor;
+	if ($spaMeth == "boundingBoxFit"){
+		
+		float $remSpace;
+		float $objFitting = $arcLength;
+		int $ss;
+		if ($scaleToFill == 0){
+			for ($i=0;$i<`size $so`;$i++){
+				$uVal[`size $uVal`] = 1.0 / ($arcLength / $objSize[($so[($i)])]);	
+				//wizlog ("	[#] UVal : " + $uVal[(`size $uVal` - 1)] + " = 1.0 / ObjectSize : " + $objSize[($so[$ss])]);	
+			}
+			/*
+			while (true){
+					//float $subSize = $objSize[($so[$ss])];
+					//wizlog ("	[#] ObjectFitting : " + $objFitting + " - ObjectSize : " + $objSize[($so[$ss])] + " = " + $subSize);
+					
+					$uVal[`size $uVal`] = 1.0 / ($arcLength / $objSize[($so[$ss])]);	
+					wizlog ("	[#] UVal : " + $uVal[(`size $uVal` - 1)] + " = 1.0 / ObjectSize : " + $objSize[($so[$ss])]);
+						
+					$ss++;
+			
+			}
+			*/
+		} else {
+		
+			while (true){
+				float $subSize = $objFitting - $objSize[($so[$ss])];
+				wizlog ("	[#] ObjectFitting : " + $objFitting + " - ObjectSize : " + $objSize[($so[$ss])] + " = " + $subSize);
+				
+				$uVal[`size $uVal`] = 1.0 / ($arcLength / $objSize[($so[$ss])]);	
+				wizlog ("	[#] UVal : " + $uVal[(`size $uVal` - 1)] + " = 1.0 / ObjectSize : " + $objSize[($so[$ss])]);
+				if ($subSize <= 0 || $ss > `size $so`){
+					$remSpace = $objFitting;
+					break ;
+				}
+				$objFitting = $objFitting - $objSize[($so[$ss])];
+					
+				$ss++;
+			}
+			
+			// divide the remainder by number of objects
+			
+			$scaleFactor = $remSpace / $ss;
+			
+			
+			$dupCount = $ss;
+			if ($scaleToFill == 1){
+			wizlog ("	[#] Scaling To Fill RemainderSpace");
+			wizlog ("	[#] Scale Factor : " + $scaleFactor + " = RemainderSpace : " + $remSpace + " / NumObjects : " + $ss);
+			wizlog ("	[#] Duplication Count : " + $ss);
+				for ($i=0;$i<`size $uVal`;$i++){
+					//wizlog ("	[#] UVal : " + $uVal[(`size $uVal` - 1)] + " + ( 1.0 / ScaleFactor : " + $scaleFactor + " ) = ");
+					$uVal[$i] = 1.0 / ($arcLength / ($objSize[($so[$i])] + $scaleFactor));	
+					//wizlog ("	[#] UVal : " + $uVal[(`size $uVal` - 1)]);
+				}
+			}
+		}
+		
+	}
+	
+	//_________________________________________
+	// Pre-Compute Duplicate Count If Using BoundingBoxFit Method
+	
+	if ($spaMeth == "boundingBoxFit"){
+		float $uTot = 0;
+		
+		float $iuVal;
+		for ($i=0;$i<$dupCount;$i++){
+			if ($uTot > 1.0){
+				$dupCount = ($i - 1);
+				wizlog ("	[!] End Duplicate Count At : " + ($i - 1));
+				break ;
+			}
+			
+			if ($i == 0){
+				$iuVal = 0;
+			} else {
+				$iuVal = $uVal[($i - 1)] + $uTot;
+			}
+			$uTot = $iuVal;
+			debugListString($dbl, (" - UTot : " + $uTot), $dbc, $dbm);
+			wizlog ("[##] iuVal : " + $iuVal);
+				
+		}
+		
+	}
+	
+	
+	
+	debugListString($dbl, (" - Duplication Count : " + $dupCount), $dbc, $dbm);
+	//print ("Duplication Count : " + $dupCount + "\n");
+	
+	//If we have made the curve smaller - delete everything and start over
+	if ($lastCurveLength >= $arcLength){
+		string $del[];
+		for ($i=0;$i<`size $dup`;$i++){
+			$del[`size $del`] = $dup[$i];
+		}
+		if ($dupType == "copy" || $dupType == "instance"){
+			delete $del;
+		} else if ($dupType == "referenceCopy"){
+			removeSelectedObjectReferenceFile($del);
+		}
+		$dup = stringArrayRemove($del, $dup);
+	} else if (`size $dup` > $dupCount){
+		// Remove Excess Duplicates 
+		string $del[];
+		for ($i=$dupCount;$i<`size $dup`;$i++){
+			$del[`size $del`] = $dup[$i];
+			//stringArrayRemoveAtIndex($i, $dup);
+		}
+		if ($dupType == "copy" || $dupType == "instance"){
+			delete $del;
+		} else if ($dupType == "referenceCopy"){
+			removeSelectedObjectReferenceFile($del);
+		}
+		$dup = stringArrayRemove($del, $dup);
+	}
+
+	if ($dupCount > 100){
+        wizProgressWindowStart("cBldr [working]", ("Making : " + ($dupCount - `size $dup`) + " : Duplicates"), 1);
+        wizProgressWindowMinMax(0,(($dupCount - `size $dup`) * 2));
+    }
+    
+	wizlog ("[?] Ready To Duplicate : " + $dupCount + " : Duplicates");
+	wizlog ("[?] If `Size Dup : " + (`size $dup`) + "` < " + $dupCount);
+	if (`size $dup` < $dupCount){
+		//_________________________________________
+		// Do the duplication 
+		
+		int $d = 0;
+		int $dupCountCap = $dupCount;
+
+		//int $dupCountCap;
+		//if ($alwaysCap){
+		//	$dupCountCap = $dupCount + 1;
+		//}
+		
+		
+		for ($i=(`size $dup`);$i<$dupCountCap;$i++){
+			string $new[];
+			//print ("-------------------\nDuplicating : " + $obj[$d] + "\n");
+			debugListString($dbl, (" - Duplicating : " + $obj[$d]), $dbc, $dbm);
+			wizlog ("[#] Duplicate Count : " + $dupCount + " [#] Current Iteration : " + $i);
+			
+			string $objNameNew = removeNamespaceFromString($obj[($so[$i])]);
+			string $curveNameNew = removeNamespaceFromString($curve);
+			
+			//string $newObjName = renameWizMakeUniqueNumberedName(($objNameNew + "_" + $curveNameNew + "_CurveDuplicateObject"));
+			string $newObjName = $objNameNew + "_" + $curveNameNew + "_CurveDuplicateObject" + $i;
+			
+			//$newObjName = removeNamespaceFromString($newObjName);
+			
+			wizlog ("	[#] New Object Name : " + $newObjName);
+			
+			if ($dupType == "copy"){
+				$new = `duplicate -rr -rc -n $newObjName $obj[($so[$i])]`;
+			} else if ($dupType == "instance"){
+				$new = `instance -n $newObjName $obj[($so[$i])]`;
+			} else if ($dupType == "referenceCopy"){
+				string $newRefDup[] = $new = duplicateReferenceObject($obj[($so[$i])]);
+				string $roots[] = getRootTransformsOfSelectedObjects($newRefDup);
+				$new[0] = $roots[0];
+			}
+			if ($groupDup == 1 && `size $group` > 0){
+				catchQuiet(`parent $new[0] $group[0]`);
+			}
+			$dup[`size $dup`] = $new[0];
+			//string $lsLong[] = `ls -l $new[0]`;
+			//string $longName = longNameOf($new[0]);
+			//wizlog ("	[#] New Duplicate Long Name : " + $longName);
+			wizlog ("	[#] New Duplicate : " + $new[0]);
+			select -r $new[0];
+			select -add $curve;
+			
+						
+			string $mp = `pathAnimation -ua $upAxis -iu $inverseUp -fa $frontAxis -if $inverseFront -fractionMode $fracMode -follow $follow -startTimeU 1 -endTimeU 10`;
+			cutKey -t ":" -f ":" -at "u" $mp;
+
+			// Add Flow 
+			if ($flow == 1){
+				select -r $curve;
+				select -r $new[0];
+                
+				string $flow[] = `flow -divisions $flowLatDiv[0] $flowLatDiv[1] $flowLatDiv[2] -objectCentered 0 -localCompute 0 -localDivisions 2 2 2 $new[0]`;	
+				if ($groupDup == 1 && `size $group` > 0){
+					catchQuiet(`parent $flow $group[0]`);
+				}	
+			}
+
+            wizProgressWindowStep(1);
+            if (wizProgressCancelled() == 1) return;	
+		}
+
+		float $uTot = 0;
+		
+		float $iuVal;
+	
+		/*
+		if ($spaMeth == "boundingBoxFit"){
+			$iuVal = 0;
+		}
+		*/
+		
+		
+		//_________________________________________
+		// Move the duplicates into position on motion path 
+		
+		for ($i=0;$i<`size $dup`;$i++){
+		
+			string $mp[] = `listConnections -type motionPath $dup[$i]`;
+			if (`size $mp` == 0){ continue;}
+			debugListString($dbl, (" - Object :  " + $obj[$d]), $dbc, $dbm);
+			debugListString($dbl, (" - Spacing :  " + $uVal[$d]), $dbc, $dbm);
+			print ("Object : " + $obj[$d] + " Spacing : " + $uVal[$i] + "\n");
+			//float $iuVal = $uVal[$d] + $uTot;
+			
+			// If we've gone past 1 then quit
+			if ($uTot > 1.0){
+				wizlog ("	[!] Stop [!]");
+				wizProgressWindowEnd();
+				break ;
+			}
+			
+			if ($randomize == 1){
+				$iuVal = rand(($iuVal + $ran[0]), ($iuVal - $ran[1]));
+			}
+			
+			if ($spaMeth != "boundingBoxFit"){
+				$iuVal = $uVal[0] * $i;
+			} 
+			
+			if ($spaMeth == "boundingBoxFit"){
+				if ($i == 0){
+					$iuVal = 0;
+				} else {
+					$iuVal = $uVal[($i - 1)] + $uTot;
+				}
+				$uTot = $iuVal;
+				debugListString($dbl, (" - UTot : " + $uTot), $dbc, $dbm);
+				wizlog ("[##] iuVal : " + $iuVal);
+			}
+			
+			
+			if ($alwaysCap && $i == (`size $dup` - 1)){
+				$iuVal = 1;
+			}
+			
+			setAttr ($mp[0] + ".uValue") $iuVal;
+			
+			if ($scaleToFill == 1){				
+				float $curScale[] = `getAttr ($dup[$i] + ".scale")`;
+				float $curSize[] = `getAttr ($dup[$i] + ".boundingBoxSize")`;
+				float $desiredSize[] = { ($curSize[0] + $scaleFactor), ($curSize[1] + $scaleFactor), ($curSize[2] + $scaleFactor) };
+				float $scaleBy[] = { ($desiredSize[0] / $curSize[0]), ($desiredSize[1] / $curSize[1]), ($desiredSize[2] / $curSize[2]) };
+				
+				
+				wizlog ("	[#] Scale To Fill : Current Scale : " + $curScale[0] + " " + $curScale[1] + " " +  $curScale[2] + " : Scale By : " + $scaleFactor + "\n");
+				//xform -s (($curScale[0] / $scaleFactor) + $curScale[0]) (($scaleFactor / $curScale[1]) + $curScale[1]) (($scaleFactor / $curScale[2]) + $curScale[2]) $dup[$i];
+
+				xform -s ($curScale[0] * $scaleBy[0]) ($curScale[1] * $scaleBy[1]) ($curScale[2] * $scaleBy[2]) $dup[$i];
+			 
+			 
+			}
+			
+			if ($normAlign == 1){
+				if (`objExists $surNormObj`){
+					select -r $surNormObj;
+					select -add $dup[$i];
+					normalConstraint -weight 1 -aimVector $aimVector[0] $aimVector[1] $aimVector[2] -upVector $upVector[0] $upVector[1] $upVector[2] -worldUpType "scene";
+				
+					select -r $dup[$i];
+				}
+			}
+			
+			/*
+			if ($spaMeth == "boundingBoxFit"){
+				$iuVal = $uVal[$i] + $uTot;
+				$uTot = $iuVal;
+				debugListString($dbl, (" - UTot : " + $uTot), $dbc, $dbm);
+			
+			}
+*/
+            wizProgressWindowStep(1);
+            if (wizProgressCancelled() == 1) return;
+            
+		}
+		
+	}
+	
+	select -r $curve;
+	
+	//_________________________________________
+	// CV Objects
+	
+	string $cvObj[];
+	if (`attributeExists "useCVObjects" $cBldr` == 1){
+		
+		int $useCVObjs = int(getWizAttr("-obj " + $cBldr + " -attr UseCVObjects -typ checkBox"));
+		float $minCVAngle;
+		if (`attributeExists "minCVAngle" $cBldr`){
+			$minCVAngle = `getAttr ($cBldr + ".minCVAngle")`;
+		}
+		float $maxCVAngle;
+		if (`attributeExists "maxCVAngle" $cBldr`){
+			$maxCVAngle = `getAttr ($cBldr + ".maxCVAngle")`;
+		}
+		
+		if (`objExists $cBldr` == 1 && $useCVObjs == 1){
+			//string $cpoc = `closestPointOnCurve`;
+			wizlog ("	[#] Duplicating CV Objects ");
+				
+			string $con[] = `listConnections ($cBldr + ".cvObjects")`;
+			if (`size $con` > 0){
+				$cvObj = `sets -q $con[0]`;
+				wizlog (niceArrayList("Get CV Objects : ", $cvObj));	
+			}
+				
+			
+			
+			string $cvDup[];
+			int $cp[] = `getAttr -mi ($curve + ".controlPoints")`;
+			wizlog ("	[#] Curve Has : " + (`size $cp`) + " : CVs");
+			int $so[] = wizIndiceSequence(("-c " + (`size $cp`) + " -as " + `size $cvObj` + " -st " + $setOrdering));
+			
+			for ($i=1;$i<(`size $cp`-1);$i++){
+				string $new[];
+				
+				//_________________________________________
+				// Check Angle
+				float $cvPos[] = `xform -q -ws -t ($curve + ".cv[" + $i + "]")`;
+				float $t1[] = `xform -q -ws -t ($curve + ".cv[" + ($i - 1) + "]")`;
+				float $t2[] = `xform -q -ws -t ($curve + ".cv[" + ($i) + "]")`;
+				float $t3[] = `xform -q -ws -t ($curve + ".cv[" + ($i + 1) + "]")`;
+				float $angle = getAngleFromThreePoints($t1, $t2, $t3);
+				wizlog ("Curve Angle : " + $angle);
+				if ($angle < $minCVAngle || $angle > $maxCVAngle){
+					wizlog ("Skipping Angle : " + $i);
+					continue ;
+				}
+				
+				string $objNameNew = removeNamespaceFromString($cvObj[($so[$i])]);
+				string $curveNameNew = removeNamespaceFromString($curve);
+			
+				string $newObjName = $objNameNew + "_" + $curveNameNew + "_CurveCVDuplicateObject" + $i;
+				
+				//_________________________________________
+				// Duplicate CV Object
+				if ($dupType == "copy"){
+					$new = `duplicate -rr -rc -n $newObjName $cvObj[($so[$i])]`;
+				} else if ($dupType == "instance"){
+					$new = `instance -n $newObjName $cvObj[($so[$i])]`;
+				} else if ($dupType == "referenceCopy"){
+					string $newRefDup[] = $new = duplicateReferenceObject($cvObj[($so[$i])]);
+					string $roots[] = getRootTransformsOfSelectedObjects($newRefDup);
+					$new[0] = $roots[0];
+				}
+				if ($groupDup == 1 && `size $group` > 0){
+					catchQuiet(`parent $new[0] $group[0]`);
+				}
+				$cvDup[`size $cvDup`] = $new[0];
+			
+			
+				xform -ws -t $cvPos[0] $cvPos[1] $cvPos[2] ;
+				
+				select -r $curve;
+				select -add $new[0];				
+				
+				//select -r $new[0];
+				
+				//_________________________________________
+				// Geometry and Tangent Constraint (Opposite Ainm and Up)
+				geometryConstraint -weight 1;
+				tangentConstraint -weight 1 -upVector $aimVector[0] $aimVector[1] $aimVector[2] -aimVector $upVector[0] $upVector[1] $upVector[2] -worldUpType "vector" -worldUpVector 0 1 0;
+				
+				
+				//setAttr ($cpoc + ".inPosition") $cvPos[0] $cvPos[1] $cvPos[2] ;
+				
+			}
+		}
+	}
+	
+	
+	
+	//_________________________________________
+	// The set of source objects needs to be reset because the duplicates were added to the set.
+	wizlog ("Reset Source Sets");
+	wizlog (niceArrayList("Objects : ", $obj));
+	wizlog (niceArrayList("CV Objects : ", $cvObj));
+	cBldrResetSourceSet($cBldr, $obj, $cvObj);
+	
+	//_________________________________________
+	// End
+    wizProgressWindowEnd();
+    
+	//_________________________________________
+	// Set the last curve length so if the curve length changes we can update the duplicates
+	setAttr ($cBldr + ".lastCurveLength") $arcLength;
+
+	select -r $curSel;
+	
+}
+
+//@ C BLDR REPLACE CURVE WITH CURVE
+//====================================================================
+/*****************************************************************//**
+	Replaces a cBldrAsset curve [0] with another curve [1]
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	cBldrReplaceCurveWithCurve(`ls -sl`);
+	
+	</code>
+*********************************************************************/
+global proc cBldrReplaceCurveWithCurve( string $sel[] )
+{
+	wizlog("[@] cBldrReplaceCurveWithCurve");
+	// be a little flexible with the selection.
+	// if we can't find an asset in sel[0] then just look for a curve
+	string $asset[] = `ls -type dagContainer $sel`;
+	string $cBldr;
+	if (`size $asset` > 0){
+		$cBldr = $asset[0];		
+	} else {
+		$asset = smartSelectObjectsOfType({$sel[0]}, "-type nurbsCurve");
+	}
+	string $cBldrCurve[] = smartSelectObjectsOfType($asset, "-type nurbsCurve");
+	
+	// use remainder of selection to search for a second curve
+	$sel = stringArrayRemove($asset, $sel);
+	string $curve[] = smartSelectObjectsOfType($sel, "-type nurbsCurve");	
+	
+	if (`objExists $cBldrCurve[0]` == 0 || `objExists $curve[0]` == 0){
+		wizLog("-w		[!] Can Not Replace cBldr Curve. Not enough curves found [!]");
+	}
+	
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//	Node casting will not work on referenced objects	
+	//	We can connect the curve to a stroke if we can fine one.
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	if (catch(`referenceQuery -f $cBldrCurve[0]`) == 1){
+		wizLog("-w	[!] " + $cBldrCurve[0] + " Is From A Referenced File. Will Attempt To Replace stroke curves [!]");
+		
+		string $stroke[] = smartSelectObjectsOfType(`ls -sl`, "-typ stroke");
+		
+		if (`size $stroke` > 0){
+			catchQuiet(`connectAttr -f ($curve[0] + ".worldSpace[0]") ($stroke[0] + ".pathCurve[0].curve")`);
+		} else {
+			wizLog("	[!] No Stokes Found [!]");
+		}
+	} else {
+		wizNodeCastSelected({$cBldrCurve[0], $curve[0]});
+	}
+
+}
+
+//--------------------------------------------------------------------
+//////////////////////////////////////////////////////////////////////
+//			SELECTION
+//////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------
+//@ RMB SELECT DUPLICATE ON CURVE DUPLICATES
+//=====================================================
+global proc rmbSelectDuplicateOnCurveDuplicates( string $object )
+{
+    selectDuplicateOnCurveDuplicates("duplicates");
+}
+
+/*
+//@ RMB SELECT DUPLICATE ON CURVE DUPLICATES MOTION PATHS
+//====================================================================
+global proc rmbSelectDuplicateOnCurveDuplicatesMotionPaths( string $object )
+{
+    selectDuplicateOnCurveDuplicates("motionPaths");
+}
+*/
+
+//@ RMBC BLDR REPLACE CURVE WITH CURVE
+//====================================================================
+global proc rmbcBldrReplaceCurveWithCurve( string $object )
+{
+    cBldrReplaceCurveWithCurve(`ls -sl`);
+}
+
+//@ SELECT DUPLICATE ON CURVE DUPLICATES
+//====================================================================
+global proc selectDuplicateOnCurveDuplicates( string $type )
+{
+    string $sel[] = `ls -type dagContainer -sl`;
+	string $cBldr = $sel[0];
+	
+    string $curves[] = getXCurveBuilderCurves(`ls -sl`);
+    
+	if (`size $curves` == 0){ print ("No Curve Selected\n"); return;}
+	
+	for ($i=0;$i<`size $curves`;$i++){
+				
+
+		//string $dup[] = `ls -tr ($curve + "CurveDuplicateObject*")`;
+		string $dup[] = getXCurveBuilderDuplicateObjects($curves[$i],$cBldr);
+		if (`size $dup` == 0){ return;}
+		
+		int $groupDup = `getAttr ($cBldr + ".groupDuplicates")`;
+		string $groupName = $cBldr + "_" + $curves[$i] + "_DuplicateObjectGroup";
+		string $group[] = `ls -tr ($groupName + "*")`;
+			
+		select -cl;   
+		if ($type == "duplicates"){
+			select -r $dup;
+					
+			return;
+		}
+
+		if ($type == "motionPaths"){
+			for ($p=0;$p<`size $dup`;$p++){
+				string $mp[] = `listConnections -type motionPath $dup[$p]`;
+				select -add $mp;
+			}
+			return;
+		}
+	
+	}
+}
+
+//@ GET X CURVE BUILDER CURVE
+//====================================================================
+global proc string[] getXCurveBuilderCurves( string $sel[] )
+{
+	wizlog ("[@] getXCurveBuilderCurves");
+	string $cBldr;
+	string $cBldrDag[] = `ls -type dagContainer $sel`;
+	if (`size $cBldrDag` == 0){
+		wizlog ("[!] No cBldr Was Passed To getXCurveBuilderCurves");
+		//$sel = `ls -sl`;
+        
+
+		string $nc[] = smartSelectObjectsOfType({$sel[0]}, "-type nurbsCurve");
+		if (`size $nc` > 0){
+			string $dc[] = smartSelectObjectsOfType($nc, "-type dagContainer");
+			if (`size $dc` > 0){
+				$cBldr = $dc[0];
+			}
+		}
+		
+		
+    } else {	
+		$cBldr = $sel[0];
+	}
+		
+	string $curves[];
+	
+	wizlog ("[#] cBldr : " + $cBldr);
+	
+	
+	// get the set connected to the curve attr
+	if (`objExists $cBldr`){
+	
+		string $con[] = `listConnections ($cBldr + ".curve")`;
+		if (`size $con` > 0){
+			$curves = `sets -q $con[0]`;
+			
+		}
+	}
+
+	// Then look in the asset hierarchy for curves
+	if (`size $curves` == 0){
+		string $assContents[] = `container -q -nl $cBldr`;
+		string $curveShapes[] = `ls -typ nurbsCurve $assContents`;		
+		for ($i=0;$i<`size $curveShapes`;$i++){
+			string $crvs[] = `listTransforms $curveShapes[$i]`;
+			appendStringArray($curves, $crvs, `size $crvs`);
+		}
+		
+	}
+
+	/*
+	// First look for the curve attribute for curves
+	string $curveString;
+	if (`objExists $cBldr`){
+		$curveString = `getAttr ($cBldr + ".curve")`;
+		if (`size $curveString` > 0){
+			$curves = tokenizeString($curveString, " ");
+		}
+	}
+	 */
+	  
+	// Then look for replacement curves
+    string $curve = $curves[0];
+	if (`getAttr ($cBldr + ".useReplacementCurves")` == 1){
+		string $reCurve = `getAttr ($cBldr + ".replacementCurves")`;
+		if (`size $reCurve` > 0){
+			$curves = tokenizeString($reCurve, " ");
+		}
+	}
+	
+	$curves = stringArrayRemoveDuplicates($curves);
+	
+	/*
+	if (`objExists $cBldr` == 1 && `size $curveString` == 0){
+		setAttr ($cBldr + ".curve") -type "string" (stringArrayToString($curves, " "));
+	}
+	*/
+	
+	return $curves;
+}
+
+//@ GET X CURVE BUILDER SOURCE OBJECTS
+//====================================================================
+global proc string[] getXCurveBuilderSourceObjects( string $sel[] )
+{
+    string $cBldr = $sel[0];
+    string $obj[];
+	
+	// get the set connected to the duplicateObject attr
+	if (`objExists $cBldr`){
+		string $con[] = `listConnections ($cBldr + ".duplicateObject")`;
+		if (`size $con` > 0){
+			$obj = `sets -q $con[0]`;
+			
+		}
+	}
+
+    return $obj;   
+}
+/*
+//@ GET X CURVE BUILDER DUPLICATE OBJECTS
+//====================================================================
+global proc string[] getXCurveBuilderDuplicateObjects( string $sel[] )
+{
+
+    string $cBldr = $sel[0];
+    string $dupObjs[];
+    string $curve = $sel[1];
+
+	select -r $sel;
+
+	
+	string $curves[] = getXCurveBuilderCurves(`ls -sl`);
+    
+	if (`size $curves` == 0){ print ("No Curve Selected\n"); return $sel;}
+	
+	for ($i=0;$i<`size $curves`;$i++){
+		string $dup[] = `ls -tr ("*_" + $curves[$i] + "_CurveDuplicateObject*")`;
+		appendStringArray($dupObjs, $dup, `size $dup`);
+	
+	}
+
+    return $dupObjs;
+    
+}
+*/
+
+//@ GET X CURVE BUILDER DUPLICATE OBJECTS
+//====================================================================
+global proc string[] getXCurveBuilderDuplicateObjects( string $curve, string $cBldr )
+{
+
+    string $dupObjs[];
+
+	select -r $curve;
+	select -add $cBldr;
+	
+	string $dupObjs[] = `ls -tr ("*_" + $curve + "_CurveDuplicateObject*")`;
+    return $dupObjs;
+    
+}
+
+global proc cBldrResetSourceSet( string $cBldr , string $orgObjs[], string $orgCVObjs[] )
+{
+	string $dupObjSet;
+	string $dupCVObjSet;
+	if (`objExists $cBldr`){
+		string $con[] = `listConnections ($cBldr + ".duplicateObject")`;
+		if (`size $con` > 0){
+			$dupObjSet = $con[0];
+			
+		}
+		if (`attributeExists "cvObjects" $cBldr` == 1){
+			string $cvObj[] = `listConnections ($cBldr + ".cvObjects")`;
+			if (`size $cvObj` > 0){
+				$dupCVObjSet = $cvObj[0];
+				
+			}
+		}
+		
+	}
+	
+	sets -cl $dupObjSet;
+	sets -cl $dupCVObjSet;	
+	
+	//wizlog (niceArrayList("Original CV Objects : ", $orgCVObjs));
+	sets -add $dupObjSet $orgObjs;
+	sets -add $dupCVObjSet $orgCVObjs;
+}
+
+//--------------------------------------------------------------------
+//////////////////////////////////////////////////////////////////////
+//			REMOVAL
+//////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------
+//REMOVE DUPLICATE ON CURVE DUPLICATES
+//=====================================================
+global proc removeDuplicateOnCurveDuplicates( string $type )
+{
+    string $sel[] = `ls -sl`;
+    string $cBldr = $sel[0];
+    string $curve = getXCurveBuilderCurve(`ls -sl`);
+    
+	//string $dup[] = `ls -tr ($curve + "CurveDuplicateObject*")`;
+    string $dup[] = getXCurveBuildrDuplicateObjects($cBldr);
+    
+	if (`size $dup` == 0){ return;}
+	
+	int $groupDup = `getAttr ($cBldr + ".groupDuplicates")`;
+	string $groupName = $cBldr + "DuplicateObjectGroup";
+	string $group[] = `ls -tr ($groupName + "*")`;
+		
+	if ($type == "duplicates"){
+		delete $dup;
+		if ($groupDup == 1 && `size $group` == 0){
+			delete $group;
+		}		
+		return;
+	}
+	
+	if ($type == "motionPaths"){
+		for ($i=0;$i<`size $dup`;$i++){
+			string $mp[] = `listConnections -type motionPath $dup[$i]`;
+			select -r $mp;
+			delete $mp;
+		}
+		return;
+	}
+	
+	
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         L BLDR
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//L BUILDER LAYOUT
+//==============================================================================
+global proc lBldrLayout( string $parent )
+{
+    string $layout = `frameLayout
+		-l "lBldr"	
+		-ann "Duplicates objects using an l-system type algorithm."
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $parent		
+		`;
+       
+    //-------------------------------------------------------
+	//########################<TAB>##########################
+	string $lBldrTabLayout = `tabLayout
+		-ann ""
+		-scrollable false
+		//-childResizable false
+		-imageVisible true
+		-tabsVisible true
+		-dcc "autoExpandCollapseWizSelectionFrames"
+		-sc "selectWizSelectionTab"
+		-cc ("wizTabCC(\"wizSelectionTab\");")
+		-p $layout
+		lBldrMainTabLayout
+		`;
+        
+     
+    //_________________________________________
+    // SELECTION
+    
+    string $lBldrSelectionColumnLayout = `columnLayout
+        -adj true
+        -p $lBldrTabLayout
+        lBldrSelectionColumnLayout
+        `;         
+    
+    global string $WIZCRAFT_setOrdering[];
+	global string $WIZ_deltaType[];
+	global string $WIZ_stepType[];
+	
+    string $lBldrSource = objectSelectionTextScrollListFrameLayout("Objects", $lBldrSelectionColumnLayout, "lBldrSourceObjectsTextScrollList");
+    
+    string $setOrdering[] = $WIZCRAFT_setOrdering;
+	string $setOrderOmg = wizOptionMenuGrpMenuItems("Set Order", "lBldrSetOrderOptionMenuGrp", $setOrdering);
+    
+	
+    string $sourceChangeFreq[] = $WIZ_deltaType;
+    string $sourceChangeFreqOmg = wizOptionMenuGrpMenuItems("Change Source", "lBldrChangeSourceOptionMenuGrp", $sourceChangeFreq);
+
+    setParent $lBldrSelectionColumnLayout;
+    //######################<END-TAB>########################
+	//-------------------------------------------------------
+    
+    //_________________________________________
+    // Translate
+    //-------------------------------------------------------
+	//########################<TAB>##########################
+    string $lBldrTranslatesColumnLayout = `columnLayout
+        -adj true
+        -p $lBldrTabLayout
+        lBldrTranslatesColumnLayout
+        `;
+
+    
+        checkBox
+            -l "Enable Translates"
+            -v false
+            lBldrTranslatesEnabledCheckBox
+            ;
+
+        string $translateStepType[] = $WIZ_stepType;
+        string $translateStepTypeOmg = wizOptionMenuGrpMenuItems("Translate Step Type", "lBldrTranslateStepTypeOptionMenuGrp", $translateStepType);
+
+        string $translateChangeFreq[] = $WIZ_deltaType;
+        string $translateChangeFreqOmg = wizOptionMenuGrpMenuItems("Change Translate", "lBldrChangeTranslateOptionMenuGrp", $translateChangeFreq);
+        
+        string $minMaxXTranslateRandomSliders = (
+        "-l1 Min X Translate Random -l2 Max X Translate Random "
+        +"-fs1 lBldrMinXTranslateRandomFloatSliderGrp "
+        +"-fs2 lBldrMaxXTranslateRandomFloatSliderGrp "
+        +"-v1 0 -v2 0 "
+        +"-cw3 100 50 50 -adj 3 -f 1 "
+        +"lBldrMinMaxXTranslateRandom");
+        
+        wizMinMaxFloatSliders($minMaxXTranslateRandomSliders);
+        
+        string $minMaxYTranslateRandomSliders = (
+        "-l1 Min Y Translate Random -l2 Max Y Translate Random "
+        +"-fs1 lBldrMinYTranslateRandomFloatSliderGrp "
+        +"-fs2 lBldrMaxYTranslateRandomFloatSliderGrp "
+        +"-v1 0 -v2 0 "
+        +"-cw3 100 50 50 -adj 3 -f 1 "
+        +"lBldrMinMaxYTranslateRandom");
+        
+        wizMinMaxFloatSliders($minMaxYTranslateRandomSliders);
+        
+        string $minMaxZTranslateRandomSliders = (
+        "-l1 Min Z Translate Random -l2 Max Z Translate Random "
+        +"-fs1 lBldrMinZTranslateRandomFloatSliderGrp "
+        +"-fs2 lBldrMaxZTranslateRandomFloatSliderGrp "
+        +"-v1 0 -v2 0 "
+        +"-cw3 100 50 50 -adj 3 -f 1 "
+        +"lBldrMinMaxZTranslateRandom");
+        
+        wizMinMaxFloatSliders($minMaxZTranslateRandomSliders);
+    
+        floatSliderGrp
+            -l "X Translate"
+            -f 1
+            -v 0
+            -pre 2
+            -cal 1 "left"
+            -adj 2
+            lBldrXTranslateFloatSliderGrp
+            ;
+        
+        floatSliderGrp
+            -l "Y Translate"
+            -f 1
+            -v 0
+            -pre 2
+            -cal 1 "left"
+            -adj 2
+            lBldrYTranslateFloatSliderGrp
+            ;
+            
+        floatSliderGrp
+            -l "Z Translate"
+            -f 1
+            -v 0
+            -pre 2
+            -cal 1 "left"
+            -adj 2
+            lBldrZTranslateFloatSliderGrp
+            ;   
+    
+    
+    
+    setParent $lBldrTranslatesColumnLayout;
+    
+    //######################<END-TAB>########################
+    //-------------------------------------------------------
+    
+    //_________________________________________
+    // Rotation
+    //-------------------------------------------------------
+    //########################<TAB>##########################
+    string $lBldrRotationsColumnLayout = `columnLayout
+        -adj true
+        -p $lBldrTabLayout
+        lBldrRotationsColumnLayout
+        `;
+    //separator -height 10 -style "in";
+   
+        checkBox
+            -l "Enable Rotations"
+            -v true
+            lBldrRotationsEnabledCheckBox
+            ;
+        
+        string $rotateStepType[] = $WIZ_stepType;
+        string $rotateStepTypeOmg = wizOptionMenuGrpMenuItems("Rotation Step Type", "lBldrRotationStepTypeOptionMenuGrp", $rotateStepType);
+        
+        string $rotateChangeFreq[] = $WIZ_deltaType;
+        string $rotateChangeFreqOmg = wizOptionMenuGrpMenuItems("Change Rotation", "lBldrChangeRotationOptionMenuGrp", $rotateChangeFreq);
+        
+        string $minMaxXRotationRandomSliders = (
+        "-l1 Min X Rotate Random -l2 Max X Rotate Random "
+        +"-fs1 lBldrMinXRotateRandomFloatSliderGrp "
+        +"-fs2 lBldrMaxXRotateRandomFloatSliderGrp "
+        +"-min -360.0 -max 360.0 "
+        +"-v1 -360.0 -v2 360.0 "
+        +"-cw3 100 50 50 -adj 3 -f 1 "
+        +"lBldrMinMaxXRotateRandom");
+        
+        wizMinMaxFloatSliders($minMaxXRotationRandomSliders);
+        
+        string $minMaxYRotationRandomSliders = (
+        "-l1 Min Y Rotate Random -l2 Max Y Rotate Random "
+        +"-fs1 lBldrMinYRotateRandomFloatSliderGrp "
+        +"-fs2 lBldrMaxYRotateRandomFloatSliderGrp "
+        +"-min -360.0 -max 360.0 "
+        +"-v1 -360.0 -v2 360.0 "
+        +"-cw3 100 50 50 -adj 3 -f 1 "
+        +"lBldrMinMaxYRotateRandom");
+        
+        wizMinMaxFloatSliders($minMaxYRotationRandomSliders);
+        
+        string $minMaxZRotationRandomSliders = (
+        "-l1 Min Z Rotate Random -l2 Max Z Rotate Random "
+        +"-fs1 lBldrMinZRotateRandomFloatSliderGrp "
+        +"-fs2 lBldrMaxZRotateRandomFloatSliderGrp "
+        +"-min -360.0 -max 360.0 "
+        +"-v1 -360.0 -v2 360.0 "
+        +"-cw3 100 50 50 -adj 3 -f 1 "
+        +"lBldrMinMaxZRotateRandom");
+        
+        wizMinMaxFloatSliders($minMaxZRotationRandomSliders);
+    
+        string $rotateDegreesType[] = { "nDegrees", "free" };
+        string $rotateDegreesTypeOmg = wizOptionMenuGrpMenuItems("Rotate By", "lBldrRotateDegressTypeOptionMenuGrp", $rotateDegreesType);
+        
+        floatSliderGrp
+            -l "X Rotation"
+            -f 1
+            -v 0
+            -pre 2
+            -cal 1 "left"
+            -adj 2
+            lBldrXRotationFloatSliderGrp
+            ;
+        
+        floatSliderGrp
+            -l "Y Rotation"
+            -f 1
+            -v 90
+            -pre 2
+            -cal 1 "left"
+            -adj 2
+            lBldrYRotationFloatSliderGrp
+            ;
+            
+        floatSliderGrp
+            -l "Z Rotation"
+            -f 1
+            -v 0
+            -pre 2
+            -cal 1 "left"
+            -adj 2
+            lBldrZRotationFloatSliderGrp
+            ;   
+    
+    //separator -height 10 -style "in";
+    //____________________________________________
+    // Scaling
+     setParent $lBldrRotationsColumnLayout;
+    
+    //######################<END-TAB>########################
+    //-------------------------------------------------------
+
+    //-------------------------------------------------------
+    //########################<TAB>##########################
+    string $lBldrScaleColumnLayout = `columnLayout
+        -adj true
+        -p $lBldrTabLayout
+        lBldrScaleColumnLayout
+        `;
+            
+        
+        checkBox
+            -l "Enable Scaling"
+            -v false
+            lBldrScalingEnabledStepCheckBox
+            ;
+        
+        string $scaleStepType[] = $WIZ_stepType;
+        string $scaleStepTypeOmg = wizOptionMenuGrpMenuItems("Set Order", "lBldrScaleStepTypeOptionMenuGrp", $scaleStepType);
+        
+        string $scaleChangeFreq[] = $WIZ_deltaType;
+        string $scaleChangeFreqOmg = wizOptionMenuGrpMenuItems("Change Scale", "lBldrChangeScaleOptionMenuGrp", $scaleChangeFreq);
+
+        /*
+        checkBox
+            -l "Scale Each Step"
+            -v true
+            lBldrScaleEachStepCheckBox
+            ;
+          */
+          
+        
+    /*
+        checkBox
+            -l "Randomize Scale"
+            -v false
+            lBldrRandomizeScaleCheckBox
+            ;
+           */
+           
+        string $minMaxScaleRandomSliders = (
+        "-l1 Min Scale Random -l2 Max Scale Random "
+        +"-min -1000 -max 1000 "
+        +"-fs1 lBldrMinScaleRandomFloatSliderGrp "
+        +"-fs2 lBldrMaxScaleRandomFloatSliderGrp "
+        +"-v1 1 -v2 2 "
+        +"-cw3 100 50 50 -adj 3 -f 1 "
+        +"lBldrMinMaxScaleRandom");
+        
+        wizMinMaxFloatSliders($minMaxScaleRandomSliders);
+        
+        floatSliderGrp
+            -l "X Scale"
+            -f 1
+            -v 0
+            -pre 2
+            -cal 1 "left"
+            -adj 2
+            lBldrXScaleFloatSliderGrp
+            ;
+        
+        floatSliderGrp
+            -l "Y Scale"
+            -f 1
+            -v 90
+            -pre 2
+            -cal 1 "left"
+            -adj 2
+            lBldrYScaleFloatSliderGrp
+            ;
+            
+        floatSliderGrp
+            -l "Z Scale"
+            -f 1
+            -v 0
+            -pre 2
+            -cal 1 "left"
+            -adj 2
+            lBldrZScaleFloatSliderGrp
+            ;
+                
+
+    //separator -height 10 -style "in";
+       
+    setParent $lBldrScaleColumnLayout;
+        
+    //######################<END-TAB>########################
+	//-------------------------------------------------------
+    
+    string $mainFunctionButtonsColumnLayout = `columnLayout
+            -adj true
+            -p $layout
+            lBldrMainFunctionButtonsColumnLayout
+            `;
+    //_________________________________________
+    // Iterations
+    
+    
+    checkBox
+        -l "Random Terminations"
+        -v true
+        lBldrRandomTerminationsCheckBox
+        ;
+      
+    checkBox
+        -l "Build Hierarchically"
+        -v true
+        lBldrBuildHierarchicallyCheckBox
+        ;
+      
+    intSliderGrp 
+        -l "Max Iterations" 
+        -min 1		
+        -v 5
+        -field true	
+        -ann ""
+        -cal 1 "left"
+        -cw3 150 50 90
+        -adj 3
+        lBldrMaxIterationsIntSliderGrp		
+        ;
+        
+    string $dupMethod[] = { "duplicate", "instance", "referenceCopy" };
+    string $dupMethodOmg = wizOptionMenuGrpMenuItems("Duplication Method", "lBldrDuplicationMethodOptionMenuGrp", $dupMethod);
+
+    //____________________________________________
+    // Button
+    float $butCol[] = getWizColor("goButtonColor");
+    
+    button 
+        -l "Build"
+        -bgc $butCol[0] $butCol[1] $butCol[2]
+        -c ("global string $WIZ_xBldrSrcType; $WIZ_xBldrSrcType = \"wiz\"; string $srcObj[] = `textScrollList -q -ai lBldrSourceObjectsTextScrollList`;lBldrDoBuild($srcObj, \"wiz\");")
+        ;
+
+	button 
+        -l "Create lBldr Asset" 
+        -ann "This will create an asset with controls for duplicating objects on the selected curve"
+        -c ("createLBldrAsset();");
+			
+    setParent $mainFunctionButtonsColumnLayout;
+    
+    tabLayout
+        -e
+        -tl $lBldrSelectionColumnLayout "Source" 
+        -tl $lBldrTranslatesColumnLayout "Translate" 
+        -tl $lBldrRotationsColumnLayout "Rotate" 
+        -tl $lBldrScaleColumnLayout "Scale" 
+        $lBldrTabLayout
+        ;
+}
+
+/*======================| SUMMARY |===================================
+    This builds using an lsystem like operation
+/*=======================| USAGE |====================================	
+
+====================================================================*/
+
+
+//@ CREATE L BLDR ASSET
+//====================================================================
+global proc createLBldrAsset()
+{
+	string $sel[] = `ls -sl`;
+	//string $asset = $sel[0];
+	
+	string $assetName = ("lBldr");
+    string $addContents[] = $sel;
+
+	//string $lBldrSourceGroup = `group -n "lBldrSrcGroup" $addContents`;
+	
+    //Create an asset to control the duplication values
+    string $asset = `container -n $assetName -type dagContainer -ind "inputs" -includeHierarchyBelow -includeShapes -includeTransform -force -addNode $addContents`;
+	addWizAssetTypeAttributeToSelectedAsset($asset, "lBldrAsset");
+	
+    //Add the assetWiz command to the asset
+    setAttr -type "string" ($asset + ".rmbCommand") "assetWiz";
+	
+	//_________________________________________
+	// ADD ATTRIBUTES
+	
+	//SET ORDERING
+	if (`attributeExists "setOrdering" $asset` == 0){
+		addAttr -ln "setOrdering" -at "enum" -en ("sequence=0:random=1:randomRepeater=2:randomRepeater=3:sequenceTail=4:headSequenceTail=5:headRandom=6:randomTail=7:headRandomTail=8:") $asset;
+		setAttr ($asset + ".setOrdering") 0;
+	}
+	
+	//SOURCE CHANGE FREQUENCY
+	if (`attributeExists "sourceChangeFrequency" $asset` == 0){
+		addAttr -ln "sourceChangeFrequency" -at "enum" -en ("everyIteration=0:everyDuplicate=1:") $asset;
+		setAttr ($asset + ".sourceChangeFrequency") 0;
+	}
+	
+    // TERMINATIONS
+	if (`attributeExists "callRandomizeOnDuplicates" $asset` == 0){
+		addAttr -ln "callRandomizeOnDuplicates" -at bool $asset;
+		setAttr -e -keyable true ($asset + ".callRandomizeOnDuplicates");
+		setAttr ($asset + ".callRandomizeOnDuplicates") true;
+	}
+    
+	// TERMINATIONS
+	if (`attributeExists "randomTerminations" $asset` == 0){
+		addAttr -ln "randomTerminations" -at bool $asset;
+		setAttr -e -keyable true ($asset + ".randomTerminations");
+		setAttr ($asset + ".randomTerminations") false;
+	}
+	
+	// MAX ITERATIONS
+    if (`attributeExists "maxIterations" $asset` == 0){
+		addAttr -ln "maxIterations" -at long -dv 5 $asset;
+		setAttr -e -keyable true ($asset + ".maxIterations");	
+	}
+	
+	// DUPLICATION METHOD
+	if (`attributeExists "duplicationMethod" $asset` == 0){
+		addAttr -ln "duplicationMethod" -at "enum" -en ("duplicate=0:instance=1:referenceCopy=2:") $asset;
+		setAttr ($asset + ".duplicationMethod") 0;
+	}
+    
+    if (`attributeExists "buildHierarchically" $asset` == 0){
+		addAttr -ln "buildHierarchically" -at bool $asset;
+		setAttr ($asset + ".buildHierarchically") 1;
+	}
+	
+	//_________________________________________	
+	// TRANSFORMS
+	
+	if (`attributeExists "enableTranslates" $asset` == 0){
+		addAttr -ln "enableTranslates" -at bool $asset;
+		setAttr -e -keyable true ($asset + ".enableTranslates");
+		setAttr ($asset + ".enableTranslates") false;
+	}
+
+		
+	//TRANSFORM STEP TYPE
+	if (`attributeExists "translateStepType" $asset` == 0){
+		addAttr -nn "translateStepType" -ln "translateStepType" -at "enum" -en ("random=0:linear=1:exponential=2:sine=3:") $asset;
+		setAttr ($asset + ".translateStepType") 0;
+	}
+	
+	//TRANSFORM CHANGE FREQUENCY
+	if (`attributeExists "translateChangeFrequency" $asset` == 0){
+		addAttr -nn "translateChange" -ln "translateChangeFrequency" -at "enum" -en ("everyIteration=0:everyDuplicate=1:") $asset;
+		setAttr ($asset + ".translateChangeFrequency") 0;
+	}
+	
+	if (`attributeExists "minTranslateRandom" $asset` == 0){	     
+        addAttr -ln "minTranslateRandom" -at float3 $asset;
+            addAttr -nn "minX" -ln "minTranslateRandomX" -at "float" -p "minTranslateRandom" $asset;
+            addAttr -nn "minY" -ln "minTranslateRandomY" -at "float" -p "minTranslateRandom" $asset;
+            addAttr -nn "minZ" -ln "minTranslateRandomZ" -at "float" -p "minTranslateRandom" $asset;
+		setAttr ($asset + ".minTranslateRandom") 0.0 0.0 0.0;
+	}
+	if (`attributeExists "maxTranslateRandom" $asset` == 0){	     
+        addAttr -ln "maxTranslateRandom" -at float3 $asset;
+            addAttr -nn "maxX" -ln "maxTranslateRandomX" -at "float" -p "maxTranslateRandom" $asset;
+            addAttr -nn "maxY" -ln "maxTranslateRandomY" -at "float" -p "maxTranslateRandom" $asset;
+            addAttr -nn "maxZ" -ln "maxTranslateRandomZ" -at "float" -p "maxTranslateRandom" $asset;
+		setAttr ($asset + ".maxTranslateRandom") 0.0 0.0 0.0;
+	}
+	
+	if (`attributeExists "translateAmount" $asset` == 0){	     
+        addAttr -ln "translateAmount" -at float3 $asset;
+            addAttr -nn "trX" -ln "translateAmountX" -at "float" -p "translateAmount" $asset;
+            addAttr -nn "trY" -ln "translateAmountY" -at "float" -p "translateAmount" $asset;
+            addAttr -nn "trZ" -ln "translateAmountZ" -at "float" -p "translateAmount" $asset;
+		setAttr ($asset + ".translateAmount") 0.0 0.0 0.0;
+	}
+	
+	//_________________________________________
+	// ROTATIONS
+	
+	if (`attributeExists "enableRotations" $asset` == 0){
+		addAttr -ln "enableRotations" -at bool $asset;
+		setAttr -e -keyable true ($asset + ".enableRotations");
+		setAttr ($asset + ".enableRotations") true;
+	}	
+	
+	//ROTATION CHANGE FREQUENCY
+	if (`attributeExists "rotationChangeFrequency" $asset` == 0){
+		addAttr -nn "rotationChange" -ln "rotationChangeFrequency" -at "enum" -en ("everyIteration=0:everyDuplicate=1:") $asset;
+		setAttr ($asset + ".rotationChangeFrequency") 0;
+	}
+	
+	//ROTATION STEP TYPE
+	if (`attributeExists "rotationStepType" $asset` == 0){
+		addAttr -nn "rotateStepType" -ln "rotationStepType" -at "enum" -en ("random=0:linear=1:exponential=2:sine=3:") $asset;
+		setAttr ($asset + ".rotationStepType") 0;
+	}
+		
+	//ROTATE DEGREES TYPE
+	if (`attributeExists "rotateDegreesType" $asset` == 0){
+		addAttr -nn "rotateFreedom" -ln "rotateDegreesType" -at "enum" -en ("nDegrees=0:free=1:") $asset;
+		setAttr ($asset + ".rotateDegreesType") 0;
+	}
+	
+	if (`attributeExists "rotateAmount" $asset` == 0){	     
+        addAttr -ln "rotateAmount" -at float3 $asset;
+            addAttr -nn "roX" -ln "rotateAmountX" -at "float" -p "rotateAmount" $asset;
+            addAttr -nn "roY" -ln "rotateAmountY" -at "float" -p "rotateAmount" $asset;
+            addAttr -nn "roZ" -ln "rotateAmountZ" -at "float" -p "rotateAmount" $asset;
+		setAttr ($asset + ".rotateAmount") 0.0 90.0 0.0;
+	}	
+		
+	if (`attributeExists "minRotateRandom" $asset` == 0){	     
+        addAttr -ln "minRotateRandom" -at float3 $asset;
+            addAttr -nn "minX" -ln "minRotateRandomX" -at "float" -p "minRotateRandom" $asset;
+            addAttr -nn "minY" -ln "minRotateRandomY" -at "float" -p "minRotateRandom" $asset;
+            addAttr -nn "minZ" -ln "minRotateRandomZ" -at "float" -p "minRotateRandom" $asset;
+		setAttr ($asset + ".minRotateRandom") -360.0 -360.0 -360.0;
+	}
+	if (`attributeExists "maxRotateRandom" $asset` == 0){	     
+        addAttr -ln "maxRotateRandom" -at float3 $asset;
+            addAttr -nn "maxX" -ln "maxRotateRandomX" -at "float" -p "maxRotateRandom" $asset;
+            addAttr -nn "maxY" -ln "maxRotateRandomY" -at "float" -p "maxRotateRandom" $asset;
+            addAttr -nn "maxZ" -ln "maxRotateRandomZ" -at "float" -p "maxRotateRandom" $asset;
+		setAttr ($asset + ".maxRotateRandom") 360.0 360.0 360.0;
+	}
+			
+	//_________________________________________
+	// SCALING	
+	
+	if (`attributeExists "enableScaling" $asset` == 0){
+		addAttr -ln "enableScaling" -at bool $asset;
+		setAttr -e -keyable true ($asset + ".enableScaling");
+		setAttr ($asset + ".enableScaling") false;
+	}
+		
+	//SCALE STEP TYPE
+	if (`attributeExists "scaleStepType" $asset` == 0){
+		addAttr -nn "scaleStepType" -ln "scaleStepType" -at "enum" -en ("random=0:linear=1:exponential=2:sine=3:") $asset;
+		setAttr ($asset + ".scaleStepType") 0;
+	}
+	
+	//SCALE CHANGE FREQUENCY
+	if (`attributeExists "scaleChangeFrequency" $asset` == 0){
+		addAttr -nn "scaleChange" -ln "scaleChangeFrequency" -at "enum" -en ("everyIteration=0:everyDuplicate=1:") $asset;
+		setAttr ($asset + ".scaleChangeFrequency") 0;
+	}
+	
+	
+	if (`attributeExists "minScaleRandom" $asset` == 0){	     
+        addAttr -ln "minScaleRandom" -at float3 $asset;
+            addAttr -nn "minX" -ln "minScaleRandomX" -at "float" -p "minScaleRandom" $asset;
+            addAttr -nn "minY" -ln "minScaleRandomY" -at "float" -p "minScaleRandom" $asset;
+            addAttr -nn "minZ" -ln "minScaleRandomZ" -at "float" -p "minScaleRandom" $asset;
+		setAttr ($asset + ".minScaleRandom") 1.0 1.0 1.0;
+	}
+	if (`attributeExists "maxScaleRandom" $asset` == 0){	     
+        addAttr -ln "maxScaleRandom" -at float3 $asset;
+            addAttr -nn "maxX" -ln "maxScaleRandomX" -at "float" -p "maxScaleRandom" $asset;
+            addAttr -nn "maxY" -ln "maxScaleRandomY" -at "float" -p "maxScaleRandom" $asset;
+            addAttr -nn "maxZ" -ln "maxScaleRandomZ" -at "float" -p "maxScaleRandom" $asset;
+		setAttr ($asset + ".maxScaleRandom") 2.0 2.0 2.0;
+	}
+	
+	if (`attributeExists "scaleAmount" $asset` == 0){	     
+        addAttr -ln "scaleAmount" -at float3 $asset;
+            addAttr -nn "scX" -ln "scaleAmountX" -at "float" -p "scaleAmount" $asset;
+            addAttr -nn "scY" -ln "scaleAmountY" -at "float" -p "scaleAmount" $asset;
+            addAttr -nn "scZ" -ln "scaleAmountZ" -at "float" -p "scaleAmount" $asset;
+		setAttr ($asset + ".scaleAmount") 1.0 1.0 1.0;
+	}
+	
+	if (`attributeExists "lBldrObjects" $asset` == 0){	     
+        addAttr -ln "lBldrObjects" -dt "string" $asset;
+	}
+	
+	string $lbldrSet = createSetFromSelection({$sel[1]}, ($asset + "lBldrObjectSet"));
+	connectAttr ($lbldrSet + ".message") ($asset + ".lBldrObjects");
+		
+	string $notes = (
+	"lBldr<br>"+"\n"
+	+"===========================================<br>"+"\n"
+	+"	- Put whatever objects you want to build with inside the lBldr Asset<br>"+"\n"
+	+"	- An lBldr object should contain locators with the names : input# and output#<br>"+"\n"
+	+"	- lBldr will build iteratively using the inputs and output transforms<br>"+"\n"
+	);
+	addNotesToObjects({$asset}, $notes);
+	/*
+	<ToDoWiz!> Add Icon
+	string $iconDir = 
+	setAttr -type "string" lBldr.iconName "C:/Users/Glen/Documents/maya/scripts/wiz/wizIcons/lBldrIcon2.png";
+*/
+}
+
+//@ L BLDR DO BUILD
+//====================================================================
+/*
+string $sel[] = `ls -sl`;
+string $c[] = `listRelatives -typ transform $sel[0]`;
+select -r $c;
+string $output[] = `ls -sl ("*output*")`;
+print("Output : \n - " + stringArrayToString($output, "\n - ") + "\n");
+*/
+global proc rmbLBldrDoBuild( string $object )
+{
+	global string $WIZ_xBldrSrcType;
+	$WIZ_xBldrSrcType = "lBldrAsset";
+	string $sel[] = `ls -sl`;
+	if (`attributeExists "wizAssetType" $sel[0]`){		
+		lBldrDoBuild($sel, ("-st \"" + $WIZ_xBldrSrcType + "\""));
+	}
+}
+
+/*****************************************************************//**
+*	This will start a lBldr building process.
+*	Tag : -st -sourceType = "wiz"
+*
+*********************************************************************/
+global proc lBldrDoBuild( string $sel[] , string $tags)
+{
+	global string $WIZ_xBldrSrcType;
+	string $sourceType = $WIZ_xBldrSrcType;
+	string $asset;
+	string $con[] = `ls -typ dagContainer $sel`;
+	if (`size $con` > 0){
+		if (`attributeExists "wizAssetType" $con[0]`){
+			string $assType = `getAttr ($con[0] + ".wizAssetType")`;
+			if ($assType == "lBldrAsset"){
+				$sourceType = "lBldrAsset";
+				$WIZ_xBldrSrcType = "lBldrAsset";
+				$asset = $con[0];
+			} else {
+				$WIZ_xBldrSrcType = "wiz";
+				$sourceType = "wiz";
+			}
+		}
+	}
+	
+	string $tok[] = tokenizeString($tags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-st" : case "-sourceType" :
+			string $sourceType = $tok[($i + 1)];
+			break;
+			
+		}
+	}
+
+    int $maxIterations;
+    string $dupMethod;
+    int $ranTerm;
+    int $buildHier;
+    
+    string $srcObj[];
+	//string $srcObj[] = `textScrollList -q -ai lBldrSourceObjectsTextScrollList`;
+    //$srcObj = `ls -l $srcObj`; // Long Name
+    
+    //Order
+    string $setOrdering;
+    string $sourceChangeFreq;
+    
+    //Translate
+    int $translatesEnabled;
+    string $translateStepType;
+    string $translateChangeFreq;
+    
+    //Rotation
+    int $rotationsEnabled;
+    string $rotateStepType;
+    string $rotateChangeFreq;
+      
+    //Scaling
+    int $scalingEnabled;
+    string $scaleStepType;
+    string $scaleChangeFreq;
+	
+	if ($sourceType == "wiz"){
+		//$srcObj[] = $sel;
+		$srcObj = `textScrollList -q -ai lBldrSourceObjectsTextScrollList`;
+		//$srcObj = `ls -l $srcObj`; // Long Name
+		
+		$maxIterations = `intSliderGrp -q -v lBldrMaxIterationsIntSliderGrp`;
+		$dupMethod = `optionMenuGrp -q -v lBldrDuplicationMethodOptionMenuGrp`;
+		$ranTerm = `checkBox -q -v lBldrRandomTerminationsCheckBox`;	
+		$buildHier = `checkBox -q -v lBldrBuildHierarchicallyCheckBox`;
+        
+		//Order
+		$setOrdering = `optionMenuGrp -q -v lBldrSetOrderOptionMenuGrp`;
+		$sourceChangeFreq = `optionMenuGrp -q -v lBldrChangeSourceOptionMenuGrp`;
+		
+		//Translate
+		$translatesEnabled = `checkBox -q -v lBldrTranslatesEnabledCheckBox`;
+		$translateStepType = `optionMenuGrp -q -v lBldrTranslateStepTypeOptionMenuGrp`;
+		$translateChangeFreq = `optionMenuGrp -q -v lBldrChangeTranslateOptionMenuGrp`;
+		
+		//Rotation
+		$rotationsEnabled = `checkBox -q -v lBldrRotationsEnabledCheckBox`;
+		$rotateStepType = `optionMenuGrp -q -v lBldrRotationStepTypeOptionMenuGrp`;
+		$rotateChangeFreq = `optionMenuGrp -q -v lBldrChangeRotationOptionMenuGrp`;
+		  
+		//Scaling
+		$scalingEnabled = `checkBox -q -v lBldrScalingEnabledStepCheckBox`;
+		$scaleStepType = `optionMenuGrp -q -v lBldrScaleStepTypeOptionMenuGrp`;
+		$scaleChangeFreq = `optionMenuGrp -q -v lBldrChangeScaleOptionMenuGrp`;
+    
+	} else if ($sourceType == "lBldrAsset"){
+		$asset = $sel[0];
+		
+		$srcObj = `listRelatives -c -type transform $asset`;
+		
+		$maxIterations = `getAttr ($asset + ".maxIterations")`;
+		$dupMethod = `getAttr -as ($asset + ".duplicationMethod")`;
+		$ranTerm = `getAttr -as ($asset + ".randomTerminations")`;
+		$buildHier = `getAttr -as ($asset + ".buildHierarchically")`;
+        
+		//Order
+		$setOrdering = `getAttr -as ($asset + ".setOrdering")`;
+		$sourceChangeFreq = `getAttr -as ($asset + ".sourceChangeFrequency")`;
+		
+		//Translate
+		$translatesEnabled = `getAttr ($asset + ".enableTranslates")`;
+		$translateStepType = `getAttr -as ($asset + ".translateStepType")`;
+		$translateChangeFreq = `getAttr -as ($asset + ".translateChangeFrequency")`;
+		
+		//Rotation
+		$rotationsEnabled = `getAttr ($asset + ".enableRotations")`;
+		$rotateStepType = `getAttr -as ($asset + ".rotationStepType")`;
+		$rotateChangeFreq = `getAttr -as ($asset + ".rotationChangeFrequency")`;
+		
+		
+		  
+		//Scaling
+		$scalingEnabled = `getAttr ($asset + ".enableScaling")`;
+		$scaleStepType = `getAttr -as ($asset + ".scaleStepType")`;
+		$scaleChangeFreq = `getAttr -as ($asset + ".scaleChangeFrequency")`;
+	}
+  
+    string $sObj[] = { $srcObj[0] }; 
+    string $oObj[];
+    string $iObj[];
+    
+    string $lBldrGroups[];
+    
+    string $input[];
+    string $output[];
+    
+    string $head = $srcObj[0];
+	string $tail = $srcObj[(`size $srcObj` - 1)];
+	if (`size $srcObj` > 1){
+		$tail = $srcObj[(`size $srcObj` - 1)];
+		wizlog ("	[#] Tail : " + $tail);
+	}
+	
+    if ($setOrdering == "headSequence" || $setOrdering == "headSequenceTail" || $setOrdering == "headRandom" || $setOrdering == "headRandomTail"){
+        stringArrayRemoveAtIndex(0, $srcObj);
+	
+    }
+    if ($setOrdering == "sequenceTail" || $setOrdering == "headSequenceTail" || $setOrdering == "randomTail" || $setOrdering == "headRandomTail"){
+        stringArrayRemoveAtIndex((`size $srcObj` - 1), $srcObj);
+
+    }
+    if ($setOrdering == "sequenceTail" || $setOrdering == "headSequenceTail" || $setOrdering == "headSequence"){
+        if (`size $srcObj` < 2){
+			wizlog ("	[!] Not Enough Objects For A Sequence [!]");
+			return ;
+		}
+	}
+	
+    int $si = 0; //The index of source objects to pull from
+    
+    int $xi = 0; //The number of iterations
+    
+	wizLog("[*] lBldr Building - [" + $maxIterations + "] Iterations [*]" + wizDiv("s"));
+	
+	wizProgressWindowStart((" - lBldr Building - "), ("lBldr Building [" + $maxIterations + "] Iterations"), 1);
+    wizProgressWindowMinMax(0,$maxIterations);   
+	
+	wizlog (niceArrayList("	[#] Source Objects [#]", $srcObj));
+	
+	int $buildCount;
+	string $statMes;
+    while ( $xi < $maxIterations ){
+        string $dup[];  
+        float $tr[];
+        float $rot[];
+        float $scale[];
+		$statMes = (" - Iteration [ " + $xi + " ] - ");
+        wizProgressWindowStatus($statMes);
+		
+		string $doDupObj;
+		
+        // Duplicate the current object on all the output transforms	    
+    	for ($io=0;$io<`size $sObj`;$io++){
+			string $ioStatMes = ($statMes + " ICount [ " + $io + " ] Total Count [ " + $buildCount + " ] - ");
+			
+			wizlog ("	[#] $xi = " + $xi + " [#] $si = " + $si);
+			wizProgressWindowStatus($ioStatMes);
+			
+            
+            // Terminate a branch ?
+            if ($ranTerm == 1){
+                int $terminate = randInt(0, (($maxIterations + 1) - $xi));
+                if ($terminate == 1){
+                    continue;
+                }
+            }        
+          
+			//_________________________________________
+			// Choose an object to duplicate
+			
+			//_________________________________________
+			// Sequences
+            if ($setOrdering == "sequence"){				
+				wizlog ("	[#] sequence [#] : $si : " + $si);
+                if ($sourceChangeFreq == "everyDuplicate"){
+                    $doDupObj = $srcObj[$si];
+                    $si++;                    
+                } else if ($sourceChangeFreq == "everyIteration" && $io == 0){
+                    $doDupObj = $srcObj[$si];
+                    $si++;                    
+                } 
+				if ($si > (`size $srcObj` - 1)){
+					$si = 0;
+				}
+            }
+			
+			if ($setOrdering == "headSequence"){
+				wizlog ("	[#] headSequence [#] : $si : " + $si);
+				if ($xi == 0){
+					$doDupObj = $head;					
+				}
+				
+				if ($xi > 0){
+					if ($sourceChangeFreq == "everyDuplicate"){                    
+						$doDupObj = $srcObj[$si];   
+					} else if ($sourceChangeFreq == "everyIteration" && $io == 0){
+						$doDupObj = $srcObj[$si];						    
+					}
+					if ($si == (`size $srcObj` - 1)){
+						$si = 0;
+					} else {
+						$si++;
+					}
+				}
+            }
+			
+			if ($setOrdering == "sequenceTail"){
+				wizlog ("	[#] sequenceTail [#] : $si : " + $si);
+				if ($xi == ($maxIterations - 1)){
+					wizlog ("	[#] Tail : " + $tail);
+					$doDupObj = $tail;
+				} else {
+
+					if ($sourceChangeFreq == "everyDuplicate"){                    
+						$doDupObj = $srcObj[$si];  
+					} else if ($sourceChangeFreq == "everyIteration" && $io == 0){
+						$doDupObj = $srcObj[$si];  
+					}
+					
+					if ($si == (`size $srcObj` - 1)){
+						$si = 0;
+					} else {
+						$si++;
+					}
+				}
+            }
+						
+			if ($setOrdering == "headSequenceTail"){
+				wizlog ("	[#] headSequenceTail [#] : $si : " + $si);
+				if ($xi == 0){
+					$doDupObj = $head;					
+				}
+				if ($xi == ($maxIterations - 1)){
+					$doDupObj = $tail;					
+				}
+				if ($xi > 0 && $xi < ($maxIterations - 1)){
+					if ($sourceChangeFreq == "everyDuplicate"){                    
+						$doDupObj = $srcObj[$si];   
+					} else if ($sourceChangeFreq == "everyIteration" && $io == 0){
+						$doDupObj = $srcObj[$si]; 
+					}
+					if ($si == (`size $srcObj` - 1)){
+						$si = 0;
+					} else {
+						$si++;
+					}
+				}
+            }
+			
+			//_________________________________________
+			// Random
+			
+            if ($setOrdering == "random"){
+                if ($sourceChangeFreq == "everyDuplicate"){                    
+                    $si = randInt(0, (`size $srcObj` - 1));
+                    $doDupObj = $srcObj[$si];
+                } else if ($sourceChangeFreq == "everyIteration" && $io == 0){
+                    $si = randInt(0, (`size $srcObj` - 1));
+                    $doDupObj = $srcObj[$si];
+                }
+            }
+			
+			
+			if ($setOrdering == "headRandomTail"){
+				if ($xi == 0){
+					$doDupObj = $head;
+				}
+				if ($xi == ($maxIterations - 1)){
+					$doDupObj = $tail;					
+				}
+				if ($xi > 0 && $xi < ($maxIterations - 1)){
+					if ($sourceChangeFreq == "everyDuplicate"){                    
+						$si = randInt(0, (`size $srcObj` - 1));
+						$doDupObj = $srcObj[$si];
+					} else if ($sourceChangeFreq == "everyIteration" && $io == 0){
+						$si = randInt(0, (`size $srcObj` - 1));
+						$doDupObj = $srcObj[$si];
+					}
+				}
+            }
+			
+			if ($setOrdering == "randomTail"){				
+				if ($xi == ($maxIterations - 1)){
+					$doDupObj = $tail;					
+				} else {
+					if ($sourceChangeFreq == "everyDuplicate"){                    
+						$si = randInt(0, (`size $srcObj` - 1));
+						$doDupObj = $srcObj[$si];
+					} else if ($sourceChangeFreq == "everyIteration" && $io == 0){
+						$si = randInt(0, (`size $srcObj` - 1));
+						$doDupObj = $srcObj[$si];
+					}
+				}
+            }
+			
+			if ($setOrdering == "headRandom"){				
+				if ($xi == 0){
+					$doDupObj = $head;					
+				} else {
+					if ($sourceChangeFreq == "everyDuplicate"){                    
+						$si = randInt(0, (`size $srcObj` - 1));
+						$doDupObj = $srcObj[$si];
+					} else if ($sourceChangeFreq == "everyIteration" && $io == 0){
+						$si = randInt(0, (`size $srcObj` - 1));
+						$doDupObj = $srcObj[$si];
+					}
+				}
+            }
+			         
+			//_________________________________________
+            // Do the duplication
+			wizLog ("	[#] Source Of Duplication : " + $doDupObj);
+			
+            string $shortName[] = `ls $doDupObj`; 			
+            wizLog ("	[#] Source Of Duplication : \n 		[-] " + stringArrayToString($shortName, "\n 		[-] ") + "\n");
+			
+			//Me have to make sure the pivot from a reference file is set to the pivot point of doDupObj
+			float $ddObjPiv[] = `xform -q -ws -piv $doDupObj`;
+			string $newDup[];
+            if ($dupMethod == "referenceCopy"){
+				namespace -set ":";
+				string $refFile;
+				if (catchQuiet(`referenceQuery -f $doDupObj`)){
+					wizLog ("	[!] " + $doDupObj + " Is Not From A Reference. Searching Relatives For Reference...\n");
+					string $rel[] = `listRelatives -ad $doDupObj`;
+					for ($i=0;$i<`size $rel`;$i++){
+						if (catchQuiet(`referenceQuery -f $rel[$i]`) == 0){
+							$refFile = `referenceQuery -f $rel[$i]`;
+						}	
+					}		
+
+				} else {
+					$refFile = `referenceQuery -f $doDupObj`;
+				}
+				if ($refFile == ""){
+					wizLog ("-w		[!] Failed To Find Reference From Object : " + $doDupObj + "\nWill Use Duplicate Method Instead.\n");		
+					$newDup = wizDoDuplicate({ $doDupObj }, "-meth duplicate -rr -rc -un -n \"" + $shortName[0] + "lBldrDuplicateObject\"");
+				} else {		
+					string $ext = `fileExtension $refFile`;
+					string $basename = basename($refFile, $ext);
+					string $ns = `namespace -vn $basename`;
+					string $ref;
+					if ($ext == "mb"){		
+						$ref = `file -r -type "mayaBinary" -gr -mergeNamespacesOnClash false -namespace $ns -options "v=0;p=17;f=0" -pmt false $refFile`;						
+					} else {
+						$ref = `file -r -gr -mergeNamespacesOnClash false -namespace $ns -options "v=0;p=17;f=0" -pmt false $refFile`;		
+					}
+					namespace -set ":";
+					$newDup = `ls -sl`;
+					// Set the pivot to the same place as doDupObj
+					xform -ws -piv $ddObjPiv[0] $ddObjPiv[1] $ddObjPiv[2] $newDup[0];
+				}
+			} else if ($dupMethod == "duplicate"){					
+				$newDup = wizDoDuplicate({ $doDupObj }, "-meth " + $dupMethod + " -rr -rc -un -n \"" + $shortName[0] + "lBldrDuplicateObject\"");
+				//printNiceArrayList("New : ", $newDup);
+			} else if ($dupMethod == "instance"){					
+				$newDup = wizDoDuplicate({ $doDupObj }, "-meth " + $dupMethod + " -lf -n \"" + $shortName[0] + "lBldrDuplicateObject\"");
+				//printNiceArrayList("New : ", $newDup);
+			}
+			
+			wizLog((niceArrayList("		[+] New Duplicate : ", $newDup)));
+			
+			$dup[`size $dup`] = $newDup[0];
+						
+            // Decide which input to use. If there are no input objects then just use the objects transform
+            // <!PROBLEM!>
+			//print ("New Dup [0] : " + $newDup[0] + "\n");
+			
+			
+			//Build Hierachy of objects
+            if ($buildHier == 1){
+				
+                if ($xi > 0){
+					wizLog ("	[#] xi : " + $xi + "\n");
+					wizLog ("	[#] parent " + $newDup[0] + " " + $sObj[$io] + ";\n");					
+					parent $newDup[0] $sObj[$io];
+					setAttr ($newDup[0] + ".translate") 0.0 0.0 0.0;
+					setAttr ($newDup[0] + ".rotate") 0.0 0.0 0.0;
+				}
+            } else {
+			
+			
+				string $input[] = lBldrGetIOTransforms($newDup[0], "input");            
+				if (`size $input` > 1){
+					wizLog ("	[#] Input Objects : \n   	[-] " + stringArrayToString($input, "\n   	[-] ") + "\n");
+					int $ranInput = randInt(0, (`size $input` - 1));
+					float $inputTr[] = `xform -q -ws -t $input[$ranInput]`;
+					float $inputRo[] = `xform -q -os -ro $input[$ranInput]`;
+					// Move the pivot to the input pivot, then rotate to match rotation, then freeze rotation
+					xform -piv $inputTr[0] $inputTr[1] $inputTr[2] $newDup[0];
+					xform -ws -ro $inputRo[0] $inputRo[1] $inputRo[2] $newDup[0];
+					makeIdentity -apply true -t 0 -r 1 -s 0 -n 1 -pn 1 $newDup[0];
+					
+				}
+							// Move the duplicate object to the output transform
+				if ($sourceType == "lBldrAsset" && $xi == 0 && $io == 0){
+					transferTransforms($asset, $newDup[0]);
+				} else {
+					transferTransforms($sObj[$io], $newDup[0]);	
+				}
+			
+			}
+			
+            
+            //Do translates
+            if ($translatesEnabled == 1){
+                if ($translateChangeFreq == "everyDuplicate"){ 
+                    $tr = lBldrGetTranslate($asset,($xi + 1));
+                } else if ($translateChangeFreq == "everyIteration" && $io == 0){
+                    $tr = lBldrGetTranslate($asset,($xi + 1));
+                }
+                xform -r -tr $tr[0] $tr[1] $tr[2] $newDup[0];
+            }
+            
+            //Do rotations
+            if ($rotationsEnabled == 1){
+                if ($rotateChangeFreq == "everyDuplicate"){ 
+                    $rot = lBldrGetRotation($asset,($xi + 1));
+                } else if ($rotateChangeFreq == "everyIteration" && $io == 0){
+                    $rot = lBldrGetRotation($asset,($xi + 1));
+                }
+                xform -r -ro $rot[0] $rot[1] $rot[2] $newDup[0];
+				//xform -os -ro $rot[0] $rot[1] $rot[2] $newDup[0];
+            }
+            
+            //Do scaling
+            if ($scalingEnabled == 1){
+                if ($scaleChangeFreq == "everyDuplicate"){ 
+                    $scale = lBldrGetScale($asset,($xi + 1));
+                } else if ($scaleChangeFreq == "everyIteration" && $io == 0){
+                    $scale = lBldrGetScale($asset,($xi + 1));
+                } 
+                xform -s $scale[0] $scale[1] $scale[2] $newDup[0];
+				wizlog ("xform -s " + $scale[0] + " " + $scale[1] + " " + $scale[2] + " " + $newDup[0] + ";");
+            }
+            
+			
+            
+			if (wizProgressCancelled() == 1){ return; }
+			wizLog("	[-] Build Count : " + $buildCount);
+			$buildCount++;
+			
+        }
+
+        // Get the input and output transforms from new object
+        for ($id=0;$id<`size $dup`;$id++){
+            //Get the output transforms from this new object       
+
+            string $output[] = lBldrGetIOTransforms($dup[$id], "output"); 
+            
+            //wizLog("Output : \n - " + stringArrayToString($output, "\n - ") + "\n");
+            
+            appendStringArray($oObj, $output, `size $output`);
+		
+        }
+        //string $gname[] = `ls $srcObj[$si]`; // use short name
+        if ($buildHier == 1){
+            if ($xi == 0){				
+				$lBldrGroups[`size $lBldrGroups`] = `group -w -n ("lBldrIteration" + $xi + "Group") $dup`;
+            }
+        } else {
+            $lBldrGroups[`size $lBldrGroups`] = `group -w -n ("lBldrIteration" + $xi + "Group") $dup`;	
+            wizLog("	[+] lBldr Group : \n - " + stringArrayToString($lBldrGroups, "\n [+] ") + "\n");   
+        }        
+        wizLog("	[+] New Output Objects : \n - " + stringArrayToString($oObj, "\n [+] ") + "\n");
+        
+        //Reset
+        clear ($dup);
+		
+        clear ($sObj);
+        $sObj = $oObj;
+        clear $oObj;
+        
+		/*
+        if ($setOrdering == "sequence" || $setOrdering == "sequenceHead" || $setOrdering == "sequenceTail" || $setOrdering == "sequenceHead"){
+            //$si++;
+            if ($si >= `size $srcObj`){
+                $si = 0;	
+            }
+        } else if ($setOrdering == "random"){
+        	//$si = randInt(0, (`size $srcObj` - 1));        	
+        }
+        */
+		
+        $xi++;
+		if ($xi > $maxIterations){
+			wizLog("	[!] lBldr has exceeded it's Iteration Limit [!]");
+			
+			break ;
+		}
+		
+		wizProgressWindowStep(1);        
+        if (wizProgressCancelled() == 1){ return; }
+		
+    }
+    group -w -n "lBldrGroup" $lBldrGroups;
+    
+    wizLog("lBldr Complete" + wizDiv("end"));
+	wizLog("-d");
+	wizProgressWindowEnd();
+}
+
+//@ L BLDR GET I O TRANSFORMS 
+//-------------------------------------------------------
+/*****************************************************************//**
+*	Will return descendants of object that are named "*input*" or "*output*".
+*	string $sel[] = `ls -sl`;
+	lBldrGetIOTransforms($sel[0], "input");
+	lBldrGetIOTransforms($sel[0], "output");
+*
+*********************************************************************/
+global proc string[] lBldrGetIOTransforms( string $obj, string $type )
+{
+    string $c[] = `listRelatives -ad -typ transform $obj`;
+    $c = `ls -l $c`;
+    
+    select -r $c;
+    if ($type == "input"){
+        string $input[] = `ls -sl -tr -r true ("*input*")`;
+        wizLog((printNiceArrayList("Inputs : ", $input)));
+
+        return $input;
+    } else if ($type == "output"){    
+        string $output[] = `ls -sl -tr -r true ("*output*")`;
+        wizLog((printNiceArrayList("Outputs : ", $output)));
+
+        return $output;
+    }
+
+
+}
+
+//@ L BLDR GET ROTATION 
+//-------------------------------------------------------
+global proc float[] lBldrGetRotation( string $src, int $i )
+{
+	global string $WIZ_xBldrSrcType;
+
+    string $rotateStepType;
+    float $minXRotateRan;
+    float $maxXRotateRan;
+    float $minYRotateRan;
+    float $maxYRotateRan;
+    float $minZRotateRan;
+    float $maxZRotateRan;  
+    string $rotateDegreesType;
+    float $xRotate;
+    float $yRotate;
+    float $zRotate;
+	
+    if ($WIZ_xBldrSrcType == "wiz"){		
+		$rotateStepType = `optionMenuGrp -q -v lBldrRotationStepTypeOptionMenuGrp`;
+		$minXRotateRan = `floatSliderGrp -q -v lBldrMinXRotateRandomFloatSliderGrp`;
+		$maxXRotateRan = `floatSliderGrp -q -v lBldrMaxXRotateRandomFloatSliderGrp`;
+		$minYRotateRan = `floatSliderGrp -q -v lBldrMinYRotateRandomFloatSliderGrp`;
+		$maxYRotateRan = `floatSliderGrp -q -v lBldrMaxYRotateRandomFloatSliderGrp`;
+		$minZRotateRan = `floatSliderGrp -q -v lBldrMinZRotateRandomFloatSliderGrp`;
+		$maxZRotateRan = `floatSliderGrp -q -v lBldrMaxZRotateRandomFloatSliderGrp`;  
+		$rotateDegreesType = `optionMenuGrp -q -v lBldrRotateDegressTypeOptionMenuGrp`;
+		$xRotate = `floatSliderGrp -q -v lBldrXRotationFloatSliderGrp`;
+		$yRotate = `floatSliderGrp -q -v lBldrYRotationFloatSliderGrp`;
+		$zRotate = `floatSliderGrp -q -v lBldrZRotationFloatSliderGrp`;	
+		
+	} else {
+		$rotateStepType = `getAttr -as ($src + ".rotationStepType")`;
+		$minXRotateRan = `getAttr ($src + ".minRotateRandomX")`;
+		$maxXRotateRan = `getAttr ($src + ".maxRotateRandomX")`;
+		$minYRotateRan = `getAttr ($src + ".minRotateRandomY")`;
+		$maxYRotateRan = `getAttr ($src + ".maxRotateRandomY")`;
+		$minZRotateRan = `getAttr ($src + ".minRotateRandomZ")`;
+		$maxZRotateRan = `getAttr ($src + ".maxRotateRandomZ")`;
+		$rotateDegreesType = `getAttr -as ($src + ".rotateDegreesType")`;
+		$xRotate = `getAttr ($src + ".rotateAmountX")`;
+		$yRotate = `getAttr ($src + ".rotateAmountY")`;
+		$zRotate = `getAttr ($src + ".rotateAmountZ")`;
+	}
+	
+    float $rot[];    
+    if ($rotateStepType == "random"){
+        $rot = { (rand($minXRotateRan, $maxXRotateRan)), (rand($minYRotateRan, $maxYRotateRan)), (rand($minZRotateRan, $maxZRotateRan)) };
+        
+        if ($rotateDegreesType == "nDegrees"){
+            $rot[0] = `constrainValue $minXRotateRan $maxXRotateRan $xRotate $rot[0]`;
+            $rot[1] = `constrainValue $minYRotateRan $maxYRotateRan $yRotate $rot[1]`;
+            $rot[2] = `constrainValue $minZRotateRan $maxZRotateRan $zRotate $rot[2]`;
+        }
+		wizlog ("[RANDOM ROTATION] : " + $rot[0] + " " + $rot[1] + " " + $rot[2]);
+    } else if ($rotateStepType == "linear"){
+            $rot = { ($i * $xRotate), ($i * $yRotate), ($i * $zRotate) };
+			wizlog ("[LINEAR ROTATION] : " + $rot[0] + " " + $rot[1] + " " + $rot[2]);
+			
+    } else if ($rotateStepType == "exponential"){
+            $rot = { (pow($xRotate, $i)), (pow($yRotate, $i)), (pow($zRotate, $i)) };
+			wizlog ("[EXPONENTIAL ROTATION] : " + $rot[0] + " " + $rot[1] + " " + $rot[2]);
+    }
+    return $rot;
+}
+
+
+//@ L BLDR GET TRANSFORM 
+//-------------------------------------------------------
+global proc float[] lBldrGetTranslate( string $src, int $i )
+{
+	global string $WIZ_xBldrSrcType;
+	
+    string $translateStepType;
+    float $minXTranslateRan;
+    float $maxXTranslateRan;
+    float $minYTranslateRan;
+    float $maxYTranslateRan;
+    float $minZTranslateRan;
+    float $maxZTranslateRan;  
+    float $xTranslate;
+    float $yTranslate;
+    float $zTranslate;
+    
+	if ($WIZ_xBldrSrcType == "lBldrAsset"){
+		$translateStepType = `getAttr -as ($src + ".rotationStepType")`;
+		$minXTranslateRan = `getAttr ($src + ".minTranslateRandomX")`;
+		$maxXTranslateRan = `getAttr ($src + ".maxTranslateRandomX")`;
+		$minYTranslateRan = `getAttr ($src + ".minTranslateRandomY")`;
+		$maxYTranslateRan = `getAttr ($src + ".maxTranslateRandomY")`;
+		$minZTranslateRan = `getAttr ($src + ".minTranslateRandomX")`;
+		$maxZTranslateRan = `getAttr ($src + ".maxTranslateRandomZ")`;
+		$translateDegreesType = `getAttr -as ($src + ".translateDegreesType")`;
+		$xTranslate = `getAttr ($src + ".translateAmountX")`;
+		$yTranslate = `getAttr ($src + ".translateAmountY")`;
+		$zTranslate = `getAttr ($src + ".translateAmountZ")`;
+	} else {
+		$translateStepType = `optionMenuGrp -q -v lBldrTranslateStepTypeOptionMenuGrp`;
+		$minXTranslateRan = `floatSliderGrp -q -v lBldrMinXTranslateRandomFloatSliderGrp`;
+		$maxXTranslateRan = `SliderGrp -q -v lBldrMaxXTranslateRandomSliderGrp`;
+		$minYTranslateRan = `SliderGrp -q -v lBldrMinYTranslateRandomSliderGrp`;
+		$maxYTranslateRan = `SliderGrp -q -v lBldrMaxYTranslateRandomSliderGrp`;
+		$minZTranslateRan = `SliderGrp -q -v lBldrMinZTranslateRandomSliderGrp`;
+		$maxZTranslateRan = `SliderGrp -q -v lBldrMaxZTranslateRandomSliderGrp`;  
+		$xTranslate = `SliderGrp -q -v lBldrXTranslateSliderGrp`;
+		$yTranslate = `SliderGrp -q -v lBldrYTranslateSliderGrp`;
+		$zTranslate = `SliderGrp -q -v lBldrZTranslateSliderGrp`;
+	
+	}
+		
+    float $tr[];    
+    if ($translateStepType == "random"){
+        $tr = { (rand($minXTranslateRan, $maxXTranslateRan)), (rand($minYTranslateRan, $maxYTranslateRan)), (rand($minZTranslateRan, $maxZTranslateRan)) };
+        /*
+        if ($translateDegreesType == "nDegrees"){
+            $tr[0] = `constrainValue $minXTranslateRan $maxXTranslateRan $xTranslate $tr[0]`;
+            $tr[1] = `constrainValue $minYTranslateRan $maxYTranslateRan $yTranslate $tr[1]`;
+            $tr[2] = `constrainValue $minZTranslateRan $maxZTranslateRan $zTranslate $tr[2]`;
+        }
+		*/
+    } else if ($translateStepType == "linear"){
+            $tr = { ($i * $xTranslate), ($i * $yTranslate), ($i * $zTranslate) };
+    } else if ($translateStepType == "exponential"){
+            $tr = { (pow($xTranslate, $i)), (pow($xTranslate, $i)), (pow($zTranslate, $i)) };
+    }
+    return $tr;
+}
+
+
+//@ L BLDR GET SCALE 
+//-------------------------------------------------------
+global proc float[] lBldrGetScale( string $src, int $i )
+{
+	global string $WIZ_xBldrSrcType;
+	wizlog ("	[#] $WIZ_xBldrSrcType : " + $WIZ_xBldrSrcType);
+	
+    string $scaleStepType;
+
+	float $minXScaleRan;
+    float $maxXScaleRan;
+    float $minYScaleRan;
+    float $maxYScaleRan;
+    float $minZScaleRan;
+    float $maxZScaleRan;
+	float $xScale;
+    float $yScale;
+    float $zScale;
+	
+	if ($WIZ_xBldrSrcType == "lBldrAsset"){
+		$scaleStepType = `getAttr -as ($src + ".scaleStepType")`;
+		$minXScaleRan = `getAttr ($src + ".minScaleRandomX")`;
+		$maxXScaleRan = `getAttr ($src + ".maxScaleRandomX")`;
+		$minYScaleRan = `getAttr ($src + ".minScaleRandomY")`;
+		$maxYScaleRan = `getAttr ($src + ".maxScaleRandomY")`;
+		$minZScaleRan = `getAttr ($src + ".minScaleRandomX")`;
+		$maxZScaleRan = `getAttr ($src + ".maxScaleRandomZ")`;
+		$xScale = `getAttr ($src + ".scaleAmountX")`;
+		$yScale = `getAttr ($src + ".scaleAmountY")`;
+		$zScale = `getAttr ($src + ".scaleAmountZ")`;
+	} else {
+		$scaleStepType = `optionMenuGrp -q -v lBldrScaleStepTypeOptionMenuGrp`;
+		$minXScaleRan = `SliderGrp -q -v lBldrMinXScaleRandomSliderGrp`;
+		$maxXScaleRan = `SliderGrp -q -v lBldrMaxXScaleRandomSliderGrp`;
+		$minYScaleRan = `SliderGrp -q -v lBldrMinYScaleRandomSliderGrp`;
+		$maxYScaleRan = `SliderGrp -q -v lBldrMaxYScaleRandomSliderGrp`;
+		$minZScaleRan = `SliderGrp -q -v lBldrMinZScaleRandomSliderGrp`;
+		$maxZScaleRan = `SliderGrp -q -v lBldrMaxZScaleRandomSliderGrp`;
+		$xScale = `SliderGrp -q -v lBldrXScaleSliderGrp`;
+		$yScale = `SliderGrp -q -v lBldrYScaleSliderGrp`;
+		$zScale = `SliderGrp -q -v lBldrZScaleSliderGrp`;
+	}
+
+	wizlog ("	[#] Scale Step Type : " + $scaleStepType);
+    float $scale[];    
+    if ($scaleStepType == "random"){
+        $scale = { (rand($minXScaleRan, $maxXScaleRan)), (rand($minYScaleRan, $maxYScaleRan)), (rand($minZScaleRan, $maxZScaleRan)) };
+    } else if ($scaleStepType == "linear"){
+            $scale = { ($i + $xScale), ($i + $yScale), ($i + $zScale) };
+    } else if ($scaleStepType == "exponential"){
+            $scale = { (pow($xScale, $i)), (pow($yScale, $i)), (pow($zScale, $i)) };
+    }
+    return $scale;
+}
+
+global proc string[] lBldrSourceObjects( string $flags )
+{
+	string $sourceType, $type;
+	string $srcObj[];
+	string $sel[];
+	int $edit;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-src" : case "-source" :
+			$sourceType = $tok[($i + 1)];
+			break ;
+				
+			
+		}
+	}
+
+	if ($sourceType == "wiz"){
+		//$srcObj[] = $sel;
+		$srcObj = `textScrollList -q -ai lBldrSourceObjectsTextScrollList`;
+		//$srcObj = `ls -l $srcObj`; // Long Name
+		
+		$maxIterations = `intSliderGrp -q -v lBldrMaxIterationsIntSliderGrp`;
+		$dupMethod = `optionMenuGrp -q -v lBldrDuplicationMethodOptionMenuGrp`;
+		$ranTerm = `checkBox -q -v lBldrRandomTerminationsCheckBox`;	
+		$buildHier = `checkBox -q -v lBldrBuildHierarchicallyCheckBox`;
+        
+		//Order
+		$setOrdering = `optionMenuGrp -q -v lBldrSetOrderOptionMenuGrp`;
+		$sourceChangeFreq = `optionMenuGrp -q -v lBldrChangeSourceOptionMenuGrp`;
+		
+		//Translate
+		$translatesEnabled = `checkBox -q -v lBldrTranslatesEnabledCheckBox`;
+		$translateStepType = `optionMenuGrp -q -v lBldrTranslateStepTypeOptionMenuGrp`;
+		$translateChangeFreq = `optionMenuGrp -q -v lBldrChangeTranslateOptionMenuGrp`;
+		
+		//Rotation
+		$rotationsEnabled = `checkBox -q -v lBldrRotationsEnabledCheckBox`;
+		$rotateStepType = `optionMenuGrp -q -v lBldrRotationStepTypeOptionMenuGrp`;
+		$rotateChangeFreq = `optionMenuGrp -q -v lBldrChangeRotationOptionMenuGrp`;
+		  
+		//Scaling
+		$scalingEnabled = `checkBox -q -v lBldrScalingEnabledStepCheckBox`;
+		$scaleStepType = `optionMenuGrp -q -v lBldrScaleStepTypeOptionMenuGrp`;
+		$scaleChangeFreq = `optionMenuGrp -q -v lBldrChangeScaleOptionMenuGrp`;
+    
+	} else if ($sourceType == "lBldrAsset"){
+		$asset = $sel[0];
+		$srcObj = `listRelatives -c -type transform $asset`;
+		if (`size $srcObj` == 0){
+			
+		}
+		
+		$maxIterations = `getAttr ($asset + ".maxIterations")`;
+		$dupMethod = `getAttr -as ($asset + ".duplicationMethod")`;
+		$ranTerm = `getAttr -as ($asset + ".randomTerminations")`;
+		$buildHier = `getAttr -as ($asset + ".buildHierarchically")`;
+        
+		//Order
+		$setOrdering = `getAttr -as ($asset + ".setOrdering")`;
+		$sourceChangeFreq = `getAttr -as ($asset + ".sourceChangeFrequency")`;
+		
+		//Translate
+		$translatesEnabled = `getAttr ($asset + ".enableTranslates")`;
+		$translateStepType = `getAttr -as ($asset + ".translateStepType")`;
+		$translateChangeFreq = `getAttr -as ($asset + ".translateChangeFrequency")`;
+		
+		//Rotation
+		$rotationsEnabled = `getAttr ($asset + ".enableRotations")`;
+		$rotateStepType = `getAttr -as ($asset + ".rotationStepType")`;
+		$rotateChangeFreq = `getAttr -as ($asset + ".rotationChangeFrequency")`;
+		  
+		//Scaling
+		$scalingEnabled = `getAttr ($asset + ".enableScaling")`;
+		$scaleStepType = `getAttr -as ($asset + ".scaleStepType")`;
+		$scaleChangeFreq = `getAttr -as ($asset + ".scaleChangeFrequency")`;
+	}
+	return $srcObj;
+}
+
+
+//########################################################################################################
+//########################################################################################################
+///////////////////                                 //////////////////////////////////////////////////////
+//			                GARBAGE PILE
+///////////////////                                 //////////////////////////////////////////////////////
+//########################################################################################################
+//########################################################################################################
+
+
+/*
+
+
+//WIZ CREATE DUPLICATE ON CURVE RIG
+//=====================================================
+global proc string wizCreateCBldrRig( string $sel[] )
+{
+	wizLog("[@] wizCreateCBldrRig");
+	
+	// To Do
+    if (`size $sel` == 0){
+		$sel[0] = `textFieldButtonGrp -q -tx cBldrDuplicateObjectTextFieldButtonGrp`;
+		$sel[1] = `textFieldButtonGrp -q -tx cBldrCurveTextFieldButtonGrp`;
+	}
+	
+	//string $s[] = `listRelatives -type nurbsCurve $sel`;
+	string $s[] = `listRelatives -type nurbsCurve $sel[1]`;
+	string $curveShape = $s[0];
+	if (`size $s` == 0){
+		$s = `listRelatives -type nurbsCurve $sel[0]`;
+		if (`size $s` == 0){
+			string $curve = $sel[0];
+			$sel[0] = $sel[1];
+			$sel[1] = $curve;
+			wizLog("	[!] No curve selected to add to cBldrAsset. Dont forget to add a curve [!]");
+			return "";
+		}
+	}
+    string $assetName = ($sel[1] + "cBldr");
+    string $addContents[] = { $sel[1] };
+
+    //Create an asset to control the duplication values
+    string $cBldr = `container -n $assetName -type dagContainer -ind "inputs" -includeHierarchyBelow -includeShapes -includeTransform -force -addNode $addContents`;
+	addWizAssetTypeAttributeToSelectedAsset($cBldr, "cBldrAsset");
+    //Add the assetWiz command to the asset
+    setAttr -type "string" ($cBldr + ".rmbCommand") "assetWiz";
+    
+	//Make arcLengthDimension to get length of curve
+	addCurveMeasuringToSelectedCurve({$sel[1]});
+
+	//string $name = $sel[1] + "StartCurveLengthChangeScriptJob";
+    string $name = $cBldr + "StartCurveLengthChangeScriptJob";
+	$name = makeNiceName($name);
+
+	//string $selName = removeAllSpaces($sel[1]);
+    string $selName = removeAllSpaces($cBldr);
+    
+	string $curveLengthAttr = $sel[1] + ".curveLength";
+    
+	string $cDupCount = $selName + ".duplicateCount";
+	string $cSpac = $selName + ".spacing";
+	string $spacMethName = $selName + ".spacingMethod";
+
+	//Create a scriptNode that executes a scriptJob when opening scene so we can monitor when curve attr are changed.
+	string $bs = (
+	"scriptJob -kws -ac " + $cDupCount + " (\"updateDuplicatesOnCurve(" + "\\\"" + $cBldr + "\\\"" + ");\");"+"\n"
+	+"scriptJob -kws -ac " + $cSpac + " (\"updateDuplicatesOnCurve(" + "\\\"" + $cBldr + "\\\"" + ");\");"+"\n"
+	+"scriptJob -kws -ac " + $spacMethName + " (\"updateDuplicatesOnCurve(" + "\\\"" + $cBldr + "\\\"" + ");\");"+"\n"
+	+"scriptJob -kws -ac " + $curveLengthAttr + " (\"updateDuplicatesOnCurve(" + "\\\"" + $cBldr + "\\\"" + ");\");"+"\n"
+	
+	);
+	
+	if (`objExists $name`){
+		delete $name;
+	}
+	
+	scriptNode -st 1 -bs $bs -n $name;
+		
+		
+	int $dupType = (`optionMenuGrp -q -sl cBldrDuplicateTypeOptionMenuGrp` - 1);
+	int $spacMeth = (`optionMenuGrp -q -sl cBldrSpacingMethodOptionMenuGrp` - 1);
+	int $dupCount = `intFieldGrp -q -v1 cBldrDuplicateCountIntFieldGrp`;
+	float $spac = `floatFieldGrp -q -v1 cBldrSpacingFloatFieldGrp`;
+	float $offsetU = `floatFieldGrp -q -v1 cBldrOffsetUFloatFieldGrp`;
+	int $ranSpace = `checkBox -q -v cBldrRandomizeSpacingCheckBox`;
+	float $ranAmount = `floatFieldGrp -q -v1 cBldrRandomAmountFloatFieldGrp`;
+	int $parLen = `checkBox -q -v cBldrParametricLengthCheckBox`;
+	int $followPath = `checkBox -q -v cBldrFollowPathCheckBox`;
+	int $flowPath = `checkBox -q -v cBldrFlowPathCheckBox`;
+    int $flowLatDiv[] = `intFieldGrp -q -v cBldrLatticeDivisionsIntFieldGrp`;
+	int $groupDup = `checkBox -q -v cBldrGroupDuplicatesCheckBox`;
+	int $useSets = `checkBox -q -v cBldrUseSetsCheckBox`;
+	
+	int $frontAxis = `optionMenuGrp -q -sl cBldrFollowPathFrontAxisOptionMenuGrp`;
+	int $inverseFront = `checkBox -q -v cBldrInverseFrontCheckBox`;
+	int $upAxis = `optionMenuGrp -q -sl cBldrFollowPathUpAxisOptionMenuGrp`;	
+	int $inverseUp = `checkBox -q -v cBldrInverseUpCheckBox`;
+	
+	//Subtract one because this value comes from an optionMenu
+	$frontAxis = $frontAxis - 1;
+	$upAxis = $upAxis - 1;
+		
+	int $alwaysCap = `checkBox -q -v cBldrAlwaysCapCheckBox`;
+	int $scaleToFill = `checkBox -q -v cBldrScaleToFillRemainderCheckBox`;
+	//Add attrs to the curve object
+	select -r $sel[1];
+	//Name of object to duplicate
+    
+    string $newAttrName[] = { "enableDuplication",
+    "duplicateName",
+    "duplicateType",
+    "callRandomizeOnDuplicates",
+    "spacingMethod",
+    "spacing",
+    "duplicateCount",
+    "randomizeSpacing",
+    "randomAmount",
+    "offsetU",
+    "followPath",
+    "frontAxis",
+    "inverseFront",
+    "upAxis",
+    "inverseUp",
+    "parametricLength",
+    "flowPath",
+    "flowLatticeDivisions",
+    "groupDuplicates",
+    "useSets",
+    "alwaysCap",
+    "scaleToFill",
+    "lastCurveLength"   
+    };
+	
+	if (`attributeExists "enableDuplication" $cBldr` == 0){
+		addAttr -ln "enableDuplication" -at bool $cBldr;
+		setAttr -e -keyable true ($cBldr + ".enableDuplication");
+		setAttr ($cBldr + ".enableDuplication") true;
+	}
+	if (`attributeExists "duplicateName" $cBldr` == 0){
+		addAttr -ln "duplicateName" -dt "string" $cBldr;
+		setAttr -e -keyable true ($cBldr + ".duplicateName");
+		setAttr -type "string" ($cBldr + ".duplicateName") $sel[0];
+	}
+	if (`attributeExists "duplicateType" $cBldr` == 0){
+		addAttr -ln "duplicateType" -at "enum" -en ("copy=0:instance=1:referenceCopy=2:") $cBldr;
+		setAttr ($cBldr + ".duplicateType") $dupType;
+	}
+	
+	if (`attributeExists "setOrdering" $cBldr` == 0){
+		string $setOrdering[] = { "sequence", "random", "headSequence", "sequenceTail", "headSequenceTail", "headRandom", "randomTail", "headRandomTail" };
+	
+		string $enum[];
+		for ($p=0;$p<`size $setOrdering`;$p++){
+			$enum[$p] = $setOrdering[$p];
+			$enum[$p] = $enum[$p] + "=" + $p + ":";
+		}
+		addAttr -ln "setOrdering" -at "enum" -en (stringArrayToString($enum, "")) $cBldr;
+	}
+    
+    // TERMINATIONS
+	if (`attributeExists "callRandomizeOnDuplicates" $cBldr` == 0){
+		addAttr -ln "callRandomizeOnDuplicates" -at bool $cBldr;
+		setAttr -e -keyable true ($cBldr + ".callRandomizeOnDuplicates");
+		setAttr ($cBldr + ".callRandomizeOnDuplicates") true;
+	}
+    
+	if (`attributeExists "spacingMethod" $cBldr` == 0){	
+		//Spacing options
+		addAttr -ln "spacingMethod" -at "enum" -en ("count=0:curvePercent=1:worldDistance=2:bboxFit=3:") $cBldr;
+		setAttr ($cBldr + ".spacingMethod") $spacMeth;
+	}
+	if (`attributeExists "spacing" $cBldr` == 0){
+		addAttr -ln "spacing" -at double -dv 1 $cBldr;
+		setAttr -e -keyable true ($cBldr + ".spacing");	
+		setAttr ($cBldr + ".spacing") $spac;
+	}
+	if (`attributeExists "duplicateCount" $cBldr` == 0){
+		addAttr -ln "duplicateCount" -at long -dv 5 $cBldr;
+		setAttr -e -keyable true ($cBldr + ".duplicateCount");	
+		setAttr ($cBldr + ".duplicateCount") $dupCount;
+	}
+	if (`attributeExists "randomizeSpacing" $cBldr` == 0){
+		addAttr -ln "randomizeSpacing" -at bool $cBldr;
+		setAttr -e -keyable true ($cBldr + ".randomizeSpacing");
+		setAttr ($cBldr + ".randomizeSpacing") $ranSpace;
+	}
+	if (`attributeExists "randomAmount" $cBldr` == 0){
+		addAttr -ln "randomAmount" -at double -dv 1 $cBldr;
+		setAttr -e -keyable true ($cBldr + ".randomAmount");
+		setAttr ($cBldr + ".randomAmount") $ranAmount;
+	}
+	if (`attributeExists "offsetU" $cBldr` == 0){	
+		addAttr -ln "offsetU" -at double -dv 0 $cBldr;
+		setAttr -e -keyable true ($cBldr + ".offsetU");
+		setAttr ($cBldr + ".offsetU") $offsetU;
+	}
+	if (`attributeExists "followPath" $cBldr` == 0){	
+		//Path options
+		addAttr -ln "followPath" -at bool $cBldr;
+		setAttr -e -keyable true ($cBldr + ".followPath");
+		setAttr ($cBldr + ".followPath") $followPath;
+	}	
+		
+	if (`attributeExists "frontAxis" $cBldr` == 0){	
+		addAttr -ln "frontAxis" -at "enum" -en ("x=0:y=1:z=2:") $cBldr;
+		setAttr ($cBldr + ".frontAxis") $frontAxis;
+	}
+	if (`attributeExists "inverseFront" $cBldr` == 0){	
+		addAttr -ln "inverseFront" -at bool $cBldr;
+		setAttr ($cBldr + ".inverseFront") $inverseFront;
+	}
+	if (`attributeExists "upAxis" $cBldr` == 0){	
+		addAttr -ln "upAxis" -at "enum" -en ("x=0:y=1:z=2:") $cBldr;
+		setAttr ($cBldr + ".upAxis") $upAxis;
+	}
+	if (`attributeExists "inverseUp" $cBldr` == 0){	
+		addAttr -ln "inverseUp" -at bool $cBldr;
+		setAttr ($cBldr + ".inverseUp") $inverseUp;
+	}
+	if (`attributeExists "parametricLength" $cBldr` == 0){
+		addAttr -ln "parametricLength" -at bool  $cBldr;
+		setAttr -e -keyable true ($cBldr + ".parametricLength");
+		setAttr ($cBldr + ".parametricLength") $parLen;
+	}
+	if (`attributeExists "flowPath" $cBldr` == 0){	
+		addAttr -ln "flowPath" -at bool $cBldr;
+		setAttr -e -keyable true ($cBldr + ".flowPath");
+		setAttr ($cBldr + ".flowPath") $flowPath;
+	}
+    if (`attributeExists "flowLatticeDivisions" $cBldr` == 0){	     
+        addAttr -ln "flowLatticeDivisions" -at short3 $cBldr;
+            addAttr -ln "flowLatticeDivisionsX" -at short -p "flowLatticeDivisions" $cBldr;
+            addAttr -ln "flowLatticeDivisionsY" -at short -p "flowLatticeDivisions" $cBldr;
+            addAttr -ln "flowLatticeDivisionsZ" -at short -p "flowLatticeDivisions" $cBldr;
+		setAttr ($cBldr + ".flowLatticeDivisions") $flowLatDiv[0] $flowLatDiv[1] $flowLatDiv[2];
+	}
+	if (`attributeExists "groupDuplicates" $cBldr` == 0){	
+		addAttr -ln "groupDuplicates" -at bool $cBldr;
+		setAttr -e -keyable true ($cBldr + ".groupDuplicates");
+		setAttr ($cBldr + ".groupDuplicates") true;
+	}
+	if (`attributeExists "useSets" $cBldr` == 0){		
+		addAttr -ln "useSets" -at bool $cBldr;
+		setAttr -e -keyable true ($cBldr + ".useSets");
+		setAttr ($cBldr + ".useSets") $useSets;
+	}
+
+	if (`attributeExists "alwaysCap" $cBldr` == 0){	
+		addAttr -ln "alwaysCap" -at bool $cBldr;
+		setAttr -e -keyable true ($cBldr + ".alwaysCap");
+		setAttr ($cBldr + ".alwaysCap") $alwaysCap;
+	}
+	
+    if (`attributeExists "scaleToFill" $cBldr` == 0){	
+		addAttr -ln "scaleToFill" -at bool $cBldr;
+		setAttr -e -keyable true ($cBldr + ".scaleToFill");
+		setAttr ($cBldr + ".scaleToFill") $scaleToFill;
+	}
+    
+	if (`attributeExists "lastCurveLength" $cBldr` == 0){
+		addAttr -ln "lastCurveLength" -at double -dv 1 -h true $cBldr;
+		setAttr -e -keyable true ($cBldr + ".lastCurveLength");
+		float $curCurveLength = `getAttr ($sel[1] + ".curveLength")`;
+		setAttr ($cBldr + ".lastCurveLength") $curCurveLength;
+	}
+	
+	if (`attributeExists "useReplacementCurves" $cBldr` == 0){
+		addAttr -ln "useReplacementCurves" -at bool $cBldr;
+		setAttr -e -keyable true ($cBldr + ".useReplacementCurves");
+		setAttr ($cBldr + ".useReplacementCurves") false;
+	}
+	
+	if (`attributeExists "replacementCurves" $cBldr` == 0){
+		addAttr -ln "replacementCurves" -dt "string" $cBldr;
+	} 
+	 
+	
+    for ($i=0;$i<`size $newAttrName`;$i++){
+        container -e -publishAndBind ($cBldr + "." + $newAttrName[$i]) $newAttrName[$i] $cBldr;
+    } 
+	
+	//Run the scriptJob now.
+	eval($bs);   
+     
+    
+	updateDuplicatesOnCurve($cBldr);
+	
+	wizLog ("	[+] Attributes For Changing The Duplicate On Curve Parameters Were Added To : " + $cBldr + "\n");
+	wizLog ("	[#] The Duplicates Will Update If The Length Of The Curve Changes, Or If The Spacing Attribute Changes.\n"+wizDiv("se")+"\n");
+	
+	return $cBldr;
+}
+
+
+//@ CREATE L BLDR ASSET
+//====================================================================
+global proc createLBldrAsset()
+{
+	string $sel[] = `ls -sl`;
+	//string $asset = $sel[0];
+	
+	string $assetName = ("lBldr");
+    string $addContents[] = $sel;
+
+	//string $lBldrSourceGroup = `group -n "lBldrSrcGroup" $addContents`;
+	
+    //Create an asset to control the duplication values
+    string $asset = `container -n $assetName -type dagContainer -ind "inputs" -includeHierarchyBelow -includeShapes -includeTransform -force -addNode $addContents`;
+	addWizAssetTypeAttributeToSelectedAsset($asset, "lBldrAsset");
+	
+    //Add the assetWiz command to the asset
+    setAttr -type "string" ($asset + ".rmbCommand") "assetWiz";
+	
+	//_________________________________________
+	// ADD ATTRIBUTES
+	
+	//SET ORDERING
+	if (`attributeExists "setOrdering" $asset` == 0){
+		addAttr -ln "setOrdering" -at "enum" -en ("sequence=0:random=1:randomRepeater=2:randomRepeater=3:sequenceTail=4:headSequenceTail=5:headRandom=6:randomTail=7:headRandomTail=8:") $asset;
+		setAttr ($asset + ".setOrdering") 0;
+	}
+	//SOURCE CHANGE FREQUENCY
+	if (`attributeExists "sourceChangeFrequency" $asset` == 0){
+		addAttr -ln "sourceChangeFrequency" -at "enum" -en ("everyIteration=0:everyDuplicate=1:") $asset;
+		setAttr ($asset + ".sourceChangeFrequency") 0;
+	}
+	
+    // TERMINATIONS
+	if (`attributeExists "callRandomizeOnDuplicates" $asset` == 0){
+		addAttr -ln "callRandomizeOnDuplicates" -at bool $asset;
+		setAttr -e -keyable true ($asset + ".callRandomizeOnDuplicates");
+		setAttr ($asset + ".callRandomizeOnDuplicates") true;
+	}
+    
+	// TERMINATIONS
+	if (`attributeExists "randomTerminations" $asset` == 0){
+		addAttr -ln "randomTerminations" -at bool $asset;
+		setAttr -e -keyable true ($asset + ".randomTerminations");
+		setAttr ($asset + ".randomTerminations") false;
+	}
+	
+	// MAX ITERATIONS
+    if (`attributeExists "maxIterations" $asset` == 0){
+		addAttr -ln "maxIterations" -at long -dv 5 $asset;
+		setAttr -e -keyable true ($asset + ".maxIterations");	
+	}
+	
+	// DUPLICATION METHOD
+	if (`attributeExists "duplicationMethod" $asset` == 0){
+		addAttr -ln "duplicationMethod" -at "enum" -en ("duplicate=0:instance=1:referenceCopy=2:") $asset;
+		setAttr ($asset + ".duplicationMethod") 0;
+	}
+    
+    if (`attributeExists "buildHierarchically" $asset` == 0){
+		addAttr -ln "buildHierarchically" -at bool $asset;
+		setAttr ($asset + ".buildHierarchically") 1;
+	}
+	
+	//_________________________________________	
+	// TRANSFORMS
+	
+	if (`attributeExists "enableTranslates" $asset` == 0){
+		addAttr -ln "enableTranslates" -at bool $asset;
+		setAttr -e -keyable true ($asset + ".enableTranslates");
+		setAttr ($asset + ".enableTranslates") false;
+	}
+
+		
+	//TRANSFORM STEP TYPE
+	if (`attributeExists "translateStepType" $asset` == 0){
+		addAttr -nn "translateStepType" -ln "translateStepType" -at "enum" -en ("random=0:linear=1:exponential=2:sine=3:") $asset;
+		setAttr ($asset + ".translateStepType") 0;
+	}
+	
+	//TRANSFORM CHANGE FREQUENCY
+	if (`attributeExists "translateChangeFrequency" $asset` == 0){
+		addAttr -nn "translateChange" -ln "translateChangeFrequency" -at "enum" -en ("everyIteration=0:everyDuplicate=1:") $asset;
+		setAttr ($asset + ".translateChangeFrequency") 0;
+	}
+	
+	if (`attributeExists "minTranslateRandom" $asset` == 0){	     
+        addAttr -ln "minTranslateRandom" -at float3 $asset;
+            addAttr -nn "minX" -ln "minTranslateRandomX" -at "float" -p "minTranslateRandom" $asset;
+            addAttr -nn "minY" -ln "minTranslateRandomY" -at "float" -p "minTranslateRandom" $asset;
+            addAttr -nn "minZ" -ln "minTranslateRandomZ" -at "float" -p "minTranslateRandom" $asset;
+		setAttr ($asset + ".minTranslateRandom") 0.0 0.0 0.0;
+	}
+	if (`attributeExists "maxTranslateRandom" $asset` == 0){	     
+        addAttr -ln "maxTranslateRandom" -at float3 $asset;
+            addAttr -nn "maxX" -ln "maxTranslateRandomX" -at "float" -p "maxTranslateRandom" $asset;
+            addAttr -nn "maxY" -ln "maxTranslateRandomY" -at "float" -p "maxTranslateRandom" $asset;
+            addAttr -nn "maxZ" -ln "maxTranslateRandomZ" -at "float" -p "maxTranslateRandom" $asset;
+		setAttr ($asset + ".maxTranslateRandom") 0.0 0.0 0.0;
+	}
+	
+	if (`attributeExists "translateAmount" $asset` == 0){	     
+        addAttr -ln "translateAmount" -at float3 $asset;
+            addAttr -nn "trX" -ln "translateAmountX" -at "float" -p "translateAmount" $asset;
+            addAttr -nn "trY" -ln "translateAmountY" -at "float" -p "translateAmount" $asset;
+            addAttr -nn "trZ" -ln "translateAmountZ" -at "float" -p "translateAmount" $asset;
+		setAttr ($asset + ".translateAmount") 0.0 0.0 0.0;
+	}
+	
+	//_________________________________________
+	// ROTATIONS
+	
+	if (`attributeExists "enableRotations" $asset` == 0){
+		addAttr -ln "enableRotations" -at bool $asset;
+		setAttr -e -keyable true ($asset + ".enableRotations");
+		setAttr ($asset + ".enableRotations") true;
+	}	
+	
+	//ROTATION CHANGE FREQUENCY
+	if (`attributeExists "rotationChangeFrequency" $asset` == 0){
+		addAttr -nn "rotationChange" -ln "rotationChangeFrequency" -at "enum" -en ("everyIteration=0:everyDuplicate=1:") $asset;
+		setAttr ($asset + ".rotationChangeFrequency") 0;
+	}
+	
+	//ROTATION STEP TYPE
+	if (`attributeExists "rotationStepType" $asset` == 0){
+		addAttr -nn "rotateStepType" -ln "rotationStepType" -at "enum" -en ("random=0:linear=1:exponential=2:sine=3:") $asset;
+		setAttr ($asset + ".rotationStepType") 0;
+	}
+		
+	//ROTATE DEGREES TYPE
+	if (`attributeExists "rotateDegreesType" $asset` == 0){
+		addAttr -nn "rotateFreedom" -ln "rotateDegreesType" -at "enum" -en ("nDegrees=0:free=1:") $asset;
+		setAttr ($asset + ".rotateDegreesType") 0;
+	}
+	
+	if (`attributeExists "rotateAmount" $asset` == 0){	     
+        addAttr -ln "rotateAmount" -at float3 $asset;
+            addAttr -nn "roX" -ln "rotateAmountX" -at "float" -p "rotateAmount" $asset;
+            addAttr -nn "roY" -ln "rotateAmountY" -at "float" -p "rotateAmount" $asset;
+            addAttr -nn "roZ" -ln "rotateAmountZ" -at "float" -p "rotateAmount" $asset;
+		setAttr ($asset + ".rotateAmount") 0.0 90.0 0.0;
+	}	
+		
+	if (`attributeExists "minRotateRandom" $asset` == 0){	     
+        addAttr -ln "minRotateRandom" -at float3 $asset;
+            addAttr -nn "minX" -ln "minRotateRandomX" -at "float" -p "minRotateRandom" $asset;
+            addAttr -nn "minY" -ln "minRotateRandomY" -at "float" -p "minRotateRandom" $asset;
+            addAttr -nn "minZ" -ln "minRotateRandomZ" -at "float" -p "minRotateRandom" $asset;
+		setAttr ($asset + ".minRotateRandom") -360.0 -360.0 -360.0;
+	}
+	if (`attributeExists "maxRotateRandom" $asset` == 0){	     
+        addAttr -ln "maxRotateRandom" -at float3 $asset;
+            addAttr -nn "maxX" -ln "maxRotateRandomX" -at "float" -p "maxRotateRandom" $asset;
+            addAttr -nn "maxY" -ln "maxRotateRandomY" -at "float" -p "maxRotateRandom" $asset;
+            addAttr -nn "maxZ" -ln "maxRotateRandomZ" -at "float" -p "maxRotateRandom" $asset;
+		setAttr ($asset + ".maxRotateRandom") 360.0 360.0 360.0;
+	}
+			
+	//_________________________________________
+	// SCALING	
+	
+	if (`attributeExists "enableScaling" $asset` == 0){
+		addAttr -ln "enableScaling" -at bool $asset;
+		setAttr -e -keyable true ($asset + ".enableScaling");
+		setAttr ($asset + ".enableScaling") false;
+	}
+		
+	//SCALE STEP TYPE
+	if (`attributeExists "scaleStepType" $asset` == 0){
+		addAttr -nn "scaleStepType" -ln "scaleStepType" -at "enum" -en ("random=0:linear=1:exponential=2:sine=3:") $asset;
+		setAttr ($asset + ".scaleStepType") 0;
+	}
+	
+	//SCALE CHANGE FREQUENCY
+	if (`attributeExists "scaleChangeFrequency" $asset` == 0){
+		addAttr -nn "scaleChange" -ln "scaleChangeFrequency" -at "enum" -en ("everyIteration=0:everyDuplicate=1:") $asset;
+		setAttr ($asset + ".scaleChangeFrequency") 0;
+	}
+	
+	
+	if (`attributeExists "minScaleRandom" $asset` == 0){	     
+        addAttr -ln "minScaleRandom" -at float3 $asset;
+            addAttr -nn "minX" -ln "minScaleRandomX" -at "float" -p "minScaleRandom" $asset;
+            addAttr -nn "minY" -ln "minScaleRandomY" -at "float" -p "minScaleRandom" $asset;
+            addAttr -nn "minZ" -ln "minScaleRandomZ" -at "float" -p "minScaleRandom" $asset;
+		setAttr ($asset + ".minScaleRandom") 1.0 1.0 1.0;
+	}
+	if (`attributeExists "maxScaleRandom" $asset` == 0){	     
+        addAttr -ln "maxScaleRandom" -at float3 $asset;
+            addAttr -nn "maxX" -ln "maxScaleRandomX" -at "float" -p "maxScaleRandom" $asset;
+            addAttr -nn "maxY" -ln "maxScaleRandomY" -at "float" -p "maxScaleRandom" $asset;
+            addAttr -nn "maxZ" -ln "maxScaleRandomZ" -at "float" -p "maxScaleRandom" $asset;
+		setAttr ($asset + ".maxScaleRandom") 2.0 2.0 2.0;
+	}
+	
+	if (`attributeExists "scaleAmount" $asset` == 0){	     
+        addAttr -ln "scaleAmount" -at float3 $asset;
+            addAttr -nn "scX" -ln "scaleAmountX" -at "float" -p "scaleAmount" $asset;
+            addAttr -nn "scY" -ln "scaleAmountY" -at "float" -p "scaleAmount" $asset;
+            addAttr -nn "scZ" -ln "scaleAmountZ" -at "float" -p "scaleAmount" $asset;
+		setAttr ($asset + ".scaleAmount") 1.0 1.0 1.0;
+	}
+		
+	string $notes = (
+	"lBldr<br>"+"\n"
+	+"===========================================<br>"+"\n"
+	+"	- Put whatever objects you want to build with inside the lBldr Asset<br>"+"\n"
+	+"	- An lBldr object should contain locators with the names : input# and output#<br>"+"\n"
+	+"	- lBldr will build iteratively using the inputs and output transforms<br>"+"\n"
+	);
+	addNotesToObjects({$asset}, $notes);
+	/*
+	<ToDoWiz!> Add Icon
+	string $iconDir = 
+	setAttr -type "string" lBldr.iconName "C:/Users/Glen/Documents/maya/scripts/wiz/wizIcons/lBldrIcon2.png";
+
+}
+*/
+
+
+
+global proc string[] wizBuildLeaf( string $flags )
+{
+	string $obj, $type;
+	string $sel[];
+	
+	int $points, $div;
+	float $length, $width, $sb;
+	
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-p" : case "-points" :
+			$points = int($tok[($i + 1)]);
+			break ;
+			
+			case "-l" : case "-length" :
+			$length = float($tok[($i + 1)]);
+			break ;			
+			
+			case "-w" : case "-width" :
+			$width = float($tok[($i + 1)]);
+			break ;
+			
+			case "-sb" : case "-splitBias" :
+			$sb = float($tok[($i + 1)]);
+			break ;
+			
+			case "-div" : case "-divisions" :
+			$div = int($tok[($i + 1)]);
+			break ;
+			
+			
+			
+		}
+	}
+
+	polyPlane -ch on -o on -w $width -h 1 -sw ($points * 2) -sh 1 -cuv 2 ;
+	
+	return {""};
+
+}
+
+
+global proc string[] arrayBldr( string $flags )
+{
+	string $obj, $type;
+	string $sel[];
+	int $edit;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-typ" : case "-type" :
+			$type = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	
+	return {""};
+}
+
+//@ WIZ DUPLICATE LINE OBJECT ON CURVES
+//====================================================================
+/*****************************************************************//**
+	This duplicates an object and moves starts and end transforms to start and end of curves.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	wizDuplicateLineObjectOnCurves("-sl");
+	
+	</code>
+*********************************************************************/
+global proc wizDuplicateLineObjectOnCurves( string $flags )
+{
+
+	string $obj;
+	string $sel[];
+	string $curves[];
+	int $im;
+	
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-c" : case "-curve" :
+			$curves[0] = $tok[($i + 1)];
+			break ;
+							
+			case "-sl" : case "-selected" :			
+			$sel = `ls -sl`;
+			if (`size $obj` == 0){
+				$obj = $sel[0];
+			}
+			$curves = smartSelectObjectsOfType($sel, "-type nurbsCurve");			
+			break ;			
+			
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+			
+			case "-im" : case "-instanceMethod" :
+			$im = true;
+			break ;
+		}
+	}
+	
+	wizlog ("	[#] Object : " + $obj);
+	wizlog (niceArrayList("	[#] Curves : ", $curves));
+	
+	
+	wizProgressWindowStart("Building Line Objects On Cuves", "Starting", 1);
+    wizProgressWindowMinMax(0,(`size $curves`));
+	
+	for ($i=0;$i<`size $curves`;$i++){
+		 wizProgressWindowStatus(("Building On Curve : " + $i + " -Of- " + (`size $curves`)));
+		
+		wizProgressWindowStep(1);
+		select -r $curves[$i];
+		string $ctransform[] = `listTransforms -sl`;
+	
+		//refresh;
+		//refreshAE;
+		
+		select -r $obj;
+		
+		//_________________________________________
+		// Duplicate the obj renaming children and duplicating inputConnections
+		
+		//wizlog ("[#] Original Object : " + $obj);
+		//string $dupName = makeNiceName(("lineBldr_" + $obj + $i));
+		//string $dup[] = wizDoDuplicate(`ls -sl`, ("-meth duplicate -c 1 -n " + $dupName));
+		//string $dup[] = `duplicate -rr -renameChildren -un -n $dupName`;
+		string $startObj;
+		string $midObj;
+		string $endObj;
+		float $midStart, $endStart, $midScale;
+		
+		if ($im){
+			select -r $obj;
+			string $c[] = `listRelatives -c`;			
+			select -r $c;
+			
+			string $so[] = `ls -tr -sl "*start*"`;
+			float $sBBoxSizeY, $mBBoxSizeY, $eBBoxSizeY;
+			
+			if (`size $so` > 0){
+				select -r $so[0];
+				string $inst[] = `instance`; 
+				$startObj = $inst[0]; 
+				parent -w $startObj;
+				$sBBoxSizeY = `getAttr ($startObj + ".boundingBoxSizeY")`;
+			} else {
+				wizlog ("	[!] No Start Transform Found Under Object : " + $obj);
+				wizlog ("	[!] A locator named start# needs to be located in objects hierarchy");
+				//return ;
+			}
+			select -r $c;
+			string $mo[] = `ls -tr -sl "*mid*"`;
+			if (`size $mo` > 0){
+				select -r $mo[0];
+				string $inst[] = `instance`; 
+				$midObj = $inst[0];
+				parent -w $midObj;
+				$mBBoxSizeY = `getAttr ($midObj + ".boundingBoxSizeY")`;
+			} else {
+				wizlog ("	[!] No Middle Transform Found Under Object : " + $obj);
+				wizlog ("	[!] A locator named mid# needs to be located in objects hierarchy");
+				//return ;
+			}
+			select -r $c;
+			string $eo[] = `ls -tr -sl "*end*"`;
+			if (`size $eo` > 0){
+				select -r $eo[0];	
+				string $inst[] = `instance`; 				
+				$endObj = $inst[0];
+				parent -w $endObj;
+				$eBBoxSizeY = `getAttr ($endObj + ".boundingBoxSizeY")`;
+			} else {
+				wizlog ("	[!] No End Transform Found Under Object : " + $obj);
+				wizlog ("	[!] A locator named end# needs to be located in objects hierarchy");
+				//return ;
+			}
+			
+			// The instance method will place start mid and end instances 
+			if ($im){
+			
+				addCurveMeasuringToSelectedCurve({$ctransform[0]});
+				string $ald[] = smartSelectObjectsOfType({$ctransform[0]}, "-type arcLengthDimension");
+				float $arcLength = `getAttr ($ald[0] + ".arcLength")`;
+				wizlog ("[*] Arch Length : " + $arcLength);
+				
+				// Calculate where to put the middle and end pieces and how much to scale the middle piece to fit.
+				
+				if ($arcLength != 0){
+					$midStart = 1 / ($arcLength / $sBBoxSizeY);
+					$endStart = 1 - (1 / ($arcLength / $eBBoxSizeY));
+					$midScale = $arcLength - ($sBBoxSizeY + $eBBoxSizeY);
+					
+					wizlog ("[*] MidStart : " + $midStart);
+					wizlog ("[*] EndStart : " + $endStart);
+					wizlog ("[*] MidScale : " + $midScale);
+				} else {
+					continue;
+				}
+
+				
+			}						
+		
+		
+		
+		
+		
+		} else {
+		
+			string $dup[] = `duplicate -rr -renameChildren -un`;
+			//wizlog ("[#] Duplicate Object : " + $dup[0]);
+			
+			//refresh;
+			//refreshAE;
+			
+			// Move obj to curve position
+			
+			select -r $ctransform[0];
+			select -add $dup[0];
+			/*
+			//_________________________________________
+			// Parent Constraint Method		
+			
+			pointConstraint -offset 0 0 0 -weight 1;	
+				
+			// tangentConstraint object to curve
+			select -r $ctransform[0];
+			select -add $dup[0];
+			tangentConstraint -weight 1 -aimVector 0 1 0 -upVector 0 1 0 -worldUpType "vector" -worldUpVector 0 1 0;
+
+			refresh;
+			refreshAE;
+			
+			select -r $dup[0];
+			
+			
+			string $c[] = `listRelatives -c`;
+			select -r $c;
+			string $startObj;
+			string $endObj;
+			string $so[] = `ls -tr -sl "*start*"`;
+			if (`size $so` > 0){
+				$startObj = $so[0];
+			} else {
+				wizlog ("	[!] No Start Transform Found Under Object : " + $dup[0]);
+				wizlog ("	[!] A locator named start# needs to be located in objects hierarchy");
+				//return ;
+			}
+			
+			string $eo[] = `ls -tr -sl "*end*"`;
+			if (`size $eo` > 0){
+				$endObj = $eo[0];
+			} else {
+				wizlog ("	[!] No End Transform Found Under Object : " + $dup[0]);
+				wizlog ("	[!] A locator named end# needs to be located in objects hierarchy");
+				//return ;
+			}
+		
+			//_________________________________________
+			// Move start transform to position of first cv
+			if (`size $startObj` > 0){
+				string $startCV = ($curves[$i] + ".cv[0]");
+				float $sPos[] = `xform -q -ws -t $startCV`;		
+				xform -ws -t $sPos[0] $sPos[1] $sPos[2] $startObj;
+				
+			}
+			
+			if (`size $endObj` > 0){
+				int $spans = `getAttr ($curves[$i] + ".spans")`;
+				int $degree = `getAttr ($curves[$i] + ".degree")`;
+				string $endCV = ($curves[$i] + ".cv[" + (($spans + $degree) - 1) + "]");
+				float $ePos[] = `xform -q -ws -t $endCV`;				
+				xform -ws -t $ePos[0] $ePos[1] $ePos[2] $endObj;
+				
+			}
+			*/
+		
+			//_________________________________________
+			// Motion Path Method
+			
+			select -r $dup[0];		
+			string $c[] = `listRelatives -c`;
+			
+			select -r $c;
+			string $so[] = `ls -tr -sl "*start*"`;
+			
+			if (`size $so` > 0){
+				$startObj = $so[0];
+				
+			} else {
+				wizlog ("	[!] No Start Transform Found Under Object : " + $dup[0]);
+				wizlog ("	[!] A locator named start# needs to be located in objects hierarchy");
+				//return ;
+			}
+			
+			string $mo[] = `ls -tr -sl "*mid*"`;
+			if (`size $mo` > 0){
+				$midObj = $mo[0];
+				
+			} else {
+				wizlog ("	[!] No Middle Transform Found Under Object : " + $dup[0]);
+				wizlog ("	[!] A locator named mid# needs to be located in objects hierarchy");
+				//return ;
+			}
+					
+			string $eo[] = `ls -tr -sl "*end*"`;
+			if (`size $eo` > 0){
+				$endObj = $eo[0];
+				
+			} else {
+				wizlog ("	[!] No End Transform Found Under Object : " + $dup[0]);
+				wizlog ("	[!] A locator named end# needs to be located in objects hierarchy");
+				//return ;
+			}
+			
+		}
+		
+		wizlog ("[*] StartObj : " + $startObj);
+		wizlog ("[*] MidObj : " + $midObj);
+		wizlog ("[*] EndObj : " + $endObj);
+		//_________________________________________
+		// Start
+		if ($startObj != ""){
+			select -r $startObj;
+			select -add $ctransform[0];
+			
+			string $moPath = `pathAnimation -fractionMode true -follow true -followAxis y -upAxis z -worldUpType "vector" -worldUpVector 0 1 0 -inverseUp false -inverseFront false -bank false -startTimeU 1 -endTimeU 2`;
+
+			disconnectAttr ($moPath + "_uValue.output") ($moPath + ".uValue");
+			setAttr ($moPath + ".uValue") 0.0;
+			
+			wizlog ("[+] Motion Path Added : " + $moPath + " : To StartObj : " + $startObj);
+		}
+		//_________________________________________
+		// Middle
+		if ($midObj != ""){
+			select -r $midObj;
+			select -add $ctransform[0];
+			
+			$moPath = `pathAnimation -fractionMode true -follow true -followAxis y -upAxis z -worldUpType "vector" -worldUpVector 0 1 0 -inverseUp false -inverseFront false -bank false -startTimeU 1 -endTimeU 2`;
+	/*
+			// Add Flow 
+				if ($flow == 1){
+					select -r $curve;
+					select -r $new[0];
+					
+					string $flow[] = `flow -divisions $flowLatDiv[0] $flowLatDiv[1] $flowLatDiv[2] -objectCentered 0 -localCompute 0 -localDivisions 2 2 2 $new[0]`;	
+					if ($groupDup == 1 && `size $group` > 0){
+						catchQuiet(`parent $flow $group[0]`);
+					}	
+				}
+				*/
+			disconnectAttr ($moPath + "_uValue.output") ($moPath + ".uValue");
+			if ($im){
+				setAttr ($moPath + ".uValue") $midStart;
+				setAttr ($midObj + ".scaleY") $midScale;
+			} else {
+				setAttr ($moPath + ".uValue") 0.5;
+			}
+			wizlog ("[+] Motion Path Added : " + $moPath + " : To MidObj : " + $midObj);
+		}
+		//_________________________________________
+		// End
+		if ($endObj != ""){
+			select -r $endObj;
+			select -add $ctransform[0];
+			
+			$moPath = `pathAnimation -fractionMode true -follow true -followAxis y -upAxis z -worldUpType "vector" -worldUpVector 0 1 0 -inverseUp false -inverseFront false -bank false -startTimeU 1 -endTimeU 2`;
+
+			disconnectAttr ($moPath + "_uValue.output") ($moPath + ".uValue");
+			if ($im){
+				setAttr ($moPath + ".uValue") $endStart;
+			} else {
+				setAttr ($moPath + ".uValue") 1.0;
+			}
+			wizlog ("[+] Motion Path Added : " + $moPath + " : To EndObj : " + $endObj);	
+		}
+		
+		if (wizProgressCancelled() == 1) return;
+		
+	}
+	wizlog ("[*] Finished Building Line Objects On Cuves [*]");
+	
+	wizProgressWindowEnd();
+}
+
+global proc wizCraftBuildRampLinesOnSelectedCurves ( string $flags )
+{
+	string $obj, $type;
+	string $sel[];
+	int $edit;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-typ" : case "-type" :
+			$type = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	
+
+}
+
+
+
+/*
+//CORD BUILDER LAYOUT
+//=======================================================
+global proc cordBldrLayout( string $parent)
+{
+	string $layout = `frameLayout
+		-l "cordBldr"	
+		-ann "Duplicates objects along a curve with many options."
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $parent		
+		cordBldr_frameLayout
+		`;
+		
+	//cordBldrMainMenuBarLayout();
+	//-----------------------------
+    wizSeparator();
+    //-----------------------------	
+	
+	checkBox
+		-l "Enable Duplication"
+		-v true
+		cordBldr_EnableDuplication_checkBox
+		;
+	
+	
+	string $dupType[] = { "Copy", "Instance", "Reference Copy" };
+	string $dupTypeOmg = wizOptionMenuGrpMenuItems("Duplicate Type", "cordBldr_DuplicateType_optionMenuGrp", $dupType);
+	//int $dupTypeVal = `optionMenuGrp -q -v cordBldrDuplicateTypeOptionMenuGrp`;
+	
+	string $spacMeth[] = { "Count", "CurvePercent", "WorldDistance", "BoundingBoxFit" };
+	string $dupTypeOmg = wizOptionMenuGrpMenuItems("Spacing Method", "cordBldr_SpacingMethod_optionMenuGrp", $spacMeth);
+	//int $spacMethVal = `optionMenuGrp -q -v cordBldrSpacingMethodOptionMenuGrp`;
+	
+    //-----------------------------
+    wizSeparator();
+    //-----------------------------
+
+	intSliderGrp
+		-l "Duplicate Count"
+		-cal 1 "left"
+		-f true
+		-min 1
+		-max 50
+		-fmn 1
+		-fmx 99999999
+		-v 5
+		cordBldr_DuplicateCount_intSliderGrp
+		;
+		
+	floatSliderGrp
+		-l "Spacing"
+		//-nf 1
+		-f true
+		-cal 1 "left"
+		-v 10
+		cordBldr_Spacing_floatSliderGrp
+		;
+	
+	floatSliderGrp
+		-l "Offset U"
+		//-nf 1
+		-f true
+		-cal 1 "left"
+		-v 0
+		cordBldr_OffsetU_floatSliderGrp
+		;
+	
+    //-----------------------------
+    wizSeparator();
+    //-----------------------------
+    
+	checkBox
+		-l "Randomize Spacing"
+		-v false
+		cordBldr_RandomizeSpacing_checkBox
+		;
+		
+	floatFieldGrp
+		-l "Random Amount"
+		-nf 2
+		-cal 1 "left"
+		-cw1 80
+		-v1 5.0
+		cordBldr_RandomAmount_floatFieldGrp
+		;
+	
+    //-----------------------------
+    wizSeparator();
+    //-----------------------------
+	checkBox
+		-l "Follow Path"
+		-v true
+		cordBldr_FollowPath_checkBox
+		;
+	
+	string $frontAxis[] = { "x", "y", "z" };
+	string $frontAxisOmg = wizOptionMenuGrpMenuItems("Front Axis", "cordBldr_FollowPathFrontAxis_optionMenuGrp", $frontAxis);
+	optionMenuGrp -e -sl 2 cordBldr_FollowPathFrontAxis_optionMenuGrp;
+	
+	checkBox
+		-l "Inverse Front"
+		-v false
+		cordBldr_InverseFront_checkBox
+		;
+		
+	string $upAxis[] = { "x", "y", "z" };
+	string $upAxisOmg = wizOptionMenuGrpMenuItems("Up Axis", "cordBldr_FollowPathUpAxis_optionMenuGrp", $upAxis);
+	optionMenuGrp -e -sl 3 cordBldr_FollowPathUpAxis_optionMenuGrp;
+	
+	checkBox
+		-l "Inverse Up"
+		-v false
+		cordBldr_InverseUp_checkBox
+		;	
+		
+	checkBox
+		-l "Parametric Length"
+		-v false
+		cordBldr_ParametricLength_checkBox
+		;	
+		
+	//-----------------------------
+    wizSeparator();
+    //-----------------------------
+
+	
+	checkBox
+		-l "Flow Path"
+		-v false
+		cordBldr_FlowPath_checkBox
+		;
+		
+    intFieldGrp
+        -nf 3
+        -l "Lattice Divisions"
+        -v1 10
+        -v2 10
+        -v3 10
+        -cal 1 "left"
+        -adj 1
+        cordBldr_LatticeDivisions_intFieldGrp
+        ;
+		
+	
+    //-----------------------------
+    wizSeparator();
+    //-----------------------------   
+
+	checkBox
+		-l "Surface Normal Constraint"
+		-v false
+		cordBldr_SurfaceNormalConstraint_checkBox
+		;
+	
+	textFieldButtonGrp
+		-l "Surface Normal Object"
+		-cal 1 "left"
+		-bl "Select"
+		-bc ("assignObjectToTextFieldButtonGrp(\"cordBldrCurveTextFieldButtonGrp\");")
+		cordBldr_SurfaceNormalObject_textFieldButtonGrp
+		;
+
+	floatFieldGrp
+		-nf 3
+		-l "Aim Vector"
+		-v1 0
+		-v2 0
+		-v3 1
+		cordBldr_AimVector_floatFieldGrp
+		;
+	
+	floatFieldGrp
+		-nf 3
+		-l "Up Vector"
+		-v1 0
+		-v2 1
+		-v3 0
+		cordBldr_UpVector_floatFieldGrp
+		;
+		
+	
+	//-----------------------------
+    wizSeparator();
+    //-----------------------------   
+	
+	checkBox
+		-l "Group Duplicates"
+		-v true
+		cordBldr_GroupDuplicates_checkBox
+		;
+	
+	checkBox
+		-l "Use Sets"
+		-v false
+		cordBldr_UseSets_checkBox
+		;	
+	//-----------------------------
+    wizSeparator();
+    //-----------------------------
+	checkBox
+		-l "Always Cap"
+		-v false
+		cordBldr_AlwaysCap_checkBox
+		;
+		
+    checkBox
+		-l "Scale To Fill"
+		-v false
+		cordBldr_ScaleToFill_checkBox
+		;
+		
+	checkBox
+		-l "Use CV Objects"
+		-v false
+		cordBldr_useCVObjects_checkBox
+		;
+    
+	textFieldButtonGrp
+		-l "CV Objects"
+		-ann "This is only used for cordBldr Assets."		
+		-cal 1 "left"
+		-bl "Select"
+		-bc ("assignObjectToTextFieldButtonGrp(\"cordBldr_cvObjects_textFieldButtonGrp\");")
+		cordBldr_cvObjects_textFieldButtonGrp
+		;	
+		
+	checkBox
+		-l "Use Replacement Curves"
+		-v false
+		cordBldr_UseReplacementCurves_checkBox
+		;	
+		
+			
+	textFieldButtonGrp
+		-l "Replacement Curves"
+		-ann "This is only used for cordBldr Assets."		
+		-cal 1 "left"
+		-bl "Select"
+		-bc ("assignObjectToTextFieldButtonGrp(\"cordBldr_ReplacementCurves_textFieldButtonGrp\");")
+		cordBldr_ReplacementCurves_textFieldButtonGrp
+		;	
+		
+	
+		
+    //-----------------------------
+    wizSeparator();
+    //-----------------------------
+	string $setOrdering[] = { "sequence", "random", "headSequence", "sequenceTail", "headSequenceTail", "headRandom", "randomTail", "headRandomTail" };
+	string $setOrderOmg = wizOptionMenuGrpMenuItems("Set Order", "cordBldr_SetOrder_optionMenuGrp", $setOrdering);
+
+	//int $spacMethVal = `optionMenuGrp -q -v cordBldrSpacingMethodOptionMenuGrp`;
+	
+	textFieldButtonGrp
+		-l "Duplicate Object"
+		-ann "Use this field to select the objects to duplicate on the selected curve."		
+		-cal 1 "left"
+		-bl "Select"
+		-bc ("assignObjectToTextFieldButtonGrp(\"cordBldr_DuplicateObject_textFieldButtonGrp\");")
+		cordBldr_DuplicateObject_textFieldButtonGrp
+		;
+	
+	textFieldButtonGrp
+		-l "Curve"
+		-ann "Use this field to select the curve to duplicate on.\nSelect the curve that you would like the actions menu to perform operations on."
+		-cal 1 "left"
+		-bl "Select"
+		-bc ("assignObjectToTextFieldButtonGrp(\"cordBldr_Curve_textFieldButtonGrp\");")
+		cordBldr_Curve_textFieldButtonGrp
+		;
+        
+    //-----------------------------
+    wizSeparator();
+    //-----------------------------  
+    
+	button 
+        -l "Create cordBldr Asset " 
+        -ann "This will create an asset with controls for duplicating objects on the selected curve"
+        -c ("wizCreateCordBldrAsset(`ls -sl`);");
+	
+    button
+		-l "Update Current Curve"
+		-ann "This will update the curve from the above curve field."
+		-c ("string $curCurve = `textFieldButtonGrp -q -tx cordBldrCurveTextFieldButtonGrp`;updateDuplicatesOnCurve($curCurve);")
+		;
+		
+}	
+*/

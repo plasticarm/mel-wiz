@@ -1,0 +1,41 @@
+//This is simple template of 3D-Coat's script. Script language is very close to c++ and based on angelscript.
+//You will usually see it if you used Scripts->Create new script
+//Read general syntax description at http://angelcode.com/angelscript/sdk/docs/manual/doc_script.html and
+//http://angelcode.com/angelscript/sdk/docs/manual/doc_understanding_as.html
+//But if you know c/c++ it will be easy to write scripts. For beginning you may just use mostly one command 
+//cmd("Some UI command");
+//With this command you may execute any item in UI. It is easy to get UI item command - hover required comamnd in UI and press MMB and RMB simultaneously. 
+//Corresponding command will be copied to clipboard. You may read about other commands in scripting manual.
+
+//declare any global variables if need, don't write commands ritght there, do it in main() of any other function. 
+//...
+int nfiles;
+
+//This function will be called once when script will be run  
+//insert any commands there. Start from cmd as described above.
+void main(){
+	nfiles=0;
+	// next command is optional, just to keep control of execution in modal message boxes (see description of ModalDialogCallback below), if you are new you may delete or ignore next line
+	SetModalDialogCallback("ModalDialogCallback");
+	//shows message box if need
+	if(ModalDialogOkCancel("Just write description there"," ")){
+		//This function will call void ForAnyFile(string &in FileName) for each file in user defined folder - jpg and png are just for example 	
+		ForEachFileInFolder("","*.png;*.jpg","ForAnyFile");
+		ModalDialog(formatInt(nfiles,'l')+" files processed."," ");	
+	}
+}
+
+//This function will be called for each file in user-defined folder  
+void ForAnyFile(string &in FileName){
+	//print there just for example, use Scripts->View execution log
+	print(FileName + "\n");
+	nfiles++;
+}
+
+//This function is mostly for advanced users. When you are calling or getting some modal message box you are loosing control until user will press some button there. 
+//But each time when modal dialog will be show this function will be called and you may do some action inside modal message box   
+void ModalDialogCallback(){
+	// Example of command - press first button in message box (uncomment next line if need)
+	//cmd("$DialogButton#1");/*press OK*/
+		
+}

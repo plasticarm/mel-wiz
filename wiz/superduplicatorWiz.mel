@@ -1,0 +1,807 @@
+global proc superduplicatorWiz()
+{
+	
+}
+
+global proc superDuplicator()
+{
+	
+	print ("*****************************************************************************************" + "\n");
+	print ("**********************************  Super Duplicator  ***********************************" + "\n");
+	print ("*****************************************************************************************" + "\n");
+	
+	string $window = "SuperDuplicator";//Global name for window
+	
+	if (`window -exists $window`)//Is my window there?
+		deleteUI $window;
+	
+	window
+		-title "SuperDuplicator"
+		-widthHeight 420 200
+		-menuBar on
+		-menuBarVisible on
+		-minimizeButton on
+		-maximizeButton on
+		-sizeable on
+		-resizeToFitChildren on
+		-titleBar on
+		$window
+		;
+		
+	/*
+	string $scrollLayout = `scrollLayout 
+		-horizontalScrollBarThickness 16
+        -verticalScrollBarThickness   16`;
+		//-adjustableColumn true;
+	*/
+	
+	string $masterLayout = `columnLayout
+		-columnAlign "center"
+		-adjustableColumn true
+	`;		
+	
+	historyDuplicationMenu($masterLayout);
+	
+	basicDuplicationMenu($masterLayout);
+	
+	arrayDuplicationMenu($masterLayout);
+	
+	randomizationDuplicationMenu($masterLayout);
+	
+	
+		
+	string $bottomLayout = `frameLayout		
+		-labelVisible false
+		-parent $masterLayout
+		-label "Go."`;
+		
+	button
+		-label "Apply"
+		-command "doSuperDuplication";
+			
+	showWindow $window;
+	
+}
+
+global proc historyDuplicationMenu(string $masterLayout)
+{
+	string $historyLayout = `frameLayout
+		-l "Duplication History"	
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		-cll true
+		-cl false
+		
+		-parent $masterLayout`;	
+	
+	rowLayout
+		-numberOfColumns 3
+		-columnWidth3 20 200 20
+		-parent $historyLayout;
+		
+	button
+		-width 20
+		-height 20
+		-label "<<"
+		-command "backInDuplicationHistory"
+		historyBack;
+	
+	button
+		-width 20
+		-height 20
+		-label ">>"
+		-command "fowardInDuplicationHistory"
+		historyForward;
+}
+
+
+global proc basicDuplicationMenu(string $masterLayout)
+{
+	string $basicDuplicationLayout = `frameLayout
+		-l "Duplication Settings"	
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl false
+		-parent $masterLayout
+		`;	
+	/*
+	string $columnLayout = `columnLayout
+		-columnAlign center`;
+	*/	
+	/*
+	columnLayout
+		-columnAlign center;
+	*/
+	
+	/*
+	string $instRB = `radioCollection
+		-p $basicDuplicationLayout
+		`;
+		
+		radioButton
+			-label "Instance"
+			//-onCommand "turnInstanceOn"
+			//-offCommand "turnInstanceOff"		
+			//-parent $columnLayout;
+			-p $instRB
+			instanceDuplicate		
+			;
+	*/
+
+	checkBoxGrp
+		-ncb 2
+		-l "Geometry Type: "
+		-l1 "Copy"
+		-l2 "Instance"
+		-v1 true
+		-v2 false
+		-p $basicDuplicationLayout
+		-vr
+		geometryType
+		;
+		
+	intSliderGrp 
+		//-cal 1 "left" 
+		//-cw3 140 70 100
+		-l "Number of Copies:" 
+		-minValue 1		
+		-maxValue 100
+		-value 1 		
+		-fieldMinValue 1 
+		-fieldMaxValue 10000
+		-fs 1
+		-sliderStep 1
+		-step 1
+		//-changeCommand "setNumberOfCopies"
+		-field true		
+		-p $basicDuplicationLayout
+		numberOfCopies
+		;	
+		 
+	floatFieldGrp 
+		-numberOfFields 3
+		-columnAlign 1 center
+		-columnAlign 2 center
+		//-parent $masterLayout
+		-label "Translate:"
+		-precision 4
+		-value1 0.0 -value2 0.0 -value3 0.0
+		-p $basicDuplicationLayout
+		duplicateTranslation
+		;
+	
+	floatFieldGrp 
+		-numberOfFields 3
+		-columnAlign 1 center
+		-columnAlign 2 center
+		//-parent $masterLayout
+		-label "Rotate:"
+		-precision 4
+		-value1 0.0 -value2 0.0 -value3 0.0
+		-p $basicDuplicationLayout
+		duplicateRotation
+		;
+	
+	floatFieldGrp 
+		-numberOfFields 3
+		-columnAlign 1 center
+		-columnAlign 2 center
+		//-parent $masterLayout
+		-label "Scale:"
+		-precision 4
+		-value1 1.0 -value2 1.0 -value3 1.0
+		-p $basicDuplicationLayout
+		duplicateScale
+		;
+		
+	frameLayout
+		-l "Grouping"	
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $basicDuplicationLayout;
+	
+		checkBoxGrp
+			-ncb 3
+			-l "Group Under: "
+			-l1 "Parent"
+			-l2 "World"
+			-l3 "New Group"
+			-v1 true
+			-v2 false
+			-v3 false
+			//-p $basicDuplicationLayout
+			-vr
+			groupUnder
+			;
+	
+	frameLayout
+		-l "Inputs"	
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $basicDuplicationLayout;
+		
+		checkBoxGrp
+			-ncb 4
+			//-cl4 "center"
+			-l1 "Duplicate Input Graph"
+			-l2 "Duplicate Input Connections"
+			-l3 "Instance Leaf Nodes"
+			-l4 "Assign Unique Name to Child Nodes"
+			-v1 false
+			-v2 false
+			-v3 false
+			-v4 false
+			//-p $basicDuplicationLayout
+			-vr
+			otherDuplicationOptions
+			;
+		
+}
+
+global proc arrayDuplicationMenu(string $masterLayout)
+{
+
+	string $arrayLayout = `frameLayout
+		-l "Array"	
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $masterLayout
+		`;
+		
+	translationArrayLayout($arrayLayout);
+	
+	rotationArrayLayout($arrayLayout);	
+	
+	scaleArrayLayout($arrayLayout);
+	
+}
+
+global proc translationArrayLayout(string $arrayLayout)
+{
+	frameLayout
+		-l "Translation"	
+		//-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $arrayLayout
+		;
+			
+		/*	
+		intFieldGrp 
+			-numberOfFields 1
+			-columnAlign 1 center
+			-label "X Array: "
+			-v1 0 		
+			-cc	"updateNumberOfCopies"		
+			xArrayDuplicateCount
+			;
+			
+		intFieldGrp 
+			-numberOfFields 1
+			-columnAlign 1 center
+			-label "Y Array: "
+			-v1 0 	
+			-cc	"updateNumberOfCopies"			
+			yArrayDuplicateCount
+			;
+		
+		intFieldGrp 
+			-numberOfFields 1
+			-columnAlign 1 center
+			-label "Z Array: "
+			-v1 0 		
+			-cc	"updateNumberOfCopies"			
+			zArrayDuplicateCount
+			;
+		*/
+		
+		intSliderGrp 
+			//-cal 1 "left" 
+			//-cw3 140 70 100
+			-l "X Array:" 
+			-minValue 1		
+			-maxValue 100
+			-value 1 		
+			-fieldMinValue 1 
+			-fieldMaxValue 10000000
+			-fs 1
+			-sliderStep 1
+			-step 1
+			-cc	"updateNumberOfCopies"
+			-field true					
+			xArrayDuplicateCount
+			;	
+			
+		intSliderGrp 
+			//-cal 1 "left" 
+			//-cw3 140 70 100
+			-l "Y Array:" 
+			-minValue 1		
+			-maxValue 100
+			-value 1 		
+			-fieldMinValue 1 
+			-fieldMaxValue 10000000
+			-fs 1
+			-sliderStep 1
+			-step 1
+			-cc	"updateNumberOfCopies"
+			-field true					
+			yArrayDuplicateCount
+			;
+			
+		intSliderGrp 
+			//-cal 1 "left" 
+			//-cw3 140 70 100
+			-l "Z Array:" 
+			-minValue 1		
+			-maxValue 100
+			-value 1 		
+			-fieldMinValue 1 
+			-fieldMaxValue 10000000
+			-fs 1
+			-sliderStep 1
+			-step 1
+			-cc	"updateNumberOfCopies"
+			-field true					
+			zArrayDuplicateCount
+			;
+}
+
+global proc rotationArrayLayout(string $arrayLayout)
+{
+		string $rotationArrayLayout = `frameLayout
+			-l "Rotation"	
+			-bv true
+			-la "center"
+			-li 10
+			-lv true
+			-mw 10
+			-mh 10		
+			
+			-cll true
+			-cl true
+			-parent $arrayLayout
+			`;
+			
+			checkBoxGrp
+				-ncb 3
+				-cal 1 "center"
+				-cal 2 "center"
+				-cal 3 "center"
+				-l "Rotation Axis"
+				-l1 "X"
+				-l2 "Y"
+				-l3 "Z"
+				-v1 false
+				-v2 true
+				-v3 false
+				-p $rotationArrayLayout
+				rotationArrayAxis
+				;
+							
+			string $rowA = `rowLayout
+				-numberOfColumns 2
+				-columnWidth2 240 40
+				-parent $rotationArrayLayout
+				`;
+		
+				intFieldGrp 
+					-numberOfFields 1
+					//-width 60
+					-label "Copies:" 
+					-ann "Enter 0 if value is unknown."
+					//-extraLabel "cm"
+					-value1 10
+					-p $rowA
+					-cc ("updateUnknownRotationArrayValueField " + "rotationCopies")
+					rotationCopies
+					;
+				
+				button
+					-l "?"
+					-w 20
+					-c ("setUnknownRotationArrayValue " + "rotationCopies")
+					-p $rowA
+					setUnknownRotationArrayValueA
+					;
+			
+			string $rowB = `rowLayout
+				-numberOfColumns 2
+				-columnWidth2 240 40
+				-parent $rotationArrayLayout
+				`;		
+				
+				floatFieldGrp 
+					-numberOfFields 1
+					//-width 60
+					-label "Total Rotation:"
+					-ann "Enter 0 if value is unknown."				
+					//-extraLabel "cm"
+					-value1 360
+					-p $rowB
+					-cc ("updateUnknownRotationArrayValueField " + "totalRotation")
+					totalRotation
+					;
+				
+				button
+					-l "?"
+					-w 20
+					-c ("setUnknownRotationArrayValue " + "totalRotation")
+					-p $rowB
+					setUnknownRotationArrayValueB
+					;
+			
+			string $rowC = `rowLayout
+				-numberOfColumns 2
+				-columnWidth2 240 40
+				-parent $rotationArrayLayout
+				`;
+			
+				floatFieldGrp 
+					-numberOfFields 1
+					//-width 60
+					-label "Increment Degrees:" 
+					-ann "Enter 0 if value is unknown."
+					//-extraLabel "cm"
+					-value1 20
+					-p $rowC
+					-cc ("updateUnknownRotationArrayValueField " + "incrementDegrees")
+					incrementDegrees
+					;
+				
+				button
+					-l "?"
+					-w 20
+					-c ("setUnknownRotationArrayValue " + "incrementDegrees")
+					-p $rowC
+					setUnknownRotationArrayValueC
+					;
+			
+			columnLayout
+			
+				-parent $rotationArrayLayout
+				;
+				
+			button
+				-label "Calculate Unknown Value"
+				-parent $rotationArrayLayout
+				-command "calculateUnknownRotationValue";
+			/*	
+			button
+				-width 20
+				-label "Copy to X"
+				-command "copyRotationCalculationsToX";
+				
+			button
+				-width 20
+				-label "Copy to Y"
+				-command "copyRotationCalculationsToY";
+			
+			button
+				-width 20
+				-label "Copy to Z"
+				-command "copyRotationCalculationsToZ";
+			*/
+}
+
+global proc scaleArrayLayout(string $arrayLayout)
+{
+frameLayout
+			-l "Scale"	
+			//-bv true
+			-la "center"
+			-li 10
+			-lv true
+			-mw 10
+			-mh 10		
+			
+			-cll true
+			-cl true
+			-parent $arrayLayout
+			;
+}
+
+global proc randomizationDuplicationMenu(string $masterLayout)
+{
+	frameLayout
+		-l "Randomization"	
+		//-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $masterLayout;
+}
+
+global proc setUnknownRotationArrayValue(string $unknownField)
+{
+if($unknownField == "rotationCopies"){
+	intFieldGrp 
+		-e
+		//-bgc 0.155 0.155 0.155
+		-value1 0
+		$unknownField;
+} else {
+	floatFieldGrp 
+		-e
+		//-bgc 0.155 0.155 0.155
+		-value1 0
+		$unknownField;
+}
+	
+}
+
+global proc updateNumberOfCopies()
+{
+int $xDup = `intSliderGrp -q -v xArrayDuplicateCount`;
+int $yDup = `intSliderGrp -q -v yArrayDuplicateCount`;
+int $zDup = `intSliderGrp -q -v zArrayDuplicateCount`;
+int $noc = `intSliderGrp -q -v numberOfCopies`;
+
+$noc = $xDup * $yDup * $zDup;
+
+intSliderGrp 
+	-e
+	-v $noc
+	numberOfCopies
+	;	
+	
+}
+
+global proc updateUnknownRotationArrayValueField(string $unknownField)
+{
+int $intVal;
+float $val;
+if($unknownField == "rotationCopes"){
+	$intVal = `intFieldGrp -q -v1 rotationCopies`;
+	$val = $intVal;
+}
+
+if($unknownField == "totalRotation"){
+	$val = `floatFieldGrp -q -v1 totalRotation`;
+}
+
+if($unknownField == "incrementDegrees"){
+	$val = `floatFieldGrp -q -v1 incrementDegrees`;
+}
+
+print("UnknownField: " + $unknownField + " Val: " + $val + "\n");
+if($val == 0){
+	return;
+}
+
+if($unknownField == "rotationCopies"){
+	intFieldGrp 
+		-e
+		-ebg false
+		$unknownField;
+} else {
+	floatFieldGrp 
+		-e
+		-ebg false
+		$unknownField;
+}
+
+
+}
+
+global proc calculateUnknownRotationValue()
+{
+				
+int $copies = `intFieldGrp -q -value1 rotationCopies`;
+float $totRot = `floatFieldGrp -q -value1 totalRotation`;
+float $incDeg = `floatFieldGrp -q -value1 incrementDegrees`;
+
+if($copies == 0){
+	$copies = $totRot / $incDeg;
+	intFieldGrp
+		-e
+		-value1 $copies
+		rotationCopies;
+}
+
+if($totRot == 0){
+	$totRot = $copies * $incDeg;
+	floatFieldGrp
+		-e
+		-value1 $totRot
+		totalRotation;
+}
+
+if($incDeg == 0){
+	$incDeg = $totRot / $copies;
+	floatFieldGrp
+		-e
+		-value1 $incDeg
+		incrementDegrees;
+}
+
+// Set the basic duplication settings
+$rotX = `checkBoxGrp -q -v1 rotationArrayAxis`;
+$rotY = `checkBoxGrp -q -v2 rotationArrayAxis`;
+$rotZ = `checkBoxGrp -q -v3 rotationArrayAxis`;
+
+	intSliderGrp
+		-e
+		-v $copies
+		numberOfCopies
+		;
+	
+	if($rotX){
+		floatFieldGrp
+			-e
+			-v1 $incDeg
+			duplicateRotation
+			;
+	}
+	if($rotY){
+		floatFieldGrp
+			-e
+			-v2 $incDeg
+			duplicateRotation
+			;
+	}
+	if($rotZ){
+		floatFieldGrp
+			-e
+			-v3 $incDeg
+			duplicateRotation
+			;
+	}
+}
+
+global proc doSuperDuplication()
+{
+string $sel[] = `ls -sl`;
+
+int $dup = `checkBoxGrp -q -v1 geometryType`;
+int $inst = `checkBoxGrp -q -v2 geometryType`;
+int $noc = `intSliderGrp -q -v numberOfCopies`;
+$noc = $noc - 1;
+float $tX = `floatFieldGrp -q -v1 duplicateTranslation`;
+float $tY = `floatFieldGrp -q -v2 duplicateTranslation`;
+float $tZ = `floatFieldGrp -q -v3 duplicateTranslation`;
+float $rX = `floatFieldGrp -q -v1 duplicateRotation`;
+float $rY = `floatFieldGrp -q -v2 duplicateRotation`;
+float $rZ = `floatFieldGrp -q -v3 duplicateRotation`;
+float $sX = `floatFieldGrp -q -v1 duplicateScale`;
+float $sY = `floatFieldGrp -q -v2 duplicateScale`;
+float $sZ = `floatFieldGrp -q -v3 duplicateScale`;
+
+int $xDup = `intSliderGrp -q -v xArrayDuplicateCount`;
+int $yDup = `intSliderGrp -q -v yArrayDuplicateCount`;
+int $zDup = `intSliderGrp -q -v zArrayDuplicateCount`;
+
+string $command;
+if($inst == 1){
+	$command = "instance";
+} else {
+	$command = "duplicate";
+	$command = $command + " -rr";
+}
+
+$command += " " + $sel[0];
+int $i;
+int $xi;
+int $yi;
+int $zi;
+
+print("Command: " + $command + "\n");
+// Add the name of the original object here.
+eval ($command);
+
+float $itx = $tX;
+float $ity = $tY;
+float $itz = $tZ;
+float $irx = $rX;
+float $iry = $rY;
+float $irz = $rZ;
+float $isx = $sX;
+float $isy = $sY;
+float $isz = $sZ;
+//duplicate -rr;
+
+//$command = $command + " -st";
+if($xDup > 1 || $yDup > 1 || $zDup > 1){
+		for($xi=0;$xi<$xDup;$xi++){
+			for($yi=0;$yi<$yDup;$yi++){
+				for($zi=0;$zi<$zDup;$zi++){
+					//duplicate -rr -st;
+					eval ($command);
+					rotate -r $rX $rY $rZ;
+					move -r $tX $tY $tZ; 
+					scale -r $sX $sY $sZ; 
+					
+					$rX += $rX;
+					$rY += $rY;
+					$rZ += $rZ;
+					$tX += $tX;
+					$tY += $tY;
+					$tZ += $tZ;
+					
+					
+					if($zi==$zDup){
+						$rX = $irx;
+						$rY = $iry;
+						$rZ = $irz;
+						$tX = $itx;
+						$tY = $ity;
+						$tZ = $itz;
+					}
+					
+				}
+				
+				if($yi==$yDup){
+					$rX = $irx;
+					$rY = $iry;
+					$rZ = $irz;
+					$tX = $itx;
+					$tY = $ity;
+					$tZ = $itz;
+				}
+						
+			}
+			
+			if($xi==$xDup){
+				$rX = $irx;
+				$rY = $iry;
+				$rZ = $irz;
+				$tX = $itx;
+				$tY = $ity;
+				$tZ = $itz;
+			}	
+			
+		}
+	
+} else {
+	$command = $command + " -st";
+	rotate -r $rX $rY $rZ;
+	move -r $tX $tY $tZ; 
+	scale -r $sX $sY $sZ;
+	for($i=0;$i<$noc;$i++){
+		eval ($command);					 
+	}
+}
+
+}

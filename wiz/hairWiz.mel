@@ -1,0 +1,494 @@
+global proc hairWiz()
+{
+
+}
+
+//LAYOUT
+//==============================================================================
+//HAIR WIZ MAIN LAYOUT
+//----------------------------
+global proc hairWizLayout(string $parent)
+{	
+	hairWizFrameLayout($parent);
+
+}
+
+//HAIR WIZ FRAME LAYOUT
+//-----------------------------
+global proc hairWizFrameLayout(string $parent)
+{
+
+	string $layout = `frameLayout
+		-l "Hair"
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true		
+		-parent $parent
+		`;
+		
+		
+	hairWizMenuBarLayout($layout);
+	
+	//cacheNHairLayout($layout);
+}
+
+//MENU BAR LAYOUT
+//==============================================================================
+//HAIR WIZ MENU BAR LAYOUT
+//-----------------------------
+global proc hairWizMenuBarLayout( string $parent )
+{
+	string $menuBarLayout = `menuBarLayout hairWizMenuBarLayout`;	
+	hairWizMenuItems();
+}
+
+//HAIR WIZ MENU ITEMS
+//-----------------------------
+global proc hairWizMenuItems()
+{
+	menu -l "Select" -to true;
+		
+		menuItem -l "Select All Hair System Follicles" -c ("wizSelectHairSystemFolliclesOfType(`ls -sl`, \"all\")");
+	
+		menuItem -l "Select Hair System Static Hair Follicles" -c ("wizSelectHairSystemFolliclesOfType(`ls -sl`, \"static\")");
+	
+		menuItem -l "Select Hair System Passive Hair Follicles" -c ("wizSelectHairSystemFolliclesOfType(`ls -sl`, \"passive\")");
+		
+		menuItem -l "Select Hair System Dynamic Hair Follicles" -c ("wizSelectHairSystemFolliclesOfType(`ls -sl`, \"dynamic\")");
+		setParent -menu ..;
+	
+	menu -l "Attributes" -to true;
+		menuItem -sm true -l "Simulation Attributes";
+			menuItem -l "Sim State" -c ("wizSetHairAttributes(\"simState\");");
+	setParent -menu ..;
+		
+	menu -l "Fields" -to true;
+		menuItem -l "Turn Off All Fields" -c ("turnOffAllFields()");
+	setParent -menu ..;
+	
+	menu -l "Cache" -to true;
+		menuItem -l "Add Custom Cache Attributes" -c ("turnOffAllFields()");
+		menuItem -l "Add Cache nHair Before Rendering PreMel" -c ("addCacheNHairBeforeRenderingPreMel()");
+	setParent -menu ..;
+	
+}
+
+//WIZ SELECT HAIR SYSTEM FOLLICLES OF TYPE
+//==============================================================================
+global proc string[] wizSelectHairSystemFolliclesOfType( string $sel[] , string $type )
+{
+	string $dbl = "-dmi WizSelectHairSystemFolliclesOfTypeDebugMenuItem -t Select Hair Follicles Of Type"; string $dbm = "add"; int $dbc = 1;
+	//menuItem -e -cb true WizSelectHairSystemFolliclesOfTypeDebugMenuItem;
+	
+	string $sel[] = `ls -sl`;
+	string $hairShape[] = getMainShapeNodesFromSelection($sel);
+	
+	debugListArray($dbl, " - Hair System Shape : ", $hairShape, $dbc, $dbm, "[NEXT]", 20);
+	
+	string $con[] = `listConnections -s on -d off $hairShape[0]`;
+	debugListArray($dbl, " - Connected To Hair : ", $con, $dbc, $dbm, "[NEXT]", 20);
+		
+	string $s[] = `listRelatives -s $con`;
+	debugListArray($dbl, " - Shapes Connected To Hair : ", $s, $dbc, $dbm, "[NEXT]", 20);
+	
+	string $f[] = `ls -type "follicle" $s`;
+	
+		
+	$f = stringArrayRemoveDuplicates($f);
+	if(`size $f` == 0){
+		print("WIZ| NO Hair Follicles Found\n");
+		return ({});
+	}
+	
+	debugListArray($dbl, " - Follicles : ", $f, $dbc, $dbm, "[NEXT]", 20);
+	
+	if($type == "all"){
+		select -r $f;	
+		return $f;	
+	}
+	
+	
+	string $ft[];
+	debugList($dbl, { (" - Selecting : " + $type + " : Follicles -") }, $dbc, $dbm);
+	//print("WIZ| " + `size $f` + " : Follicles Connected To : " + $hairShape[0] + "\n");
+	//print("WIZ| selecting : " + $type + " : follicles\n");
+	
+	for($i=0;$i<`size $f`;$i++){
+		//print("	- Follicle : " + $f[$i] + "\n");
+		
+		if($type == "static"){
+			
+			if(`getAttr ($f[$i] + ".simulationMethod")` == 0){
+				//select -add $f[$i];
+				$ft[`size $ft`] = $f[$i];
+				//print(" : static follicle : " + $f[$i] + "\n");
+				debugList($dbl, { ($f[$i] + " : IS : " + $type) }, $dbc, $dbm);
+			}
+		}
+		
+		if($type == "passive"){
+			
+			if(`getAttr ($f[$i] + ".simulationMethod")` == 1){
+				//select -add $f[$i];
+				$ft[`size $ft`] = $f[$i];
+				//print(" : passive follicle : " + $f[$i] + "\n");
+				debugList($dbl, { ($f[$i] + " : IS : " + $type) }, $dbc, $dbm);
+			}
+		}
+		
+		if($type == "dynamic"){
+			
+			if(`getAttr ($f[$i] + ".simulationMethod")` == 2){
+				//select -add $f[$i];
+				$ft[`size $ft`] = $f[$i];
+				//print(" : dynamic follicle : " + $f[$i] + "\n");
+				debugList($dbl, { ($f[$i] + " : IS : " + $type) }, $dbc, $dbm);
+			}
+		}
+		//print("\n");
+	}
+	
+	select -r $ft;
+	
+	return $ft;
+	
+}
+
+global proc turnOffAllFields()
+{
+	string $fields[] = `ls -type radialField -type volumeAxisField -type vortexField -type turbulenceField -type newtonField -type gravityField -type dragField -type airField`;
+	for($i=0;$i<`size $fields`; $i++){
+		setAttr ($fields[$i] + ".magnitude") 0;	
+	}
+}
+
+//@ WIZ SET HAIR ATTRIBUTES
+//========================================================
+// USAGE : Choose from presets of only certain attributes
+global proc wizSetHairAttributes( string $state )
+{
+	string $sel[] = `ls -sl`;
+	float $stretchResistance;
+	float $compressionResistance;
+	float $bendResistance;
+	float $twistResistance;
+
+	float $startCurveAttract;
+	float $attractionDamp;
+
+	float $mass;
+	float $drag;
+	float $motionDrag;
+	float $damp;
+	float $stretchDamp;
+			
+	switch($state){
+		case "simState" :
+					
+			$stretchResistance = 20;
+			$compressionResistance = 20;
+			$bendResistance = 0;
+			$twistResistance = 0;
+			
+			$startCurveAttract = 0.1;
+			$attractionDamp = 0.2;
+			
+			$mass = 1;
+			$drag = 0.0;
+			$motionDrag = 0;
+			$damp = 0.1;
+			$stretchDamp = 0.5;		
+
+		break;
+		
+		case "longHairSimState" :
+					
+			$stretchResistance = 20;
+			$compressionResistance = 20;
+			$bendResistance = 0;
+			$twistResistance = 0;
+			
+			$startCurveAttract = 0.1;
+			$attractionDamp = 0.2;
+			
+			$mass = 1;
+			$drag = 0.0;
+			$motionDrag = 0;
+			$damp = 0.1;
+			$stretchDamp = 0.5;		
+
+		break;
+		
+			
+		
+	}
+	
+	setAttr ($sel[0] + ".stretchResistance") $stretchResistance;
+	setAttr ($sel[0] + ".compressionResistance") $compressionResistance;
+	setAttr ($sel[0] + ".bendResistance") $bendResistance;
+	setAttr ($sel[0] + ".twistResistance") $twistResistance;
+	setAttr ($sel[0] + ".startCurveAttract") $startCurveAttract;
+	setAttr ($sel[0] + ".attractionDamp") $attractionDamp;
+	setAttr ($sel[0] + ".mass") $mass;
+	setAttr ($sel[0] + ".drag") $drag;
+	setAttr ($sel[0] + ".motionDrag") $motionDrag;
+	setAttr ($sel[0] + ".damp") $damp;
+	setAttr ($sel[0] + ".stretchDamp") $stretchDamp;
+}
+
+//CACHE
+//=========================================================================================
+
+global proc cacheNHairLayout(string $parent)
+{
+	string $cachingLayout = `frameLayout
+		-l "Cache"
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true		
+		-parent $parent`;		
+		
+	button
+		-l "Create Custom Cache Attributes"
+		-ann "Select the NHair System Objects You Want To Cache. This Will Add Attributes To The NHair System."			
+		-c ("createCustomNHairCacheAttributes(`ls -sl`);")
+		createCustomCacheAttributes
+		;
+		
+	button
+		-l "Delete Custom Cache Attributes"
+		-ann "Select the NHair System Objects You Want To Remove Custom Cache Attributes From."			
+		-c ("deleteCustomNCacheAttributes(`ls -sl`);")
+		deleteCustomCacheAttributes;	
+	
+	text
+		-l "nHair to Cache:"
+		;
+		
+	textScrollList
+		-w 80
+		-h 60
+		-ams true
+		-dkc ("removeSelectedItemFromTextScrollList(\"nHairCacheTextScrollList\");")
+		nHairCacheTextScrollList
+		;
+	
+		
+	string $cacheListLayout = `rowLayout
+		-numberOfColumns 3
+		`;
+		
+		button
+			-l "Add"
+			-ann ""
+			-c ("addSelectedObjectsToTextScrollList(`ls -sl`, \"nHairCacheTextScrollList\");")
+			;
+			
+		button
+			-l "Clear"
+			-ann ""
+			-c ("clearTextScrollList(\"nHairCacheTextScrollList\");")
+			;
+		/*	
+		button
+			-l "Cache Selected"
+			-ann ""			
+			-c ("createNCacheForSelected(`ls -sl`);")
+			;			
+		*/
+		string $bc = ("string $selN[] = `textScrollList -q -ai nHairCacheTextScrollList`;"+"\n"
+		+"select -r $selN;"+"\n"
+		+"createNCacheForSelected(`ls -sl`);"+"\n"
+		);
+		
+		button
+			-l "Cache Selected"
+			-ann ""			
+			-c $bc
+			;	
+		
+		setParent..;
+		
+		
+		button
+			-l "Add Cache nHair Before Rendering PreMel"
+			-c ("addCacheNHairBeforeRenderingPreMel()")
+			;
+		
+		wizCheckBox(
+			"-l Render When Cache is Complete. "
+			+"-v true "
+			+"-n nHairCacheRenderWhenCacheIsCompleteOption"
+			);
+			
+		
+}
+
+//CREATE CUSTOM CACHE ATTRIBUTES
+//-----------------------------------------------
+global proc createCustomNHairCacheAttributes( string $sel[] )
+{
+	string $cacheDir = `workspace -q -rd`;
+	$cacheDir = $cacheDir + "cache/nCache/";
+	string $fileName = getCurrentFileNameNoPathNoExt();
+	$cacheDir = $cacheDir + $fileName + "/";
+	
+	wizlog ("[#] Cache Directory : " + $cacheDir);
+	
+	for ($i=0;$i<`size $sel`;$i++){
+		string $cacheName;
+		//$cacheName = getObjectNameNoNamespaces($sel[$i]);
+		$cacheName = $sel[$i];
+		//$cacheName = $sel[$i];
+		
+		wizlog ("[#] Cache Directory : " + $cacheDir);
+		wizlog ("[#] Cache Name : " + $cacheName);
+		
+		select -r $sel[$i];
+		
+		if (`attributeExists "cacheName" $sel[$i]`){
+			//$cacheName = getObjectNameNoNamespaces($sel[$i]);
+			//$cacheName = $fileName + "_" + $cacheName;
+			//$cacheName = $cacheName;
+			setAttr -type "string" ($sel[$i] + ".cacheName") $cacheName;	
+			continue;
+		}
+		//_________________________________________
+		// Add the attributes
+		
+		// Directory attr
+		addAttr -ln "cacheDirectory" -dt "string" $sel[$i];
+			setAttr -type "string" ($sel[$i] + ".cacheDirectory") $cacheDir;
+			wizlog ("setAttr -type \"string\" " + $sel[$i] + ".cacheDirectory " + $cacheDir + ";");
+			
+		// CacheName attr
+		addAttr -ln "cacheName" -dt "string" $sel[$i];
+			//$cacheName = getObjectNameNoNamespaces($sel[$i]);
+			//$cacheName = $cacheName;
+			setAttr -type "string" ($sel[$i] + ".cacheName") $cacheName;
+			wizlog ("setAttr -type \"string\" " + $sel[$i] + ".cacheName " + $cacheName + ";");
+			
+		addAttr -ln usePrefix -at bool -dv 0 $sel[$i];	
+		addAttr -ln cacheTimeRange -at enum -en "renderSettings=1:timeSlider=2:startEnd=3" $sel[$i];
+			setAttr ($sel[$i] + ".cacheTimeRange") 3;
+			
+		addAttr -ln cacheStartFrame -nn "Start Frame" -at long -dv 1 $sel[$i];
+		addAttr -ln cacheEndFrame -nn "End Frame" -at long -dv 100 -min 0 -max 100000000 $sel[$i];
+		addAttr -ln cacheByFrame -nn "By Frame" -at "float" -dv 1 $sel[$i];
+		addAttr -ln saveEveryNEvaluations -nn "Save Every N Evaluatinos" -at "float" -dv 1 $sel[$i];
+		
+		addAttr -ln fileDistribution -at enum -en "oneFile=1:oneFilePerFrame=2" $sel[$i];
+		setAttr ($sel[$i] + ".fileDistribution") 2;
+		//setAttr ($sel[$i] + ".fileDistribution") 1;
+		
+	}
+
+}
+
+//CREATE NCACHE FOR SELECTED
+//-----------------------------------------------
+global proc createNCacheForSelected( string $sel[] )
+{
+
+	string $fd;
+	int $ctc;
+	
+	// remember which nucleus solvers are enabled to reset when finished.
+	string $allNuc[] = `ls -typ nucleus`;
+	string $enNuc[];
+	for ($i=0;$i<`size $allNuc`;$i++){
+		int $en = `getAttr ($allNuc[$i] + ".enable")`;
+		if ($en == 1){
+			$enNuc[`size $enNuc`] = $allNuc[$i];
+		}
+	}
+	
+	for ($i=0;$i<`size $sel`;$i++){
+		// turn off nucleus solvers that are not connected
+		string $nuc[] = `ls -typ nucleus`;
+		for ($c=0;$c<`size $nuc`;$c++){
+			setAttr ($nuc[$c] + ".enable") 0;
+		}	
+		// turn on nucleus solver for this object
+		string $cNuc[] = smartSelectObjectsOfType($sel, "nucleus");
+		for ($c=0;$c<`size $cNuc`;$c++){
+			setAttr ($cNuc[$c] + ".enable") 1;
+		}
+		
+		string $cacheDirectory = `getAttr ($sel[$i] + ".cacheDirectory")`;
+		string $cacheName = `getAttr ($sel[$i] + ".cacheName")`;
+		$usePrefix = `getAttr ($sel[$i] + ".usePrefix")`;
+		if ($usePrefix){
+			$up = 1;
+		} else {
+			$up = 0;
+		}
+		
+		int $cacheTimeRange = `getAttr ($sel[$i] + ".cacheTimeRange")`;
+		string $ctr = $cacheTimeRange;
+		float $cacheStartFrame = `getAttr ($sel[$i] + ".cacheStartFrame")`;
+		float $cacheEndFrame = `getAttr ($sel[$i] + ".cacheEndFrame")`;
+		float $cacheByFrame = `getAttr ($sel[$i] + ".cacheByFrame")`;
+		int $saveEveryNEvaluations = `getAttr ($sel[$i] + ".saveEveryNEvaluations")`;
+		
+		int $fileDistribution = `getAttr ($sel[$i] + ".fileDistribution")`;
+		if ($fileDistribution == 1){
+			$fd = "OneFile";
+		} else {
+			$fd = "OneFilePerFrame";
+		}
+		
+		print ("Caching: " + $sel[$i] + "\n");
+		//_________________________________________
+		// Do The Caching
+		select -r $sel[$i];
+		//doCreateFluidCache 5 { $cacheTimeRange, $cacheStartFrame, $cacheEndFrame, $fd, "1", "","0", "","0", $ar, "0", $cacheByFrame, $saveEveryNEvaluations, $usePrefix, $inheritModifications, "mcc", $cacheDensity, $cacheVelocity, $cacheTemperature, $cacheFuel, $cacheColor, $cacheTextureCoordinates, $cacheFalloff }; 	
+		//doCreateFluidCache 5 { "2", "1", "10", "OneFilePerFrame", "1", "","0", "","0", "add", "0", "1", "1", "0", "1", "mcc", "1", "1", "1", "1", "1", "1", "1" } ;
+		//doCreateFluidCache 5 { $ctr, $cacheStartFrame, $cacheEndFrame, $fd, "1", "","0", "","0", $ar, "0", $cacheByFrame, $saveEveryNEvaluations, $up, $im, "mcc", $cd, $cv, $ct, $cf, $cc, $ctc, $cfo } ;
+		
+		//doCreateNclothCache 5 { $ctr, $cacheStartFrame, $cacheEndFrame, $fd, "1", "","0","","0", "add", "0", "1", "1","0","1","mcx" } ;
+		doCreateNclothCache 5 { $ctr, $cacheStartFrame, $cacheEndFrame, $fd, "1", "","0", "","0", "add", "0", $cacheByFrame, $saveEveryNEvaluations, "0", "1", "mcx" } ;
+			
+		print ("Done Caching: " + $sel[$i] + "\n");
+	}
+
+	if (`checkBox -q -v nHairCacheRenderWhenCacheIsCompleteOption`){
+		BatchRender;
+	}
+	
+	// reset nuclues solvers that were enabled.
+	for ($i=0;$i<`size $enNuc`;$i++){
+		setAttr ($enNuc[$i] + ".enable") 0;
+	}
+}
+
+//DELETE CUSTOM NCACHE ATTRIBUTES
+//-----------------------------------------------
+global proc deleteCustomNCacheAttributes( string $sel[] )
+{
+	string $allAttr[] = {	
+	"cacheDirectory","cacheName","usePrefix","cacheTimeRange","cacheStartFrame","cacheEndFrame",
+	"cacheByFrame","saveEveryNEvaluations","fileDistribution"
+	};
+	for ($i = 0; $i < `size $sel` ; $i++){
+		doDeleteAttr($allAttr, $sel[$i]);
+		print ("Custom Cache Attributes on " + $sel[$i] + " Deleted!" + "\n");
+	
+	}
+
+}
+

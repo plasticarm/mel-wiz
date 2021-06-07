@@ -1,0 +1,3730 @@
+global proc uvWiz()
+{
+uvWizWindow();
+}
+
+//WINDOW
+//=======================================================================================================
+global proc uvWizWindow()
+{
+	global string $uvWizWindow;
+	$uvWizWindow = "uvWiz";
+	if(`window -exists $uvWizWindow`){
+		deleteUI $uvWizWindow;
+	}
+	
+	window
+		-title "UV Wiz"
+		-widthHeight 400 200
+		-menuBar on
+		-menuBarVisible on
+		-minimizeButton on
+		-maximizeButton on
+		-sizeable on		
+		-resizeToFitChildren off
+		-titleBar on
+		$uvWizWindow;
+		
+		string $masterLayout = `columnLayout
+			-adjustableColumn true
+			masterLayout
+			`;
+			
+		fixEmptyUVs();	
+		
+		showWindow $uvWizWindow;	
+}
+
+//LAYOUTS
+//===============================================================================
+
+//UV WIZ LAYOUT
+//-------------------------------------
+global proc uvWizLayout()
+{
+	
+	string $masterLayout = `columnLayout -adj true	uvWizMasterLayout`;
+		
+	uvFixesLayout($masterLayout);	
+		
+}
+
+global proc uvLayoutLayout(string $parent)
+{
+	
+	string $layout = `frameLayout
+		-l "UV Layout"
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true		
+		-parent $parent
+		`;
+	
+	uvLayoutToolsLayout($layout);
+	
+	layoutUVsIntoMultiUVGridSpacesLayout($layout);
+		
+	splitUVsIntoGridSpacesByUVsLayout($layout);
+	
+	splitUVsIntoGridSpacesBy3dAreaLayout($layout);	
+	
+	uvWizCreateUVsLayout($layout);
+	
+	setParent..;		
+}
+
+//LAYOUT UVS INTO GRID SPACES LAYOUT
+//============================================
+
+//LAYOUT UVS INTO GRID SPACES LAYOUT
+//--------------------------------------------
+global proc layoutUVsIntoMultiUVGridSpacesLayout(string $parent)
+{
+	string $layout = `frameLayout
+		-l "Layout UVs Into Multiple UV Grid Spaces"
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true		
+		-parent $parent
+		layoutUVsIntoMultiUVGridSpacesFrameLayout
+		`;
+	
+	layoutUVsIntoMultiUVGridSpacesMenu();
+	
+	intSliderGrp
+		-l "Divide UVs By Squared"
+		-cal 1 "left"
+		-cal 2 "left"
+		-cal 3 "left"
+		-cat 2 "left" 0
+		-adj 3
+		-min 2
+		-max 10
+		-value 5
+		-fmn 2
+		-fmx 999999
+		-field true	
+		-ann ""		
+		layoutUVsIntoGridSpacesDivideBySquaredIntSliderGrp			
+		;		
+	
+	floatFieldGrp
+		-l "Search Range"
+		-cal 1 "left"
+		-cal 2 "left"
+		-cal 3 "left"
+		-nf 2
+		-v1 0
+		-v2 1
+		-pre 4
+		layoutUVsIntoGridSpacesSearchRangeFloatFieldGrp
+		;
+	
+	floatSliderGrp 
+		-l "Min UV Percentage Space"
+		-minValue 0
+		-maxValue 5
+		-value 0.1
+		-f true
+		-fmn 0.000001 
+		-fmx 99999 
+		-pre 4
+		-cal 1 "left"
+		-cal 2 "left"
+		-adj 3
+		layoutUVsIntoGridSpacesMinUVPercentageSpaceFloatSliderGrp
+		;
+		
+	checkBox
+		-l "Use Recommended PolyLayout Settings" 
+		-v 1 
+		layoutUVsIntoGridSpacesUseRecommendedSettingsCheckBox
+		;
+		
+	string $inspectButton = wizButton("Inspect", "", "inspectSortUVShellsIntoGridAreasButton", "help");	
+	button -e -c ("inspectSortUVShellsIntoGridAreas(`ls -sl`);openCurrentOptionsLayout(\"recommendedSettingsOptionMenu\");") $inspectButton; 
+	
+	string $button = wizStandardActionButton("Sort UV Shells Into Grid Areas", "sortUVShellsIntoGridAreas(`ls -sl`)", "sortUVShellsIntoGridAreasButton");
+	
+	
+	button
+		-label "Merge UVs By Propogation"
+		-ann ""			
+		-command "mergeUVShellsBySelectionPropogationMethods(`ls -sl`)"
+		splitUVsIntoGridSpacesByUVs
+		;
+	/*
+	string $button = wizStandardActionButton("Sort UV Shells Into Grid Areas (Faster Method) (Does Not Work)", "sortUVShellsIntoGridAreasHighPolyCount(`ls -sl`)", "sortUVShellsIntoGridAreasFasterMethodButton");
+	*/
+		
+	setParent..;
+}
+
+//SPLIT UVS INTO GRID SPACES
+//===============================================
+
+//SPLIT UVS INTO GRID SPACES BY UVS LAYOUT
+//----------------------------------------------
+global proc splitUVsIntoGridSpacesByUVsLayout(string $parent)
+{
+	string $layout = `frameLayout
+		-l "Split UVs Into Grid Spaces By UVs"
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true		
+		-parent $parent
+		`;
+		
+	
+	intSliderGrp
+		-cal 1 "left"
+		-l "Divide By Squared"
+		-min 2
+		-max 10
+		-value 5
+		-fmn 2
+		-fmx 999999
+		-field true	
+		-ann ""
+		-cw 1 200		
+		splitUVIntoGridSpacesByUVsDivideBySquared			
+		;
+	
+	floatFieldGrp	
+		-l "Search Range"
+		-cal 1 "left"
+		-nf 2
+		-v1 0
+		-v2 1
+		-pre 4
+		splitUVIntoGridSpacesByUVsSearchRange
+		;
+		
+	checkBox
+		-l "Do Not Overlap UVs" 
+		-v 1 
+		//-en false
+		splitUVsIntoGridSpacesByUVsOverlapUVsOption
+		;
+		
+	checkBox
+		-l "Select Shells" 
+		-v 1 
+		//-en false
+		splitUVsIntoGridSpacesByUVsSelectShellsCheckBox
+		;
+		
+	button
+		-label "Split UVs Into Separate GridSpaces By UVs"
+		-ann "This function divides the mesh into evenly sized cubes. More iterations produce more cubes."			
+		-command "splitUVsOfSelectedObjectsIntoGridSpacesByUVs(`ls -sl`)"
+		splitUVsIntoGridSpacesByUVs
+		;
+		
+
+		
+	/*			
+	progressBar
+		-min 0
+		-max 100
+		splitUVsIntoGridSpacesByUVsProgressBar
+		;
+	*/	
+	setParent..;
+}
+
+//SPLIT UVS INTO GRID SPACES LAYOUT
+//---------------------------------------------
+global proc splitUVsIntoGridSpacesBy3dAreaLayout(string $parent)
+{
+	string $layout = `frameLayout
+		-l "Split UVs Into Grid Spaces By 3D Area"
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true		
+		-parent $parent
+		`;
+	
+	intSliderGrp 
+		-l "Iterations" 
+		-minValue 1
+		-maxValue 5
+		-value 2
+		-fmn 1
+		-fmx 999999
+		-field true	
+		-ann "This function divides the mesh into evenly sized cubes. More iterations produce more cubes."
+		-cw 1 200
+		splitUVIntoGridSpacesIterations			
+		;
+
+	button
+		-label "Split UVs Into Separate GridSpaces By 3d Area"
+		-ann "This function divides the mesh into evenly sized cubes. More iterations produce more cubes."			
+		-command "splitUVsOfSelectedObjectsIntoGridSpacesBy3dArea(`ls -sl`)"
+		splitUVsIntoGridSpacesBy3dArea
+		;
+		
+	setParent..;
+}
+
+//UV TOOLS
+//============================================
+//UV TOOLS LAYOUT
+//-------------------------------
+global proc uvLayoutToolsLayout(string $parent)
+{
+	string $layout = wizStandardFrameLayout($parent, "UV Layout Tools", "uvLayoutToolsFrameLayout");
+	
+	uvToolsMenuBarLayout();
+	
+	scaleUVsCenteredInGridAreaControls($layout);
+	
+	moveUVsControlsLayout($layout);	
+
+}
+
+//SCALE UVS CENTERED IN GRID AREA
+//-----------------------------------------------
+global proc scaleUVsCenteredInGridAreaControls(string $parent)
+{
+	
+	string $rowLayout = `rowLayout -nc 2 -p $parent`;
+
+	intFieldGrp
+		-numberOfFields 1
+		-label "Grid Area U : (X)"
+		-value1 0
+		scaleUVsCenteredInGridAreaGridAreaUIntFieldGrp
+		;
+		
+	intFieldGrp
+		-numberOfFields 1
+		-label "Grid Area V : (Y)"
+		-value1 0 
+		scaleUVsCenteredInGridAreaGridAreaVIntFieldGrp
+		;
+	
+	setParent..;
+	
+	floatSliderButtonGrp
+		-l "Scale"
+		-f true
+		-cal 1 "left"
+		-cal 2 "left"
+		-cw1 20
+		-min 0.0001
+		-max 2
+		-fmn 0.0001
+		-fmx 999999
+		-pre 5
+		-v 0.98
+		-bl "Scale UVs"
+		-bc ("scaleUVsCenteredInGridArea(`ls -sl`);")
+		//-cc ("scaleUVsCenteredInGridArea(`ls -sl`);")
+		scaleUVsCenteredInGridAreaScaleFloatSliderButtonGrp
+		;
+	
+	floatSliderButtonGrp
+		-l "Scale U"
+		-f true
+		-cal 1 "left"
+		-cal 2 "left"
+		-cw1 20
+		-min 0.0001
+		-max 2
+		-fmn 0.0001
+		-fmx 999999
+		-pre 5
+		-v 1
+		-bl "Scale U"
+		-bc ("wizScaleUVs(`ls -sl`);")
+		//-cc ("wizScaleUVs(`ls -sl`);")
+		scaleUVsUFloatSliderButtonGrp
+		;
+		
+	floatSliderButtonGrp
+		-l "Scale V"
+		-f true
+		-cal 1 "left"
+		-cal 2 "left"
+		-cw1 20
+		-min 0.0001
+		-max 2
+		-fmn 0.0001
+		-fmx 999999
+		-pre 5
+		-v 1
+		-bl "Scale V"
+		-bc ("wizScaleUVs(`ls -sl`);")
+		//-cc ("wizScaleUVs(`ls -sl`);")
+		scaleUVsVFloatSliderButtonGrp
+		;
+}
+
+//MOVE UVS
+//----------------------------------
+global proc moveUVsControlsLayout(string $parent)
+{
+	/*	
+	string $layout = `frameLayout
+		-l "Move UVs"
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true		
+		-parent $parent
+		moveUVsWizFrameLayout
+		`;		
+	
+	*/	
+	floatSliderButtonGrp 
+		-l "Move U"
+		-cal 1 "left"
+		-cal 2 "left"
+		-cw1 20
+		-adj 3
+		-value 0
+		-minValue -2
+		-maxValue 2		
+		-f true
+		-fmn -99999 
+		-fmx 99999
+		-pre 4	
+		-s 0.1
+		-bl "Move"
+		moveUVsWizMoveUFloatSliderButtonGrp
+		;
+	
+	floatSliderButtonGrp 
+		-l "Move V"
+		-cal 1 "left"
+		-cal 2 "left"
+		-cw1 20
+		-adj 3
+		-value 0
+		-minValue -2
+		-maxValue 2		
+		-f true
+		-fmn -99999 
+		-fmx 99999 
+		-pre 4	
+		-s 0.1
+		-bl "Move"
+		moveUVsWizMoveVFloatSliderButtonGrp
+		;	
+	
+	string $bc = ("float $moveU = `floatSliderButtonGrp -q -v moveUVsWizMoveUFloatSliderButtonGrp`;"
+	+"float $moveV = `floatSliderButtonGrp -q -v moveUVsWizMoveVFloatSliderButtonGrp`;"
+	+"moveSelectedUVs(`ls -sl`,$moveU, $moveV);");
+	
+	floatSliderButtonGrp -e -bc $bc moveUVsWizMoveUFloatSliderButtonGrp;
+	floatSliderButtonGrp -e -bc $bc moveUVsWizMoveVFloatSliderButtonGrp;
+	
+	//floatSliderButtonGrp -e -dc $bc moveUVsWizMoveUFloatSliderButtonGrp;
+	//floatSliderButtonGrp -e -dc $bc moveUVsWizMoveVFloatSliderButtonGrp;
+	
+	button
+		-l "Move Selected UVs"
+		-c $bc
+		;		
+
+	
+	setParent..;
+}
+
+//FIX EMPTY UVS LAYOUT
+//----------------------------------
+global proc uvFixesLayout(string $parent)
+{
+	string $layout = `frameLayout
+		-l "UVs"
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true		
+		-parent $parent`;
+	
+	button
+		-label "Fix Empty UV's"
+		-ann ""			
+		-command "fixEmptyUVs"
+		fixEmptyUVs;
+	
+}
+
+//UV WIZ CREATE UVS LAYOUT
+//----------------------------------
+global proc uvWizCreateUVsLayout(string $parent)
+{
+	string $layout = `frameLayout
+		-l "Create UVs"
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true		
+		-parent $parent
+		`;
+		
+	button
+		-l "(Experimental) Create UVs"		
+		-c ("uvWizCreateUVs(`ls -sl`)")
+		;	
+}
+
+//MENUS
+//==============================================================================
+
+//UV MENU
+//-----------------------------
+global proc wizGlobalUVMenu()
+{
+	//menuBarLayout;
+	menu -l "UVs" -to true;
+		menuItem -sm true -l "Window";
+			menuItem -l "UV Texture Editor" -c ("TextureViewWindow;");
+		setParent -menu..;
+		
+		menuItem -sm true -l "Create UVs";
+			menuItem -l "Sphere Projection Unfolded" -c ("wizUVs(\"-sl -typ sphereUnfold\");");
+		setParent -menu..;
+		
+		menuItem -sm true -l "UV Layout" -to true;
+			menuItem -l "Optimize UV Space" -c ("optimizeUVSpace(`ls -sl`);");
+				menuItem -ob true -c ("openCurrentOptionsLayout(\"optimizePrepForPaintingOptions\");");
+				
+			menuItem -l "Poly Layout UVs" -c ("polyLayoutUVSelected(`ls -sl`);");
+				menuItem -ob true -c ("openCurrentOptionsLayout(\"polyLayoutUVOptionsMenu\");");
+				
+			menuItem -l "Trasfer UVs" -c ("string $sel[] = `ls -sl`; string $from = $sel[0]; string $to = $sel[1];transferUVs($from, $to);");
+				menuItem -ob true -c ("openCurrentOptionsLayout(\"transferUVsOptions\");");
+			
+			menuItem -l  "Fit Selected Objects UVs Into Single UV Space" -c ("fitSelectedObjectsUVsIntoSingleUVSpace(`ls -sl`);");
+				menuItem -ob true -c ("openCurrentOptionsLayout(\"fitSelectedObjectsUVsIntoSingleUVSpaceOptions\");");
+			menuItem -l "Auto Tile Layout" -c ("wizCraftAutoTileUVLayout(\"-sl\");");
+			
+		setParent -menu..;
+		
+		menuItem -sm true -l "UV Sets" -to true;
+			menuItem -l "Flatten UVs To Default" -c ("wizFlattenUVSetsOnSelectedObjects(`ls -sl`);");
+			menuItem -l "Merge All UV Sets Down" -c ("mergeAllUVSetsDownward(`ls -sl`);");
+			menuItem -l "Delete Non-Default UV Sets" -c ("deleteNonDefaultUVSets(`ls -sl`);");
+			menuItem -l "Rename Default Set \"map1\"" -c ("renameSelectedObjectsDefaultUVSetToMap1(`ls -sl`);");
+			menuItem -l "Get UV Set Names In Logical Order" -c ("getAllUVSetNamesInLogicalOrder(`ls -sl`);");
+			menuItem -l "Rename Default UV Set To map1" -c ("renameSelectedObjectsDefaultUVSetToMap1(`ls -sl`);");
+		setParent -menu..;
+			
+}
+
+//UV TOOLS MENU
+//---------------------------------------------------
+global proc uvToolsMenuBarLayout()
+{
+	string $menuBarLayout = `menuBarLayout uvToolsMenuBarLayout`;	
+	setParent $menuBarLayout;	
+	menu -l "Select";
+		menuItem -l "Select UVs" -c ("ConvertSelectionToUVs");	
+
+}
+
+//LAYOUT UVS INTO MULTI GRID SPACES MENU
+//---------------------------------------------------
+global proc layoutUVsIntoMultiUVGridSpacesMenu()
+{
+	string $menuBarLayout = `menuBarLayout layoutUVsIntoMultiUVGridSpacesMenuBarLayout`;	
+	setParent $menuBarLayout;
+	menu -l "Options";
+		menuItem -l "Output Options" -c ("openCurrentOptionsLayout(\"sortUVShellsIntoGridAreasOutputOptionsMenu\")");
+		menuItem -l "Layout Options" -c ("openCurrentOptionsLayout(\"polyLayoutUVOptionsMenu\")");
+	
+	menu -l "Functions";	
+		menuItem -l "Sort" -sm true;
+			menuItem -l "Sort Faces Into Shell Sets" -c ("passSelectionListToCommandGetReturnSelectionList(\"selectMasterListA\",\"sortFacesIntoShellSets\");");
+			menuItem -l "Sort Faces Into Shell Selection Commands" -c ("passSelectionListToCommandGetReturnSelectionList(\"selectMasterListA\",\"sortFacesIntoShellSelectionCommands\");");
+			menuItem -l "Sort UVs into Grid Areas" -c ("passSelectionListToCommandGetReturnSelectionList(\"selectMasterListA\",\"sortUVsIntoGridAreas\");");
+			setParent -menu..;
+			
+		menuItem -l "Measure" -sm true;
+			menuItem -l "Get Area Of Shell Faces" -c ("getAreaOfShellFaces(`ls -sl`);");
+			menuItem -l "Get Perimeter Of Shell Faces" -c ("getPerimeterOfShellFaces(`ls -sl`);");
+			setParent -menu..;
+		
+	wizGlobalUVMenu();
+		
+	//Debug menu
+		string $functionList[] = {
+		"sortUVShellsIntoGridAreas", "sortUVsIntoGridAreas", "sortFacesIntoShellSelectionCommands",
+		"sortFacesIntoShellSets", "sortFacesIntoShellSelections", "getAreaOfShellFaces",
+		"getPerimeterOfShellFaces" };
+		int $defaultValues[] = { 1, 0, 0, 0, 0, 0, 0 };
+		debugWizDebuggerMenu $menuBarLayout $functionList $defaultValues layoutUVsIntoMultiUVGridDebugMenuBar;
+		
+		menuItem -l "Confirm Layout" -cb false layoutUVsIntoGridSpacesByUVsConfirmLayoutMenuItem;
+}
+
+//SORT UV SHELLS INTO GRID AREAS MAIN FUNCTION MENU ITEMS
+//---------------------------------------------------------------
+global proc sortUVShellsIntoGridAreasMainFunctionsMenuItems()
+{	
+	menuItem -l "Inspect" -c ("inspectSortUVShellsIntoGridAreas(`ls -sl`);openCurrentOptionsLayout(\"recommendedSettingsOptionMenu\");");
+	menuItem -l "Sort UV Shells Into Grid Areas" -c "sortUVShellsIntoGridAreas(`ls -sl`)";
+
+}
+
+//FUNCTIONS
+//=============================================================================
+
+//CREATE UVS
+//=========================================================================
+global proc uvWizCreateUVs(string $sel[])
+{
+	string $dbl = "-dmi UvWizCreateUVsDebugMenuItem -t Create UVs"; string $dbm = "add"; int $dbc = 1;
+	
+	string $mesh = $sel[0];
+	string $ff = getFaceFarthestInDirection($mesh, "Z", 1);
+	
+	//Create a new uv set with auto name
+	string $curUVSet[] = `polyUVSet -q -currentUVSet $mesh`;
+	string $newUVSet[] = `polyUVSet -create $mesh`;
+	
+	polyUVSet -cuv -uvSet $newUVSet[0];
+	
+	//string $sf[];
+	createUVsUsingVertexSpace({$ff});
+
+}
+
+global proc createUVsUsingVertexSpace(string $f[])
+{
+	for($i=0;$i<`size $f`;$i++){
+		select -r $f[$i];	
+		polyForceUV -uni;
+		
+		ConvertSelectionToVertices;
+		string $v[] = `ls -fl -sl`;
+		
+		for($vi=0;$vi<`size $v`;$vi++){
+			float $vPos[] = `xform -q -t $v[$i]`;
+			select -r $v[$i];
+			ConvertSelectionToUVs;
+			string $uv[] = `ls -fl -sl`;
+			polyEditUV -r false -u ($vPos[0]) -v ($vPos[1]);
+			
+		}
+		
+	}	
+}
+
+
+global proc string getFaceFarthestInDirection(string $mesh, string $axis, float $dir)
+{
+	string $dbl = "-dmi UvWizCreateUVsDebugMenuItem -t Create UVs"; string $dbm = "add"; int $dbc = 1;
+	
+	string $f[] = wizGetComponentFromSelection({$mesh}, "faces");
+	
+	debugList($dbl, { (" - Mesh: " + $mesh) }, $dbc, $dbm);
+	debugList($dbl, { (" - Faces: " + `size $f`) }, $dbc, $dbm);
+	debugList($dbl, {(tslDiv(""))}, $dbc, $dbm);	
+	
+	float $fdir[];
+	int $ti;
+	switch($axis){
+		case "X" : case "x" :
+		$ti = 0;
+		break;	
+		case "Y" : case "y" :
+		$ti = 1;
+		break;
+		case "Z" : case "z" :
+		$ti = 2;
+		break;
+	}
+	
+	for($i=0;$i<`size $f`;$i++){
+		float $fPos[] = getPolyFaceCenterPosition($f[$i], $mesh);
+		
+		string $fPosString = floatArrayToString($fPos, " ");
+		
+		if(`size $f` < 100){
+			debugList($dbl, { (" - Face: " + $f[$i]) }, $dbc, $dbm);
+			debugList($dbl, { (" - Face Center: " + $fPosString) }, $dbc, $dbm);
+		}
+		
+		$fdir[`size $fdir`] = $fPos[$ti];
+	}
+	string $sortedDir[] = sortStringArrayByFloatArray($f, $fdir);
+	
+	if(`size $sortedDir` < 100){
+		debugList($dbl, { (" - Faces Sorted By Z Translate - ") }, $dbc, $dbm);
+		debugList($dbl, $sortedDir, $dbc, $dbm);	
+	}
+	debugList($dbl, { (" - Farthest In Direction: " + $sortedDir[0]) }, $dbc, $dbm);
+	
+	select -r $sortedDir[0];
+	
+	return $sortedDir[0];
+
+}
+
+//INSPECTION
+//===================================================
+//INSPECT SORT UV SHELLS INTO GRID AREAS
+//------------------------------------------
+global proc inspectSortUVShellsIntoGridAreas(string $sel[])
+{
+	if(`size $sel` > 1){
+		string $selRec = "Sorting UV Shells Into Grid Areas Works Best On One Object At A Time\n"
+		+"Please Select One Object At A Time When Using Sort UV Shells Into Grid Areas";
+		addRecommendedSetting("sortUVShellsIntoGridAreasHighShellCountRecommendedSettings",
+		$selRec, "", "", "");
+	}
+	//Get shell count
+	int $shellCount = getUVShellCount($sel);
+	int $highShellCount;
+	if($shellCount > 1000){
+		$highShellCount = 1;
+		//$shellCount = getAccurateShellCount($sel);	
+	}
+	if($highShellCount){
+		
+		int $recDiv = $shellCount * 0.002;
+		string $hscm = (stringArrayToString($sel," ") + " Contains Large Number Of UV Shells : " + $shellCount + " Shells\n"
+		+ "Recommended To Sort UV Shells Into Grid Areas By :" + $recDiv + " Divisions");
+		string $hscbl1 = "Set Divide UVs By\n Squared To: " + $recDiv + " Divisions";
+		string $hscbc1 = ("intSliderGrp -e -v " + $recDiv + " layoutUVsIntoGridSpacesDivideBySquaredIntSliderGrp;");
+	
+		string $hscbl2 = "Sort UV Shells\n Into Grid Areas";
+		string $selString = stringArrayToStringArrayString($sel);
+		string $hscbc2 = "sortUVShellsIntoGridAreas(" + $selString + ");";
+		addRecommendedSetting("sortUVShellsIntoGridAreasHighShellCountRecommendedSettings",
+		$hscm, $hscbc1, $hscbl2, $hscbc2);	
+	} else {
+		string $hscm = ("Sorting UV Shells Into Grid Areas Is Not Recommended For Objects With Low Shell Count\n"
+		+ stringArrayToString($sel, " ") + " Shell Count :" + $shellCount);
+		addRecommendedSetting("sortUVShellsIntoGridAreasHighShellCountRecommendedSettings",
+		$hscm, "", "", "");
+	}
+
+}
+
+
+//LAYING OUT UVS
+//=============================================================================
+
+//LAYOUT INTO GRID SPACES
+//==============================
+global proc layoutFacesIntoGridSpaces(string $face[], int $uMove, int $vMove, float $scale, string $currentUVSet, string $newUVSet, string $layoutType)
+{
+	//printProc("layoutFacesIntoGridSpaces");
+	
+	string $layoutTypes[] = { "shellSplit", "shellSpread" };
+	//shellSplit - for splitting uvs into multi grid spaces
+	//shell spread - for optimizing layouts while spreading out uv to make sure theres enough space in between uvs
+	
+	//Use recommended settings?
+	int $useRec = `checkBox -q -v layoutUVsIntoGridSpacesUseRecommendedSettingsCheckBox`;
+	
+	//Get settings from polyLayoutUVSettings
+	float $ps = float(getPolyLayoutUVSettings("ps"));
+	int $rbf = int(getPolyLayoutUVSettings("rbf"));
+	int $l = int(getPolyLayoutUVSettings("l"));
+	int $lm = int(getPolyLayoutUVSettings("lm"));
+	
+	//Select the faces
+	string $selString = stringArrayToString($face, " ");
+	
+	//Copy the uvs from the current uv set to the new uv set
+	string $polyCopy = ("polyCopyUV -uvi " + $currentUVSet + " -uvs " + $newUVSet + " " + $selString + " ;");
+	eval($polyCopy);
+	
+	//Layout the uvs with some spacing
+	//polyLayoutUV -lm 0 -sc 1 -se 0 -rbf 2 -fr 0 -ps 0.05 -l 2 -ch 1 ppTest1;
+	string $polyLayout;
+	if($useRec){
+		if($layoutType == "shellSplit"){
+			$polyLayout = ("polyLayoutUV -lm 0 -sc 0 -se 0 -rbf 0 -fr 0 -ps 1 -l 0 " + $selString + " ;");
+		} else if ($layoutType == "shellSpread"){
+			$polyLayout = ("polyLayoutUV -lm 0 -sc 1 -se 0 -rbf 0 -fr 0 -ps " + $ps + " -l 2 " + $selString + " ;");
+		}
+	} else {
+		$polyLayout = ("polyLayoutUV -lm " + $lm + " -sc 0 -se 0 -rbf " + $rbf + " -fr 0 -ps " + $ps + " -l " + $l + " " + $selString + " ;");
+	}
+	eval($polyLayout);
+	
+	if($layoutType == "shellSplit"){
+		//Scale the UVs up to fit into the UV space
+		string $uvScale = ("polyEditUV -s true -pu 0 -pv 0 -su " + $scale + " -sv " + $scale + " " + $selString + " ;");
+		eval($uvScale);
+	} else if($layoutType == "shellSpread"){
+		string $uvScale;
+		if($useRec){
+			$uvScale = "polyEditUV -s true -pu 0.5 -pv 0.5 -su 0.98 -sv 0.98 " + $selString + " ;";
+		} else {	
+			$uvScale = "polyEditUV -s true -pu 0.5 -pv 0.5 -su " + $scale + " -sv " + $scale + " " + $selString + " ;";
+		}
+		eval($uvScale);
+	}
+	
+	//Move the UVs over into a different grid area of UV space
+	string $polyMoveUV;
+	if($layoutType == "shellSplit"){
+	//Move the UVs over into a different grid area of UV space
+		$polyMoveUV = ("polyEditUV -u " + ($uMove + 0.04) + " -v " + ($vMove + 0.04) + " " + $selString + " ;");
+	
+	} else if($layoutType == "shellSpread"){
+		$polyMoveUV = ("polyEditUV -u " + ($uMove) + " -v " + ($vMove) + " " + $selString + " ;");
+	}
+	eval($polyMoveUV);
+
+}
+
+//FIT SELECTED OBJECTS UVS INTO SINGLE UV SPACE
+//================================================================
+global proc fitSelectedObjectsUVsIntoSingleUVSpace(string $sel[])
+{
+	//loadCurrentOptions("fitSelectedObjectsUVsIntoSingleUVSpaceOptions");
+	
+	string $dbl = "-dim FitSelectedObjectsUVsIntoSingleUVSpaceDebugMenuItem -t Fit UVs Into Single UV Space"; string $dbm = "add"; int $dbc = 1;
+		
+	//float $size = 1.0;
+	float $size = `intSliderGrp -q -v fitSelectedObjectsUVsIntoSingleUVSpaceGridAreaIntSliderGrp`;
+	float $div = ceil(sqrt(`size $sel`));
+	float $scale = $size / $div;
+	
+	float $moveSize = $scale;
+	$scale = $scale * 0.99;
+	//int $startU = 0 - (sqrt($div));
+	float $startU = 0 - ($size - 1);
+	float $startV = $startU;
+	
+	float $uMove = $startU;
+	float $vMove = $startU;
+	int $rowEnd = $div;
+	int $col = 1;
+	
+	debugList($dbl, { (" - Selection - ") }, $dbc, $dbm);
+	debugList($dbl, $sel, $dbc, $dbm);
+	debugList($dbl, { ("---------------------") }, $dbc, $dbm);
+	debugList($dbl, { (" - Scale UVs: " + $scale) }, $dbc, $dbm);
+	debugList($dbl, { (" - U Move: " + $uMove) }, $dbc, $dbm);
+	debugList($dbl, { (" - V Move: " + $vMove) }, $dbc, $dbm);
+	debugList($dbl, { (" - Start UV: " + $startU + " " + $startV) }, $dbc, $dbm);
+	debugList($dbl, { ("----------START-----------") }, $dbc, $dbm);
+	
+	for($i=0;$i<`size $sel`;$i++){
+		select -r $sel[$i];
+		ConvertSelectionToUVs;
+		
+		polyEditUV -pu $startU -pv $startU -su $scale -sv $scale;
+		
+		//polyEditUV -u $uMove -v $vMove;
+		polyMoveUV -tu $uMove -tv $vMove;
+			
+		debugList($dbl, { (" - Sel" + $i + ": " + $sel[$i]) }, $dbc, $dbm);
+		debugList($dbl, { (" - Scale UVs: " + $scale) }, $dbc, $dbm);
+		debugList($dbl, { (" - U Move: " + $uMove) }, $dbc, $dbm);
+		debugList($dbl, { (" - V Move: " + $vMove) }, $dbc, $dbm);
+		debugList($dbl, { ("---------NEXT----------") }, $dbc, $dbm);
+		
+		//Move over row
+		if($col == $rowEnd){
+			$col = 0;
+			$vMove = $vMove + $moveSize;			
+			$uMove = $startU;
+		} else {
+			$uMove = $uMove + $moveSize;
+		}
+		$col++;
+			
+	}
+	debugList($dbl, { ("---------END---------") }, $dbc, $dbm);	
+}
+
+
+//FIND EMPTY GRID SPACE TO PUT UVS
+//====================================
+global proc int[] findEmptyGridAreaInUVSets(string $face[], float $startSearchArea)
+{
+	int $emptyArea[] = {0,1};
+	return $emptyArea;	
+	//Get all uv sets and then search
+	
+	// use polyEvaluate -boundingBox2d 
+	// this gets the bounding box of the uv space
+}
+
+//CALCULATE MIN UV PERCENTAGE SPACE
+//======================================
+//This doesn't work yet.
+global proc float analyzeAndRecommendMinUVPercentageSpace(string $sel[])
+{
+	printProc("sortUVShellsIntoGridAreas");
+	//openCurrentOptions("polyLayoutUVOptionsMenu");
+	global int $WIZ_confirmStep;
+	int $debug = `menuItem -q -cb AnalyzeAndRecommendMinUVPercentageSpaceDebugMenuItem` ;
+	string $debugListA[];
+	
+	float $ps = float(getPolyLayoutUVSettings("ps"));
+	float $minPs = `floatSliderGrp -q -v layoutUVsIntoGridSpacesMinUVPercentageSpaceFloatSliderGrp`;
+	
+	string $obj = $sel[0];
+	
+	//Sort the faces into shells
+	string $sSel[] = sortFacesIntoShellSelectionCommands($sel);
+	float $uvArea[];
+	for($i=0;$i<`size $sSel`;$i++){
+		
+		eval($sSel[$i]);
+		string $f[] = `ls -fl -sl`;
+		//Get the uvs of each shell
+		ConvertSelectionToUVs;
+		string $uvs[] = `ls -fl -sl`;
+		//Sort the uvs so we can get the min and max uv for an area calculation
+		$uvs = sortUVsbyUVspace($uvs, 1);
+		
+		//Find the area of the shell
+		float $minUV[] = `polyEditUV -q -u -v $uvs[0]`;
+		int $lastUV = (`size $uvs` - 1);
+		float $maxUV[] = `polyEditUV -q -u -v $uvs[$lastUV]`;
+		float $uvAreaSize = get2dAreaSize($minUV,$maxUV);
+		$uvArea[`size $uvArea`] = $uvAreaSize;	
+		
+		//Put the area of the shell at the beginning of the selection command to sort
+		$sSel[$i] = $uvAreaSize + " " + $sSel[$i];
+		
+		//<DEBUG>	
+		if($debug == 1){
+			$debugListA[`size $debugListA`] = $sSel[$i];
+			//$debugList[`size $debugList`] = "UVArea: " + $uvAreaSize;
+			debugList("UV Shells", $debugListA, 1, "add");
+		}	
+		//<DEBUG>
+	}
+	
+	//Sort the shell selection commands by area size
+	$sSel = `sort $sSel`;
+	$sSel = getStringArrayAfterSpace($sSel);
+	return $minPs;
+}
+
+//SORT UV SHELLS INTO GRID AREAS
+//============================================================================
+
+global proc string[] sortUVShellsIntoGridAreas(string $sel[])
+{
+		
+	float $startTime = `timerX`;	
+	printProc("sortUVShellsIntoGridAreas");
+	//openCurrentOptions("polyLayoutUVOptionsMenu");
+	//openCurrentOptions("sortUVShellsIntoGridAreasOutputOptionsMenu");
+	string $pbp = "layoutUVsIntoMultiUVGridSpacesFrameLayout"; //ProgressBarParent
+	if(`progressBar -q -ex wizProgressBar` == 0){ progressBar -min 0 -max 100 -p $pbp wizProgressBar;}
+	progressBar -e -vis 1 -min 0 -max 100 -pr 0 -p $pbp wizProgressBar;
+	
+	refreshStep();
+	
+	//<DEBUG>
+	string $dbL = "UV Shells Layout";
+	int $dbC = 2;
+	string $dbM = "add";
+	//<DEBUG>
+	
+	//Count the shells... this seems unreliable.
+	int $shellCount = getUVShellCount($sel);
+	
+	global int $WIZ_confirmStep;
+	int $debug = `menuItem -q -cb SortUVShellsIntoGridAreasDebugMenuItem` ;
+	string $debugListA[];
+	
+	float $ps = float(getPolyLayoutUVSettings("ps"));
+	float $minPs = `floatSliderGrp -q -v layoutUVsIntoGridSpacesMinUVPercentageSpaceFloatSliderGrp`;
+	
+	string $obj = $sel[0];
+	
+	//<DEBUG>
+	//Turn off Debugging if there is a high number of faces in the object
+	int $fC[] = `polyEvaluate -f $obj`;
+	if($shellCount > 400){
+		//if(`menuItem -q -cb toggleAllFeedback` == 1){
+			int $debugOff = turnOffAllDebuggingConfirm(("Object Has " + $shellCount + " Shells\n" + "That Is A Lot Of Shells To Debug\n" + "Turning Off All Debug Messages Is Recommended\n"), "Turn Off Debug Messages", "Ignore This Warning");
+			if($debugOff == 1){ $debug = 0;}
+		//}	
+	
+	}
+	//<DEBUG>
+	
+	//Sort the faces into shells
+	string $sSel[] = sortFacesIntoShellSets($sel);
+	//string $sSel[] = sortFacesIntoShellsSeparatorArray($sel);
+	
+	progressBar -e -max (`size $sSel` * 2) wizProgressBar;
+	
+	//<DEBUG>
+	if($debug == 1){
+		debugList($dbL, {($obj + " : Face Count : " + $fC[0])}, $dbC, "add");
+		debugList($dbL, { ("-----------------------") }, $dbC, $dbM);
+		debugList($dbL, { ("STEP 1: FIND PERIMETER OF ALL SHELLS") }, $dbC, $dbM);
+		debugList($dbL, { ("-----------------------") }, $dbC, $dbM);
+	}
+	//<DEBUG>
+	print("WIZ| Finding The Perimeter Of All Shells... " + "\n");
+	
+	float $shellArea[];
+	int $allShellFaceCount = 0;
+	
+	for($i=0;$i<`size $sSel`;$i++){
+	
+		//Shell Set
+		string $sfSet[] = `sets -q $sSel[$i]`;	
+		select -r $sfSet;
+		string $shellFaces[] = `ls -fl -sl`;
+		
+		//Find the area of the shell
+		$shellArea[$i] = getPerimeterOfShellFaces($shellFaces);
+		//$shellArea[`size $shellArea`] = $sA;
+			
+		//<DEBUG>
+		if($debug == 1){
+			debugList($dbL, { ($sSel[$i]) }, $dbC, $dbM);
+			debugList($dbL, { (" - Shell[" + $i + "] : Face Count: " + `size $shellFaces`) }, $dbC, $dbM);
+			debugList($dbL, { (" - Perimeter: " + $shellArea[$i]) }, $dbC, $dbM);
+			debugList($dbL, { ("-----------------------") }, $dbC, $dbM);
+		}
+		$allShellFaceCount = $allShellFaceCount + `size $shellFaces`;
+		//<DEBUG>
+		
+		//Put the area of the shell at the beginning of the selection command to sort
+		$sSel[$i] = $shellArea[$i] + " " + $sSel[$i];
+			
+		progressBar -e -s 1 wizProgressBar;
+	}
+	refreshStep();
+	//<DEBUG>
+	if($debug == 1){
+		debugList($dbL, { (" - UnSorted Shells - ") }, $dbC, $dbM);	
+		debugList($dbL, { ("-----------------------") }, $dbC, $dbM);
+		debugList($dbL, $sSel, $dbC, $dbM);
+		debugList($dbL, { ("-----------------------") }, $dbC, $dbM);
+	}
+	//<DEBUG>
+	
+	//Sort the shell selection commands by area size
+	$sSel = `sort $sSel`;
+	
+	//<DEBUG>
+	if($debug == 1){
+		debugList($dbL, { (" - Area Sorted Shells - ") }, $dbC, $dbM);	
+		debugList($dbL, { ("-----------------------") }, $dbC, $dbM);
+		debugList($dbL, $sSel, $dbC, $dbM);
+		debugList($dbL, { ("-----------------------") }, $dbC, $dbM);
+		debugList($dbL, { (" - All Shell Face Count: " + $allShellFaceCount) }, $dbC, $dbM);	
+		debugList($dbL, { ("-----------------------") }, $dbC, $dbM);
+		debugList($dbL, { ("STEP 2: COMBINE SHELLS INTO LAYOUTS") }, $dbC, $dbM);
+		debugList($dbL, { ("-----------------------") }, $dbC, $dbM);
+	} else {
+		print($fC[0] + " Faces : " + `size $sSel` + " Shells : " + "\n");
+		print("Sorting Shells Into Layouts By Shell Size... \n");	
+	}
+	//<DEBUG>
+	
+	$shellArea = getFloatPrefixFromStringArray($sSel);
+	$sSel = getStringArrayAfterSpace($sSel);
+	
+	
+	//Initilize some variable to calculate the sizes of the new layouts
+	int $xi = `intSliderGrp -q -v layoutUVsIntoGridSpacesDivideBySquaredIntSliderGrp`;
+	float $rangeMin = 0;
+	float $rangeMax = 1;
+	float $aSize = ($rangeMax - $rangeMin) / $xi;
+	int $totalAreas = $xi * $xi;
+	
+	//We will add up the size of the shells we combine to figure out how many shells we can fit into a new layout
+	float $combShellSize = 0;
+	string $combShells[];
+	
+	//Create a new uv set with auto name
+	string $curUVSet[] = `polyUVSet -q -currentUVSet $obj`;
+	string $newUVSet[] = `polyUVSet -create $obj`;
+	
+	//Combine the shells into layout groups based on combined shell size
+	string $layoutSets[];
+	int $layoutCount = 0;
+	
+	print("WIZ| Combining Shells Into Layouts Based On Shell Size... " + "\n");
+	string $shellPS[];
+	
+	for($i=0;$i<`size $sSel`;$i++){	
+		
+		//<DEBUG>
+		if($debug == 1){
+			string $interation = " --" + $i + " -- ";
+			debugList($dbL, {$interation}, $dbC, $dbM);
+		}
+		//<DEBUG>
+		
+		$combShellSize = $combShellSize + $shellArea[$i];
+		$combShells[`size $combShells`] = $sSel[$i];	
+		
+		//<DEBUG>
+		if($debug == 1){
+			debugList($dbL, { (" - UV Area: " + $shellArea[$i]) }, $dbC, $dbM);			
+			if($shellArea[$i] != $combShellSize){		
+				debugList($dbL, { (" - Combined Shell Size: " + $combShellSize) }, $dbC, $dbM);
+			}
+			debugList($dbL, { (" - Shells Combined: " + `size $combShells`) }, $dbC, $dbM);
+			debugList($dbL, { (" - Compare Size( " + $combShellSize + " < " + $aSize + " )") }, $dbC, $dbM);
+		}
+		//<DEBUG>
+		
+		if($combShellSize < $aSize && $i < (`size $sSel` - 1)){
+			//<DEBUG>
+			if($debug == 1){			
+				debugList($dbL, { (" - Not Big Enough To Combine Yet -") }, $dbC, $dbM);			
+			}
+			//<DEBUG>
+			continue;
+		} else {
+			
+			//Layout all the faces in the shell groups that fit			
+			string $layoutFaces[] = getAllObjectsInSets($combShells);		
+			
+			string $layoutSet = createSetFromSelection($layoutFaces, ($obj + "LayoutSet" + $layoutCount));
+			$layoutSets[`size $layoutSets`] = $layoutSet;
+			
+			int $sizeLayoutFaces = `size $layoutFaces`;		
+			
+			//Calculate how we need to scale the uvs to fit... this is not used...
+			float $scaleUVs = ((1 - $combShellSize) + 1);
+			
+			//Calculate percentage space based on how many shells are in combShell
+			float $csps = getUVPercentageSpaceBasedOnShellCount($minPs, `size $combShells`);
+			$shellPS[`size $shellPS`] = $csps;			
+			
+			//<DEBUG>
+			if($debug == 1){	
+				debugList($dbL, { ("-----------------------") }, $dbC, $dbM);
+				debugList($dbL, { (" - COMBINING SHELLS -") }, $dbC, $dbM);			
+				debugList($dbL, { ("- " + $i + " - Shell Layout") }, $dbC, $dbM);
+				debugList($dbL, $combShells, $dbC, $dbM);
+				debugList($dbL, { (" - Number of Faces: " + $sizeLayoutFaces)}, $dbC, $dbM);
+				debugList($dbL, { (" - Combined Shell Size: " + $combShellSize)}, $dbC, $dbM);
+				debugList($dbL, { (" - Percentage Space: " + $csps)}, $dbC, $dbM);
+				debugList($dbL, { ("-----------------------") }, $dbC, $dbM);
+		
+			}
+			//<DEBUG>
+			$layoutCount++;
+			
+			//Reset the combined shells		
+			clear $combShells;
+			$combShellSize = 0;
+			
+		}
+		progressBar -e -s 1 wizProgressBar;
+	}
+	refreshStep();
+	
+	//Vars for moving around grid area
+	//Vars for moving around grid area
+	int $startU = 0 - ((sqrt($layoutCount)) / 2);
+	int $startV = $startU;
+	int $uMove = $startU;
+	int $vMove = $startV;
+	int $lo = 1;
+	int $rowEnd = sqrt($layoutCount);
+	int $col = 1;
+	
+	//<DEBUG>
+	if($debug == 1){
+		debugList($dbL, { (" * Preparing To Layout Faces * ") }, $dbC, $dbM);
+		debugList($dbL, { (" - Grid Size: " + $aSize) }, $dbC, $dbM);
+		debugList($dbL, { (" - Current UV Set: " + $curUVSet[0]) }, $dbC, $dbM);
+		debugList($dbL, { (" - New UV Set: " + $newUVSet[0]) }, $dbC, $dbM);
+		debugList($dbL, { (" - Layout Count: " + $layoutCount) }, $dbC, $dbM);
+		debugList($dbL, { ("-----------------------") }, $dbC, $dbM);	
+		debugList($dbL, { ("STEP 3: LAYOUT FACES INTO GRID SPACES") }, $dbC, $dbM);
+		debugList($dbL, { ("-----------------------") }, $dbC, $dbM);
+	} else {
+		print("Combined : " + `size $sSel` + " : Shells Into : " + `size $layoutSets` + " : Layouts" + "\n");
+		print("Laying Out Faces Into Grid Areas... \n");	
+	}
+	//<DEBUG>
+	progressBar -e -max (`size $layoutSets`) -pr 0 wizProgressBar;	
+	
+	print("WIZ| Laying Out Shell Faces In Grid Spaces... " + "\n");
+	int $fLayoutCount = 0;
+	for($i=0;$i<`size $layoutSets`;$i++){
+		//Do the layout	
+		
+		string $layoutFaces[] = getAllObjectsInSets({$layoutSets[$i]});	
+		
+		//<DEBUG>
+		if($debug == 1){
+			string $fInLayout[] = `ls -fl $layoutFaces`;
+			$fLayoutCount = $fLayoutCount + `size $fInLayout`;
+			debugList($dbL, { (" * LAYING OUT UVS * ") }, $dbC, $dbM);
+			debugList($dbL, { (" - Layout Set: " + $layoutSets[$i]) }, $dbC, $dbM);
+			debugList($dbL, { (" - Faces In Set: " + `size $layoutFaces`) }, $dbC, $dbM);
+			debugList($dbL, { (" - U Move: " + $uMove + " V Move: " + $vMove)}, $dbC, $dbM);
+			debugList($dbL, { ("-----------------------") }, $dbC, $dbM);	
+		}
+		//<DEBUG>
+		
+		//Set the polyLayoutUVSettings to our new setting
+		polyLayoutUVSettings(("-ps " + $shellPS[$i]));
+		
+		layoutFacesIntoGridSpaces($layoutFaces, $uMove, $vMove, 0, $curUVSet[0], $newUVSet[0], "shellSpread");
+		
+		//Move over row
+		if($col == $rowEnd){
+			$col = 0;
+			$vMove = $vMove + 1;			
+			$uMove = $startU;
+		} else {
+			$uMove = $uMove + 1;
+		}
+		$col++;
+		$lo++;
+		
+		progressBar -e -s 1 wizProgressBar;	
+	}
+	
+	refreshStep();
+	
+	//<DEBUG>
+	float $totalTime = `timerX -startTime $startTime`;
+	if($debug == 1){	
+		string $dbL = "UV Shells Layout";
+		int $dbC = 2;
+		debugList($dbL, {"-------FINISHED-------" }, $dbC, "add");
+		debugList($dbL, {("Time To Process:" + $totalTime)}, $dbC, "add");
+		debugList($dbL, {("Final Layout Count:" + $layoutCount)}, $dbC, "add");
+		int $faceCount[] = `polyEvaluate -f $obj`;
+		debugList($dbL, {("Mesh Face Count:" + $faceCount[0])}, $dbC, "add");
+		debugList($dbL, {("Number of Faces Layed Out:" + $fLayoutCount)}, $dbC, "add");
+		if($fLayoutCount != $faceCount[0]){
+			debugList($dbL, {("WARNING: Not All Faces Were Layout Out")}, $dbC, "add");
+			debugList($dbL, {("Number of Faces Not Layed Out:" + ($faceCount[0] - $fLayoutCount))}, $dbC, "add");
+		}
+	
+	} 
+	//<DEBUG>
+	
+	
+	if(`checkBox -q -v layoutUVsIntoGridSpacesKeepUVShellSetsCheckBox` == 0){
+		emptyAndDeleteSelectedSets($sSel);	
+	}
+	if(`checkBox -q -v layoutUVsIntoGridSpacesKeepUVLayoutSetsCheckBox` == 0){
+		emptyAndDeleteSelectedSets($layoutSets);	
+	}
+	if(`checkBox -q -v layoutUVsIntoGridSpacesFlattenUVsCheckBox` == 1){
+		select -r $obj;
+		mergeAllUVSetsDownward({$obj});
+	}
+	
+	$totalTime = `timerX -startTime $startTime`;
+	print("WIZ| Sort UV Shells Into Grid Areas [COMPLETE] : Time To Process: " + $totalTime + "\n");
+	
+	progressBar -e -pr 100 wizProgressBar;
+	select -r $obj;
+	return $sSel;
+}
+
+
+global proc sortUVShellsIntoGridAreasHighPolyCount(string $sel[])
+{
+	//<DEBUG>
+	int $debug = `menuItem -q -cb SortUVShellsIntoGridAreasDebugMenuItem` ;
+	//openCurrentOptions("polyLayoutUVOptionsMenu");
+	//openCurrentOptions("sortUVShellsIntoGridAreasOutputOptionsMenu");
+	//Turn off Debugging if there is a high number of faces in the object
+	int $fC[] = `polyEvaluate -f $sel[0]`;
+	if($fC[0] > 5000){
+		int $debugOff = turnOffAllDebuggingConfirm(("Object Has " + $fC[0] + " Faces\n" + "That Is A Lot Of Faces To Debug\n" + "Turning Off All Debug Messages Is Recommended\n"), "Turn Off Debug Messages", "Ignore This Warning");	
+		if($debugOff == 1){ $debug = 0;}
+	
+	}
+	//<DEBUG>	
+	
+	//<DEBUG>
+	string $dbL = "UV Shells Layout";
+	int $dbC = 2;
+	string $dbM = "add";
+	//<DEBUG>
+	
+	float $startTime = `timerX`;
+	
+	select -r $sel;
+	string $obj = $sel[0];
+	ConvertSelectionToFaces;
+	string $f[] = `ls -fl -sl`;
+	
+	float $minPs = `floatSliderGrp -q -v layoutUVsIntoGridSpacesMinUVPercentageSpaceFloatSliderGrp`;
+	
+	//Initilize some variable to calculate the sizes of the new layouts
+	int $xi = `intSliderGrp -q -v layoutUVsIntoGridSpacesDivideBySquaredIntSliderGrp`;
+	float $rangeMin = 0;
+	float $rangeMax = 1;
+	float $aSize = ($rangeMax - $rangeMin) / $xi;
+	int $totalAreas = $xi * $xi;
+	
+	//Vars for moving around grid area
+	int $startU = 0;
+	int $startV = $startU;
+	int $uMove = $startU;
+	int $vMove = $startV;
+	int $lo = 1;
+	int $rowEnd = $xi;
+	int $col = 1;
+	
+	//Vars for counting shells and layouts
+	float $combShellSize = 0;
+	int $combCount = 0;
+	string $combShells[];
+	int $totalLayouts = 0;
+	string $remove[];
+	
+	//Create new uv sets
+	//One set for doing our laying out another set for doing our combining
+	string $curUVSet[] = `polyUVSet -q -cuv $obj`; //map1
+	string $newUVSet[] = `polyUVSet -create -nuv combUVSet $obj`; //uvSet1
+	string $workUVSet[] = `polyUVSet -create -nuv workUVSet $obj`; //uvSet2
+	
+	//<DEBUG>
+	if($debug == 1){	
+		debugList($dbL, { ("-----------------------") }, $dbC, $dbM);
+		debugList($dbL, { (" - Current UVSet: " + $curUVSet[0]) }, $dbC, $dbM);
+		debugList($dbL, { (" - Combine UVSet: " + $newUVSet[0]) }, $dbC, $dbM);
+		debugList($dbL, { (" - Work UVSet: " + $workUVSet[0]) }, $dbC, $dbM);
+		debugList($dbL, { ("-----------------------") }, $dbC, $dbM);
+	}
+	//<DEBUG>
+	
+	for($i=0;$i<`size $f`;$i++){
+		polyUVSet -cuv -uvSet $curUVSet[0];
+		if(stringArrayContains($f[$i], $remove) == 1){
+			continue;	
+		}
+		
+		select -r $f[$i];
+		SelectUVShell;
+		string $shell[] = `ls -fl -sl`;
+		
+		//Find the area of the shell
+		float $shellArea = getPerimeterOfShellFaces($shell);
+		$combShellSize = $combShellSize + $shellArea;
+		appendStringArray($remove, $shell, `size $shell`);
+		
+		//<DEBUG>
+		if($debug == 1){
+			debugList($dbL, { (" - UV Area: " + $shellArea) }, $dbC, $dbM);			
+			if($shellArea != $combShellSize){		
+				debugList($dbL, { (" - Combined Shell Size: " + $combShellSize) }, $dbC, $dbM);
+			}
+			debugList($dbL, { (" - Shells Combined: " + `size $combShells`) }, $dbC, $dbM);
+			debugList($dbL, { (" - Compare Size( " + $combShellSize + " < " + $aSize + " )") }, $dbC, $dbM);
+		}
+		//<DEBUG>
+			
+		if($combShellSize < $aSize){
+			polyCopyUV -uvi $curUVSet[0] -uvs $workUVSet[0] $shell;
+			$combCount++;
+			//<DEBUG>
+			if($debug == 1){			
+				debugList($dbL, { (" - Not Big Enough To Combine Yet -") }, $dbC, $dbM);			
+			}
+			//<DEBUG>
+			
+		} else {
+			select -r $obj;
+			ConvertSelectionToUVs;
+			string $setUVs[] = `ls -fl -sl`;
+			
+			//Calculate percentage space based on how many shells are in combShell
+			float $shellps = getUVPercentageSpaceBasedOnShellCount($minPs, $combCount);
+			
+			polyUVSet -cuv -uvSet $workUVSet[0];
+			polyLayoutUV -lm 0 -sc 1 -se 0 -rbf 2 -fr 0 -ps $shellps -l 2 $setUVs;
+			
+			polyEditUV -u $uMove -v $vMove $setUVs;		
+			
+			polyCopyUV -uvi $workUVSet[0] -uvs $newUVSet[0] $setUVs;
+			
+			//<DEBUG>
+			if($debug == 1){	
+				debugList($dbL, { ("-----------------------") }, $dbC, $dbM);
+				debugList($dbL, { (" - COMBINING SHELLS -") }, $dbC, $dbM);			
+				debugList($dbL, { ("- " + $i + " - Shell Layout") }, $dbC, $dbM);
+				debugList($dbL, { (" - Number of UVs: " + `size $setUVs`)}, $dbC, $dbM);
+				debugList($dbL, { (" - Combined Shell Size: " + $combShellSize)}, $dbC, $dbM);
+				debugList($dbL, { (" - Percentage Space: " + $shellps)}, $dbC, $dbM);
+				debugList($dbL, { ("-----------------------") }, $dbC, $dbM);	
+			}
+			//<DEBUG>
+			
+			//Move over row
+			if($col == $rowEnd){
+				$col = 0;
+				$vMove = $vMove + 1;			
+				$uMove = $startU;
+			} else {
+				$uMove = $uMove + 1;
+			}
+			$col++;
+			$lo++;
+			$totalLayouts++;
+			$combCount = 0;
+			$combShellSize = 0;
+		}
+		
+	}	
+	//Move the UVs over to center them
+	select -r $obj;
+	polyUVSet -cuv -uvSet $newUVSet[0];
+	$uMove = 0 - ((sqrt($totalLayouts)) / 2);
+	$vMove = $uMove;
+	polyEditUV -u $uMove -v $vMove;	
+	
+	if(`checkBox -q -v layoutUVsIntoGridSpacesFlattenUVsCheckBox` == 1){
+		//Clean Up the UV Sets	
+		polyUVSet -cuv -uvSet $workUVSet[0];
+		polyUVSet -delete;
+		polyUVSet -e -cuv -uvSet $newUVSet[0];
+		polyUVSet -delete;
+	}
+	
+	$totalTime = `timerX -startTime $startTime`;
+	print("WIZ| Sort UV Shells Into Grid Areas [COMPLETE] : Time To Process: " + $totalTime + "\n");
+	select -r $obj;
+}
+
+global proc float getUVPercentageSpaceBasedOnShellCount(float $minPs, int $shellCount)
+{
+	float $shellps = $minPs * ($shellCount * 0.001);	
+	return $shellps;
+}
+
+//FIX EMPTY UVS
+//======================================
+global proc fixEmptyUVs()
+{
+	
+	string $allObjs[] = `ls -typ mesh`;
+	
+	int $i = 0;
+	int $fixed = 0;
+	print("Checking all polygon meshes for empty UV sets... " + "\n");
+	for($i = 0; $i < `size $allObjs`; $i++){
+		$newUVs = false;
+		select $allObjs[$i];
+		string $uvSet[] = `polyUVSet -q -allUVSets`;
+		if(`size $uvSet` < 1){
+			print("Warning! " + $allObjs[$i] + " has no UV sets" + "\n");
+		}	
+		
+		int $p = 0;
+		print($allObjs[$i]);
+		for($p=0; $p < `size $uvSet`; $p++){	
+			print(" | " + $uvSet[$p]);		
+			int $uvCount[] = `polyEvaluate -uv`;		
+				if($uvCount[0] == 0){
+					print(" : has no UVs! ");
+					polyAutoProjection;
+					$newUVs = true;
+					$fixed++;
+				} else {
+					print(" : " + $uvCount[0] + " UVs ");
+				}
+		}
+		
+		print("\n");
+		if($newUVs){
+			print(">>>>> " + $allObjs[$i] + " was automatically assigned UVs." + "\n");
+		}
+		
+	}
+	print("______Fix Empty UVs complete_____ " + "\n");
+	print( $fixed + " objects were missing UVs and automatically fixed." + "\n");
+
+}
+
+//SPLIT UVS INTO GRID SPACE 
+//=============================================================================
+global proc splitUVsOfSelectedObjectsIntoGridSpacesByUVs(string $sel[])
+{
+	for($i=0;$i<`size $sel`;$i++){
+		splitUVsIntoGridSpacesByUVs($sel[$i]);	
+	}
+}
+
+global proc splitUVsOfSelectedObjectsIntoGridSpacesBy3dArea(string $sel[])
+{
+	for($i=0;$i<`size $sel`;$i++){
+		splitUVsIntoGridSpacesBy3dArea($sel[$i]);	
+	}
+}
+
+//SPLIT UVS INTO GRID SPACE - BY UVS -
+//========================================
+global proc splitUVsIntoGridSpacesByUVs(string $obj)
+{
+	printProc("splitUVsIntoGridSpacesByUVs");	
+	//progressBar -e -pr 0 splitUVsIntoGridSpacesByUVsProgressBar;
+		
+	global string $Wiz_sep = "|";
+	
+	int $divBy = `intSliderGrp -q -v splitUVIntoGridSpacesByUVsDivideBySquared`;
+	float $searchRangeMin = `floatFieldGrp -q -v1 splitUVIntoGridSpacesByUVsSearchRange`;
+	float $searchRangeMax = `floatFieldGrp -q -v2 splitUVIntoGridSpacesByUVsSearchRange`;
+	float $it = ($searchRangeMax - $searchRangeMin) / $divBy;
+	select -cl;
+	select -r $obj;
+	
+	//Get the faces of the object
+	ConvertSelectionToFaces;
+	string $faces[] = `ls -fl -sl`;
+	
+	//Get the uvs of the object
+	ConvertSelectionToUVs;
+	string $uvs[] = `ls -fl -sl`;
+	
+	//debugML1(("		- Faces: " + stringArrayToString($faces, " ") + "\n"));
+	//debugML1(("		- UVs: " + stringArrayToString($uvs, " ") + "\n"));
+	
+	int $totalAreas = $divBy * $divBy;
+	debugML1(("		- Total Areas To Create: " + $totalAreas + "\n"));
+	debugML1(("		- Size of Areas: " + $it + "\n"));
+	
+	int $ui = $divBy;
+	int $vi = $divBy;
+	
+	//Keep track of the faces we group in an area
+	string $uvsInArea[];
+	string $facesInArea[];
+	int $areaUVCount;
+	
+	//This is where we will keep our list of uvs and faces as we sort them
+	string $areaSortedUVs[];
+	string $areaSortedFaces[];
+	
+	float $searchMin[] = {$searchRangeMin,$searchRangeMin};
+	float $startSearchMax = $searchRangeMin + $it;
+	float $searchMax[] = {$startSearchMax,$startSearchMax};
+	
+	int $a=0;
+	int $v=0;
+	int $u=0;
+	//float $progressMax = ($ui * $vi * (`size $uvs`));
+	float $progressMax = $ui * $vi;
+	//int $pMax = $ui * $vi;
+	//global string $gMainProgressBar;
+	//-status "Splitting UVs Into Grid Spaces..."
+	//progressBar -edit -beginProgress -isInterruptable true -maxValue $pMax $gMainProgressBar;
+	//evalDeferred("progressBar -edit -endProgress $gMainProgressBar ;");
+	
+	for($v=0;$v<$vi;$v++){
+		for($u=0;$u<$ui;$u++){	
+			debugML1(("		* Searching Area " + $a + " - Min: " + floatArrayToString($searchMin, " ") + " | Max: " + floatArrayToString($searchMax, " ") + "\n"));
+			debugML1(("		  ==========================================" + "\n"));					
+			debugML3(("			* Searching Across U... " + "\n"));		
+			//if(`progressBar -query -isCancelled $gMainProgressBar`){ return;}
+			
+			for($i=0;$i<`size $uvs`;$i++){							
+				$progressMax = ($ui * $vi * (`size $uvs`));
+				//progressBar -e -max $progressMax -s 1 splitUVsIntoGridSpacesByUVsProgressBar;
+							
+				//Get the uv position of each uv
+				//This takes awhile. There might be a way to do this in less time.
+				float $uvPos[] = `polyEditUV -q -u -v $uvs[$i]`;
+				
+				//Find out if the uv is inside the area we are looking in
+				int $isInsideArea = isPointInsideUVSpace($uvPos,$searchMin,$searchMax);
+				
+				if($isInsideArea == 1){
+					//Convert the uv selection to faces and add the selected face to our sorted face list
+					string $selFace[];
+					if(`checkBox -q -v splitUVsIntoGridSpacesByUVsSelectShellsCheckBox` == 1){
+						select -r $uvs[$i];
+						ConvertSelectionToFaces;
+						polySelectConstraint -m 3 -t 0x8000 -sh 1;
+						$selFace = `ls -fl -sl`;
+					} else {
+						select -r $uvs[$i];
+						ConvertSelectionToFaces;
+						$selFace = `ls -fl -sl`;
+					}
+					appendStringArray($facesInArea,$selFace,`size $selFace`);
+					
+					autoFocus(0.5);
+					
+					//If it's in the area, add it to our sorted lists
+					$areaSortedUVs[`size $areaSortedUVs`] = $uvs[$i];
+					$uvsInArea[`size $uvsInArea`] = $uvs[$i];
+					$areaUVCount++;
+					
+					debugML2(("			+ INSIDE AREA : " + $uvs[$i] + " | Pos: " + floatArrayToString($uvPos, " ") + "\n"));
+				} else {
+					debugML2(("				- NOT INSIDE AREA : " + $uvs[$i] + " | Pos: " + floatArrayToString($uvPos, " ") + "\n"));
+				}		
+			}
+			if($areaUVCount > 0){	
+				//debugML1(("			+ FOUND UVS INSIDE AREA : " + stringArrayToString($uvsInArea, " ") + "\n"));
+				//debugML1(("			+ FOUND FACES INSIDE AREA : " + stringArrayToString($facesInArea, " ") + "\n"));
+				debugList("UVs In Grid Area", $uvsInArea, 1 , "add");
+				debugList("Faces In Grid Area", $facesInArea, 2 , "add");
+				//Remove any faces we've previosly found from any we might have matched again.
+				stringArrayRemove($areaSortedFaces,$facesInArea);
+				
+				//Put the faces found in the area in our list of sorted faces
+				appendStringArray($areaSortedFaces,$facesInArea,`size $facesInArea`);
+				
+				//Add a divider so we know what area each face was found in
+				$areaSortedUVs[`size $areaSortedUVs`] = $Wiz_sep;
+				$areaSortedFaces[`size $areaSortedFaces`] = $Wiz_sep;
+				
+				//Remove the faces that we've match to areas so we can skip them in our next search to save time
+				$uvs = stringArrayRemove($areaSortedUVs,$uvs);	
+				//$faces = stringArrayRemove($areaSortedFaces,$faces);
+				
+			} else {
+				debugML1(("			- No UVs Found In Area " + $a + "\n"));
+			}
+			
+			//Move the search area over in the u direction			
+			$searchMin[0] = $searchMax[0];
+			$searchMax[0] = $searchMax[0] + $it;
+						
+			$a++;
+			clear $uvsInArea;
+			clear $facesInArea;
+			$areaUVCount = 0;	
+			$ok = confirmStep("Found: " + $areaUVCount + " UVs in Area: " + $a);if(!$ok){ return;}
+			debugML3(("			- U - Min: " + $searchMin[0] + " Max: " + $searchMax[0] +"\n"));
+			debugML3(("			- V - Min: " + $searchMin[1] + " Max: " + $searchMax[1] +"\n"));
+			
+			//progressBar -e -s 1 $gMainProgressBar;
+		}
+		
+		//Reset the search area in the u direction
+		$searchMin[0] = $searchRangeMin;
+		$searchMax[0] = $startSearchMax;
+				
+		//Move the search area over in the v direction
+		$searchMin[1] = $searchMax[1];
+		$searchMax[1] = $searchMax[1] + $it;
+		
+		debugML3(("			============================================" +"\n"));
+		debugML3(("			* Moving Up V... " + "\n"));
+		debugML3(("			- U - Min: " + $searchMin[0] + " Max: " + $searchMax[0] +"\n"));
+		debugML3(("			- V - Min: " + $searchMin[1] + " Max: " + $searchMax[1] +"\n"));
+		
+	}
+	//progressBar -edit -endProgress splitUVsIntoGridSpacesByUVsProgressBar;
+	
+	debugML1(("		  ==========================================" + "\n"));	
+	debugML1(("		- " + `size $uvs` + " UVs Not Put Into Any Areas: " + stringArrayToString($uvs, " ") + "\n"));
+	debugML1(("		  ==========================================" + "\n"));
+	
+	
+	if(`size $uvs` > 0){
+		appendStringArray($areaSortedUVs,$uvs,`size $uvs`);
+		//Add a divider so we know what area each face was found in
+		$areaSortedUVs[`size $areaSortedUVs`] = $Wiz_sep;
+	}
+			
+	debugML1(("		* Area Sorted UVs: " + stringArrayToString($areaSortedUVs, " ") + "\n"));
+	debugML1(("		* Area Sorted Faces: " + stringArrayToString($areaSortedFaces, " ") + "\n"));
+	
+	//Create a new uv set with auto name
+	string $curUVSet[] = `polyUVSet -q -currentUVSet $obj`;
+	string $newUVSet[] = `polyUVSet -create $obj`;
+	
+	string $layoutFaces[];
+	
+	int $uMove = 0 - ($ui / 2);
+	int $vMove = 0 - ($vi / 2);
+	int $lo = 1;
+	int $rowEnd = $ui;
+	int $col = 1;
+	
+	float $largestDiff = 0;
+	for($i=0;$i<`size $areaSortedFaces`;$i++){
+		if($areaSortedFaces[$i] == $Wiz_sep){
+			float $diff = getDifferenceBetweenMinAndMaxUVsInSet($layoutFaces);
+			if($diff > $largestDiff){
+				$largestDiff = $diff;
+			}
+			clear $layoutFaces;		
+		} else {
+			$layoutFaces[`size $layoutFaces`] = $areaSortedFaces[$i];
+		}
+	}
+	debugML1(("		* Largest Area: " + $largestDiff + "\n"));
+	//float $scaleUVs = $divBy - ((( $divBy * 0.01 ) * 2));
+	
+	float $scaleUVs = 1 / $largestDiff;
+	$scaleUVs = $scaleUVs - ((( $scaleUVs * 0.02 ) * 2));
+	debugML1(("		* Scale UVs By: " + $scaleUVs + "\n"));
+	
+	debugML1(("		* Laying Out UVs..." + "\n"));
+	for($i=0;$i<`size $areaSortedFaces`;$i++){	
+		//progressBar -e -max (`size $areaSortedFaces`) -s 1 splitUVsIntoGridSpacesByUVsProgressBar; //-st ("Searching Area: " + $a + " Of: " + $totalAreas)					
+		if($areaSortedFaces[$i] == $Wiz_sep){	
+			refreshStep();
+			debugML2(("		- Layout Num: " + $lo + " Col: " + $col + " U Move: " + $uMove + " V Move: " + $vMove + "\n"));
+			
+			layoutFacesIntoGridSpaces($layoutFaces,$uMove, $vMove, $scaleUVs, $curUVSet[0], $newUVSet[0], "shellSplit");
+			
+			//Move over row
+			if($col == $rowEnd){
+				$col = 0;
+				$vMove++;			
+				$uMove = 0 - ($ui / 2);
+			} else {
+				$uMove = $uMove + 1;
+			}
+			clear $layoutFaces;
+			$col++;
+			$lo++;
+		} else {
+			$layoutFaces[`size $layoutFaces`] = $areaSortedFaces[$i];
+		}			
+	}	
+	//progressBar -edit -endProgress splitUVsIntoGridSpacesByUVsProgressBar;
+	
+	select -r $obj;
+
+}
+
+//SPLIT UVS INTO GRID SPACE - BY 3D AREA -
+//========================================
+global proc splitUVsIntoGridSpacesBy3dArea(string $obj)
+{
+	global int $WIZ_dm; global int $WIZ_edm; global int $WIZ_confirmStep; global int $WIZ_detailConfirmStep;
+	global string $Wiz_sep = "|";
+	print("		* Splitting UVs of: " + $obj + " Into Grid Spaces" + "\n" + "=============================" + "\n");
+	
+	int $it = `intSliderGrp	-q -v splitUVIntoGridSpacesIterations`;
+	float $iterations = $it;
+	
+	select -cl;
+	select -r $obj;
+	ConvertSelectionToFaces;
+	string $face[] = `ls -fl -sl`;
+	
+	if($WIZ_edm){print("		- Faces: " + stringArrayToString($face, " ") + "\n");}
+			
+	float $bboxSize[] = `getAttr ($obj + ".boundingBoxSize")`;
+	float $bboxMin[] = `getAttr ($obj + ".boundingBoxMin")`;
+	float $bboxMax[] = `getAttr ($obj + ".boundingBoxMax")`;
+	float $selFaceMin[] = `getAttr ($obj + ".boundingBoxMin")`;
+	float $selFaceMax[] = `getAttr ($obj + ".boundingBoxMax")`; 
+	
+	pauseStep();
+	
+	int $xi = 1;
+	int $yi = 0;
+	int $zi = 0;
+	int $areaCount = 1;
+	string $areaSortedFaces[];
+	
+	//Get the length we want each area to be
+	float $itPow = 3 * $iterations; //float $itPow = pow (3, $iterations);
+	//float $divLength = floor(($bboxSize[0] + $bboxSize[1] + $bboxSize[2]) / $itPow);
+	float $divLength = ($bboxSize[0] + $bboxSize[1] + $bboxSize[2]) / $itPow;
+	
+	if($WIZ_dm){print("		- Iterations: " + $iterations + " Times 3 = " + $itPow + "\n");}
+	if($WIZ_dm){print("		- BBoxSize: " + floatArrayToString($bboxSize, " ") + "\n");}
+	if($WIZ_dm){print("		- DivLength: " + $divLength + "\n");}
+	
+	//Figure out how to divide the bbox up into areas
+	//Set the max to the min corner and then add the div length
+	
+	$selFaceMax[0] = $selFaceMin[0] + $divLength;
+	$xi = ceil($bboxSize[0] / $divLength);
+	
+	$selFaceMax[1] = $selFaceMin[1] + $divLength;
+	$yi = ceil($bboxSize[1] / $divLength);
+	
+	$selFaceMax[2] = $selFaceMin[2] + $divLength;
+	$zi = ceil($bboxSize[2] / $divLength);
+	
+	$areaCount = $xi + $yi + $zi;
+	
+	if($WIZ_confirmStep == 1){
+		string $tempLattice[] = `lattice -before -divisions $xi $yi $zi -objectCentered true $obj`;
+		create3dArrayOfLocators($bboxMin,$bboxMax, $divLength, $xi,$yi,$zi);
+		$ok = confirmStep(
+		"Dividing Object Into Areas Like So..." + "\n"
+		+ "There Should Be " + $areaCount + " Areas" + "\n"
+		+ "Does This Look OK?");
+		if(!$ok){ 
+			//deleteSelectedObjects($tempLattice);
+			return;
+		}
+		deleteSelectedObjects($tempLattice);
+	}
+	
+	if($WIZ_dm){print("		- Areas to Search: " + $areaCount + "\n");}
+	if($WIZ_dm){print("		- BBoxMin: " + floatArrayToString($bboxMin, " ") + " | BBoxMax: " + floatArrayToString($bboxMax, " ") + "\n");}
+	
+	//Keep track of the faces we group in an area
+	int $areaFaceCount = 0;
+	string $facesInArea[];
+	
+	int $a = 0;
+	for($z=0;$z<$zi;$z++){
+		for($y=0;$y<$yi;$y++){
+			for($x=0;$x<$xi;$x++){	
+				if($WIZ_dm){print("		* Searching Area " + $a + " - Min: " + floatArrayToString($selFaceMin, " ") + " | Max: " + floatArrayToString($selFaceMax, " ") + "\n");}
+				if($WIZ_edm){
+					spaceLocator -p $selFaceMin[0] $selFaceMin[1] $selFaceMin[2] -n ("AreaMin" + $a);
+					spaceLocator -p $selFaceMax[0] $selFaceMax[1] $selFaceMax[2] -n ("AreaMax" + $a);
+					group -n ("AreaLocatorsGroup" + $a) ("AreaMin" + $a) ("AreaMax" + $a);
+				}
+						
+				for($f=0;$f<`size $face`;$f++){
+					
+					//Get the position of the center of the poly face
+					float $faceCenter[] = getPolyFaceCenterPosition($face[$f], $obj);
+	
+					//Find out if the face is inside the area we are looking in
+					int $isInsideArea = isPointInsideArea($faceCenter,$selFaceMin,$selFaceMax);
+					
+					if($isInsideArea == 1){
+						if($WIZ_edm){print("			+ INSIDE AREA : " + $face[$f] + " | Pos: " + floatArrayToString($faceCenter, " ") + "\n");}
+					
+						//If it's in the area, add it to our sorted lists
+						$areaSortedFaces[`size $areaSortedFaces`] = $face[$f];
+						$areaFaceCount++;
+						$facesInArea[`size $facesInArea`] = $face[$f];
+						
+					} else {
+						if($WIZ_edm){print("				- NOT INSIDE AREA : " + $face[$f] + " | Pos: " + floatArrayToString($faceCenter, " ") + "\n");}
+					}
+				
+				}
+				if($areaFaceCount > 0){	
+					if($WIZ_dm){print("			+ FOUND FACES INSIDE AREA : " + stringArrayToString($facesInArea, " ") + "\n");}
+					
+					//Add a divider so we know what area each face was found in
+					$areaSortedFaces[`size $areaSortedFaces`] = $Wiz_sep;
+					
+					//Remove the faces that we've match to areas so we can skip them in our next search to save time
+					$face = stringArrayRemove($areaSortedFaces,$face);	
+					
+				} else {
+					if($WIZ_dm){print("			- No Faces Found In Area " + $a + "\n");}
+				}
+				//Move the search area over in the x direction			
+				$selFaceMin[0] = $selFaceMax[0];
+				$selFaceMax[0] = $selFaceMax[0] + $divLength;
+							
+				$a++;
+				clear $facesInArea;
+				$areaFaceCount = 0;	
+				$ok = confirmStep("Found: " + $areaFaceCount + " Faces in Area: " + $a);if(!$ok){ return;}
+			}
+			//Reset the search area in the x direction
+	
+			$selFaceMin[0] = $bboxMin[0];
+			$selFaceMax[0] = $bboxMin[0] + $divLength;
+					
+			//Move the search area over in the y direction
+			$selFaceMin[1] = $selFaceMax[1];
+			$selFaceMax[1] = $selFaceMax[1] + $divLength;
+			
+		}
+		//Reset the search area in the y direction
+		$selFaceMin[1] = $bboxMin[1];
+		$selFaceMax[1] = $bboxMin[1] + $divLength;
+	
+		//Move the search area over in the z direction
+		$selFaceMin[2] = $selFaceMax[2];
+		$selFaceMax[2] = $selFaceMax[2] + $divLength;			
+		
+	}
+	if($WIZ_dm){print("		- Faces Not Put Into Any Areas: " + stringArrayToString($face, " ") + "\n");}
+	if(`size $face` > 0){
+		appendStringArray($areaSortedFaces,$face,`size $face`);
+		//Add a divider so we know what area each face was found in
+		$areaSortedFaces[`size $areaSortedFaces`] = $Wiz_sep;
+	}
+	
+	//Create a new uv set called map2
+	polyUVSet -create -uvSet "map2" $obj;
+	
+	string $layoutFaces[];
+	int $uMove = 0;
+	
+	for($i=0;$i<`size $areaSortedFaces`;$i++){	
+		if($areaSortedFaces[$i] == $Wiz_sep){		
+			layoutFacesIntoGridSpaces($layoutFaces,$uMove, $uMove, $it, "map1", "map2", "shellSplit" );
+			print("Fix splitUVsIntoGridSpacesBy3dArea where we lay out the u and v \n");
+			$uMove = $uMove + 1;
+			clear $layoutFaces;		
+		} else {
+			$layoutFaces[`size $layoutFaces`] = $areaSortedFaces[$i];
+		}			
+	}	
+			
+	print("		* Area Sorted Faces: " + stringArrayToString($areaSortedFaces, " ") + "\n");
+		
+}
+
+//@ CREATE U V SHELLS FROM FACE SETS
+//====================================================================
+/*****************************************************************//**
+*	Pass a set of faces and UV shells will be made on current uv set.
+*	This just uses polyMapCut on each face selection set.
+*	USAGE : 
+*
+*********************************************************************/
+global proc createUVShellsFromFaceSets( string $sets[] )
+{
+	for ($i=0;$i<`size $sets`;$i++){
+		string $f[] = `sets -q $sets[$i]`;
+		polyMapCut -ch 1 $f;
+		
+	}
+
+}
+
+//SORTING
+//=============================================================================
+
+//SORT POLY COMPONENT BY UV SPACE
+//-----------------------------------------------
+global proc string[] sortPolyComponentByUVSpace(string $sel[])
+{
+	
+	if (isPolyGeometry($sel[0])){	
+		string $mesh = $sel[0];	
+		select -r $mesh;
+	} else {
+		select -r $sel;	
+	}
+	
+	//Get the uvs of the object
+	ConvertSelectionToUVs;
+	string $uvs[] = `ls -fl -sl`;
+	//debugList("UVs", $uvs, 1, "replace");
+	
+	string $sorted[] = sortUVsbyUVspace($uvs, 4);
+	//debugList("Sorted UVs", $sorted, 2, "replace");
+	
+	return $sorted;
+}
+
+//SORT POLY COMPONENT BY UV SPACE U
+//-----------------------------------------------
+global proc string[] sortPolyComponentByUVSpaceU( string $sel[] )
+{
+	if (isPolyGeometry($sel[0])){	
+		string $mesh = $sel[0];	
+		select -r $mesh;
+	} else {
+		select -r $sel;	
+	}
+	
+	//Get the uvs of the object
+	ConvertSelectionToUVs;
+	string $uvs[] = `ls -fl -sl`;
+	//debugList("UVs", $uvs, 1, "replace");
+	
+	string $sorted[] = sortUVsbyUVspace($uvs, 1);
+	//debugList("Sorted UVs", $sorted, 2, "replace");
+	
+	return $sorted;	
+}
+
+global proc string[] sortPolyComponentByUVSpaceV( string $sel[] )
+{
+	if(isPolyGeometry($sel[0])){	
+		string $mesh = $sel[0];	
+		select -r $mesh;
+	} else {
+		select -r $sel;	
+	}
+	
+	//Get the uvs of the object
+	ConvertSelectionToUVs;
+	string $uvs[] = `ls -fl -sl`;
+	//debugList("UVs", $uvs, 1, "replace");
+	
+	string $sorted[] = sortUVsbyUVspace($uvs, 0);
+	//debugList("Sorted UVs", $sorted, 2, "replace");
+	
+	return $sorted;	
+}
+
+
+//@ SORT U VS INTO ROW COLUMNS
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = sortUVsIntoRowColumns("-sl -u");
+	
+	</code>
+*********************************************************************/
+global proc string[] sortUVsIntoRowColumns( string $flags )
+{
+	string $dbl = "-dmi SortUVsbyUVspaceDebugMenuItem -t Sort UVs By UV Space"; string $dbm = "add"; int $dbc = 1;
+	menuItem -e -cb true SortUVsbyUVspaceDebugMenuItem;
+	string $uvs[];
+	string $sel[];
+	int $dir = 1;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-uv" : case "-uvs" :
+			$uvs = wizFlagArray($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			if (isPolyGeometry($sel[0])){	
+				string $mesh = $sel[0];	
+				select -r $mesh;
+				ConvertSelectionToUVs;						
+			} 
+			$uvs = $sel;
+			break ;			
+			
+			case "-u" : 
+			$dir = 1;
+			break ;
+			
+			case "-v" : 
+			$dir = 0;
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	// make sure its a uv selection
+	select -r $uvs;
+	ConvertSelectionToUVs;	
+	$uvs = `ls -fl -sl`;
+	
+	string $uv[] = `ls -fl $uvs`;
+
+	float $uvPos[];
+	float $sortPos[];
+	if ($dir == 0){
+		$uvPos = `polyEditUV -q -u -v $uv`;
+		$sortPos = getColumnOfFloatArray($uvPos,1,2);
+	} else if ($dir == 1){
+		$uvPos = `polyEditUV -q -u -v $uv`;	
+		$sortPos = getColumnOfFloatArray($uvPos,2,2);
+	}
+		
+	string $uvPosStringArray[] = floatArrayToStringArray($sortPos);
+	debugListArray($dbl, " - UV Positions : ", $uvPosStringArray, $dbc, $dbm, "[NEXT]", 1000);
+		
+	string $sorted[] = prefixStringArrayWithFloatArray($uv,$sortPos);
+	debugListArray($dbl, " [Position] [UV] ", $sorted, $dbc, $dbm, "[NEXT]", 1000);
+	
+	$sorted = sort($sorted);
+	debugListArray($dbl, " - SORTED : ", $sorted, $dbc, $dbm, "[NEXT]", 1000);
+		
+	$sorted = getStringArrayAfterSpace($sorted);
+	debugListArray($dbl, " - SORTED UV Names :", $sorted, $dbc, $dbm, "[NEXT]", 1000);
+	
+	return $sorted;	
+	
+	/*
+	
+	0,0 + 0
+	0,1 + 2
+	0,2 + 4
+	1,0 + 1
+	1,1 + 3
+	1,2 + 5
+	
+	string $sortString[] = { "1.24 Bat", "0.98 Cat", "47.92 Rat", "22.7893 Hat", "-9.25 Mat" };
+	sort($sortString);
+	
+	*/
+
+}
+
+
+
+//@ WIZ SELECT U VS IN RANGE
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	selectUVsInRange("-lowU 0.0 -lowV 0.0 -hiU 0.4 -hiV 0.4");
+	
+	</code>
+*********************************************************************/
+global proc string[] wizSelectUVsInRange( string $flags )
+{		
+	wizlog ("[@] wizSelectUVsInRange");
+	
+	float $lowU = 0.1;
+	float $lowV = 0.1;
+	float $hiU = 0.2;
+	float $hiV = 0.2;
+	
+	string $obj, $type;
+	string $inRange[];
+	int $edit;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+			
+			case "-lowU" : 
+			$lowU = float($tok[($i + 1)]);
+			break ;
+					
+			case "-lowV" : 
+			$lowV = float($tok[($i + 1)]);
+			break ;
+			
+			case "-hiU" : 
+			$hiU = float($tok[($i + 1)]);
+			break ;
+					
+			case "-hiV" : 
+			$hiV = float($tok[($i + 1)]);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			$obj = $sel[0];
+			break ;			
+
+			
+		}
+	}
+
+	
+	string $s[] = listRelatives("-shapes", {$obj});
+
+	//string $parent[] = `listRelatives -parent $s[0]`;
+	
+	
+	
+	ConvertSelectionToUVs;
+	string $selUVs[] = `ls -fl -sl`;
+	//string $uvs[] = `getAttr ($item + ".uvpt[0:" + ((getAttr -s ($item + ".uvpt")) - 1) + "]")`;
+	
+	float $uvPos[] = `polyEditUV -q -u -v $selUVs`;
+	for ($i=0;$i<`size $uvPos`;$i+=2){
+		if ($uvPos[$i] <= $hiU && $uvPos[$i] >= $lowU && $uvPos[($i+1)] <= $hiV && $uvPos[($i+1)] >= $lowV){
+			$inRange[`size $inRange`] = ($obj + ".map[" + ($i / 2) + "]");
+		}
+	}
+	
+	select -r $inRange;
+	
+	return $inRange;
+	
+	//PolySelectConvert 10;
+
+}
+
+//SORT FACES INTO SHELL SELECTIONS
+//-----------------------------------------------
+//- its better to use sortFacesIntoShellSelectionCommands or... maybe consolidate the two?
+global proc string[] sortFacesIntoShellSelections(string $sel[])
+{
+	int $debug = `menuItem -q -cb SortFacesIntoShellSelectionsDebugMenuItem`;
+	select -r $sel;
+	string $sel[] = `ls -sl`;
+	string $obj = $sel[0];
+	//Count the shells... this seems unreliable.
+	int $shellCount = getUVShellCount($sel);
+	string $shellPrefix = ($obj + ".shell");
+	string $selectCommand = "select -r ";
+	string $shells[];
+	ConvertSelectionToFaces;
+	string $f[] = `ls -fl -sl`;
+	//Get any unmapped faces
+	string $unmapped[] = getUnmappedFaces($sel);
+	$f = stringArrayRemove($unmapped, $f);
+	
+	select -cl;
+	int $count = 0;
+	
+	//<debug>
+	string $debugList[];
+	if($debug){
+		$debugList = { ("Faces") };
+		appendStringArray($debugList, $f, `size $f`);
+		$debugList[`size $debugList`] = "Shell Count: " + $shellCount;
+		debugList("Faces To Shells", $debugList, 2, "add");
+	}
+	//<debug>
+	
+	for($i=0;$i<$shellCount;$i++){			
+			select -r $f[$i];
+			SelectUVShell;
+			string $sf[] = `ls -fl -sl`;
+			$shells[`size $shells`] = "|";
+			//$shells[`size $shells`] = $shellPrefix + "[" + $count + "]";
+			$shells[`size $shells`] = $selectCommand + stringArrayToString($sf, " ");
+			appendStringArray($shells, $sf,`size $sf`);
+			$f = stringArrayRemove($sf,$f);	
+			
+			//<debug>
+			if($debug){			
+				$debugList[`size $debugList`] = $shellPrefix + "[" + $count + "]";
+				appendStringArray($debugList, $sf, `size $sf`);		
+				debugList("Faces To Shells", $debugList, 2, "add");			
+			}
+			//<debug>
+			
+			$count++;	
+	}	
+	polySelectConstraint -disable;
+	
+	//<debug>
+	if($debug){	
+		debugList("Shells", $shells, 2, "replace");	
+	}
+	//<debug>
+	
+	return $shells;
+}
+
+//SORT FACES INTO SHELL SELECTION COMMANDS
+//-----------------------------------------------
+global proc string[] sortFacesIntoShellSelectionCommands(string $sel[])
+{	
+	int $debug = `menuItem -q -cb SortFacesIntoShellSelectionCommandsDebugMenuItem`;
+	if(`size $sel` == 0){
+		$sel = `ls -sl`;	
+	}
+	//Get the selection
+	string $obj = $sel[0];
+	select -r $obj;
+	
+	//Count the shells... this seems unreliable.
+	int $shellCount = getUVShellCount($sel);
+	
+	string $selectCommand = "select -r ";
+	string $shells[];
+	
+	//Get all the faces
+	ConvertSelectionToFaces;
+	string $f[] = `ls -fl -sl`;
+	
+	//Get any unmapped faces
+	string $unmapped[] = getUnmappedFaces($sel);
+	if(`size $unmapped` > 0){
+		int $warning = wizWarningDialog("Unmapped Faces", ($obj + " has " + `size $unmapped` + "faces.\n"
+		+ "It is highly recommended to cancel and map all faces before continuing to process UVs."), "Continue Anyways", "Cancel");
+		if($warning == 0){
+			return {"Please Map All Faces Before Processing UVs.\n"};	
+		}
+	}
+	if(`size $unmapped` != `size $f`){
+		$f = stringArrayRemove($unmapped, $f);
+	}
+	
+	select -cl;
+	
+	//<debug>
+	string $debugList[];
+	if($debug){
+		$debugList = { ("Faces: " + `size $f`) };
+		string $fsl[] = `ls $f`;
+		appendStringArray($debugList, $fsl, `size $fsl`);
+		string $unmappedsl[] = `ls $unmapped`;
+		$debugList[`size $debugList`] = "Unmapped Faces: " + `size $unmappedsl`;
+		appendStringArray($debugList, $unmappedsl, `size $unmappedsl`);
+		$debugList[`size $debugList`] = "Shell Count: " + $shellCount + " (estimated) ";
+		debugList("Faces To Shells Selection Commands", $debugList, 1, "add");
+	}
+	//<debug>
+	
+	//For Counting the shells
+	int $shellTotal = 0;
+	
+	for($i=0;$i<`size $f`;$i++){	
+	/*
+	int $ok = 0;
+	int $i = 0;
+	while($ok == 0){
+	*/		
+			select -r $f[$i];		
+			SelectUVShell;
+			string $sf[] = `ls -fl -sl`;
+			$shells[`size $shells`] = $selectCommand + stringArrayToString($sf, " ");
+			$f = stringArrayRemove($sf,$f);		
+			
+			//<debug>
+			if($debug){
+				$debugList[`size $debugList`] = "------- " + "Shell " + $shellTotal + " Faces -------";
+				string $sfsl[] = `ls $sf`;
+				appendStringArray($debugList, $sfsl, `size $sfsl`);		
+				debugList("Faces To Shells Selection Commands", $debugList, 1, "add");	
+			}
+			//<debug>
+				
+			if(`size $f` == 0){
+				if(`size $unmapped` > 0){
+						$shells[`size $shells`] = $selectCommand + stringArrayToString($unmapped, " ");
+				}
+				$ok = 1;
+				break;
+			}
+			$shellTotal++;
+			//$i++;
+	}	
+	polySelectConstraint -disable;
+	//<debug>
+	if($debug){	
+		debugList("Shells Selection Commands", $shells, 1, "add");
+	}
+	//<debug>
+	//select -r $sel;
+	return $shells;
+}
+
+//SORT FACES INTO SHELL SETS
+//-----------------------------------------------
+/*======================| SUMMARY |===================================
+
+/*=======================| USAGE |====================================	
+    string $sel[] = `ls -fl -sl`;
+    sortFacesIntoShellSets($sel);
+====================================================================*/
+global proc string[] sortFacesIntoShellSets( string $sel[] )
+{
+	string $sets[] = sortMeshComponentsIntoShellSets("-sl");
+	return $sets;
+}
+
+//@ PROC NAME
+//====================================================================
+/*****************************************************************//**
+	Creates a set for every shell in uv set
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-fa string] [-fb linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-selected(-sl) <br>
+	-prefix(-pre) <br>
+	-sizeSuffix(-si) <br>
+	-type(-typ) <br>
+	
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $sets[] = sortMeshComponentsIntoShellSets("-sl -pre objectNameFaces -si -typ e");
+	
+	</code>
+*********************************************************************/
+global proc string[] sortMeshComponentsIntoShellSets( string $flags )
+{/*
+global proc string[] sortFacesIntoShellSets( string $sel[] )
+{*/
+	string $sel[];
+	string $setPrefix;
+	string $type = "faces";
+	int $sizeSuffix;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break;
+				
+			case "-pre" : case "-prefix" :
+			$prefix = $tok[($i + 1)];
+			break;
+			
+			case "-si" : case "-sizeSuffix" :
+			$sizeSuffix = 1;
+			break;			
+		
+			case "-typ" : case "-type" :
+			$type = $tok[($i + 1)];
+			break;	
+		}
+	}
+	
+	//string $sel[] = wizFlagObjTrail($flags);
+	
+	//<debug>
+	int $debug = `menuItem -q -cb SortFacesIntoShellSetsDebugMenuItem`;
+	string $dbl = "Sort Faces Into Shell Sets";
+	int $dbc = 1;
+	string $dbm = "add";
+	//<debug>
+	
+	if (`size $sel` == 0){
+		$sel = `ls -sl`;	
+	}
+	//Get the selection
+	string $obj = $sel[0];
+	select -r $obj;
+	
+	if ($setPrefix == ""){
+		$setPrefix = $obj + "Shell";	
+	}
+	
+	//Count the shells... this seems unreliable.
+	int $shellCount = getUVShellCount($sel);
+	
+	string $selectCommand = "select -r ";
+	string $shells[];
+	
+	//Get all the faces
+	ConvertSelectionToFaces;
+	string $f[] = `ls -fl -sl`;
+	
+	//Get any unmapped faces
+	string $unmapped[] = getUnmappedFaces($sel);
+	if (`size $unmapped` > 0){
+		int $warning = wizWarningDialog("Unmapped Faces", ($obj + " has " + `size $unmapped` + "faces.\n"
+		+ "It is highly recommended to cancel and map all faces before continuing to process UVs."), "Continue Anyways", "Cancel");
+		if($warning == 0){
+			return {"Please Map All Faces Before Processing UVs.\n"};	
+		}
+		if(`size $unmapped` != `size $f`){
+			$f = stringArrayRemove($unmapped, $f);
+		}
+	}
+	
+	
+	select -cl;
+	
+	//<debug>
+	string $debugList[];
+	if ($debug){
+		debugList($dbl, { (" - Face Count: " + `size $f`) }, $dbc, $dbm);	
+		string $unmappedsl[] = `ls $unmapped`;
+		debugList($dbl, { (" - Unmapped Face Count: " + `size $unmappedsl`) }, $dbc, $dbm);
+		debugList($dbl, { (" - Estimated Shell Count: " + $shellCount) }, $dbc, $dbm);
+		debugList($dbl, { (" * Creating Shell Sets * ") }, $dbc, $dbm);
+		debugList($dbl, { ("-------------------------------") }, $dbc, $dbm);
+	}
+	//<debug>
+	
+	//For Counting the shells
+	int $shellTotal = 0;
+	string $remove[];
+	for ($i=0;$i<`size $f`;$i++){	
+			
+			if (stringArrayContains($f[$i], $remove) == 1){
+				continue;	
+			}
+			select -r $f[$i];
+			string $currentFace = $f[$i];		
+			SelectUVShell;
+			string $sf[] = `ls -fl -sl`;
+			string $setName;
+			if ($sizeSuffix){
+				$setName = ($setPrefix + $shellTotal + "_size_" + (`size $sf`));
+			} else {
+				$setName = ($setPrefix + $shellTotal);
+			}
+			string $newShell = createSetFromSelection($sf, $setName);
+			$shells[`size $shells`] = $newShell;
+			appendStringArray($remove, $sf, `size $sf`);
+			//$f = stringArrayRemove($sf,$f);		
+			
+			//<debug>
+			if ($debug){
+				debugList($dbl, { ($i + " - Shell - " + $i) }, $dbc, $dbm);
+				debugList($dbl, { (" - Face: " + $currentFace) }, $dbc, $dbm);
+				debugList($dbl, { (" - Number of Faces In Shell: " + `size $sf`) }, $dbc, $dbm);
+				debugList($dbl, { ($newShell) }, $dbc, $dbm);
+				debugList($dbl, { (" - Faces Remaining: " + `size $f`) }, $dbc, $dbm);
+				debugList($dbl, { ("-------------------------------") }, $dbc, $dbm);
+			}
+			//<debug>
+			
+			$shellTotal++;
+	
+	}	
+	//<debug>
+	if ($debug){
+		debugList($dbl, { ("------SHELLS SETS------") }, $dbc, $dbm);	
+		debugList($dbl, { (" - Shell Set Count: " + `size $shells`) }, $dbc, $dbm);	
+		debugList($dbl, $shells, $dbc, $dbm);
+	}
+	//<debug>
+	
+	return $shells;
+}
+
+
+//@ CREATE SETS FROM UV SET SHELLS
+//====================================================================
+/*======================| SUMMARY |===================================
+    Creates Sets From the shells found in the given UV Set    
+/*=======================| USAGE |====================================	
+    string $sel[] = `ls -sl`;
+    string $cuvs[] = `polyUVSet -q -cuv $sel[0]`;
+    createSetsFromUVSetShells($sel[0], $cuvs[0]);
+====================================================================*/
+global proc string[] createSetsFromUVSetShells( string $obj, string $uvSet )
+{
+    polyUVSet -cuv -uvs $uvSet $obj;
+    select -r $obj;
+    ConvertSelectionToUVs;
+    string $setPrefix = ($obj + (capitalizeString($uvSet)));
+    string $uvs[] = `ls -fl -sl`;
+    string $remove[];
+    
+    string $shells[];
+    int $shellCount;
+    for ($i=0;$i<`size $uvs`;$i++){    
+        if (stringArrayContains($uvs[$i], $remove) == 1){
+            continue;	
+        }
+        select -r $uvs[$i];		
+        SelectUVShell;
+        string $shell[] = `ls -fl -sl`;
+        string $newShell = createSetFromSelection($shell,($setPrefix + $shellCount));
+        $shells[`size $shells`] = $newShell;
+        appendStringArray($remove, $shell, `size $shell`);
+        $shellCount++;
+    }
+    return $shells;
+}
+
+//@ CREATE SETS FROM UV SET SHELLS
+//====================================================================
+/*======================| SUMMARY |===================================
+    Creates Sets From the shells found in the given UV Set    
+/*=======================| USAGE |====================================	
+    string $sel[] = `ls -sl`;
+    string $cuvs[] = `polyUVSet -q -cuv $sel[0]`;
+    createFacesSetsFromUVSetShells($sel[0], $cuvs[0]);
+====================================================================*/
+/*****************************************************************//**
+*	Creates Sets From the shells found in the given UV Set.
+	The uv set must exist already.
+    string $sel[] = `ls -sl`;
+    string $cuvs[] = `polyUVSet -q -cuv $sel[0]`;
+    createFacesSetsFromUVSetShells($sel[0], $cuvs[0]);
+*
+*********************************************************************/
+//@ CREATE FACES SETS FROM UV SET SHELLS
+//====================================================================
+global proc string[] createFacesSetsFromUVSetShells( string $obj, string $uvSet )
+{
+    polyUVSet -cuv -uvs $uvSet $obj;
+    select -r $obj;
+    ConvertSelectionToUVs;
+    string $setPrefix = ($obj + (capitalizeString($uvSet)));
+    string $uvs[] = `ls -fl -sl`;
+    string $remove[];
+    
+    string $shells[];
+    int $shellCount;
+    for ($i=0;$i<`size $uvs`;$i++){    
+        if (stringArrayContains($uvs[$i], $remove) == 1){
+            continue;	
+        }
+        select -r $uvs[$i];		
+        SelectUVShell;
+        string $shell[] = `ls -fl -sl`;
+        ConvertSelectionToFaces;
+        string $f[] = `ls -fl -sl`;
+        string $newShell = createSetFromSelection($f,($setPrefix + $shellCount));
+        $shells[`size $shells`] = $newShell;
+        appendStringArray($remove, $shell, `size $shell`);
+        $shellCount++;
+    }
+    return $shells;
+}
+
+//@ SORT FACES INTO SHELLS
+//====================================================================
+global proc string[] sortFacesIntoShells(string $sel[], string $method)
+{	
+	//<debug>
+	int $debug = `menuItem -q -cb SortFacesIntoShellSetsDebugMenuItem`;
+	string $dbl = "Sort Faces Into Shell Sets";
+	int $dbc = 1;
+	string $dbm = "add";
+	//<debug>
+	
+	if(`size $sel` == 0){
+		$sel = `ls -sl`;	
+	}
+	//Get the selection
+	string $obj = $sel[0];
+	select -r $obj;
+	
+	string $setPrefix = $obj + "Shell";
+	
+	//Count the shells... this seems unreliable.
+	int $shellCount = getUVShellCount($sel);
+	
+	string $selectCommand = "select -r ";
+	string $shells[];
+	
+	//Get all the faces
+	ConvertSelectionToFaces;
+	string $f[] = `ls -fl -sl`;
+	
+	//Get any unmapped faces
+	string $unmapped[] = getUnmappedFaces($sel);
+	if(`size $unmapped` > 0){
+		int $warning = wizWarningDialog("Unmapped Faces", ($obj + " has " + `size $unmapped` + "faces.\n"
+		+ "It is highly recommended to cancel and map all faces before continuing to process UVs."), "Continue Anyways", "Cancel");
+		if($warning == 0){
+			return {"Please Map All Faces Before Processing UVs.\n"};	
+		}
+		if(`size $unmapped` != `size $f`){
+			$f = stringArrayRemove($unmapped, $f);
+		}
+	}
+	
+	
+	select -cl;
+	
+	//<debug>
+	string $debugList[];
+	if($debug){
+		debugList($dbl, { (" - Face Count: " + `size $f`) }, $dbc, $dbm);	
+		string $unmappedsl[] = `ls $unmapped`;
+		debugList($dbl, { (" - Unmapped Face Count: " + `size $unmappedsl`) }, $dbc, $dbm);
+		debugList($dbl, { (" - Estimated Shell Count: " + $shellCount) }, $dbc, $dbm);
+		debugList($dbl, { (" * Creating Shell Sets * ") }, $dbc, $dbm);
+		debugList($dbl, { ("-------------------------------") }, $dbc, $dbm);
+	}
+	//<debug>
+	
+	//For Counting the shells
+	int $shellTotal = 0;
+	string $remove[];
+	for($i=0;$i<`size $f`;$i++){	
+			
+			if(stringArrayContains($f[$i], $remove) == 1){
+				continue;	
+			}
+			select -r $f[$i];
+			string $currentFace = $f[$i];		
+			SelectUVShell;
+			string $sf[] = `ls -fl -sl`;
+			if($method == "sets"){
+				$shells[`size $shells`] = createSetFromSelection($sf,($setPrefix + $shellTotal));
+			} else if ($method == "separator"){
+				$shells[`size $shells`] = "|";
+				appendStringArray($shells, $sf, `size $sf`);
+			} else if ($method == "selectionString"){			
+				$shells[`size $shells`] = "select -r " + stringArrayToString($sf, " ");
+			}
+			appendStringArray($remove, $sf, `size $sf`);
+			//$f = stringArrayRemove($sf,$f);		
+			
+			//<debug>
+			if($debug){
+				debugList($dbl, { ($i + " - Shell - " + $i) }, $dbc, $dbm);
+				debugList($dbl, { (" - Face: " + $currentFace) }, $dbc, $dbm);
+				debugList($dbl, { (" - Number of Faces In Shell: " + `size $sf`) }, $dbc, $dbm);
+				debugList($dbl, { ($shells[$i]) }, $dbc, $dbm);
+				debugList($dbl, { (" - Faces Remaining: " + `size $f`) }, $dbc, $dbm);
+				debugList($dbl, { ("-------------------------------") }, $dbc, $dbm);
+			}
+			//<debug>
+			
+			$shellTotal++;
+	
+	}	
+	//<debug>
+	if($debug){
+		debugList($dbl, { ("------SHELLS SETS------") }, $dbc, $dbm);	
+		debugList($dbl, { (" - Shell Set Count: " + `size $shells`) }, $dbc, $dbm);	
+		debugList($dbl, $shells, $dbc, $dbm);
+	}
+	//<debug>
+	
+	return $shells;
+}
+
+//@ GET ACCURATE SHELL COUNT
+//====================================================================
+global proc int getAccurateShellCount(string $sel[])
+{
+	int $debug = `menuItem -q -cb SortFacesIntoShellSetsDebugMenuItem`;
+	if(`size $sel` == 0){
+		$sel = `ls -sl`;	
+	}
+	//Get the selection
+	string $obj = $sel[0];
+	select -r $obj;
+	
+	string $setPrefix = $obj + "Shell";
+	
+	string $selectCommand = "select -r ";
+	string $shells[];
+	
+	//Get all the faces
+	ConvertSelectionToFaces;
+	string $f[] = `ls -fl -sl`;
+	
+	//Get any unmapped faces
+	string $unmapped[] = getUnmappedFaces($sel);
+	if(`size $unmapped` > 0){
+		int $warning = wizWarningDialog("Unmapped Faces", ($obj + " has " + `size $unmapped` + "faces.\n"
+		+ "It is highly recommended to cancel and map all faces before continuing to process UVs."), "Continue Anyways", "Cancel");
+		if($warning == 0){
+			return 0;	
+		}
+		if(`size $unmapped` != `size $f`){
+			$f = stringArrayRemove($unmapped, $f);
+		}
+	}
+	select -cl;
+	//For Counting the shells
+	int $shellTotal = 0;
+	for($i=0;$i<`size $f`;$i++){			
+			select -r $f[$i];		
+			SelectUVShell;
+			string $sf[] = `ls -fl -sl`;		
+			$f = stringArrayRemove($sf,$f);				
+			if(`size $f` == 0){			
+				$ok = 1;
+				break;
+			}
+			$shellTotal++;
+	}	
+	select -r $sel;
+	return $shellTotal;	
+}
+
+//UV SET FUNCTIONS
+//=============================================================================
+
+//TRANSFER UVS
+//--------------------
+global proc transferUVsOnSelected(string $sel[])
+{
+	transferUVs($sel[0], $sel[1]);	
+}
+
+//@ TRANSFER UVS
+//====================================================================
+global proc transferUVs(string $from, string $to)
+{
+	string $dbl = "-dmi TransferUVsDebugMenuItem -t Transfer UVs"; string $dbm = "add"; int $dbc = 1;
+	
+	int $fuv = `optionMenuGrp -q -sl transferUVsFlipUVsOptionMenuGrp`;
+	int $spa = `optionMenuGrp -q -sl transferUVsSampleSpaceOptionMenuGrp`;
+	int $sm = `optionMenuGrp -q -sl transferUVsSeachMethodOptionMenuGrp`;
+	
+	$fuv = $fuv - 1;
+	$spa = $spa - 1;
+	$sm = $sm - 1;
+	
+	debugListString($dbl, (" -spa: " + $spa + " -sm " + $sm + " -fuv " + $fuv), $dbc, $dbm);
+	debugListString($dbl, (" - FROM: " + $from + " - TO: " + $to), $dbc, $dbm);
+	
+	//transferAttributes -uvs 2 -pos 0 -spa $spa -sm $sm -fuv $fuv -sus "map1" -tus "map1" $from $to;
+	transferAttributes -uvs 2 -pos 0 -spa $spa -sm $sm -fuv $fuv $from $to;
+}
+
+//GET UV SETS
+//--------------------------------
+global proc string[] getAllUVSetNamesInLogicalOrder(string $sel[])
+{
+	//string $sel[] = `ls -sl`;
+	string $obj = $sel[0];
+	int $indices[] = `polyUVSet -q -allUVSetsIndices $obj`;
+	string $allUVSet[];
+	clear $allUVSet;
+	for($i=0;$i<`size $indices`;$i++){
+		string $uvSetName = `getAttr ($obj + ".uvSet[" + $i + "].uvSetName")`;
+		$allUVSet[`size $allUVSet`] = $uvSetName;
+	}
+	print ("WIZ| getAllUVSetNamesInLogicalOrder : " + stringArrayToString($sel, ", ") + "\n");
+	print ("	UVSets\n" + (wizDiv("se")) + "\n - " + stringArrayToString($allUVSet, "\n - ") + "\n");
+	debugList("UV Sets", { ($obj + " Has " + `size $allUVSet` + " UV Sets")}, 1, "add");
+	debugList("UV Sets", $allUVSet, 1, "add");
+	return $allUVSet;
+}
+
+//UNMAPPED FACES
+//--------------------------------
+global proc string[] getUnmappedFaces(string $sel[])
+{
+	select -r $sel;	
+	polySelectConstraint -m 3 -t 0x0008 -tx 2 -sh 1;
+	string $unmapped[] = `ls -fl -sl`;
+	polySelectConstraint -disable;
+	return $unmapped;
+}
+
+global proc string[] selectUnmappedFaces(string $sel[])
+{
+	string $unmapped[] = getUnmappedFaces($sel);
+	select -r $unmapped;
+	return $unmapped;
+}
+
+global proc int countUnmappedFaces(string $sel[])
+{
+	string $unmapped[] = getUnmappedFaces($sel);
+	int $count = `size $unmapped`;	
+	select -r $sel;
+	return $count;
+}
+
+//MERGE ALL UV SETS DOWNWARD
+//--------------------------------
+global proc mergeAllUVSetsDownward(string $sel[])
+{
+	for ($i = 0;$i < `size $sel`; $i++){
+		select -r $sel[$i];
+		mergeAllUVSetsDownwardTo(`ls -sl`, 0);
+	
+	}
+
+}
+
+//MERGE ALL UV SETS DOWNWARD TO
+//--------------------------------
+global proc mergeAllUVSetsDownwardTo(string $sel[], int $to)
+{
+	string $obj = $sel[0];
+	select -r $obj;
+	string $allUVSet[] = getAllUVSetNamesInLogicalOrder($sel);
+
+	int $flatten = 0;
+	if ($to == 0){
+		$flatten = 1;
+		$to = 1;	
+	}
+	string $curSet;
+
+	if (`size $allUVSet` == 1){
+		//renameDefaultUVSetToMap1($obj);	
+		return;
+	}
+	
+	print ("Copying UV Sets Down To : Set Number : " + $to + "\n" + wizDiv("s") + "\n");
+	for ($i=(`size $allUVSet` - 1);$i>($to - 1);$i--){
+		print($i + wizDiv("se") + "\n");
+		//Set the current UV Set
+		polyUVSet -currentUVSet -uvSet $allUVSet[$i];
+		print("	- Current UV Set : " + $allUVSet[$i] + "\n");
+		
+		//Get the uv count of the current set
+		int $uvCount[] = `polyEvaluate -uv $obj`;
+		print("	- UV Count : " + $uvCount[0] + "\n");
+		
+		//If there are no uvs then move on.
+		if ($uvCount[0] == 0){
+			continue;	
+		}
+		//Select the uvs
+		select -r $obj;
+		ConvertSelectionToUVs;
+		string $setUVs[] = `ls -fl -sl`;
+		
+		//Copy the uvs into the uv set below
+		if ($allUVSet[$i] == $allUVSet[($i - 1)]){
+			print ("WIZ| Cant Copy UV Set Onto Itself\n");
+			continue;
+		}
+		print (" - Copying UVs From : " + $allUVSet[$i] + " To : " + $allUVSet[($i - 1)] + "\n");
+		polyCopyUV -uvi $allUVSet[$i] -uvs $allUVSet[($i - 1)] $setUVs;
+		
+		//$curSet = $allUVSet[($i - 1)];	
+		
+	}
+	print (wizDiv("end") + "\n");
+	//Copy the current uv set to the default uv set
+	/*
+	if($flatten == 1){	
+		polyUVSet -copy -uvSet $curSet -nuv "map1";
+		$to = 0;
+	}
+	*/
+	//Delete extra sets
+	print ("Deleting Sets : \n" + wizDiv("se") + "\n");
+	for($i=(`size $allUVSet` - 1);$i>($to - 1);$i--){
+		print (" - " + $allUVSet[$i] + "\n");
+		polyUVSet -currentUVSet -uvSet $allUVSet[$i];
+		polyUVSet -delete;
+	}
+	print (wizDiv("end") + "\n");
+	//renameDefaultUVSetToMap1($obj);
+	select -r $obj;
+}
+
+global proc deleteUVSetIndices(string $sel[], int $ind[])
+{
+	/*
+	for($i=$ind[0];$i>$ind[(lastIndex($ind))];$i++){
+		//polyUVSet -currentUVSet -uvSet $allUVSet[$i];
+		//polyUVSet -delete;
+	}
+	*/
+}
+
+//DELETE NON DEFAULT UV SETS
+//===========================================================
+global proc deleteNonDefaultUVSets(string $sel[])
+{
+	for($i=0;$i < `size $sel`; $i++){
+		deleteNonDefaultUVSetsOnObject($sel[$i]);
+	}
+}
+
+//@ DELETE NON DEFAULT UV SETS ON OBJECT 
+//-------------------------------------------------------
+global proc deleteNonDefaultUVSetsOnObject(string $sel)
+{
+	int $indices[] = `polyUVSet -q -allUVSetsIndices $sel`;
+	string $allUVSet[];
+	clear $allUVSet;
+	for ($i=0;$i<`size $indices`;$i++){
+		string $uvSetName = `getAttr ($sel + ".uvSet[" + $i + "].uvSetName")`;
+		polyUVSet -currentUVSet -uvSet $uvSetName;
+		
+		if($uvSetName == "map1" || $i == 0){
+			continue;
+		} else {
+			polyUVSet -delete;
+			print("WIZ| deleteNonDefaultUVSets : Deleted : " + $uvSetName + "\n");
+		}
+		
+	}
+	//debugList("Deleted UV Sets", { ($obj + " Has " + `size $allUVSet` + " UV Sets")}, 1, "add");
+
+}
+
+
+//RENAME DEFAULT UV SET TO MAP1
+//===========================================================
+global proc renameSelectedObjectsDefaultUVSetToMap1(string $sel[])
+{
+	for($i=0;$i < `size $sel`; $i++){
+		renameDefaultUVSetToMap1($sel[$i]);
+	}
+}
+
+//@ RENAME DEFAULT UV SET TO MAP1 
+//-------------------------------------------------------
+global proc renameDefaultUVSetToMap1(string $sel)
+{
+	string $uvSetName = `getAttr ($sel + ".uvSet[0].uvSetName")`;
+	
+	polyUVSet -currentUVSet -uvSet $uvSetName;
+	if($uvSetName == "map1"){
+		return;
+	}
+
+	polyUVSet -rename -uvSet $uvSetName -newUVSet "map1";
+}
+
+
+//UV SHELL FUNCTIONS
+//=============================================================================
+global proc int getUVShellCount(string $sel[])
+{
+	string $mesh = $sel[0];
+	if(isPolyGeometry($mesh) == 0){
+		print("WIZ| getUVShellCount: Cannot Get UV Shell Count On Non Poly Geometry\n");
+		return 0;
+	}
+	int $shellCount[];
+	string $shellCountString; 
+	if(catchQuiet($shellCount = `polyEvaluate -s $mesh`) == 1){	
+		if(catchQuiet($shellCountString = `polyEvaluate -s $mesh`) == 1){
+			print("WIZ| getUVShellCount: Catch Quiet Error : Cannot Get UV Shell Count For Some Strange Reason\n"); return 0;
+		}
+	} else {		
+			catchQuiet($shellCount[`size $shellCount`] = int($shellCountString));
+	}	
+	
+	return $shellCount[0];
+	}
+	
+	global proc string[] getUVShellsWithinGridArea(string $sel[], float $minX, float $maxX, float $minY, float $maxY)
+	{
+	
+	return $sel;
+}
+
+//SCALE UVS
+//=============================================================================
+global proc scaleUVsCenteredInGridArea(string $sel[])
+{
+	int $puGrid = `intFieldGrp -q -v1 scaleUVsCenteredInGridAreaGridAreaUIntFieldGrp`;	
+	int $pvGrid = `intFieldGrp -q -v1 scaleUVsCenteredInGridAreaGridAreaVIntFieldGrp`;
+	float $scale = `floatSliderButtonGrp -q -v scaleUVsCenteredInGridAreaScaleFloatSliderButtonGrp`;
+	
+	float $pu = $puGrid + 0.5;
+	float $pv = $puGrid + 0.5;
+	string $selString = stringArrayToStringArrayString($sel);
+	string $uvScale = ("polyEditUV -s true -pu " + $pu + " -pv " + $pv + " -su " + $scale + " -sv " + $scale + " " + $selString + " ;");	
+	eval($uvScale);
+}
+
+global proc wizScaleUVs( string $sel[] )
+{
+	int $puGrid = `intFieldGrp -q -v1 scaleUVsCenteredInGridAreaGridAreaUIntFieldGrp`;	
+	int $pvGrid = `intFieldGrp -q -v1 scaleUVsCenteredInGridAreaGridAreaVIntFieldGrp`;
+	float $u = `floatSliderButtonGrp -q -v scaleUVsUFloatSliderButtonGrp`;
+	float $v = `floatSliderButtonGrp -q -v scaleUVsVFloatSliderButtonGrp`;
+	
+	float $pu = $puGrid + 0.5;
+	float $pv = $puGrid + 0.5;
+	string $selString = stringArrayToStringArrayString($sel);
+	string $uvScale = ("polyEditUV -s true -pu " + $pu + " -pv " + $pv + " -su " + $u + " -sv " + $v + " " + $selString + " ;");	
+	eval($uvScale);
+}
+
+global proc scaleUVsUniformlyInCenter(string $sel[], float $scale)
+{
+	//string $selString = stringArrayToStringArrayString($sel);
+	string $objs[] = getGeometryTransforms($sel);
+	select -r $objs;
+	ConvertSelectionToUVs;
+	
+	//string $uvs[] = `ls -fl -sl`;
+	
+	string $uvScale = ("polyEditUV -s true -pu 0.5 -pv 0.5 -su " + $scale + " -sv " + $scale + " ;");
+	
+	eval($uvScale);	
+	
+	select -r $objs;
+}
+
+//MOVE UVS
+//==============================================================================
+global proc moveSelectedUVs(string $sel[], float $u, float $v)
+{
+	polyMoveUV -tu $u -tv $v $sel;
+
+}
+
+//HELPER FUNCTIONS
+//=============================================================================
+
+//GET DIFFERENCE BETWEEN MIN AND MAX UV IN SET
+//-------------------------------------------------
+global proc float getDifferenceBetweenMinAndMaxUVsInSet(string $faces[])
+{
+	selectAllObjectsInArray($faces);
+	debugML5("Faces: " + stringArrayToString($faces, " ") + "\n");
+	ConvertSelectionToUVs;
+	string $uvs[] = `ls -fl -sl`;
+	
+	debugML5("UVs: " + stringArrayToString($uvs, " ") + "\n");
+	float $uvPos[] = `polyEditUV -q -u`;
+	float $uPos[] = getEveryOtherInFloatArray($uvPos,0);
+	float $vPos[] = getEveryOtherInFloatArray($uvPos,1);
+	
+	debugML5("	- UPos: " + floatArrayToString($uPos, " ") + "\n");
+	debugML5("	- VPos: " + floatArrayToString($uPos, " ") + "\n");
+	$uPos = `sort $uPos`;
+	$vPos = `sort $vPos`;
+	debugML5("	- UPos Sorted: " + floatArrayToString($uPos, " ") + "\n");
+	debugML5("	- VPos Sorted: " + floatArrayToString($vPos, " ") + "\n");
+	
+	float $minUV[] = {$uPos[0], $vPos[0]};
+	float $maxUV[] = {($uPos[(`size $uPos` - 1)]), ($vPos[(`size $vPos` - 1)])};
+	debugML5("MinUV: " + $minUV[0] + " " + $minUV[1] + " MaxUV: " + $maxUV[0] + " " + $maxUV[1] + "\n");
+	float $diff = (($maxUV[0] - $minUV[0]) + ($maxUV[1] - $minUV[1])) / 2;
+	return $diff;
+
+}
+
+global proc float[] getEveryOtherInFloatArray(float $array[], int $start)
+{
+	int $o = $start + 1;
+	float $keep[];
+	for($i=$start;$i<`size $array`;$i++){
+		if($i == $o){
+			$o = $o + 2;
+			continue;
+		} else{
+			$keep[`size $keep`] = $array[$i];	
+		}
+	}
+	return $keep;
+}
+//GET AREA SIZE
+//-------------------------------------------------
+global proc float get2dAreaSize(float $posA[], float $posB[])
+{	
+	float $a = $posB[0] - $posA[0];
+	float $b = $posB[1] - $posA[1];
+	float $size = $b * $a;
+	return $size;
+}
+
+global proc float getAreaOfShellFaces(string $f[])
+{
+	int $debug = `menuItem -q -cb GetAreaOfShellFacesDebugMenuItem`;
+	float $bc2[] = `polyEvaluate -bc2 $f`;
+	
+	float $x = $bc2[1] - $bc2[0];
+	float $y = $bc2[3] - $bc2[2];
+	float $area = $x * $y;
+	
+	if ($debug){
+	debugList("Get Area Of Shell Faces", { ("polyEvaluate -bc2 " + stringArrayToString($f," ")) }, 1, "add");
+	//debugList("Get Area Of Shell Faces", { (floatArrayToString($bc2, " | ")) }, 1, "add");
+	debugList("Get Area Of Shell Faces", { ("x = " + $bc2[1] + " - " + $bc2[0]) } , 1, "add");
+	debugList("Get Area Of Shell Faces", { ("y = " + $bc2[3] + " - " + $bc2[2]) } , 1, "add");
+	debugList("Get Area Of Shell Faces", { ("area = " + $x  + " * " + $y) } , 1, "add");
+	debugList("Get Area Of Shell Faces", { ("area = " + $area) } , 1, "add");
+	}
+	return $area;
+}
+
+global proc float getPerimeterOfShellFaces(string $f[])
+{
+	int $debug = `menuItem -q -cb GetPerimeterOfShellFacesDebugMenuItem`;
+	string $dbl = "Get Perimeter Of Shell Faces";
+	int $dbc = 1;
+	string $dbm = "add";
+	
+	float $bc2[] = `polyEvaluate -bc2 $f`;
+	
+	float $x = $bc2[1] - $bc2[0];
+	float $y = $bc2[3] - $bc2[2];
+	float $perimeter = (2 * $x) * (2 * $y);
+	
+	if($debug){
+		debugList($dbl, { ("polyEvaluate -bc2 " + stringArrayToString($f," ")) }, $dbc, $dbm);
+		//debugList($dbl, { (floatArrayToString($bc2, " | ")) }, $dbc, $dbm);
+		debugList($dbl, { ("x = " + $bc2[1] + " - " + $bc2[0]) } , $dbc, $dbm);
+		debugList($dbl, { ("y = " + $bc2[3] + " - " + $bc2[2]) } , $dbc, $dbm);
+		debugList($dbl, { ("perimeter = " + (2 * $x)  + " * " + (2 * $y)) } , $dbc, $dbm);
+		debugList($dbl, { ("perimeter = " + $perimeter) } , $dbc, $dbm);
+		debugList($dbl, { ("---------------------------------") } , $dbc, $dbm);
+	}
+	return $perimeter;
+
+}
+
+//IS POINT INSIDE AREA
+//-------------------------------------------------
+global proc int isPointInsideArea(float $point[], float $areaMin[], float $areaMax[])
+{
+	int $inside = 1;
+	//string $debugList[];
+	//$debugList[`size $debugList`] = ("Point Positions: " + floatArrayToString($point, " "));
+	for($i=0;$i<`size $areaMin`;$i++){
+		//$debugList[`size $debugList`] = ("Min Area: " + $areaMin[$i]);
+			
+		if($point[$i] >= $areaMin[$i]){
+			//$debugList[`size $debugList`] = ("Is Point: " + $point[$i] + " >= " + $areaMin[$i]);
+			//$debugList[`size $debugList`] = " - YES - ";
+			$inside = 1;	
+		} else {
+			//$debugList[`size $debugList`] = ("Is Point: " + $point[$i] + " >= " + $areaMin[$i]);
+			//$debugList[`size $debugList`] = " - NO - ";
+			$inside = 0;	
+			break;
+		}
+	}
+	
+	for($i=0;$i<`size $areaMax`;$i++){
+		//$debugList[`size $debugList`] = ("Max Area: " + $areaMax[$i]);
+		if($point[$i] <= $areaMax[$i]){
+			//$debugList[`size $debugList`] = ("Is Point: " + $point[$i] + " <= " + $areaMax[$i]);
+			//$debugList[`size $debugList`] = " - YES - ";
+			$inside = 1;
+		} else {
+			//$debugList[`size $debugList`] = ("Is Point: " + $point[$i] + " <= " + $areaMax[$i]);
+			//$debugList[`size $debugList`] = " - NO - ";
+			$inside = 0;
+			break;
+		}
+	}
+	//debugList("Is Point Inside Area", $debugList, 1, "replace");
+	return $inside;
+}
+
+global proc int isPointInsideUVSpace(float $point[],float $areaMin[],float $areaMax[])
+{
+	int $inside = isPointInsideArea($point,$areaMin,$areaMax);
+	return $inside;
+}
+
+global proc int isPointInside3dArea(float $point[],float $areaMin[],float $areaMax[])
+{
+	int $inside = isPointInsideArea($point,$areaMin,$areaMax);
+	return $inside;	
+}
+
+
+global proc mergeUVShellsBySelectionPropogationMethods(string $sel[])
+{
+	int $debug = `menuItem -q -cb MergeUVShellsBySelectionPropogationMethodsDebugMenuItem`;
+	string $dbl = "Merge UV Shells By Selection Propogation";
+	int $dbc = 1;
+	string $dbm = "add";	
+	openCurrentOptionsLayout("propogateFaceSelectionMaxAngleOptions");	
+	//tabLayout -e -sti 3 wizSelectionTab;
+	//openWizCurrentOptions();
+	
+	//Create a new uv set with auto name
+	
+	string $obj = $sel[0];
+	string $curUVSet[] = `polyUVSet -q -currentUVSet $obj`;
+	string $newUVSet[] = `polyUVSet -create $obj`;
+	
+	//string $sel[] = forceGetSelectionList();
+	string $f[] = wizGetComponentFromSelection($sel,"faces");
+	
+	//<DEBUG>
+	if($debug){
+		debugList($dbl, { (" - Current UV Set: " + $curUVSet[0]) }, $dbc, $dbm);
+		debugList($dbl, { (" - New UV Set: " + $newUVSet[0]) }, $dbc, $dbm);
+		debugList($dbl, { ("----------------------") }, $dbc, $dbm);
+		debugList($dbl, { (" - Faces: " + `size $f`) }, $dbc, $dbm);
+		debugList($dbl, $f, $dbc, $dbm);
+		debugList($dbl, { ("----------------------") }, $dbc, $dbm);
+	}
+	//<DEBUG>
+	
+	string $remove[];
+	for($i=0;$i<`size $f`;$i++){
+		if(stringArrayContains($f[$i], $remove) == 1){ continue;}
+		
+		//Propogate the face selection stopping at anything above angle 
+		string $pf[] = propogateFaceSelectionMaxAngle({$f[$i]},0,60);
+		
+		//Get the uvs of the selection
+		ConvertSelectionToUVs;
+		string $setUVs[] = `ls -fl -sl`;
+		
+		//Copy the uvs into a new set to layout
+		if(`size $setUVs` > 0){
+			polyCopyUV -uvi $curUVSet[0] -uvs $newUVSet[0] $setUVs;
+			polyLayoutUV -lm 0 -sc 1 -se 0 -rbf 2 -fr 0 -ps 0.1 -l 2 $setUVs;
+			polyMapSewMove ;
+		}
+		
+		//Remove process faces so we don't process them again
+		appendStringArray($remove, $pf, `size $pf`);
+		//<DEBUG>
+		if($debug){
+			debugList($dbl, { ("[" + $i + "]") }, $dbc, $dbm);
+			debugList($dbl, { (" - Propogated To Faces: " + `size $pf`) }, $dbc, $dbm);
+			debugList($dbl, { (" - UVs To Copy: " + `size $setUVs`) }, $dbc, $dbm);
+			int $remaingFaces = (`size $f`) - (`size $remove`);
+			debugList($dbl, { (" - Faces Remaining: " + $remaingFaces) }, $dbc, $dbm);
+			debugList($dbl, { ("----------------------") }, $dbc, $dbm);
+		
+		}
+		//<DEBUG>
+	}
+	select -r $sel;
+}
+
+//OPTIMIZING
+//==============================================================
+
+//OPTIMIZE UV SPACE
+//---------------------------------------
+global proc optimizeUVSpace(string $sel[])
+{
+	string $dbl = "-dmi OptimizeUVSpaceDebugMenuItem -t Optimize UV Space"; string $dbm = "add"; int $dbc = 1;	
+	
+	//Copy the selection array so we don't mess it up
+	//Just list the transforms
+	string $selCopy[];
+	$selCopy = getGeometryTransforms($sel);
+	
+	//Set the options to only return an array with separators	
+	checkBox -e -v 0 sortMethodsSortIntoSetsCheckBox;
+	checkBox -e -v 0 sortMethodsSortIntoSelectionCommandsCheckBox;
+		
+	//Sort the objects by matching geometry
+	string $sorted[] = sortByMatchingPolyGeometry($selCopy);
+	
+	//Get the maxSameUV Setting
+	int $maxSameUV;
+	string $omg = "prepForPaintingShareUVSpaceMethodOptionMenuGrp";
+	if (`optionMenuGrp -q -sl $omg` == 2){
+		//This is how many of the same objects we will allow to occupy unique uv space
+		$maxSameUV = `intSliderGrp -q -v prepForPaintingMaxSameUVSpaceIntSliderGrp`;
+		//shuffle the array for some random variation
+		$sorted = shuffleSeperatedSortedArray($sorted);
+		//Divide the separated groups by the maxSameUV setting
+		$sorted = divideSeparatedStringArrayBy($sorted, $maxSameUV, "||", "divide");
+	} else if(`optionMenuGrp -q -sl $omg` == 3) {
+		$maxSameUV = `intSliderGrp -q -v prepForPaintingMaxSameUVSpaceIntSliderGrp`;
+		//shuffle the array for some random variation
+		$sorted = shuffleSeperatedSortedArray($sorted);
+		//Divide the separated groups by the maxSameUV setting
+		$sorted = divideSeparatedStringArrayBy($sorted, $maxSameUV, "||", "dividePercent");
+	}
+	
+	//<DEBUG>
+	debugListArray($dbl, " - Sorted By Matching Geometry: ", $sorted, $dbc, $dbm, "", 1000);
+	//<DEBUG>
+	
+	//Pull out the first object after the separator for the layouts
+	string $layout[];
+	for ($i=0;$i<`size $sorted`;$i++){
+		if($sorted[$i] == "|" || $sorted[$i] == "||" && $i != (`size $sorted`)){
+			$layout[`size $layout`] = $sorted[($i + 1)];
+		}
+	}
+	
+	$layout = stringArrayRemoveEmptyIndices($layout);
+	
+	string $matched[];
+	//<DEBUG>
+	debugList($dbl, { (" * Size Selected: " + `size $sel`) }, $dbc, $dbm);
+	debugListArray($dbl, " - Layout Objects: ", $layout, $dbc, $dbm, "", 1000);	
+	appendStringArray($matched, $selCopy, `size $selCopy`);
+	$matched = stringArrayRemove($layout, $matched);
+	debugListArray($dbl, " - Matched Objects: ", $matched, $dbc, $dbm, "", 1000);	
+	//<DEBUG>
+	
+	if(`checkBox -q -v autoPrepForPaintingNormalizeOption` == 1){
+		//Normalize the UVs
+		normalizeSelectedObjectUVs($layout);
+	}
+	
+	if(`checkBox -q -v autoPrepForPaintingLayoutUVsCheckBox`){
+		//Do the layout
+		polyLayoutUVSelected($layout);	
+	}
+		
+	if(`floatSliderGrp -q -v prepForPaintingScaleToFitInGridSpaceFloatSliderGrp` != 1){
+		//Scale the uvs down a little so they don't touch the edges at all
+		float $scaleUVs = `floatSliderGrp -q -v prepForPaintingScaleToFitInGridSpaceFloatSliderGrp`;
+		scaleUVsUniformlyInCenter($layout, $scaleUVs);
+	}
+	
+	if(`checkBox -q -v autoPrepForPaintingTransferUVsCheckBox`){
+		//Transfer the uvs to the matching objects
+		transferUVsOnSortedObjects($sorted);
+	}
+}
+
+//TRANSFER UVS ON SORTED OBJECTS
+//=========================================
+global proc transferUVsOnSortedObjects(string $sorted[])
+{
+	
+	string $from;
+	string $to;
+	for($i=0;$i<`size $sorted`;$i++){
+		if($sorted[$i] == "|" || $sorted[$i] == "||"){
+			$from = $sorted[($i + 1)];		
+		} else {
+			if(`isPolyGeometry($sorted[$i])`== 0){ continue;}			
+			$to = $sorted[$i];
+			if($from == $to){ continue;}
+			transferUVs($from, $to);
+			
+		}
+		if(wizProgressCancelled() == 1) return;
+	}
+}
+
+//UV LAYOUT
+//=================================
+//AUTO PROJECT
+//------------------------------
+global proc string[] autoProjectUVsOnSelectedObjects(string $sel[])
+{
+	printProc("autoProjectUVsOnSelectedObjects");
+	float $ps = `floatSliderGrp -q -v prepForPaintingUVPercentageSpace`;
+	int $settings = `optionMenuGrp -q -sl autoPrepForPaintingAutoUVsUseSettings`;
+	int $i;
+	for($i=0;$i<`size $sel`;$i++){
+		if(`isPolyGeometry($sel[$i])`== 0){ continue;}
+		//Auto project UV's
+		if($settings == 1){
+			polyAutoProjection -ps $ps $sel[$i];	
+		} else {		
+			polyAutoProjection $sel[$i];
+		}
+		if(wizProgressCancelled() == 1) return $sel;
+	}
+	return $sel;
+}
+
+//NORMALIZE
+//------------------------------
+global proc string[] normalizeSelectedObjectUVs(string $obj[])
+{
+	//We probably don't need to use this function
+	
+	printProc("normalizeSelectedObjectUVs");
+	//Fit the uvs into a square so it is normalized first
+	fitUVsOfSelectedIntoSquare($obj);
+	return $obj;
+}
+
+//FIT INTO SQUARE
+//------------------------------
+global proc fitUVsOfSelectedIntoSquare(string $obj[])
+{
+	//We probably don't need to use this function
+	
+	//string $polyLayoutSettings = getPrepForPaintingPolyLayoutSettings("polyLayout");
+	string $polyLayoutSettings = getPolyLayoutUVSettings("polyLayout");
+	int $i;
+	for($i=0;$i<`size $obj`;$i++){	
+		if(`isPolyGeometry($obj[$i])`== 0){ continue;}
+		polyNormalizeUV -normalizeType 1 -preserveAspectRatio on $obj[$i];
+		string $polyLayoutCommand = "polyLayoutUV " + $polyLayoutSettings + " " + $obj[$i];
+		eval($polyLayoutCommand);
+		//polyLayoutUV -lm 2 -sc 1 -rbf 2 -fr 0 -ps $ps -l 2 $obj[$i];
+		string $message = $obj[$i] + " - Fit UV intoSquare OK?";
+		$ok = detailConfirmStep($message);if(!$ok){ return;}
+		if(wizProgressCancelled() == 1) return ;	
+	}
+}
+
+//POLY LAYOUT UV SELECTED
+//-------------------------------
+global proc polyLayoutUVSelected(string $sel[])
+{
+	string $dbl = "-dmi PolyLayoutUVSelectedDebugMenuItem -t Poly Layout UVs"; string $dbm = "add"; int $dbc = 1;
+	
+	string $polyLayoutSettings = getPolyLayoutUVSettings("polyMultiLayoutUV");
+	
+	debugList($dbl, { (" - Settings - ") }, $dbc, $dbm);
+	debugList($dbl, { $polyLayoutSettings }, $dbc, $dbm);
+	
+	string $layout[] = getGeometryTransforms($sel);
+		
+	select -r $layout;
+	
+	debugListArray($dbl, " - Layout: ", $layout, $dbc, $dbm, "", 100);
+	
+	//Do the polyLayout
+	//string $polyLayoutCommand = "polyMultiLayoutUV " + $polyLayoutSettings + " -ou 0 -ov 0 -su 1 -sv 1";
+	string $polyLayoutCommand = "polyMultiLayoutUV " + $polyLayoutSettings;
+	
+	eval($polyLayoutCommand);
+
+}
+
+//@ WIZ FLATTEN UV SETS
+//=============================================
+/*
+	wizFlattenUVSetsOnSelectedObjects(`ls -sl`);
+*/
+global proc wizFlattenUVSetsOnSelectedObjects( string $sel[] )
+{
+	for ($i=0;$i<`size $sel`;$i++){
+		wizFlattenUVSetsOnSelected($sel[$i]);
+	}
+}
+
+//wizFlattenUVSetsOnSelected(`ls -sl`);
+global proc wizFlattenUVSetsOnSelected( string $sel )
+{
+	//string $sel[] = `ls -sl`;
+	
+	select -r $sel;
+	string $uvSets[] = `polyUVSet -q -auv $sel`;
+	
+	/*
+	for ($i=0;$i<`size $uvSets`;$i++){
+		int $shellCount[] = `polyEvaluate -s -uvs $uvSets[$i]`;
+		int $uvCount[] = `polyEvaluate -uv -uvs $uvSets[$i]`;
+		print ("UVSet : " + $uvSets[$i] + " Shell Count : " + $shellCount[0] + " UVCount : " + $uvCount[0] + "\n");
+		if ($uvSets[$i] == "map1" || $i == 0){
+			//int $shellCount[] = `polyEvaluate -s -uvs $uvSets[$i]`;
+			//print ("UVSet : " + $uvSets[$i] + " Shell Count : " + $shellCount[0] + "\n");
+			if ($uvCount[0] == 0){
+				print ("Empty Default UV Set\n");
+				mergeAllUVSetsDownward({$sel});
+				
+			} else {
+				deleteNonDefaultUVSetsOnObject($sel);
+				break;
+			}
+		}
+		
+	}
+	*/
+	string $uvCount[] = `polyEvaluate -uv -uvs $uvSets[0]`;
+	if ($uvCount[0] == 0){
+		print ("Empty Default UV Set\n");
+		mergeAllUVSetsDownward({$sel});
+		
+	} else {
+		deleteNonDefaultUVSetsOnObject($sel);		
+	}
+	//mergeAllUVSetsDownward({$sel});
+	renameDefaultUVSetToMap1($sel);
+	
+	
+}
+
+
+//@ GET MIN MAX U V AREA
+//====================================================================
+/*======================| SUMMARY |===================================
+    Given a selection of faces, vert, edges, this returns the min and
+    max uv coordiates that correspond to the components.
+    returns : float[4]
+        minU, minV, maxU, maxV
+/*=======================| USAGE |====================================	
+    string $sel[] = `ls -sl`;
+    getMinMaxUVArea($sel);
+====================================================================*/
+global proc float[] getMinMaxUVArea( string $sel[] )
+{
+    select -r $sel;
+    ConvertSelectionToUVs;
+    string $uvs[] = `ls -sl`;
+    float $uvPos[] = `polyEditUV -q -u $uvs`;
+    float $uPos[] = getColumnOfFloatArray($uvPos, 1, 2);
+    float $vPos[] = getColumnOfFloatArray($uvPos, 2, 2);
+    
+    //float $v[] = `polyEditUV -q -v $uvs`;
+    sort ($uPos);
+    sort ($vPos);
+    
+    return { $uPos[0], $vPos[0], $uPos[(`size $uPos` - 1)], $vPos[(`size $vPos` - 1)] }; 
+    
+    
+}
+
+
+//@ MAKE U V AREA MASK RAMP
+//====================================================================
+/*======================| SUMMARY |===================================
+    This takes a min max uv area and creats a ramp with a white square
+    corresponding to that precise area.
+    It returns the name of the new ramp.
+/*=======================| USAGE |====================================	
+    makeUVAreaMaskRamp("uvAreaMaskRamp", { 0.0, 0.5, 0.1, 0.5 });
+====================================================================*/
+global proc string makeUVAreaMaskRamp( string $name, float $uvMinMax[] )
+{
+    string $ramp = wizCreateNewRampTexture($name);
+    //print ("Make UV Area Mask Ramp : U Min : " + $uvMinMax[0] + " : V Min : " + $uvMinMax[1] + " : U Max : " + $uvMinMax[2] + " : V Max : " + $uvMinMax[3] + " " + "\n");
+    //Put the entry 1 at the min v position
+    //Put the entry 2 and the max v position
+    setAttr ($ramp + ".interpolation") 0;
+    
+    setAttr ($ramp + ".colorEntryList[0].color") -type double3 0.0 0.0 0.0;
+    setAttr ($ramp + ".colorEntryList[0].position") 0.0;  
+    
+    if ($uvMinMax[1] < 1.0 && $uvMinMax[1] > 0.0){
+        setAttr ($ramp + ".colorEntryList[1].color") -type double3 1.0 1.0 1.0;
+        setAttr ($ramp + ".colorEntryList[1].position") $uvMinMax[1];
+    }
+    if ($uvMinMax[3] < 1.0 && $uvMinMax[3] > 0.0){
+        setAttr ($ramp + ".colorEntryList[2].color") -type double3 0.0 0.0 0.0;
+        setAttr ($ramp + ".colorEntryList[2].position") $uvMinMax[3];  
+    }
+    //Set the default color to black
+    setAttr ($ramp + ".defaultColor") -type double3 0 0 0 ;
+    
+    //Set the u coverage to the u max - the u min, then move the ramp over to the u min
+    if ($uvMinMax[2] < 1.0 && $uvMinMax[2] > 0.0 && $uvMinMax[0] < 1.0 && $uvMinMax[0] > 0.0){
+        string $p2d = getTexturesPlace2dTextureNode($ramp);
+        setAttr ($p2d + ".coverageU") ($uvMinMax[2] - $uvMinMax[0]);
+        setAttr ($p2d + ".translateFrameU") $uvMinMax[0];
+    }
+    return $ramp;
+}
+
+
+global proc int wizGetUVCount(string $sel[] )
+{
+	string $obj = $sel[0];
+	select -r $obj;
+
+	int $uvCount[] = `polyEvaluate -uv $obj`;
+	print ("UV Count : " + $uvCount[0] + "\n");
+		
+	return $uvCount[0];
+}
+
+//@ wizUVs
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	wizUVs("-sl -typ sphereUnfold");
+	
+	</code>
+*********************************************************************/
+global proc wizUVs( string $flags )
+{
+	string $obj, $type;
+	string $sel[];
+	int $edit;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-typ" : case "-type" :
+			$type = $tok[($i + 1)];
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			$sel = smartSelectObjectsOfType($sel, "mesh");
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+		}
+	}
+
+	for ($i=0;$i<`size $sel`;$i++){
+		wizlog ("[#] Creating UVs For : " + $sel[$i]);		
+		if ($type == "sphereUnfold"){
+			select -r $sel[$i];
+			ConvertSelectionToFaces;
+			
+			string $pp[] = `polyProjection -ch 1 -type Spherical -ibd on -sf on`;
+			wizlog ("[+] Poly Projection : " + $pp[0]);
+			setAttr ($pp[0] + ".projectionHorizontalSweep") 360;
+			setAttr ($pp[0] + ".projectionVerticalSweep") 180;
+			
+			select -r $sel[$i];
+			ConvertSelectionToUVs;
+			
+			Unfold3D -u -ite 1 -p 1 -bi 1 -tf 1 -ms 1024 -rs 6;
+			
+		}	
+	}
+
+	
+
+}

@@ -1,0 +1,357 @@
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//|||||||||||||||||||||||||:::WIZ:::||||||||||||||||||||||||||||||||||
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+/*====================================================================
+Author: Glen Johnson
+Email: plasticarm@gmail.com
+Website: plasticarm.com / hrpictures.com
+----------------------------------------------------------
+Summary:
+
+
+
+====================================================================*/
+
+global int $WIZ_fullDomeCameraHudButton;
+
+global proc fullDomeCameraWiz()
+{
+	fullDomeCameraWizHudMenu();
+	cameraWiz();
+}
+
+global proc fullDomeCameraWizHudMenu()
+{
+	
+	global int $WIZ_fullDomeCameraHudButton;
+	global string $WIZ_fullDomeCameraHudButtonShape;
+	
+	$WIZ_fullDomeCameraHudButton = 9;
+	if(`headsUpDisplay -ex renderToPlanetariumPlayerHudButton` == true){
+		return;
+	}
+		
+	renderToPlanetariumPlayerHudButton();
+		
+	$WIZ_fullDomeCameraHudButton--;		
+	
+	setFullDomeCameraModeHudButton();			
+		
+	$WIZ_fullDomeCameraHudButton--;		
+	
+	setFullDomeMaskHudButton();
+	
+	$WIZ_fullDomeCameraHudButton--;		
+	
+	switchFullDomeShaderHudButton();
+	
+	$WIZ_fullDomeCameraHudButton--;
+	
+	setFullDomeCameraLenseHudButtons();
+	
+	$WIZ_fullDomeCameraHudButton--;
+	
+	fullDomeWizHudCloseMenuButton();
+}
+
+global proc string getFullDomeCameraWizHudButtonShape()
+{
+	//return "roundRectangle";
+	return "rectangle";
+}
+
+global proc fullDomeWizHudCloseMenuButton()
+{
+	global int $WIZ_fullDomeCameraHudButton;
+	string $bsh = getFullDomeCameraWizHudButtonShape();
+
+	hudButton		
+		-s 7
+		-b $WIZ_fullDomeCameraHudButton
+		-vis 1
+		-p 20
+		-l "Exit"
+		-bw 200
+		-bsh $bsh
+		-rc ("closeFullDomeCameraWizHud();")
+		exitFullDomeCameraHudButton
+		;
+}
+
+global proc renderToPlanetariumPlayerHudButton()
+{
+	global int $WIZ_fullDomeCameraHudButton;
+	string $bsh = getFullDomeCameraWizHudButtonShape();
+
+	hudButton
+		-s 7
+		-b $WIZ_fullDomeCameraHudButton
+		-vis 1
+		-p 20
+		-l "Render To Planetarium Player"
+		-bw 200
+		-bsh $bsh
+		-rc ("renderToPlanetarium();")
+		renderToPlanetariumPlayerHudButton
+		;
+			
+}
+
+global proc switchFullDomeShaderHudButton()
+{
+	global int $WIZ_fullDomeCameraHudButton;
+	string $bsh = getFullDomeCameraWizHudButtonShape();
+	
+	int $fdLense = `getAttr FullDomeCamera.fullDomeLenseOS`;
+	string $l;
+	string $rc;
+	if($fdLense == 0){
+		$l = "Switch To PC Dome Shader";	
+		$rc = ("connectFullDomeCameraPerOS(1); closeFullDomeCameraWizHud(); setAttr FullDomeCamera.fullDomeLenseOS 1;");
+		
+	} else if($fdLense == 1){
+		$l = "Switch To Mac Dome Shader";
+		$rc = ("connectFullDomeCameraPerOS(0); closeFullDomeCameraWizHud(); setAttr FullDomeCamera.fullDomeLenseOS 0;");
+	}
+	
+	hudButton
+		-s 7
+		-b $WIZ_fullDomeCameraHudButton
+		-vis 1
+		-p 20
+		-l $l
+		-bw 200
+		-bsh $bsh
+		-rc $rc
+		switchFullDomeShaderHudButton
+		;	
+		
+	
+}
+
+global proc setFullDomeCameraModeHudButton()
+{
+	global int $WIZ_fullDomeCameraHudButton;
+	string $bsh = getFullDomeCameraWizHudButtonShape();
+	
+	hudButton
+		-s 7
+		-b $WIZ_fullDomeCameraHudButton
+		-vis 1
+		-p 20
+		-l "Full Dome Sim Mode"
+		-bw 200
+		-bsh $bsh
+		-rc ("setFullDomeCameraMode(0);")
+		fullDomeCameraModeFullDomeCameraHudButton
+		;
+	
+	$WIZ_fullDomeCameraHudButton--;		
+			
+	hudButton
+		-s 7
+		-b $WIZ_fullDomeCameraHudButton
+		-vis 1
+		-p 20
+		-l "Main View Area Mode"
+		-bw 200
+		-bsh $bsh
+		-rc ("setFullDomeCameraMode(1);")
+		mainViewAreaCameraModeFullDomeCameraHudButton
+		;
+		
+}
+
+global proc setFullDomeMaskHudButton()
+{
+	global int $WIZ_fullDomeCameraHudButton;
+	string $bsh = getFullDomeCameraWizHudButtonShape();
+	/*
+	string $l;
+	string $rc;
+	if(`getAttr "FullDomeCamera1.fullDomeMask"` == 0){
+		$l = "Enable Mask";	
+		$rc = ("setAttr FullDomeCamera1.fullDomeMask 1;");
+	} else {
+		$l = "Disable Mask";	
+		$rc = ("setAttr FullDomeCamera1.fullDomeMask 0;");
+	}
+	*/
+	
+	hudButton
+		-s 7
+		-b $WIZ_fullDomeCameraHudButton
+		-vis 1
+		-p 20
+		-l "Enable Mask"
+		-bw 200
+		-bsh $bsh
+		-rc ("setAttr FullDomeCamera1.fullDomeMask 1;")
+		enableFullDomeMaskHudButton
+		;
+		
+	$WIZ_fullDomeCameraHudButton--;	
+	
+	hudButton
+		-s 7
+		-b $WIZ_fullDomeCameraHudButton
+		-vis 1
+		-p 20
+		-l "Disable Mask"
+		-bw 200
+		-bsh $bsh
+		-rc ("setAttr FullDomeCamera1.fullDomeMask 0;")
+		disableFullDomeMaskHudButton
+		;	
+}
+
+
+global proc planetariumWiz()
+{
+	
+}
+
+global proc setFullDomeCameraModeHudButton()
+{
+	/*
+	global int $WIZ_fullDomeCameraHudButton;
+	string $bsh = getFullDomeCameraWizHudButtonShape();
+	
+	hudButton
+		-s 7
+		-b $WIZ_fullDomeCameraHudButton
+		-vis 1
+		-p 20
+		-l "Render Full Dome Camera"
+		-bw 200
+		-bsh $bsh
+		-rc ("setFullDomeCameraMode(0);")
+		fullDomeCameraModeFullDomeCameraHudButton
+		;
+	
+	$WIZ_fullDomeCameraHudButton--;		
+			
+	hudButton
+		-s 7
+		-b $WIZ_fullDomeCameraHudButton
+		-vis 1
+		-p 20
+		-l "Main View Area Mode"
+		-bw 200
+		-bsh $bsh
+		-rc ("setFullDomeCameraMode(1);")
+		mainViewAreaCameraModeFullDomeCameraHudButton
+		;
+		
+		*/
+}
+
+
+global proc setFullDomeCameraLenseHudButtons()
+{
+	
+	global int $WIZ_fullDomeCameraHudButton;
+	string $bsh = getFullDomeCameraWizHudButtonShape();
+	
+	hudButton
+		-s 7
+		-b $WIZ_fullDomeCameraHudButton
+		-vis 1
+		-p 20
+		-l "Use DomeAFLFOV Lense"
+		-bw 200
+		-bsh $bsh
+		-rc ("setFullDomeCameraLense(\"dome\");")
+		fullDomeCameraLenseFullDomeCameraHudButton
+		;
+	
+	$WIZ_fullDomeCameraHudButton--;		
+			
+	hudButton
+		-s 7
+		-b $WIZ_fullDomeCameraHudButton
+		-vis 1
+		-p 20
+		-l "Use FishEye Lense"
+		-bw 200
+		-bsh $bsh
+		-rc ("setFullDomeCameraLense(\"fisheye\");")
+		fisheyeLenseFullDomeCameraHudButton
+		;
+		
+		
+}
+
+global proc setFullDomeCameraLense( string $lense )
+{
+	
+}
+
+
+global proc closeFullDomeCameraWizHud()
+{
+	headsUpDisplay -remove renderToPlanetariumPlayerHudButton;
+	headsUpDisplay -remove switchFullDomeShaderHudButton;
+	
+	headsUpDisplay -remove fullDomeCameraModeFullDomeCameraHudButton;	
+	headsUpDisplay -remove mainViewAreaCameraModeFullDomeCameraHudButton;
+	
+	headsUpDisplay -remove enableFullDomeMaskHudButton;
+	headsUpDisplay -remove disableFullDomeMaskHudButton;
+	
+	headsUpDisplay -remove exitFullDomeCameraHudButton;
+}
+
+
+global proc setFullDomeCameraMode( int $mode )
+{
+	switch($mode){
+		case 0 :
+		setAttr "fullDome1.filmTranslateV" 0;
+		setAttr "fullDome1.postScale" 1;
+		break;
+		
+		case 1 :
+		setAttr "fullDome1.filmTranslateV" -0.21;
+		setAttr "fullDome1.postScale" 3;
+		break;
+		
+	}
+}
+/*
+string $os = `about -os`;
+if($os == "mac"){
+	setAttr FullDomeCamera.fullDomeLenseOS 0;
+	connectFullDomeCameraPerOS(0);
+} else if($os == "nt" || $os == "win64"){
+	setAttr FullDomeCamera.fullDomeLenseOS 1;
+	connectFullDomeCameraPerOS(1);
+} else if($os == "linux" || $os == "linux64"){
+	setAttr FullDomeCamera.fullDomeLenseOS 2;
+	connectFullDomeCameraPerOS(2);
+}
+
+global proc connectFullDomeCameraPerOS(int $os)
+{
+	int $connected;
+	if($os == 0){
+		$connected = `isConnected "DynamicDomeMACth_domeAFL_FOV1.message" "fullDome1.miLensShader"`;
+		if($connected == 0){
+			connectAttr -force DynamicDomeMACth_domeAFL_FOV1.message fullDome1.miLensShader;
+			print("WIZ| FULL DOME CAMERA SET TO OS - FullDomeCamera : OS : MAC : DynamicDomeMACth_domeAFL_FOV1" + "\n");
+		} else {
+			print("WIZ| FULL DOME CAMERA ALREADY SET TO OS - FullDomeCamera : OS : MAC : DynamicDomeMACth_domeAFL_FOV1" + "\n");
+		}
+	} else if($os == 1){
+		$connected = `isConnected PCDome_FOV1.message fullDome1.miLensShader`;
+		if($connected == 1){
+			connectAttr -force PCDome_FOV1.message fullDome1.miLensShader;
+			print("WIZ| FULL DOME CAMERA SET TO OS - FullDomeCamera : OS : PC : PCDome_FOV1" + "\n");
+		} else {
+			print("WIZ| FULL DOME CAMERA ALREADY SET TO OS - FullDomeCamera : OS : PC : PCDome_FOV1" + "\n");
+		}
+	} else if($os == 2){
+		print("WIZ| WHAT?\n YOU ARE ON LINUX?\n WHO THE FUCK ARE YOU?\n You are going to have to do something else before you can use the full dome camera!" + "\n");
+	}
+}
+*/

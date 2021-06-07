@@ -1,0 +1,2368 @@
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//|||||||||||||||||||||||||:::WIZ:::||||||||||||||||||||||||||||||||||
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//                         SCRIPT WIZ
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+/*====================================================================
+Author: Glen Johnson
+Email: plasticarm@gmail.com
+Website: plasticarm.com / hrpictures.com
+----------------------------------------------------------
+Summary:
+
+
+
+====================================================================*/
+
+global proc scriptWiz()
+{
+//scriptWizTabLayout();
+scriptWizWindow();
+}
+
+//========================================================================================================
+//[][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][]
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//                     WINDOWS
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//[][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][]
+//========================================================================================================
+
+global proc scriptWizWindow()
+{
+	
+	global string $WIZ_scriptWizWindow;
+	$WIZ_scriptWizWindow = "scriptWizWindow";//Global name for window
+	//global string $MY_customFileNamePrefix;
+	if(`window -exists $WIZ_scriptWizWindow`){
+		deleteUI $WIZ_scriptWizWindow;
+	}
+	
+	string $window = `window
+		-title "Script Wiz"
+		-widthHeight 600 700
+		-menuBar on
+		-menuBarVisible on
+		-minimizeButton on
+		-maximizeButton on
+		-sizeable on		
+		-resizeToFitChildren on
+		-titleBar on
+		$WIZ_scriptWizWindow
+		`;
+	
+	scriptWizTabLayout($window);
+		
+	showWindow $WIZ_scriptWizWindow;
+
+}
+
+global proc closeSourceAllScriptsWindow()
+{
+	global string $SAS_window = "SASWindow";
+		if (`window -exists $SAS_window`)
+			deleteUI $SAS_window;
+}
+
+global proc sourceSelectedScriptsWindow()
+{
+	//This is here in case we cant open up the main window	
+	global string $SAS_window = "SASWindow";
+	if (`window -exists $SAS_window`)
+		deleteUI $SAS_window;
+	
+	window
+		-title "Scripts Wiz"
+		-widthHeight 100 250
+		-menuBar on
+		-menuBarVisible on
+		-minimizeButton on
+		-maximizeButton on
+		-sizeable on		
+		-resizeToFitChildren on
+		-titleBar on
+		$SAS_window;
+	
+	sourceSelectedScriptsLayout();	
+	scriptsUpdateLayout();	
+	showWindow $SAS_window;	
+}
+
+
+//========================================================================================================
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//                     LAYOUTS
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//========================================================================================================
+//@ SCRIPT WIZ TAB LAYOUT
+//=======================================================
+global proc scriptWizTabLayout(string $parent)
+{
+	string $layout = `columnLayout
+			-adjustableColumn true
+			-p $parent
+			scriptWizColumnLayout
+			`;
+			
+	//scriptWizMainLayout($layout);
+	scriptWizMainTabLayout($layout);
+
+}
+
+global proc scriptWizMainLayout(string $parent)
+{
+	scriptManagementFrameLayout($parent);
+	
+	wizScriptEditorFrameLayout($parent);
+	
+	debugWizFrameLayout($parent);
+}
+
+global proc scriptWizMainTabLayout(string $parent)
+{
+	string $tabLayout = `tabLayout
+		-scrollable false
+		-childResizable true
+		-imageVisible true
+		-tabsVisible true
+		-sc ("selectScriptWizTabCommand()")
+		-p $parent
+		scriptWizMainTabLayout
+		`;
+		
+	setParent $tabLayout;
+    
+	batchProcessorLayout($tabLayout);
+    
+	wizLogLayout($tabLayout);
+	
+	/*
+	debugWizColumnLayout($tabLayout);
+	*/
+	
+	mathWizColumnLayout($tabLayout);
+	
+	commandListColumnLayout($tabLayout);
+	
+	wizScriptEditorColumnLayout($tabLayout);
+	
+	scriptManagementColumnLayout($tabLayout);
+
+	layoutWizColumnLayout($tabLayout);
+	
+	stringWizMainLayout($tabLayout);
+	
+    
+    //buttonSoupLayout($tabLayout);
+		
+	tabLayout
+		-e
+		-tl "scriptManagementColumnLayout" "Management"
+		-tl "wizLog_columnLayout" "Log"
+		-tl "mathWizColumnLayout" "Math Wiz"
+		-tl "wizScriptEditorColumnLayout" "Editor"		
+		-tl "commandListColumnLayout" "Command List"
+		-tl "layoutWizColumnLayout" "UI"
+        -tl "batchProcessWizColumnLayout" "Batch"
+		-tl "stringWizMainColumnLayout" "Strings"		
+		scriptWizMainTabLayout
+		;
+    /*    
+    -tl "debugWizColumnLayout" "Debug"
+	*/
+}
+
+
+//# WIZ CRAFT ANALYSIS LOG LAYOUT
+//====================================================================
+global proc wizLogLayout( string $parent )
+{
+    global string $WIZ_logKey;
+	int $w = 400;
+	int $h = 500;
+
+    string $logLayout = `columnLayout 
+        -p $parent
+        wizLog_columnLayout
+        `;
+
+    string $ec = (
+	"string $eval = `scrollField -q -sl wizLog_scrollField`;"+"\n"
+	+"eval($eval);"+"\n"
+	);
+	
+    scrollField 
+        -text ""
+        -h 500 
+        -w $w
+        //-ww 1 
+        -ed 0 
+		-ec $ec
+		-ann $WIZ_logKey
+        -fn "smallPlainLabelFont"         
+        wizLog_scrollField
+        ;  
+		
+	string $pop = `popupMenu
+		-p "wizLog_scrollField"
+		`;
+		
+	
+	string $maxC = ("columnLayout -e -adj true -h 900 wizLog_columnLayout;");
+	menuItem -l "Maximize Scroll Field" -c $maxC;
+	
+	string $minC = ("columnLayout -e -adj false -w " + $w + " -h " + $h + " wizLog_columnLayout;");
+	menuItem -l "Reset Scroll Field" -c $minC;
+	menuItem -l "Clear Log" -c ("scrollField -cl wizLog_scrollField;");
+	
+
+}
+
+
+//SELECT SCRIPT WIZ TAB COMMAND
+//----------------------------------------------
+global proc selectScriptWizTabCommand()
+{
+	int $sti = `tabLayout -q -sti scriptWizMainTabLayout`;
+	if($sti == 4){
+		wizScriptEditorLayout("wizScriptEditorColumnLayout");
+	} else {
+		if(`columnLayout -q -ex wizScriptEditorColumnLayoutB` == 1){
+			destroyLayout("wizScriptEditorColumnLayoutB");	
+		}
+	}
+}
+
+//SCRIPT MANAGEMENT COLUMN LAYOUT
+//----------------------------------------------
+global proc scriptManagementColumnLayout(string $parent)
+{
+	string $columnLayout = wizStandardColumnLayout($parent, "scriptManagementColumnLayout");
+	
+	sourceSelectedScriptsLayout();
+		
+	scriptsUpdateLayout();
+}
+
+//SCRIPT MANAGEMENT LAYOUT
+//----------------------------------------------
+global proc scriptManagementFrameLayout(string $parent)
+{
+	string $layout = `frameLayout
+		-l "Script Management"
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true		
+		-p $parent
+		scriptManagementFrameLayout
+		`;
+		
+	sourceSelectedScriptsLayout();
+		
+	scriptsUpdateLayout();
+		
+}
+
+//SOURCE SELECTED SCRIPTS LAYOUT
+//===================================================
+global proc sourceSelectedScriptsLayout()
+{
+	global string $SAS_scriptsToSource[];
+	string $scriptSourceDirectory = getWizScriptDirectory();
+	
+	string $sourceSelectedScriptsLayout = `frameLayout
+		-l "Source Selected Scripts"	
+		-ann ""
+		-bv true
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl false
+		sourceSelectedScriptsFrameLayout
+		`;
+	
+	string $scriptSourceCommand = ("assignDirectoryToTextFieldButtonGrp(\"scriptWizScriptSourceDirectoryTextFieldButtonGrp\",1);"
+	+"string $dir = `textFieldButtonGrp -q -tx scriptWizScriptSourceDirectoryTextFieldButtonGrp`;"
+	+"setWizScriptDirectory($dir);"
+	+"setScriptsToSource();");
+	
+	string $scriptSource = `textFieldButtonGrp
+		-l "Wiz Script Directory"
+		-cal 1 "left"
+		-tx $scriptSourceDirectory
+		-bl "Select"
+		-bc $scriptSourceCommand
+		scriptWizScriptSourceDirectoryTextFieldButtonGrp
+		`;
+	
+	//SCRIPT TEXTSCROLL LIST LAYOUT
+	string $rowLayout = `rowLayout
+		-nc 2
+		-p $sourceSelectedScriptsLayout
+		scriptsToSourceRowLayout
+		`;
+		
+	string $colLayoutA = `columnLayout
+		-adj true
+		-w 500
+		-p $rowLayout
+		scriptsToSourceColumnLayoutA
+		`;
+	
+		textScrollList	
+			-sc ("doSelectWizSelectCommand(\"scriptsToSource\")")
+			-dgc dragTextScrollListSelection
+			-dpc dropTextScrollListSelection
+			-dkc ("removeSelectedItemFromTextScrollList(\"scriptsToSource\");")
+			-p $colLayoutA
+			scriptsToSource
+			;
+			
+	string $colLayoutB = `columnLayout
+		-adj true
+		-p $rowLayout
+		scriptsToSourceColumnLayoutB
+		`;
+		
+	selectionArrangementColumnLayout();		
+	
+	setParent..;
+	
+	setParent $sourceSelectedScriptsLayout;			
+	
+	
+	string $buttonRow = `rowLayout
+		-nc 3
+		-cw2 120 120 
+		`;
+		
+		button
+			-l "Browse"
+			-c "getScriptsToSource"
+			getScriptsToSource
+			;
+		
+		button
+			-l "Source All"
+			-c ("sourcAllScriptsInList(\"scriptsToSource\");")
+			sourceAllWizScriptsButton
+			;
+			
+		button
+			-l "Source Selected"
+			-c ("sourceSelectedScriptsInList(\"scriptsToSource\");")
+			sourceSelectedScriptsButton
+			;	
+		
+		setParent..;
+		
+	setScriptsToSource();		
+		
+}
+
+//SCRIPTS UPDATE LAYOUT
+//----------------------------------------------
+global proc scriptsUpdateLayout()
+{
+	global string $SAS_updateExe;
+	global string $WIZ_wizScriptDir;
+	//global string $WIZ_googleDriveDir;
+	//global string $WIZ_mayaBackupDir;
+	
+	string $scriptsUpdateLayout = `frameLayout
+			-l "Updates"
+			-ann ""
+			-bv true
+			-la "center"
+			-li 10
+			-lv true
+			-mw 10
+			-mh 10		
+			
+			-cll true
+			-cl false	
+			scriptsUpdateFrameLayout
+			`;
+			
+	button
+		-l "Download Latest Scripts"
+		-command "openScriptsDownloadWebsite"
+		openScriptsDownloadWebsite
+		;
+		
+	backUpToGoogleDriveLayout($scriptsUpdateLayout);
+	
+	setParent..;
+	
+	string $scriptUpdateManagementLayout = `frameLayout
+		-l "Update Management"
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true	
+		-p $scriptsUpdateLayout
+		`;
+		
+		$wizUser = true;
+		if(`optionVar -q WIZ_userType` == "wiz"){	
+			$wizUser = true;
+		} else {
+			$wizUser = false;
+		}
+	
+		textFieldButtonGrp
+			-l "Update Executable"
+			-cal 1 "left"
+			-text $SAS_updateExe
+			-buttonLabel "Select"
+			-bc "assignUpdateExecutable"
+			getUpdateExecutable
+			;
+			
+		textFieldButtonGrp
+			-l "Shared Scripts Directory"
+			-cal 1 "left"
+			-text ""
+			-buttonLabel "Select"
+			-bc "assignSharedScriptsDirectory"
+			wizSharedScriptsDirectory
+			;
+
+		button
+			-l "Update Scripts on Shared Script Directory"
+			-command "copySourceScriptsToSharedScriptsDirectory"
+			-en $wizUser
+			updateScriptsOnSharedScriptsDirectory
+			;
+			
+		string $wizIconsDirectory = getWizIconsDirectory();
+		
+		textFieldGrp
+			-l "Wiz Icons Directory"
+			-cal 1 "left"
+			-tx $wizIconsDirectory		
+			wizIconsDirectoryTextFieldGrp
+			;
+
+		setParent..;	
+		
+		getUpdateExecutable();
+		
+		getSharedScriptsDirectory();		
+		
+}
+
+//BACK UP TO GOOGLE DRIVE LAYOUT
+//----------------------------------------------
+global proc backUpToGoogleDriveLayout(string $parent)
+{
+	global string $WIZ_googleDriveDir;
+	global string $WIZ_mayaBackupDir;
+	
+	string $layout = `frameLayout
+			-l "Back-Up Maya Directory to Google Drive"
+			-ann ""
+			-bv true
+			-la "center"
+			-li 10
+			-lv true
+			-mw 10
+			-mh 10		
+			
+			-cll true
+			-cl true
+			-p $parent
+			`;
+			
+	textFieldButtonGrp
+		-l "Maya Directory"
+		-text $WIZ_mayaBackupDir
+		-buttonLabel "Select"
+		-bc ("$WIZ_mayaBackupDir = assignDirectoryToTextFieldButtonGrp(\"getMayaBackupDirectory\",0);$WIZ_mayaBackupDir = saveOptionVarString($WIZ_mayaBackupDir, \"WIZ_mayaBackupDir\");")
+		getMayaBackupDirectory
+		;
+		
+	$WIZ_mayaBackupDir = setSavedDir($WIZ_mayaBackupDir, "WIZ_mayaBackupDir", "getMayaBackupDirectory"); 
+	
+	textFieldButtonGrp
+		-l "Google Drive"
+		-text $WIZ_googleDriveDir
+		-buttonLabel "Select"
+		-bc ("$WIZ_googleDriveDir = assignDirectoryToTextFieldButtonGrp(\"getGoogleDriveDirectory\",0);$WIZ_googleDriveDir = saveOptionVarString($WIZ_googleDriveDir, \"WIZ_googleDriveDir\");")
+		getGoogleDriveDirectory
+		;
+	
+	$WIZ_googleDriveDir = setSavedDir($WIZ_googleDriveDir, "WIZ_googleDriveDir", "getGoogleDriveDirectory");
+	
+	button
+		-l "Backup Maya Directory to Google Drive"
+		-command "backUpMayaDirToGoogleDrive"
+		backUpMayaDirToGoogleDrive
+		;
+	/*	
+	button
+		-l "Update Scripts on Google Drive"
+		-command "updateScriptsOnGoogleDrive"
+		-en $wizUser
+		updateScriptsOnGoogleDrive
+		;					
+	*/	
+	
+	setParent..;
+}
+
+//========================================================================================================
+//""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//                     MENUS
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+//========================================================================================================
+
+//ALL SCRIPTS MENU
+//------------------------------------------
+global proc allScriptsMenu()
+{
+	menuItem -d true;
+	
+	string $mainScriptMenuItem = `menuItem -sm true -to true
+		-label "Scripts"
+		`;	
+		
+	string $allScripts[] = getAllScripts();
+	buildScriptsMenu($allScripts, $mainScriptMenuItem);
+
+	setParent -menu ..;
+	setParent -menu ..;
+	setParent -menu ..;
+	menuItem -d true;
+
+	menuItem -l "Batch Process" -c ("batchProcessor();");
+	
+}
+
+//========================================================================================================
+//()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//                     FUNCTIONS
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()
+//========================================================================================================
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                       AUTO SOURCE SCRIPTS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//AUTO(1)
+//AUTO SOURCE WIZ SCRIPTS
+//--------------------------------------
+global proc autoSourceWizScripts()
+{
+	string $wizUserType = "wiz";
+	if (`optionVar -ex WIZ_userType`){
+		$wizUserType = `optionVar -q WIZ_userType`;
+	}	
+	global string $SAS_scriptsToSource[];
+	clear $SAS_scriptsToSource;
+	
+	$SAS_scriptsToSource = getMostCurrentWizScripts();
+
+	sourceScripts($SAS_scriptsToSource);
+	
+	if (`optionVar -q WIZ_autoUpdate` == 1){
+	
+		autoUpdateWizShared();
+	}
+	// update doxygen documentation
+	int $updateDoxygen = 1;
+	if (`optionVar -ex WIZ_updateDoxygenDocs`){
+		$updateDoxygen = `optionVar -q WIZ_updateDoxygenDocs`;
+		if ($updateDoxygen){		
+			updateDoxygenDocs();
+		}
+	}
+}
+
+//AUTO SOURCE SELECTED SCRIPTS
+//--------------------------------------
+global proc autoSourceSelectedScripts()
+{
+	autoSourceWizScripts();
+}
+
+//@ AUTO UPDATE WIZ SHARED
+//====================================================================
+/*****************************************************************//**
+	This creates a script job to copy the wiz directory to a shared directory.
+	<hr>
+	<b>Synopsis</b><br>
+	autoUpdateWizShared <br>
+	The script job to copy wiz to another directory is executed 
+	when the application is quit.
+	
+	<b>Return value</b><br>
+	none.
+	
+	<b>Flags</b><br>
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	autoUpdateWizShared();
+	
+	</code>
+*********************************************************************/
+global proc autoUpdateWizShared()
+{
+	global string $SAS_scriptsToSource[];
+	writeListOfCurrentSourcedScriptsToFile($SAS_scriptsToSource);
+	//After all the scripts are source... then copy stuff to shared directory
+	if (`optionVar -q WIZ_userType` == "wiz"){
+	//writeListOfCurrentSourcedScriptsToFile({\"\"});
+		string $eval = "copySourceScriptsToSharedScriptsDirectory(); copyWizIconsToSharedDirectory();";
+		//evalDeferred($eval);
+		scriptJob -runOnce true -event quitApplication $eval;
+		
+		//copySourceScriptsToSharedScriptsDirectory();
+		//copyWizIconsToSharedDirectory();
+	} else {
+		print("WIZ| autoUpdateWizShared : You are not Wiz You cannot update Wiz Shared directory. Don't worry about this messaage!\n");
+		/*
+		string $iconEval = "copyWizIconsToUserPrefIconsDirectory();";
+		string $eval = "copySharedScriptsToUserScriptsDir()";
+		evalDeferred($iconEval);
+		evalDeferred($eval);
+		//copyWizIconsToUserPrefIconsDirectory();
+		*/
+	}	
+}
+
+//AUTO(2)
+//GET MOST CURRENT WIZ SCRITPS
+//--------------------------------------
+global proc string[] getMostCurrentWizScripts()
+{
+	string $wizScripts[];
+	//First look for list of wiz scripts in file
+	$wizScripts = getWizScriptsFromFile();
+	if(`size $wizScripts` > 0){
+		//print("WIZ| loading... wizScripts.txt |WIZ" + "\n");
+		//print("WIZ| wizScripts: " + stringArrayToString($wizScripts, "\n") + "\n");
+		return $wizScripts;
+	}	
+	//Then look for wiz scripts in option var
+	$wizScripts = getWizScriptsFromOptionVar();
+	if(`size $wizScripts` > 0){
+		//print("WIZ| loading... wizOptionVar |WIZ" + "\n");
+		return $wizScripts;
+	}
+	//If we didn't find any then we have to build a list
+	print("WIZ| No Wiz scripts were found. Please enter scripts to source. |WIZ" + "\n");
+	scriptWiz();
+	return $wizScripts;
+}
+
+//GET WIZ SCRIPTS FROM OPTION VAR
+//===========================================
+global proc string[] getWizScriptsFromOptionVar()
+{
+	string $wizScripts[];
+	string $as;
+	if(`optionVar -ex SAS_scriptsToSource`){
+		$as = `optionVar -as SAS_scriptsToSource`;	
+		if($as == 0 || $as == 1){		
+		} else {
+			$wizScripts = `optionVar -q SAS_scriptsToSource`;
+		}
+	}
+	return $wizScripts;		
+}
+
+//AUTO SOURCE LOCAL SCRIPTS
+//===========================================
+global proc autoSourceLocalScripts()
+{
+	global string $SAS_scriptsToSource[];
+	int $i;
+	$SAS_scriptsToSource = createDefaultListOfLocalScriptsToSource();
+	if(`optionVar -ex SAS_scriptsToSource`){
+		optionVar -ca SAS_scriptsToSource;
+	}
+	for($i=0;$i<`size $SAS_scriptsToSource`;$i++){
+		optionVar -sva SAS_scriptsToSource $SAS_scriptsToSource[$i];
+	}
+	doSourceScripts($SAS_scriptsToSource,0);
+
+}
+
+//DO SOURCE SCRIPTS
+//===========================================
+global proc doSourceScripts(string $script[], int $outputResults)
+{
+	int $i;
+	if($outputResults == 1){
+		print("Sourcing Scripts: " + "\n");
+	}
+	for($i=0;$i<`size $script`;$i++){
+		eval( "source \"" + $script[$i] + "\"");
+		if($outputResults == 1) print("          " + $script[$i] + "\n");
+	}
+	if($outputResults == 1){
+		print("=====================================" + "\n");
+		print("Sourcing All Scripts Complete! \n");
+	}
+}
+
+//WIZ FILES
+//===================================
+global proc string getWizScriptsFile()
+{
+	string $scriptListFileName;	
+	string $wizScriptDirectory = getWizScriptDirectory();
+
+	if(`optionVar -q WIZ_userType` == "wiz"){
+		$scriptListFileName = ( $wizScriptDirectory + "wizScripts.txt" );
+	} else {
+		$scriptListFileName = ( $wizScriptDirectory + "wizScripts.txt" );
+	}
+	return $scriptListFileName;
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         WIZ DIRECTORIES
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//GET DIRECTORIES
+//=============================================================
+//AUTO(3.2)
+//GET WIZ SCRIPT DIRECTORY
+//----------------------------------------
+global proc string getWizScriptDirectory()
+{
+	string $wizScriptDir;
+	if(`optionVar -ex WIZ_wizScriptDir`){
+		$wizScriptDir = `optionVar -q WIZ_wizScriptDir`;
+		return $wizScriptDir;
+	}
+	if(`optionVar -q WIZ_userType` == "wiz"){
+		//$wizScriptDir = `internalVar -userScriptDir`;
+		//$wizScriptDir = getWizScriptDirectory();
+		$wizScriptDir = `internalVar -userScriptDir`;
+		$wizScriptDir = $wizScriptDir + "wiz/";
+	} else {
+		$wizScriptDir = `optionVar -q WIZ_wizScriptDir`;
+		
+	}
+	return $wizScriptDir;
+}
+
+//GET WIZ SHARED DIRECTORY
+//----------------------------------
+global proc string getWizSharedDirectory()
+{
+	global string $WIZ_wizSharedScriptDir;
+	if(`optionVar -ex WIZ_wizSharedScriptDir`){
+		$WIZ_wizSharedScriptDir = `optionVar -q WIZ_wizSharedScriptDir`;
+	} else {
+		$WIZ_wizSharedScriptDir = "";
+	}
+	return $WIZ_wizSharedScriptDir;
+}
+
+//GET WIZ ICON DIRECTORY
+//----------------------------------
+global proc string getWizIconsDirectory()
+{
+	string $wizDir = getWizScriptDirectory();
+	string $wizIconsDir = $wizDir + "wizIcons/";
+	//print ("Wiz Icon Dir : " + $wizIconsDir + "\n");
+	//string $userPrefDir = `internalVar -upd`;
+	//string $wizIconsDir = $userPrefDir + "wizIcons/";
+
+	return $wizIconsDir;
+}
+
+//GET SHARED SCRIPTS DIRECTORY
+//----------------------------------
+global proc getSharedScriptsDirectory()
+{
+	global string $WIZ_wizSharedScriptDir;
+	if(`optionVar -ex WIZ_wizSharedScriptDir`){
+		$WIZ_wizSharedScriptDir = `optionVar -q WIZ_wizSharedScriptDir`;
+	} else {
+		$WIZ_wizSharedScriptDir = "";
+	}
+	textFieldButtonGrp -edit -text $WIZ_wizSharedScriptDir wizSharedScriptsDirectory;
+}
+
+//--------------------------------------------------------------------
+//////////////////////////////////////////////////////////////////////
+//			SET DIRECTORYS
+//////////////////////////////////////////////////////////////////////
+//-------------------------------------------------------------------
+
+//SET WIZ SCRIPT DIRECTORY
+//----------------------------------
+global proc setWizScriptDirectory(string $dir)
+{
+	global string $WIZ_wizScriptDir;
+	$WIZ_wizScriptDir = $dir;
+	optionVar -sv WIZ_wizScriptDir $dir;
+}
+
+//SET SAVED DIR
+//----------------------------------
+global proc string setSavedDir(string $dir, string $opVar, string $text)
+{
+	if(`optionVar -ex $opVar` == 1){
+		$dir = `optionVar -q $opVar`;
+	} else {
+		$dir = "";
+	}
+	textFieldButtonGrp -edit -text $dir $text;
+	return $dir;
+}
+
+//ASSIGN SHARED SCRIPTS DIRECTORY
+//----------------------------------
+global proc assignSharedScriptsDirectory()
+{
+	global string $WIZ_wizSharedScriptDir;
+	string $sel[] = `fileDialog2 -fileMode 3 -dialogStyle 2 -okCaption "OK"`;
+	$sel[0] = $sel[0] + "/";
+	$WIZ_wizSharedScriptDir = $sel[0];
+	optionVar -sv WIZ_wizSharedScriptDir $WIZ_wizSharedScriptDir;
+	textFieldButtonGrp -edit -text $WIZ_wizSharedScriptDir wizSharedScriptsDirectory;
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         COPY WIZ ICONS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+global proc copyWizIconsToSharedDirectory()
+{
+	string $wizIconsDir = getWizIconsDirectory();
+	//string $wizIcons[] = `getFileList -fld $wizIconsDir`;
+	
+	string $wizSharedDir = getWizSharedDirectory();
+	string $sourceDir = $wizIconsDir;
+	string $destDir = $wizSharedDir + "wizIcons/";
+	
+	wizlog ("	[!] Copy Wiz Icons Has Been Disabled... see copyWizIconsToSharedDirectory");
+	//copyFolderFromTo($sourceDir,$destDir);
+	//print $wizIcons;
+}
+
+global proc copyWizIconsToUserPrefIconsDirectory()
+{
+	string $wizIconsDir = getWizIconsDirectory();
+	string $wizSharedDir = getWizSharedDirectory();
+	
+	string $sourceDir = $wizSharedDir + "wizIcons/";
+	string $destDir = $wizIconsDir;
+	
+	//copyFolderFromTo($sourceDir,$destDir);
+	wizlog ("	[!] Copy Wiz Icons Has Been Disabled... see copyWizIconsToUserPrefIconsDirectory");
+	//print $wizIcons;
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         UPDATE EXE
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//UPDATE EXE
+//=================================
+global proc getUpdateExecutable()
+{
+	global string $SAS_updateExe;
+	if(`optionVar -ex SAS_updateExe`){
+		$SAS_updateExe = `optionVar -q SAS_updateExe`;
+	} else {
+			$SAS_updateExe = "";
+    }
+	textFieldButtonGrp -edit -text $SAS_updateExe getUpdateExecutable;
+}
+
+global proc assignUpdateExecutable()
+{
+	global string $SAS_updateExe;
+	string $sel[] = `fileDialog2 -fileMode 1 -dialogStyle 2 -okCaption "OK"`;
+	$SAS_updateExe = $sel[0];
+	$SAS_updateExe = $SAS_updateExe + "/";
+	optionVar -sv SAS_updateExe $SAS_updateExe;
+	textFieldButtonGrp -edit -text $SAS_updateExe getUpdateExecutable;
+}
+
+//TEXT FIELD BUTTON GRPS
+//============================================================================
+//ASSIGN DIRECTORY TO TEXT FIELD BUTTON GRP
+//-------------------------------------------
+global proc string assignDirectoryToTextFieldButtonGrp(string $tf, int $slash)
+{
+	string $sel[] = `fileDialog2 -fileMode 3 -dialogStyle 2 -okCaption "OK"`;
+	if($slash){
+		$sel[0] = $sel[0] + "/";
+	}
+	textFieldButtonGrp -edit -text $sel[0] $tf;
+    return $sel[0];
+}
+
+//ASSIGN FILE TO TEXT FIELD BUTTON GRP
+//-------------------------------------------
+global proc string assignFileToTextFieldButtonGrp(string $tf)
+{
+	string $sel[] = `fileDialog2 -fileMode 1 -dialogStyle 2 -okCaption "OK"`;
+	//$sel[0] = $sel[0] + "/";
+	textFieldButtonGrp -edit -text $sel[0] $tf;
+	return $sel[0];
+}
+
+//ASSIGN NEW FILE TO TEXT FIELD BUTTON GRP
+//-------------------------------------------
+global proc string assignNewFileToTextFieldButtonGrp(string $tf)
+{
+	string $sel[] = `fileDialog2 -fileMode 0 -dialogStyle 2 -okCaption "OK"`;
+	textFieldButtonGrp -edit -text $sel[0] $tf;
+	return $sel[0];
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         OPTION VARS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//OPTION VARS
+//=================================
+global proc string saveOptionVarString(string $string, string $opVar)
+{
+	optionVar -sv $opVar $string;
+	return $string;
+}
+
+global proc string saveOptionVarStringArray(string $string, string $opVar)
+{
+	optionVar -sva $opVar $string;
+	return $string;
+}
+
+global proc string[] putOptionVarStringArray(string $optionVar, string $string[])
+{
+	string $dbl = "-dmi GetPutOptionVarStringArrayDebugMenuItem -t Get Put Option Var String Array"; string $dbm = "add"; int $dbc = 1;
+	int $db = `menuItem -q -ex GetPutOptionVarStringArrayDebugMenuItem`;
+	
+	if($db){
+		debugList($dbl, { (" * Put Option Var: " + $optionVar + " Size: " + `size $string`) }, $dbc, $dbm);
+		debugList($dbl, $string, $dbc, $dbm);
+		//debugList($dbl, { (tslDiv("")) }, $dbc, $dbm);
+	}
+	
+	string $ov[];	
+	string $append[];
+	if(`optionVar -as $optionVar` > 1){
+		$ov = `optionVar -q $optionVar`;
+		if($db){
+			debugList($dbl, { (" - Found Option Var: " + $optionVar + " Size: " + `size $ov`) }, $dbc, $dbm);
+			debugList($dbl, $ov, $dbc, $dbm);
+			//debugList($dbl, {(tslDiv(""))}, $dbc, $dbm);
+		}
+		
+		for($i=0;$i<`size $string`;$i++){
+			int $index = stringArrayFind($string[$i],0,$ov);
+			if($index == -1){
+				optionVar -sva $optionVar $string[$i];	
+				$append[`size $append`] = $string[$i];
+			}
+		}
+		return $append;
+	}	
+	
+	for($i=0;$i<`size $string`;$i++){
+		optionVar -sva $optionVar $string[$i];
+		$append[`size $append`] = $string[$i];
+	}
+	if($db){
+		debugList($dbl, { (" - Appended To Option Var: " + $optionVar + " Size: " + `size $append`) }, $dbc, $dbm);
+		debugList($dbl, $append, $dbc, $dbm);
+		//debugList($dbl, {(tslDiv(""))}, $dbc, $dbm);
+	}
+	return $append;
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         SOURCE SCRIPTS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//SELECTED
+global proc sourceSelectedScripts()
+{
+	global string $SAS_scriptsToSource[];	
+	$SAS_scriptsToSource = `textScrollList -q -ai scriptsToSource`;
+	string $sourceScripts[];
+	//print("===========Sourcing Scripts===========" + "\n");
+	for($i=0;$i<`size $SAS_scriptsToSource`;$i++){
+		$sourceScripts[`size $sourceScripts`] = basename($SAS_scriptsToSource[$i], ".mel");
+		eval( "source \"" + $sourceScripts[$i] + "\"");
+		print("[" + $i + "] " + $sourceScripts[$i] + "\n");
+	}
+	//print("===============Complete================" + "\n");
+	writeListOfCurrentSourcedScriptsToFile($SAS_scriptsToSource);
+
+}
+
+//SOURCE SELECTED SCRIPTS ALL IN LIST
+//-----------------------------------------------------------
+global proc sourceSelectedScriptsInList(string $textScrollList)
+{
+	//print("===========Sourcing Selected Scripts In List===========" + "\n");
+	//This function does not update the text file	
+	string $sourceScripts[] = `textScrollList -q -si $textScrollList`;
+	string $sourced[] = sourceScripts($sourceScripts);
+
+}
+
+//SOURCE ALL SCRIPTS ALL IN LIST
+//-----------------------------------------------------------
+global proc sourcAllScriptsInList(string $textScrollList)
+{
+	global string $SAS_scriptsToSource[];	
+	clear $SAS_scriptsToSource;
+	$SAS_scriptsToSource = `textScrollList -q -ai $textScrollList`;
+	//print("===========Sourcing All Scripts In List===========" + "\n");
+	
+	string $sourced[] = sourceScripts($SAS_scriptsToSource);
+	
+	writeListOfCurrentSourcedScriptsToFile($SAS_scriptsToSource);
+	/*
+	if(`size $sourced` == `size $SAS_scriptsToSource`){
+		
+	}*/
+
+}
+
+//SOURCE SCRIPTS
+//-----------------------------------------------------------
+global proc string[] sourceScripts(string $scripts[])
+{	
+	//Successfull Sourced Scripts
+	string $sourced[];
+	//Errors
+	int $errorCount = 0;
+	int $notInUserDir = 0;
+	int $unresolvable = 0;
+	int $notFound = 0;
+	int $notFoundFile = 0;
+	int $wrongNum = 0;
+	string $lastError;
+	string $errorScripts[];
+	
+	int $lineCount = 0;
+	
+	string $print;
+	
+	$print = ("===========Sourcing Wiz Scripts===========" + "\n");
+	
+	for($i=0;$i<`size $scripts`;$i++){
+		//string $scriptBasename = basename($scripts[$i], ".mel");
+		//$print += ("[" + $i + "] source " + $scriptBasename);
+		
+		//If Error
+		if(catchQuiet(`eval("source \"" + $scripts[$i] + "\"")`) == 1){
+			
+			$lastError = getLastError();
+			
+			if(getReasonForLastSourceError($lastError) == "Cannot find procedure"){
+				$notInUserDir++;
+				$print += (" : Not Located In Default Directory");
+				
+				//If Error
+				if(catchQuiet(`eval("source \"" + $scripts[$i] + "\"")`) == 1){
+					$errorCount++;					
+					$lastError = getLastError();
+					
+					if(getReasonForLastSourceError($lastError) == "Cannot find procedure"){
+						//Give up searching for the script	
+						$notFound++;
+						$print += (" : Not Located In Full Path Search");
+						$print += (" : [CANNOT FIND PROCEDURE ERROR] \n");
+						
+					} if(getReasonForLastSourceError($lastError) == "Cannot find file"){
+						//Give up searching for the script	
+						$notFoundFile++;
+						$print += (" : Not Located In Full Path Search");
+						$print += (" : [CANNOT FIND FILE ERROR] \n");
+						
+					} else if(getReasonForLastSourceError($lastError) == "Wrong number of arguments"){
+						$wrongNum++;
+						$print += (" : [WRONG NUMBER OF ARGUMENTS ERROR] \n");
+						//tryToResolveSourceScriptErrors($scripts,$scripts[$i]);	
+						//return $sourced;
+						
+					} else {
+						//Unresolvable Error
+						$print += (" : [UNRESOLVABLE ERROR] \n");
+						$unresolvable++;
+						$errorScripts[`size $errorScripts`] = $scripts[$i];	
+					}
+					
+				} else {
+					//Success				
+					$print += (" [+] \n");
+					$sourced[`size $sourced`] = $scripts[$i];
+				}
+				
+			} else if(getReasonForLastSourceError($lastError) == "Cannot find file"){
+				//Give up searching for the script	
+				$notFoundFile++;
+				$print += (" : [CANNOT FIND FILE ERROR] \n");					
+			}else if(getReasonForLastSourceError($lastError) == "Wrong number of arguments"){
+				$wrongNum++;
+				$print += (" : [WRONG NUMBER OF ARGUMENTS ERROR] \n");
+				//tryToResolveSourceScriptErrors($scripts,$scripts[$i]);		
+			} else {
+				//Unresolvable Error
+				$print += (" : [UNRESOLVABLE ERROR] \n");
+				$unresolvable++;
+				$errorScripts[`size $errorScripts`] = $scripts[$i];
+			}
+		} else {
+			//Success
+			$print += (" [+] \n");
+			$sourced[`size $sourced`] = $scripts[$i];
+		}
+		/*
+		if($lineCount == 5){
+			print("\n");	
+		}
+		*/
+		$lineCount++;
+		
+	}
+	$print += ("WARNING :  NOT FOUND IN DEFAULT DIRECTORY: " + $notInUserDir + "\n");
+	$print += ("PROCEDURE NOT FOUND ERRORS: " + $notFound + "\n");
+	$print += ("FILE NOT FOUND ERRORS: " + $notFoundFile + "\n");
+	$print += ("WRONG NUMBER OF ARGUMENT ERRORS: " + $wrongNum + "\n");
+	$print += ("UNRESOLVABLE ERRORS: " + $unresolvable + "\n");
+	$print += ("TOTAL ERRORS: " + $errorCount + "\n");
+	$print += ("====================Complete====================" + "\n");
+	if($errorCount > 0){
+		print($print);	
+	}
+	string $errorSourceCommands[];
+	if(`size $errorScripts` > 0){	
+		print("WIZ| There were errors sourcing scripts - Some Files could not be sourced.\n");
+		print("\n\n			---- ERRORS ---- \n");
+		print("::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::\n\n");
+		for($i=0;$i<`size $errorScripts`;$i++){
+			
+			print ("WIZ|	ERROR In File : " + $errorScripts[$i] + "\n");
+			$errorSouceCommands[$i] = ("print(\"\\n\\nWIZ| ERROR\\n\\n\");source " + "\"" + $errorScripts[$i] + "\";\n");
+			evalDeferred -lp ($errorSouceCommands[$i]);
+		}
+		print("\n\n::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::\n\n");
+		//sourceScriptsWithErrors($errorScripts);
+		
+	}
+		
+	return $sourced;
+}
+
+//SOURCE SCRIPTS WITH ERRORS
+//---------------------------------------------
+global proc sourceScriptsWithErrors(string $scripts[])
+{
+	if(`size $scripts` == 0){ return;}
+	//print("===========Sourcing Scripts With Errors===========" + "\n");
+	for($i=0;$i<`size $scripts`;$i++){
+		string $scriptBasename = basename($scripts[$i], ".mel");
+		eval("source \"" + $scriptBasename + "\"");	
+	}
+	//print("=====================Complete=====================" + "\n");	
+}
+
+//ALL IN USER SCRIPT DIR
+//---------------------------------------------
+global proc sourceAllScripts()
+{
+	
+	//string $scriptDir = `internalVar -userScriptDir`;
+	string $scriptDir = getWizScriptDirectory();
+	string $allScripts[] = `getFileList -folder $scriptDir -filespec "*.mel"`;
+	//print("===========Sourcing Scripts===========" + "\n");
+	for($i=0;$i<`size $allScripts`;$i++){
+		eval( "source \"" + $scriptDir + $allScripts[$i] + "\"");
+		//print("[" + $i + "] " + $allScripts[$i] + "\n");
+	}
+	//print("===============Complete================" + "\n");
+
+}
+
+//SOURCE AND EXECUTE
+//---------------------------------------------
+global proc sourceAndExecuteScript(string $script)
+{
+	string $command = "source \"" + $script + "\"";
+	eval($command);
+	string $do = basename($script, ".mel");
+	print("Sourcing: " + $script + " Executing: " + $do + "\n");
+	catchQuiet(eval($do));
+}
+
+//SOURCE A SCRIPT
+//---------------------------------------------
+global proc sourceScript(string $script)
+{
+	string $command = "source \"" + $script + "\"";
+	eval($command);
+	print($command + "\n");
+
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         ERRORS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//ERRORS
+//========================================================================================
+//TRY TO RESOLVE SOURCE SCRIPT ERRORS
+//---------------------------------------------
+global proc tryToResolveSourceScriptErrors(string $scripts[], string $errorScript)
+{	
+	string $lastError = getLastError();	
+	print("Trying To Resolve Script Source Error: " + $lastError + "\n");
+	string $error = encodeString($lastError);
+	string $mel = findMelProcInString($error);
+	
+	string $lastErrorReason = getReasonForLastSourceError($lastError);
+	
+	if($lastErrorReason == "New procedure definition" || $lastErrorReason == "Wrong number of arguments"){
+		print("Last Error Reason: " + $lastErrorReason + "\n");	
+	}
+}
+
+//GET REASON FOR LAST SOURCE ERROR
+//---------------------------------------------
+global proc string getReasonForLastSourceError(string $error)
+{
+	string $lastError;	
+	if($error == ""){
+		$lastError = getLastError();
+		print("Reason For Last Source Error: " + $lastError + "\n");
+	}
+	string $reason = "Unknown";
+	string $notFound;
+	
+	// Error: line 1: Cannot find procedure "someScript". // 
+	string $notFoundReason = "Cannot find procedure";
+	$notFound = `match $notFoundReason $lastError`;
+	if($notFound == $notFoundReason){
+		$reason = $notFoundReason;
+	}
+	
+	// Error: line 1: Cannot find file "someScript" for source statement. // 
+	string $notFoundFileReason = "Cannot find file";
+	$notFound = `match $notFoundFileReason $lastError`;
+	if($notFound == $notFoundFileReason){
+		$reason = $notFoundFileReason;
+	}
+	
+	// Warning: file: C:/Users/Glen/Documents/maya/2013-x64/scripts/scriptWiz.mel line 516: New procedure definition for "doSelectWizSelectCommand" has a different argument list and/or return type. // 
+	string $newProcedureReason = "New procedure definition";
+	$notFound = `match $notFoundReason $lastError`;
+	if($notFound == $newProcedureReason){
+		$reason = $newProcedureReason;
+	}
+	
+	// Error: Line 1.46: Wrong number of arguments on call to doSelectWizSelectCommand. // 
+	string $wrongNumOfArgReason = "Wrong number of arguments";
+	$notFound = `match $wrongNumOfArgReason $lastError`;
+	if($notFound == $wrongNumOfArgReason){
+		$reason = $wrongNumOfArgReason;
+	}
+	
+	return $reason;
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         LIST SCRIPTS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//GET SCRIPTS
+global proc getScriptsToSource()
+{
+	global string $SAS_scriptsToSource[];
+	string $scriptsToSource[];
+	$scriptsToSource = `fileDialog2 -fileMode 4 -dialogStyle 2 -okCaption "OK"`;
+	
+	int $i;
+	for($i=0;$i<`size $scriptsToSource`;$i++){
+		textScrollList	-e -append $scriptsToSource[$i] scriptsToSource;
+		optionVar -sva SAS_scriptsToSource $scriptsToSource[$i];	
+	}
+	updateSourcedScriptLists();
+}
+
+//SET SCRIPTS
+//---------------------------------
+global proc setScriptsToSource()
+{	
+	global string $SAS_scriptsToSource[];
+	$SAS_scriptsToSource = getMostCurrentWizScripts();
+	for($i=0;$i<`size $SAS_scriptsToSource`;$i++){
+		textScrollList	-e -append $SAS_scriptsToSource[$i] scriptsToSource;
+	}
+	
+	//writeListOfCurrentSourcedScriptsToFile($SAS_scriptsToSource);
+}
+
+//UPDATE SOURCED SCRIPT LIST
+//---------------------------------
+global proc updateSourcedScriptLists()
+{
+	global string $SAS_scriptsToSource[];
+	$SAS_scriptsToSource = getMostCurrentWizScripts();
+	putOptionVarStringArray("SAS_scriptsToSource", $SAS_scriptsToSource);
+	writeListOfCurrentSourcedScriptsToFile($SAS_scriptsToSource);
+}
+
+//CREATE DEFUALT LIST OF SCRIPTS TO SOURCE
+//------------------------------------------------
+global proc string[] createDefaultListOfScriptsToSource()
+{
+	string $scriptDir;	
+	if(`optionVar -q WIZ_userType` == "wiz"){
+		//$scriptDir = `internalVar -userScriptDir`;
+		$scriptDir = `optionVar -q WIZ_wizScriptDir`;
+	} else {
+		$scriptDir = `optionVar -q WIZ_wizScriptDir`;
+	}
+	string $scriptArray[] = getListOfWizScriptsFromTextFile();
+	
+	string $returnScripts[];
+	int $i;
+	for($i=0;$i<`size $scriptArray`;$i++){
+		optionVar -sva WIZ_scriptName $scriptArray[$i];
+		$returnScripts[$i] = $scriptDir + $scriptArray[$i];
+	}
+	return $returnScripts;
+
+}
+
+//LOCAL
+global proc string[] createDefaultListOfLocalScriptsToSource()
+{
+	string $scriptDir = `optionVar -q WIZ_wizScriptDir`;
+	string $scriptArray[] = getListOfWizScriptsFromTextFile();
+	string $returnScripts[];
+	int $i;
+	for($i=0;$i<`size $scriptArray`;$i++){
+		optionVar -sva WIZ_scriptName $scriptArray[$i];
+		$returnScripts[$i] = $scriptDir + $scriptArray[$i];
+	}
+	return $returnScripts;
+}
+
+//REMOVE
+global proc removeScriptsFromSourceScriptsList()
+{
+	string $sel[] = `textScrollList -q -si scriptsToSource`;
+	int $i;
+	for($i=0;$i<`size $sel`;$i++){
+		textScrollList
+			-edit
+			-ri $sel[$i]
+			scriptsToSource
+			;
+	}
+	optionVar -ca SAS_scriptsToSource;
+	optionVar -ca WIZ_scriptName;
+	string $updatedList[] = `textScrollList -q -ai scriptsToSource`;
+	global string $SAS_scriptsToSource[];
+	clear $SAS_scriptsToSource;
+	for($i=0;$i<`size $updatedList`;$i++){
+		optionVar -sva SAS_scriptsToSource $updatedList[$i];
+		optionVar -sva WIZ_scriptName $updatedList[$i];
+		$SAS_scriptsToSource[$i] = $updatedList[$i];
+	}
+	writeListOfCurrentSourcedScriptsToFile($SAS_scriptsToSource);
+}
+
+//PRINT
+global proc printListOfCurrentSourcedScripts()
+{
+	string $sourceScripts[] = `textScrollList -q -ai scriptsToSource`;
+	string $basename[];
+	string $printScripts;
+	int $i;
+	for($i=0;$i<`size $sourceScripts`;$i++){
+		$basename[$i] = basename($sourceScripts[$i], "");
+		$printScripts = $printScripts + "\"" + $basename[$i] + "\"";
+		if($i < (`size $sourceScripts` - 1)){
+			$printScripts = $printScripts + "," + "\n";
+		}	
+	}
+	print($printScripts + "\n");
+
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                   READING AND WRITING TO FILE
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//GET SCRIPTS FROM FILE
+//AUTO(3)
+global proc string[] getWizScriptsFromFile()
+{
+	//Get the list of scripts from text file	
+	string $scripts[] = getListOfWizScriptsFromTextFile();
+	
+	//Combine the list of scripts with the current user script directory
+	string $wizScriptDir = getWizScriptDirectory();
+	if(`size $scripts` > 0 && $wizScriptDir != ""){
+		$scripts = combineDirectoryAndFileNames($wizScriptDir,$scripts);
+	}
+	return $scripts;
+}
+
+//READ
+//AUTO(3.1)
+global proc string[] getListOfWizScriptsFromTextFile()
+{
+	string $filename = getWizScriptsFile();
+	/*
+	int $fileId =`fopen $filename "r"`;
+	string $s;
+	
+	$s = `fread $fileId $s`;
+	fclose $fileId;
+	string $buffer[];
+	tokenize($s, ",", $buffer);
+	int $i;
+	for($i=0;$i<`size $buffer`;$i++){
+		$buffer[$i] = `strip $buffer[$i]`;
+	
+	}
+	return $buffer;
+	*/
+	string $wizFileNames[] = scriptWizReadCSVTextFile($filename);
+	for ($i=0;$i<`size $wizFileNames`;$i++){
+		$wizFileNames[$i] = `strip $wizFileNames[$i]`;
+	
+	}
+	return $wizFileNames;
+}
+
+//WIZ READ CSV TEXT FILE
+/*===================================================================
+	This function originated from fileWiz. 
+*/
+global proc string[] scriptWizReadCSVTextFile( string $file )
+{
+	int $fileId = `fopen $file "r"`;
+	string $data[];
+	clear $data;
+	while ( !`feof $fileId` ){
+		string $nextLine = `fgetline $fileId`;
+		if($nextLine == ""){ continue;}
+
+		string $tok[];
+		clear $tok;
+		tokenizeList($nextLine, $tok);		
+		string $items[];
+		for ($i=0;$i<`size $tok`;$i++){
+			$tok[$i] = `strip $tok[$i]`;
+			if($tok[$i] == ""){
+				continue;
+			} else {
+				$items[`size $items`] = $tok[$i];
+			}	
+		}
+
+		appendStringArray($data,$items,`size $items`);
+			
+	}
+	fclose $fileId;
+
+	$data = stringArrayRemoveDuplicates($data);
+
+	//print("WIZ| wizReadCSVTextFile : \n" + stringArrayToString($data, "\n") + "\n");
+	
+	return $data;	
+}
+
+//TOKENIZE STRING
+//-------------------------------------------
+global proc string[] tokenizeString(string $string, string $sep)
+{
+	string $buffer[];
+	int $numTok = `tokenize $string $sep $buffer`;
+	return $buffer;
+}
+
+//GET DIRECTORY AND FILENAME
+//AUTO(3.3)
+global proc string[] combineDirectoryAndFileNames(string $dir, string $fileNames[])
+{	
+	$dir = strip($dir);	
+	if(endsWith($dir, "/") == 0){
+		//print("Dir Before Adding Slash: " + $dir + "\n");
+		$dir = $dir + "/";
+		//print("Added Slash To Dir: " + $dir + "\n");
+	}
+	for($i=0;$i<`size $fileNames`;$i++){
+		if(startsWith("/", $fileNames[$i]) == 1){
+			$fileNames[$i] = `substitute "/" $fileNames[$i] ""`;
+		}	
+		$fileNames[$i] = $dir + $fileNames[$i];
+	}
+	return $fileNames;
+}
+
+
+//@ WRITE LIST OF CURRENT SOURCED SCRIPTS TO FILE
+//====================================================================
+/*****************************************************************//**
+	This saves the list of all the wiz scripts that need to be sourced to a text file.
+	<hr>
+	<b>Synopsis</b><br>
+	writeListOfCurrentSourcedScriptsToFile [string $sourceScripts[]] <br>
+	Pass an array of scripts to source. If no scripts are passed, the
+	global string $SAS_scriptsToSource will be used.
+	
+	<b>Return value</b><br>
+	none.
+	
+	<b>Flags</b><br>
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	writeListOfCurrentSourcedScriptsToFile({""});
+	
+	</code>
+*********************************************************************/
+global proc writeListOfCurrentSourcedScriptsToFile( string $sourceScripts[])
+{
+	global string $SAS_scriptsToSource[];
+	if (`size $sourceScripts` == 0){
+		$sourceScripts = $SAS_scriptsToSource;
+	}
+	//print ("WIZ| writeListOfCurrentSourcedScriptsToFile : Full Path : " + stringArrayToString($sourceScripts, " ") + "\n");
+	string $basename[];
+	string $printScripts;
+	int $lineCount;
+	for($i=0;$i<`size $sourceScripts`;$i++){
+		
+		$basename[$i] = basename($sourceScripts[$i], "");
+		$printScripts = $printScripts + $basename[$i];
+		if($i < (`size $sourceScripts` - 1)){
+				$printScripts = $printScripts + ", ";
+			}
+		if($lineCount == 20){
+			$printScripts = $printScripts + "\n";
+			$lineCount = 0;
+		} 
+		$lineCount++;
+	}
+	string $scriptListFileName = getWizScriptsFile();
+	//print("WIZ| writeListOfCurrentSourcedScriptsToFile : Wiz File : " + $scriptListFileName + "\n");
+	//print("WIZ| " + $printScripts + "\n");
+	int $fileId=`fopen $scriptListFileName "w"`;
+	fprint $fileId ($printScripts + "\n");
+	fclose $fileId;
+
+}
+
+//--------------------------------------------------------------------
+//////////////////////////////////////////////////////////////////////
+//			COPY
+//////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------
+//COPY TO/FROM SHARED DIRECTORY
+//==========================================
+global proc copySourcedScriptsToCurrentProjectScriptsDirectory()
+{
+	string $script[] = getListOfWizScriptsFromTextFile();
+	//string $userScriptDir = `internalVar -userScriptDir`;
+	string $wizScriptDirectory = getWizScriptDirectory();
+	string $projDir = `workspace -q -rd`;
+	string $projScripts = `workspace -q -fre scripts`;
+	string $projScriptDir = $projDir + $projScripts;
+	
+	int $i;
+	for($i=0;$i<`size $script`;$i++){
+		string $source = $wizScriptDirectory + $script[$i];
+		string $dest = $projScriptDir + $script[$i];
+		sysFile -copy $dest $source;
+	}
+}
+
+global proc copySourceScriptsToSharedScriptsDirectory()
+{
+	debugML3("Copying Wiz Scripts To Shared Scripts Directory..." + "\n");
+	string $script[] = getListOfWizScriptsFromTextFile();
+	debugML3("		* Scripts: " + "\n" + "			- " + stringArrayToString($script, "\n			- ") + "\n");
+	string $userScriptDir = getWizScriptDirectory();
+	global string $WIZ_wizSharedScriptDir;
+	if(`optionVar -ex WIZ_wizSharedScriptDir`){
+		$WIZ_wizSharedScriptDir = `optionVar -q WIZ_wizSharedScriptDir`;
+	} else {
+		$WIZ_wizSharedScriptDir = "";
+		//print("You Must Set the Shared Scripts Directory Path!\n");
+		return;
+	}
+	string $ssDir = $WIZ_wizSharedScriptDir;
+	int $i;
+	for($i=0;$i<`size $script`;$i++){	
+		string $source = $userScriptDir + $script[$i];
+		string $dest = $ssDir + $script[$i];
+		
+		if($source == $dest){
+			//print("WIZ| copySourceScriptsToSharedScriptsDirectory : ERROR! Source is same as Destination!\n");
+			continue;
+		}
+		debugML3("		* Copy From: " + $source + " To: " + $dest + "\n");
+		
+		sysFile -delete $dest;
+		sysFile -copy $dest $source;
+		//print("Copied: " + $source + " || To: " + $dest + "\n");
+	}
+	copyFileFromScriptsDirectoryToSharedScriptsDirectory("wizScripts.txt");
+	copyFileFromScriptsDirectoryToSharedScriptsDirectory("scriptWiz.mel");
+	//copyWizIconsToSharedDirectory();
+}
+
+global proc copySharedScriptsToUserScriptsDir()
+{
+	if(`optionVar -q WIZ_userType` == "wiz"){
+		return;
+	}
+	string $script[] = getListOfWizScriptsFromTextFile();
+	string $userScriptDir = `internalVar -userScriptDir` + "wiz/";
+	global string $WIZ_wizScriptDir;
+	global string $WIZ_wizSharedScriptDir;
+	if(`optionVar -ex WIZ_wizSharedScriptDir`){
+		$WIZ_wizScriptDir = `optionVar -q WIZ_wizSharedScriptDir`;
+	} else {
+		$WIZ_wizSharedScriptDir = "";
+		//print("You Must Set the Shared Scripts Directory Path!\n");
+		return;
+	}
+	string $ssDir = $WIZ_wizSharedScriptDir;
+	int $i;
+	for($i=0;$i<`size $script`;$i++){
+		string $source = $ssDir + $script[$i];
+		string $dest = $userScriptDir + $script[$i];
+		sysFile -delete $dest;
+		sysFile -copy $dest $source;
+	}
+	copyFileFromDirToDir("wizScripts.txt", $ssDir, $userScriptDir,1);
+	copyFileFromDirToDir("scriptWiz.mel", $ssDir, $userScriptDir,1);
+}
+
+global proc copyFileFromDirToDir(string $file, string $sourceDir, string $destDir, int $del)
+{
+	string $s = $sourceDir + $file;
+	string $d = $destDir + $file;
+	
+	if($s == $d){
+		print("WIZ| Error - Copy source and destination are the same! check copyFileFromScriptsDirectoryToSharedScriptsDirectory\n");
+		return;
+	}
+	
+	if($del == 1){
+		sysFile -delete $d;
+	}
+	sysFile -copy $d $s;
+}
+
+global proc copyFileFromScriptsDirectoryToSharedScriptsDirectory(string $file)
+{
+	//string $userScriptDir = `internalVar -userScriptDir`;
+	string $wizScriptDir = getWizScriptDirectory();
+	global string $WIZ_wizSharedScriptDir;
+	if(`optionVar -ex WIZ_wizSharedScriptDir`){
+		$WIZ_wizSharedScriptDir = `optionVar -q WIZ_wizSharedScriptDir`;
+	} else {
+		$WIZ_wizSharedScriptDir = "";
+	}
+	string $ssDir = $WIZ_wizSharedScriptDir;
+	string $source = $wizScriptDir + $file;
+	string $dest = $ssDir + $file;
+	if($source == $dest){
+		print("WIZ| Error - Copy source and destination are the same! check copyFileFromScriptsDirectoryToSharedScriptsDirectory\n");
+		return;
+	}
+	sysFile -delete $dest;
+	sysFile -copy $dest $source;
+
+}
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			GOOGLE DRIVE
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+
+global proc updateScriptsOnGoogleDrive()
+{
+	global string $SAS_updateExe;
+	string $exec = "start " + $SAS_updateExe;
+	system ($exec);
+}
+
+global proc openScriptsDownloadWebsite()
+{
+	launch -web "https://docs.google.com/folder/d/0B8JQVeAGofBIU1F0aENRVVpZQlU/edit";
+}
+
+//BACK UP TO GOOGLE DRIVE
+//======================================================
+global proc backUpMayaDirToGoogleDrive()
+{
+	string $backupDir;
+	if(`optionVar -ex WIZ_mayaBackupDir`){
+		$backupDir = `optionVar -q WIZ_mayaBackupDir`;
+	} else {
+		$backupDir = `textFieldButtonGrp -q -text getMayaBackupDirectory`;
+	}
+	string $googleDriveDir;
+	if(`optionVar -ex WIZ_googleDriveDir`){
+		$googleDriveDir = `optionVar -q WIZ_googleDriveDir`;
+	} else {
+		$googleDriveDir = `textFieldButtonGrp -q -text getGoogleDriveDirectory`;
+	}
+	string $q = "'";
+	string $newLoc = basename($backupDir,"");
+	$googleDriveDir = $googleDriveDir + "/" + $newLoc + "/";
+
+	if($backupDir == ""){
+		print("Cannot Save Maya Directory to Google Drive. Missing Maya Directory!" + "\n");
+		return;
+	}
+	if($googleDriveDir == ""){
+		print("Cannot Save Maya Directory to Google Drive. Missing Google Drive Directory!" + "\n");
+		return;
+	}
+	
+	copyFolderFromTo($backupDir, $googleDriveDir);
+	print("WIZ| Backed up Maya Directory To Google Drive :)" + "\n");
+	
+}
+
+//GET FROM GOOGLE DRIVE
+global proc getMayaDirFromGoogleDrive()
+{
+	string $backupDir;
+	if(`optionVar -ex WIZ_mayaBackupDir`){
+		$backupDir = `optionVar -q WIZ_mayaBackupDir`;
+	} else {
+		$backupDir = `textFieldButtonGrp -q -text getMayaBackupDirectory`;
+	}
+	string $googleDriveDir;
+	if(`optionVar -ex WIZ_googleDriveDir`){
+		$googleDriveDir = `optionVar -q WIZ_googleDriveDir`;
+	} else {
+		$googleDriveDir = `textFieldButtonGrp -q -text getGoogleDriveDirectory`;
+	}
+	string $q = "'";
+	string $newLoc = basename($backupDir,"");
+	string $backup = $q + $backupDir + $q;
+	$googleDriveDir = $googleDriveDir + $newLoc + "/";
+	string $googleDrive = $q + $googleDriveDir + $q;
+	
+	//textFieldButtonGrp -edit -text $WIZ_googleDriveDir getGoogleDriveDirectory;
+	if($backup == "" || $googleDrive == ""){
+		print("Cannot Save Maya Directory to Google Drive. Missing Directory!" + "\n");
+		return;
+	}
+	
+	//Put statements about system here------
+	//Mac system copy command
+	//cp -r -f '/Users/glen/Library/Preferences/Autodesk/maya/2013-x64/' '/Users/glen/Google Drive/Maya/2013-x64/'
+	string $sysCopyCommand = "cp -r -f ";
+	
+	//$backedUp = `sysFile -copy $googleDrive $backup`;
+	string $sysCommand = $sysCopyCommand + $googleDrive + " " + $backup;
+	
+	system($sysCommand);
+	print("SystemCommand: " + $sysCommand + "\n");
+	print("Retrieved Maya Directory From Google Drive" + "\n");	
+}
+
+//========================================================================================================
+//********************************************************************************************************
+//********************************************************************************************************
+//********************************************************************************************************
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                      SCRIPT MENU
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//********************************************************************************************************
+//********************************************************************************************************
+//********************************************************************************************************
+//========================================================================================================
+//SCRIPT MENU FOR MENU OF ALL SCRIPTS ON SYSTEM
+//================================
+global proc buildScriptsMenu( string $allScripts[], string $mainScriptMenuItem)
+{
+	int $groupSize = 0;
+	int $groupMax = 10;
+	string $allScriptsBasename[] = getBasenameOfAllMelScripts($allScripts);
+	string $groupName;
+	int $menuGroupIndex = 0;
+	string $groupMenuItem;
+	string $startGroupMenuItem;
+	int $groupIndex[] = getIndexOfSeparatorsInStringArray($allScripts);
+	int $cgix = 0;
+	int $thisGroupSize = 0;
+	
+	for ($i=0;$i<`size $allScripts`;$i++){
+	
+		//Make sub menus for groupings of scripts
+		
+		//If this is the end of a group then make a submenu and start a new group
+		if ($allScripts[$i] == "|" || $groupSize == $groupMax || $i == 0){	
+			$thisGroupSize = ($groupIndex[($cgix + 1)] - $groupIndex[$cgix]);
+			$cgix++;
+			$menuGroupIndex = $i + 1;
+			
+			if ($allScripts[$i] == "|"){
+				//Create menu GROUP label
+				string $label = $allScriptsBasename[($i + 1)];
+				$groupName = $label;
+				
+				//End the last menu group
+				//if($i != 0){setParent -menu ..;}
+				if ($i != 0){
+					setParent -menu $mainScriptMenuItem;
+				}
+				
+				//Make a new submenu
+				$groupMenuItem = `menuItem -sm true -to true -label $label`;
+				setParent -menu $groupMenuItem;
+				
+				if ($thisGroupSize > $groupMax){				
+					$startGroupMenuItem = `menuItem -sm true -to true -label $label`;				
+					setParent -menu $startGroupMenuItem;				
+					
+				}
+				$groupSize = 0;
+			}
+			
+			//If we have reached the group max then make a submenu and start a new group
+			if ($groupSize == $groupMax){	
+	
+				//Edit the label of the first group that was created in the script group
+				string $ssC = startString($allScriptsBasename[(($i - $groupMax)+1)],1); //Starting Character
+				string $seC = startString($allScriptsBasename[$i],1); //Ending Character
+				string $lastLabel = ($groupName + " " + $ssC + "-" + $seC);
+				menuItem -edit -label $lastLabel $startGroupMenuItem;
+				
+				//Create menu max group size label			
+				string $sC = startString($allScriptsBasename[($i+1)],1); //Starting Character
+				string $eC = startString($allScriptsBasename[(($i+1) + ($groupMax))],1); //Ending Character
+				string $label = ($groupName + " " + $sC + "-" + $eC);
+				
+				//End the last menu group
+				//setParent -menu ..;
+				setParent -menu $groupMenuItem;
+				
+				//Make a new submenu
+				string $nextSubMenu = `menuItem -sm true -to true -label $label`;
+				setParent -menu $nextSubMenu;
+	
+				$groupSize = 0;
+			}
+	
+		
+		} else if($i > $menuGroupIndex){	
+			//Add the script to the submenu
+			menuItem 
+				-label $allScriptsBasename[$i]			
+				-command ("sourceAndExecuteScript(" +  "\"" + $allScripts[$i] + "\"" + ")")
+				;
+				
+			$groupSize++;
+		}
+	}
+	
+}
+
+//FIND ALL SCRIPTS
+//=================================
+global proc string[] getAllScripts()
+{
+	//Get the scripts in the user script dir
+	string $scriptDir = `internalVar -userScriptDir`;
+	string $melScripts[] = getMelScriptsInSubfolders($scriptDir);
+	//string $melScripts[] = `getFileList -folder $scriptDir -filespec "*.mel"`;
+	
+	//Get the scripts in the user script Subfolders
+	//string $scriptsInSubfolders[] = getMelScriptsInSubfolders($scriptDir);
+	//appendStringArray($melscripts,$scriptsInSubfolders,`size $scriptsInSubfolders`);
+	
+	
+	/* For Testing
+	string $scriptDir = `internalVar -userScriptDir`;
+	string $scriptsInSubfolders[] = getMelScriptsInSubfolders($scriptDir);
+	*/
+	//Sort the scripts
+	//$melScripts = `sort $melScripts`;
+	
+	return $melScripts;
+}
+	
+global proc string[] getMelScriptsInSubfolders(string $dir)
+{
+	//string $subFolder[] = `getFileList -folder $dir -filespec "*."`; //This doesn't seem to work on mac
+	//string $subFolder[] = getSubfoldersInDirectory($dir);
+	string $subFolder[];
+	string $scripts[]; //We will put all the scripts we find in here
+	
+	string $searchDirs[] = { $dir};
+	//$searchDirs = addPathToSubFolders($subFolder,$dir);
+	string $remove[];
+	string $subFolderDown[]; //This will contain all the folders that are a level down from the current directory level
+	int $ok = 1;
+	int $stopCount = 0;
+		debugML4(("SEARCHING SUBFOLDERS FOR MEL FILES..." + "\n"));
+		debugML4(("==============================================" + "\n"));
+	while ($ok == 1){
+		//debugML4((`size $subFolder` + " - SubFolders: " + stringArrayToString($subFolder, " ")) + "\n");
+		
+		debugML4(("		* Directories To Search: " + "\n" + "			" + stringArrayToString($searchDirs, ("\n" + "			")) + "\n"));
+		for ($i=0;$i<`size $searchDirs`;$i++){	
+			debugML4(("		===========SEARCHING===========" + "\n"));
+			debugML4(("		* " + $i + " Searching Directory: " + $searchDirs[$i] + "\n"));
+								
+			//FOLDERS
+			//Get all the folders in the current directory
+			//Put it into a list of all the folders that are a step down from the current folder
+			//debugML4(("		* Getting Folder List From Directory: " + $searchDirs[$i] + "\n"));
+			//string $newSubFolder[] = `getFileList -folder $searchDirs[$i] -filespec "*."`;	
+			string $newSubFolder[] = getSubfoldersInDirectory($searchDirs[$i]);	
+			
+			if (`size $newSubFolder` > 0){
+				debugML4(("			- " + `size $newSubFolder` + " Folders Found: " + stringArrayToString($newSubFolder, " ") + "\n"));
+				
+				$newSubFolder = addPathToSubFolders($newSubFolder,$searchDirs[$i]);
+				appendStringArray($subFolderDown,$newSubFolder,`size $newSubFolder`);			
+			} 
+			$remove[`size $remove`] = $searchDirs[$i];
+			
+			//SCRIPTS
+			//Get the list of all the scripts
+			string $addScripts[] = `getFileList -folder $searchDirs[$i] -filespec "*.mel"`;	
+			if (`size $addScripts` > 0){
+				debugML4(("			- " + `size $addScripts` + " Scripts Found: " + stringArrayToString($addScripts, " ") + "\n"));
+			
+				//Put the name of the subfolder before the script name
+				//addPrefixToStringArray($addScripts, ($subFolder[$i] + "/"));	
+				addPrefixToStringArray($addScripts, $searchDirs[$i]);
+				
+				//Put the current directory name into the scripts list with a separator
+				//This is so when we create a menu we can group scripts by their containing folders
+				string $searchDirBasename = basename($searchDirs[$i], "");
+				string $scriptGroup[] = { "|", $searchDirBasename};
+				appendStringArray($scripts,$scriptGroup,`size $scriptGroup`);
+				
+				//Put the list of scripts into the list of all scripts
+				appendStringArray($scripts,$addScripts,`size $addScripts`);
+			}
+			
+		}
+		debugML4(("		===========END SEARCHING===========" + "\n"));
+		
+		//Remove folders that do not contain subfolders from our search directory list
+		debugML4(("		- Directories To Remove: " + "\n" + "			" + stringArrayToString($remove, ("\n" + "			")) + "\n"));
+		$searchDirs = stringArrayRemove($remove,$searchDirs);
+		debugML4(("		- Directories After Removal: " + "\n" + "			" + stringArrayToString($searchDirs, ("\n" + "			")) + "\n"));
+		
+		//Add folders that did have sub directorys to our search directory list
+		appendStringArray($searchDirs,$subFolderDown,`size $subFolderDown`);
+		
+		debugML4(("		+ Directories After Adding New Sub Directories: " + "\n" + "			" + stringArrayToString($searchDirs, ("\n" + "			")) + "\n"));
+		
+		//Clear the subfolderDown list
+		clear $subFolderDown;
+		clear $remove;
+		
+		if (`size $searchDirs` == 0){
+			$ok = 0;
+			debugML4(("		* FOUND " + `size $scripts` + " SCRIPTS: " + "\n" + "			" + stringArrayToString($scripts, ("\n" + "			")) + "\n"));
+			debugML4(("END SEARCHING SUBDIRECTORIES FOR MEL FILES" + "\n"));
+			debugML4(("=============================================" + "\n"));
+			return $scripts;
+		}
+		
+			debugML4(("==========NEXT LEVEL DOWN=========================" + "\n"));
+		
+	}
+	
+	return $scripts;
+
+}
+
+//ADD PATH TO SUBFOLDERS
+//=======================================
+global proc string[] addPathToSubFolders(string $subFolder[], string $path)
+{
+	string $searchDir[];
+	for($i=0;$i<`size $subFolder`;$i++){
+		$searchDir[$i] = $path + $subFolder[$i] + "/";
+	}
+	return $searchDir;
+}
+
+//GET BASENAME OF ALL MEL SCRIPTS
+//=======================================
+global proc string[] getBasenameOfAllMelScripts(string $scripts[])
+{
+	string $baseNames[];
+	for ($i=0;$i<`size $scripts`;$i++){
+		$baseNames[$i] = basename($scripts[$i], ".mel");
+	}
+	return $baseNames;
+}
+
+
+//GET SUBFOLDERS IN DIRECTORY
+//=======================================
+global proc string[] getSubfoldersInDirectory(string $dir)
+{
+	string $subFolder[] = `getFileList -folder $dir -filespec "*."`;
+	if(`size $subFolder` == 0){
+		string $allFiles[] = `getFileList -folder $dir`;
+		for($i=0;$i<`size $allFiles`;$i++){
+			//string $endString = endString($allFiles[$i], 5);
+			string $buffer[];
+			int $numTokens = `tokenize $allFiles[$i] "." $buffer`;
+			debugML3(("NumTokens: " + $numTokens + " Of: " + $allFiles[$i] + "\n"));
+			if($numTokens < 2){
+				$subFolder[`size $subFolder`] = $allFiles[$i];
+			}
+			//print ("Get Subfolders : " + $allFiles[$i] + "\n");
+		}
+		
+	}
+	return $subFolder;
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         SCRIPT JOBS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//SCRIPT JOBS
+//======================================
+//PUT WIZ SCRIPT JOB
+//===========================
+global proc putWizScriptJob(string $name, int $jobNum)
+{
+	global string $WIZ_scriptJobs[];
+	int $index = stringArrayFind($name,0,$WIZ_scriptJobs);
+	if($index == -1){
+		$WIZ_scriptJobs[`size $WIZ_scriptJobs`] = $name;
+		$WIZ_scriptJobs[`size $WIZ_scriptJobs`] = $jobNum;
+	} else {
+		$WIZ_scriptJobs[($index + 1)] = $jobNum;
+	}
+}
+
+//GET WIZ SCRIPT JOB
+//===========================
+global proc int getWizScriptJobNumber(string $name)
+{
+	global string $WIZ_scriptJobs[];
+	int $index = stringArrayFind($name,0,$WIZ_scriptJobs);
+	if($index == -1){
+		return -1;
+	} else {
+		int $returnIndex;
+		catchQuiet($returnIndex = int($WIZ_scriptJobs[($index + 1)]));
+		return $returnIndex;
+	}	
+}
+
+//COPY FOLDER FROM TO
+//-----------------------------------------------------
+global proc copyFolderFromTo(string $source, string $dest)
+{
+	string $sysCopyCommand;
+	string $sysCommand;
+	//Get what system we are on and use system specific commands
+	string $os = `about -os`;
+	if($os == "mac"){
+		//Mac system copy command. Must have entire path on both sides
+		//cp -r -f '/Users/glen/Library/Preferences/Autodesk/maya/2013-x64/' '/Users/glen/Google Drive/Maya/2013-x64/'
+		$source = "'" + $source + "'";
+		$dest = "'" + $dest + "'";
+		$sysCopyCommand = "cp -r -f ";
+		$sysCommand = $sysCopyCommand + $source + " " + $dest;
+	} else if($os == "nt" || $os == "win64"){
+		//PC system copy command. Must convert to native path first. No slash at end.
+		//http://commandwindows.com/xcopy.htm
+		//xcopy C:\source C:\destination /E /Y /I
+		//xcopy C:\Users\Glen\Documents\Projects\Wiz\test\testSource C:\Users\Glen\Documents\Projects\Wiz\test\SomeOtherPlace\testSource /E /Y /I
+		//xcopy "C:\Users\Glen\Documents\Projects\Wiz\test\testSource" "C:\Users\Glen\Documents\Projects\Wiz\test\SomeOtherPlace\testSource" /E /Y /I
+		//XCOPY /E /Y /I "C:\Users\Glen\Documents\Projects\Wiz\test\testSource" "C:\Users\Glen\Documents\Projects\Wiz\test\SomeOtherPlace\testSource"
+		//string $source = "C:\Users\Glen\Documents\Projects\Wiz\test\testSource\"
+		//Remove trailing slash/
+		string $endString = endString($source, 1);
+		if($endString == "/"){
+			$source = pathpart($source);
+		}
+		$endString = endString($dest, 1);
+		if($endString == "/"){
+			$dest = pathpart($dest);
+		}
+		//Convert to native path
+		$source = toNativePath($source);
+		$dest = toNativePath($dest);
+		
+		//Add quotes for safety
+		$source = "\"" + $source + "\"";
+		$dest = "\"" + $dest + "\"";
+		
+		//Add the system copy commands
+	$sysCopyCommand = "XCOPY /E /Y /I ";
+	$sysCommand = $sysCopyCommand + $source + " " + $dest;
+	} else if($os == "linux" || $os == "linux64"){
+		print("WIZ| WHAT? LINUX? WHO THE FUCK ARE YOU? You cann't copy files untill fileWiz:copyFolderFromTo is modified." + "\n");
+	}
+	debugML3("CopyFolderFromTo SysCommand: " + $sysCommand + "\n");
+	system($sysCommand);
+
+}
+
+global proc buttonSoupWindow()
+{
+    string $name = "buttonSoup";
+	
+	if (`window -exists $name`){
+		deleteUI $name;
+		return;
+	}
+    window
+		-title "Button Soup"
+        -widthHeight 100 100
+        -menuBar on
+        -menuBarVisible on
+        -minimizeButton on
+        -maximizeButton on
+        -sizeable on		
+        -resizeToFitChildren on
+        -titleBar on
+		$name
+		;
+
+    string $layout = `frameLayout
+		-l "Button Soup"	
+		-ann ""
+		-bv true
+		-li 10
+		-lv true
+		-mw 0
+		-mh 0		
+		
+		-cll false
+		-cl false
+		//-parent $parent
+		`;
+
+    //columnLayout
+     //   buttonSoupColumnLayout;
+	
+        
+        button
+            -label "Do Stuff"
+            -ann ("Use the middle mouse button to drag another button onto me and drop the buttons command.\nI'll do whatever you put in me.\n")
+            -c ""
+            -dgc dragWizButton
+            -dpc dropButtonSoupButton
+            buttonSoupDoItButton
+            ;
+            
+        /*    
+        button
+            -l "Test Button 1"
+            -c ("doShit();")
+            -dgc dragWizButton
+            -dpc dropWizButton
+            ;
+         
+        button
+            -l "Test Button 2"
+            -c ("doShitSomeMore();")
+            -dgc dragWizButton
+            -dpc dropWizButton
+            ;
+          */
+        setParent ..;
+          
+        showWindow $name; 
+        //setParent ..;
+}
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			DRAG AND DROP
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//====================================================================
+
+global proc doShit()
+{
+    print ("Yeah I'm Doin Shit!\n");
+}
+
+global proc doShitSomeMore()
+{
+    print ("Fuck Fuck Fuck Fuck Fuck Yeah I'm Doin Shit!\n");
+}
+//DRAG AND DROP
+//==================================
+global proc string[] dragWizButton( string $dragControl, int $x, int $y, int $mods)
+{	
+	//print("Drag from " + $dragControl + "\n");
+	//The msg array returned from the drag callback must _not_ be empty,
+	//else the drop callback will not trigger.
+    string $command;
+	if (`button -q -ex $dragControl`){
+        $command = `button -q -c $dragControl`;
+    }
+    if (`menuItem -q -ex $dragControl`){
+        $command = `menuItem -q -c $dragControl`;
+    }
+
+	return { $command };  
+
+}
+
+global proc dropWizButton( string $drag, string $drop, string $msgs[], int $x, int $y, int $type)
+{
+/*
+	//print("Drop on " + $drop + " from " + $msgs[0] + "\n");
+	print ("Drop On : " + $drop + " Messages : " + stringArrayToString($msgs, ", ") + "\n");
+    
+	string $sel[] = tokenizeCSV($msgs[0]);
+	if(`textScrollList -q -exists $drop`){
+		for($i=0;$i<`size $sel`;$i++){
+			textScrollList -e -append $sel[$i] $drop;
+		}
+		//textScrollList -e -append ("Drop from " + $msgs[0]) $drop;
+	}
+    */
+}
+
+global proc dropButtonSoupButton( string $drag, string $drop, string $msgs[], int $x, int $y, int $type)
+{
+    string $tok[] = tokenizeString($msgs[0], " ");
+    buttonSoupAddCommands($tok);
+    
+}
+
+global proc buttonSoupAddCommands( string $c[] )
+{
+    for ($i=0;$i<`size $c`;$i++){
+        string $curCommand = `button -q -c buttonSoupDoItButton`;
+        button -e -c ($curCommand + $c[$i]) buttonSoupDoItButton;
+        
+    }
+    string $cc = `button -q -c buttonSoupDoItButton`;
+    print ("Gulp... Button Soup Button Command : " + $cc + "\n");
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         DOXYGEN
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//@ PROC NAME
+//====================================================================
+/*****************************************************************//**
+	Updates the wiz doxygen documentation
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-tag1 string] [-tag2 linear] <br>
+	Runs a system command to update wiz doxygen documentation.
+	<br>
+	<b>path : </b> (localProjectDirectory)/Assets/doc/wizDoc<br>
+	note : doxygen bin path must be in system environmental variables
+		
+	<b>Return value</b><br>
+	none
+	
+	<b>Flags</b><br>
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	updateDoxygenDocs();
+	
+	</code>
+*********************************************************************/
+global proc updateDoxygenDocs()
+{
+	string $lpd = wizGetLocalProjectDirectory();
+	
+	string $doxDir = $lpd + "Assets/doc/wizDoc";
+	
+	string $command = ("doxygen " + (toNativePath($doxDir)));
+	system ($command);
+	wizLog("[#] Updated Doxygen Documentation : " + $command);
+	
+
+}

@@ -1,0 +1,2 @@
+# wiz
+ automation mel scripts

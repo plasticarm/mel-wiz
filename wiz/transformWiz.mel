@@ -1,0 +1,4077 @@
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//|||||||||||||||||||||||||:::WIZ:::||||||||||||||||||||||||||||||||||
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//                       TRANSFORM WIZ
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+/*====================================================================
+Author: Glen Johnson
+Email: plasticarm@gmail.com
+Website: plasticarm.com / hrpictures.com
+----------------------------------------------------------
+Summary:
+
+
+
+====================================================================*/
+
+global proc transformWiz()
+{
+
+}
+
+//========================================================================================================
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//                     LAYOUTS
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//========================================================================================================
+//TRANSFORM WIZ LAYOUT
+//=======================================
+global proc transformWizLayout(string $parent)
+{
+	string $layout = `frameLayout
+		-l "Transform"
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true		
+		-parent $parent`;
+	
+	transformWizMenu();
+	
+	fixTransformsLayout($layout);
+		
+	transformSelectedObjectsByAmountLayout($layout);
+	
+	randomLocalRotationsLayout($layout);
+	
+	//wizMoveByBoundingBoxSizeLayout($layout);
+	
+	duplicateOnCurveLayout($layout);
+	
+	duplicateObjectsUsingTransformsLayout($layout);
+	
+	mirroredInstancedGroupLayout($layout);
+	
+	//conformScaleLayout($layout);
+
+}
+
+//CONFORM SCALE LAYOUT
+//------------------------------
+global proc conformScaleLayout(string $parent)
+{
+	string $layout = wizStandardFrameLayout($parent, "Conform Scale", "conformScaleLayout_frameLayout");	
+	frameLayout -edit -ec ("updateCurrentUnitText(\"conformScaleCurrentUnit\");") $layout;
+	
+	modelingPackageUnitConversionMenuBarLayout();
+	
+	text
+		-al "left"		
+		conformScaleCurrentUnit
+		;
+		
+	
+	rowLayout
+		-nc 2
+		;
+		
+	floatFieldGrp
+		-numberOfFields 1
+		-cal 1 "left"
+		-l "Wanted Size:"
+		-v1 0
+		conformScaleSizeOfObject_floatFieldGrp
+		;
+			
+	optionMenuGrp 
+		//-l "Units:"
+		-cal 1 "left"
+		//-cal 2 "left"
+		conformScaleUnits
+		;
+			menuItem -label "millimiter";
+			menuItem -label "centimeter";
+			menuItem -label "meter";
+			menuItem -label "kilometer";
+			menuItem -label "inch";
+			menuItem -label "foot";
+			menuItem -label "yard";	
+			menuItem -label "mile";
+			
+		setParent..;
+		
+	optionMenuGrp 
+		-l "Measure Axis:"
+		-cal 1 "left"
+		-cal 2 "left"
+		conformScaleUnitsAxis
+		;
+			menuItem -label "X";
+			menuItem -label "Y";
+			menuItem -label "Z";
+	
+
+	optionMenuGrp 
+		-l "Conform Objects:"
+		-cal 1 "left"
+		-cal 2 "left"
+		conformScaleObjects
+		;
+			menuItem -label "Selected Only";
+			menuItem -label "All Top Level Transforms To Selected";
+			
+	checkBox
+		-l "Freeze Scale"
+		-v false
+		conformScaleFreezeScale
+		;
+			
+	button
+		-l "Conform Scale"
+		-c ("conformScaleOfSelected(`ls -sl`)")
+		conformScaleSizeOfObject_button
+		;
+	
+	button
+		-l "Scale Measure Axis"
+		-c ("conformScaleOfSelected(`ls -sl`)")		
+		;
+		
+	button
+		-l "Scale Object To Fit Into Object"
+		-c ("scaleObjectToFitObject(`ls -sl`)")
+		;
+		
+	button
+		-l "Measure Selected Object"
+		-c ("measureSelectedObject(`ls -sl`)")
+		conformScaleMeasureSelectedObject_button
+		;
+		
+	text
+		-l "Object Measurements"
+		-al "center"
+		conformScaleObjectMeasurements
+		;
+		
+	setParent..;
+}
+
+//UPDATE CURRENT UNIT TEXT
+//-------------------------------
+global proc updateCurrentUnitText(string $text)
+{
+	string $currentUnit = getCurrentUnitLongName();
+	$currentUnit = "Current Unit: " + $currentUnit;
+	text -edit -l $currentUnit $text;
+
+}
+
+//FIX TRANSFORMS LAYOUT
+//------------------------------
+global proc fixTransformsLayout(string $parent)
+{
+	string $layout = `frameLayout
+		-l "Fix Transforms"	
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-p $parent
+		`;
+	
+	string $alignOptionMenuGrp = alignmentOptionMenuGrp($layout, "fixTransformsAlignToOption");
+		
+	button
+		-label "Align To World Center"
+		-command ("alignObjectsToWorldCenter(`ls -sl`)")
+		;
+	
+		
+	button
+		-label "Straighten Object"
+		-ann ""
+		-command ("float $precision = `floatSliderGrp -q -v fixTransformsStraightenPrecisionFloatSliderGrp`;"
+		+ "straightenRotationsOnSelected(`ls -sl`,$precision);")
+		;
+		
+	button
+		-label "Fix All Transforms"
+		-ann ""
+		-command ("fixSelectedTransforms(`ls -sl`)")
+		;
+		
+		
+		
+	setParent..;
+}
+
+global proc wizQuickTransformsLayout( string $parent )
+{
+/*
+	string $layout = `frameLayout
+		-l "Quick Transforms"	
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10			
+		-cll true
+		-cl true
+		-p $parent
+		`;
+		*/
+	string $columnLayout = "quickTransformsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "QuickTransforms", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;	
+	
+		string $rotateXCommand = ("float $rotX = `floatSliderButtonGrp -q -v wizQuickTransform_rotateX_floatSliderButtonGrp`;"+"\n"
+		+"xform -r -ro $rotX 0 0;");
+		
+		string $rotateYCommand = ("float $rotY = `floatSliderButtonGrp -q -v wizQuickTransform_rotateY_floatSliderButtonGrp`;"+"\n"
+		+"xform -r -ro 0 $rotY 0 ;");
+
+		string $rotateZCommand = ("float $rotZ = `floatSliderButtonGrp -q -v wizQuickTransform_rotateZ_floatSliderButtonGrp`;"+"\n"
+		+"xform -r -ro 0 0 $rotZ;");
+
+		floatSliderButtonGrp
+			-l "X Rotation"
+			-f true
+			-v 90 
+			-bl "Rotate" 
+			-bc $rotateXCommand
+			wizQuickTransform_rotateX_floatSliderButtonGrp
+			;
+			
+		floatSliderButtonGrp
+			-l "Y Rotation"
+			-f true
+			-v 90 
+			-bl "Rotate" 
+			-bc $rotateYCommand
+			wizQuickTransform_rotateY_floatSliderButtonGrp
+			;
+			
+		floatSliderButtonGrp
+			-l "Z Rotation"
+			-f true
+			-v 90 
+			-bl "Rotate" 
+			-bc $rotateZCommand
+			wizQuickTransform_rotateZ_floatSliderButtonGrp
+			;
+			
+		string $scaleXCommand = ("float $scaleX = `floatSliderButtonGrp -q -v wizQuickTransform_scaleX_floatSliderButtonGrp`;"+"\n"
+		+"xform -r -s $scaleX 0 0;");
+
+		floatSliderButtonGrp
+			-l "X Scale"
+			-f true
+			-v 0.5
+			-bl "Scale" 
+			-bc $scaleXCommand
+			wizQuickTransform_scaleX_floatSliderButtonGrp
+			;
+			
+		string $scaleYCommand = ("float $scaleY = `floatSliderButtonGrp -q -v wizQuickTransform_scaleY_floatSliderButtonGrp`;"+"\n"
+		+"xform -r -s 0 $scaleY 0;");
+
+		floatSliderButtonGrp
+			-l "Y Scale"
+			-f true
+			-v 0.5
+			-bl "Scale" 
+			-bc $scaleYCommand
+			wizQuickTransform_scaleY_floatSliderButtonGrp
+			;
+			
+		string $scaleZCommand = ("float $scaleZ = `floatSliderButtonGrp -q -v wizQuickTransform_scaleZ_floatSliderButtonGrp`;"+"\n"
+		+"xform -r -s 0 0 $scaleZ;");
+
+		floatSliderButtonGrp
+			-l "Z Scale"
+			-f true
+			-v 0.5
+			-bl "Scale" 
+			-bc $scaleZCommand
+			wizQuickTransform_scaleZ_floatSliderButtonGrp
+			;
+
+}
+
+global proc duplicateOnCurveLayout( string $parent )
+{
+	string $layout = `frameLayout
+		-l "Duplicate On Curve"	
+		-ann ""
+		-bv true
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $parent
+		duplicateOnCurveFrameLayout
+		`;
+		
+	button -l "Duplicate On Curve" -c ("wizCreateDuplicateOnCurveRig(`ls -sl`);");
+	
+}
+
+//TRANSFORM SELECTED BY AMOUNT LAYOUT
+//-------------------------------------
+global proc transformSelectedObjectsByAmountLayout(string $parent)
+{
+	string $transformSelectedObjectsByAmoutLayout = `frameLayout
+		-l "Transform Selected Objects By Amout"	
+		-ann ""
+		-bv true
+		//-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $parent
+		transformSelectedObjectsByAmountLayout
+		`;
+
+	string $scaleSelectedObjectsByAmoutLayout = `frameLayout
+		-l "Scale"	
+		-ann ""
+		-bv true
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $transformSelectedObjectsByAmoutLayout
+		scaleSelectedObjectsByAmountLayout
+		`;	
+	
+	floatSliderButtonGrp 
+		-l "Scale By" 
+		-minValue 1		
+		-maxValue 10
+		-value 2 
+		-fieldMinValue -9999999999 
+		-fieldMaxValue 9999999999
+		-buttonLabel "Scale"
+		-buttonCommand "scaleSelectedObjectsByAmount"
+		-field true	
+		-ann ""
+		-cw4 300 50 60 50
+		scaleSelectedObjects				
+		;
+		
+	setParent..;
+	
+}
+
+//DUPLICATED OBJECTS USING TRANSFORMS LAYOUT
+//------------------------------
+global proc duplicateObjectsUsingTransformsLayout(string $parent)
+{
+	string $layout = `frameLayout
+		-l "Duplicate Objects Using Transforms"	
+		-ann ""
+		-bv true
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $parent	
+		`;
+	
+	text
+		-l "Transforms"
+		;
+		
+		textScrollList
+			-w 80
+			-h 90
+			-ams true
+			-dkc ("removeSelectedItemFromTextScrollList " + "getDuplicateObjectTransforms ")
+			getDuplicateObjectTransforms
+			;
+			
+		rowLayout
+			-numberOfColumns 2
+			;			
+			button
+				-label "Select Object(s)"
+				-c ("replaceTextScrollListWithSelectedObjects(`ls -sl`, \"getDuplicateObjectTransforms\");")
+				;
+			button
+				-label "Clear List"
+				-command ("clearTextScrollList " + "getDuplicateObjectTransforms ")
+				;
+		setParent..;
+		
+	textFieldButtonGrp
+			-ed true
+			-label "Object To Duplicate"
+			-text  ""
+			-ann ""
+			-cal 1 "center"
+			-buttonLabel "Select"
+			-bc ("assignObjectToTextFieldButtonGrp " + "getObjectToDuplicateOnTransforms ")
+			getObjectToDuplicateOnTransforms
+			;	
+			
+	optionMenuGrp -l "Duplicate Type"
+			duplicateObjectOnTransformsDuplicateType;
+			menuItem -label "copy" -en 1;
+			menuItem -label "instance" -en 1;
+			menuItem -label "referenceCopy" -en 1;				
+				
+	button 
+		-l "Duplicate Object On Transforms"
+		-c "duplicateObjectOnTransforms"
+		;				
+}
+
+//MIRRORED INSTANCED GROUP LAYOUT
+//------------------------------
+global proc mirroredInstancedGroupLayout(string $parent)
+{
+	string $layout = `frameLayout
+		-l "Mirrored Instanced Group"	
+		-ann ""
+		-bv true
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $parent	
+		`;
+
+	optionMenuGrp 
+		-l "Mirror Axis:"
+		-cal 1 "left"
+		-cal 2 "left"
+		mirroredInstancedGroupAxis;
+			menuItem -label "X";
+			menuItem -label "Y";
+			menuItem -label "Z";
+	
+	button
+		-label "Create Mirrored Instanced Group"
+		-command ("createMirroredInstancedGroup(`ls -sl`)")
+		;
+		
+	setParent..;
+		
+}
+
+//RANDOM ROTATIONS LAYOUT
+//------------------------------
+global proc randomLocalRotationsLayout(string $parent)
+{
+	string $layout = `frameLayout
+		-l "Random Local Rotations"	
+		-ann ""
+		-bv true
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $parent	
+		`;
+
+	text "Min Rotation (0 - 360): ";
+	rowLayout -nc 3 -cw3 70 70 70;
+		floatField -w 70 -max 360 minRanRotationX;
+		floatField -w 70 -max 360 minRanRotationY;
+		floatField -w 70 -max 360 minRanRotationZ;
+	setParent..;
+	text "Max Rotation (0 - 360): ";
+	rowLayout -nc 3 -cw3 70 70 70;
+		floatField -w 70 -max 360 maxRanRotationX;
+		floatField -w 70 -max 360 -v 360 maxRanRotationY;
+		floatField -w 70 -max 360 maxRanRotationZ;
+	setParent..;
+
+	button 
+		-l "Do Random Rotations"
+		-c "doRandomRotations"
+		;
+}
+
+//========================================================================================================
+//""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//                     MENUS
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+//========================================================================================================
+// MODELING PACKAGE UNIT CONVERSION MENU BAR LAYOUT
+//---------------------------------------------------------------
+global proc modelingPackageUnitConversionMenuBarLayout()
+{
+	string $menuBarLayout = `menuBarLayout 3dPackageUnitConversionMenuBarLayout`;	
+	menu -l "3d Package Unit Conversions" -to true;
+	modelingPackageUnitConversionMenuItems();
+}
+
+// MODELING PACKAGE UNIT CONVERSION MENU ITEMS
+//---------------------------------------------------------------
+global proc modelingPackageUnitConversionMenuItems()
+{
+	//SketchUp = 1.757
+	menuItem -l "Sketch Up" -c ("xform -s 1.757 1.757 1.757;");
+}
+
+//WIZ TRANSFORM WIZ MENU
+//--------------------------------
+global proc wizTransformsMenu()
+{	
+	
+	menu -l "Transform" -to true;
+		menuItem -sm true -l "Copy Transforms" -to true;
+			copyTransformsMenuItems();
+			
+		setParent -menu..;
+		menuItem -sm true -l "Fix Transforms" -to true;
+			fixTransformsMenuItems();
+		setParent -menu..;
+		menuItem -sm true -l "Instances" -to true;
+			//replaceInstancesMenu();	
+			instancesMenuItems();
+		setParent -menu..;
+		menuItem -sm true -l "Mirror" -to true;	
+			mirrorTransformsMenuItems();
+		setParent -menu..;
+		menuItem -sm true -l "Cameras" -to true;	
+			cameraTransformsMenuItems();
+		setParent -menu..;
+		menuItem -sm true -l "Transform Bookmarks" -to true;	
+			transformBookmarkMenuItems();
+		setParent -menu..;
+		
+		menuItem -sm true -l "LOD" -to true;	
+			lodTransformsMenuItems();
+		setParent -menu..;
+				
+		menuItem -sm true -l "Duplicate On Curve" -to true;	
+			duplicateOnCurveMenuItems();
+		setParent -menu..;
+		
+		menuItem -sm true -l "Particles" -to true;
+			duplicateOnParticlesMenuItems();
+		setParent -menu..;
+		
+		menuItem -l "Proportional Scale Connections" -c ("wizProportionalScaleConnect(\"-sl\");");
+		
+		menuItem -l "Add Circle Curve Under Transform" -c ("wizAddTransformCurveHandle(\"-sl\");");
+		
+		
+		currentCameraAttachmentMenuItems();
+		
+}
+
+//DUPLICATE ON CURVE MENU ITEMS
+//--------------------------------
+global proc duplicateOnParticlesMenuItems()
+{
+	menuItem -l "Duplicate On Particles" -c ("wizDuplicateObjectsOnParticles(\"-sl -dup\");");
+	menuItem -l "Instance On Particles" -c ("wizDuplicateObjectsOnParticles(\"-sl -i\");");
+	menuItem -l "Reference Copy On Particles" -c ("wizDuplicateObjectsOnParticles(\"-sl -rc\");");
+	
+}
+
+//DUPLICATE ON CURVE MENU ITEMS
+//--------------------------------
+global proc duplicateOnCurveMenuItems()
+{
+	menuItem -l "Duplicate On Curve" -c ("wizCreateDuplicateOnCurveRig(`ls -sl`);");	
+}
+
+//TRANSFORM WIZ MENU
+//--------------------------------
+global proc transformWizMenu()
+{
+	string $menuBarLayout = `menuBarLayout
+		transformWizMenu
+		`;
+	
+	menu -l "Copy Transforms" -to true;
+		copyTransformsMenuItems();
+	
+	menu -l "Fix Transforms" -to true;
+		fixTransformsMenuItems();
+				
+	menu -l "Mirror" -to true;
+		mirrorTransformsMenuItems();
+		
+	menu -l "Camera" -to true;	
+		cameraTransformsMenuItems();
+		
+	menu -l "Bookmarks" -to true;	
+		transformBookmarkMenuItems();
+	
+	menu -l "LOD" -to true;	
+		lodTransformsMenuItems();
+		
+	menu -l "Do Transforms" -to true;	
+		doTransformsMenuItems();	
+}
+
+//COPY TRANSFORMS MENU ITEMS
+//--------------------------------
+global proc copyTransformsMenuItems()
+{
+	//menuItem -l "Transfer Transforms A > B" -c ("string $sel[] = `ls -sl`;string $from = $sel[0];string $to = $sel[1];transferTransforms($from,$to);");	
+	menuItem -l "Transfer Transforms A > B..." -c ("wizTransferTransforms(\"-sl -t -r -s\");");
+	menuItem -l "Transfer Translation A > B..." -c ("wizTransferTransforms(\"-sl -t\");");	
+	menuItem -l "Transfer Rotation A > B..." -c ("wizTransferTransforms(\"-sl -r\");");	
+	menuItem -l "Transfer Scale A > B..." -c ("wizTransferTransforms(\"-sl -s\");");	
+	
+	menuItem -l "Transfer Mirror Transforms A > B" -c ("string $sel[] = `ls -sl`;string $from = $sel[0];string $to = $sel[1];transferMirrorTransforms($from,$to);");	
+		menuItem -ob true -c ("openCurrentOptionsLayout(\"transferMirrorTransformsOptions\");");
+	menuItem -l "Replace Object A With Object B" -c ("string $sel[] = `ls -sl`; string $remove = $sel[0]; string $keep = $sel[1];replaceObjectWithObject($remove, $keep);");
+	
+
+}
+
+//COPY TRANSFORMS MENU ITEMS
+//--------------------------------
+global proc doTransformsMenuItems()
+{
+
+
+}
+
+//FIX TRANSFORMS MENU ITEMS
+//--------------------------------
+global proc fixTransformsMenuItems()
+{
+	//menuItem -sm true -l "Fix Transforms";
+	menuItem -sm true -l "Alignment" -to true;
+		menuItem -l "World Center" -c ("alignObjectsToWorldCenter(`ls -sl`);");
+		menuItem -l "World Center Ground" -c ("alignObjectsToWorldCenterGround(`ls -sl`);");
+		
+		menuItem -l "World Center Ground Left" -c ("wizAlignSelectedToWorldGround(`ls -sl`,\"worldCenterGroundLeft\");");
+		menuItem -l "World Center Ground Right" -c ("wizAlignSelectedToWorldGround(`ls -sl`,\"worldCenterGroundRight\");");
+		menuItem -l "World Center Ground Front" -c ("wizAlignSelectedToWorldGround(`ls -sl`,\"worldCenterGroundFront\");");
+		menuItem -l "World Center Ground Back" -c ("wizAlignSelectedToWorldGround(`ls -sl`,\"worldCenterGroundBack\");");
+		menuItem -l "World Center Ground Front Left" -c ("wizAlignSelectedToWorldGround(`ls -sl`,\"worldCenterGroundFrontLeft\");");
+		menuItem -l "World Center Ground Front Right" -c ("wizAlignSelectedToWorldGround(`ls -sl`,\"worldCenterGroundFrontRight\");");
+		menuItem -l "World Center Ground Back Left" -c ("wizAlignSelectedToWorldGround(`ls -sl`,\"worldCenterGroundBackLeft\");");
+		menuItem -l "World Center Ground Back Right" -c ("wizAlignSelectedToWorldGround(`ls -sl`,\"worldCenterGroundBackRight\");");
+		menuItem -l "World Center Under Ground" -c ("alignObjectsToWorldCenterUnderGround(`ls -sl`);");
+		menuItem -l "World Center Under Ground Left" -c ("wizAlignSelectedToWorldGround(`ls -sl`,\"worldCenterUnderGroundLeft\");");
+		menuItem -l "World Center Under Ground Right" -c ("wizAlignSelectedToWorldGround(`ls -sl`,\"worldCenterUnderGroundRight\");");
+		menuItem -l "World Center Under Ground Front" -c ("wizAlignSelectedToWorldGround(`ls -sl`,\"worldCenterUnderGroundFront\");");
+		menuItem -l "World Center Under Ground Back" -c ("wizAlignSelectedToWorldGround(`ls -sl`,\"worldCenterUnderGroundBack\");");
+		menuItem -l "World Center Under Ground Front Left" -c ("wizAlignSelectedToWorldGround(`ls -sl`,\"worldCenterUnderGroundFrontLeft\");");
+		menuItem -l "World Center Under Ground Front Right" -c ("wizAlignSelectedToWorldGround(`ls -sl`,\"worldCenterUnderGroundFrontRight\");");
+		menuItem -l "World Center Under Ground Back Left" -c ("wizAlignSelectedToWorldGround(`ls -sl`,\"worldCenterUnderGroundBackLeft\");");
+		menuItem -l "World Center Under Ground Back Right" -c ("wizAlignSelectedToWorldGround(`ls -sl`,\"worldCenterUnderGroundBackRight\");");
+		menuItem -l "World Ground" -c ("alignObjectsToWorldGround(`ls -sl`);");
+	setParent -menu..;
+	
+	menuItem -sm true -l "Freeze" -to true;	
+		menuItem -l "Freeze Transforms" -c ("freezeTransformsOnSelectedObjects(`ls -sl`);");
+		menuItem -l "Freeze Scale Of Heirarchy" -c ("freezeScaleOfHeirarchy(`ls -sl`);");
+		menuItem -l "Un-Freeze Transforms" -c ("fixGeometryTransforms(`ls -sl`);");
+		menuItem -l "Un-Freeze All Top Level Transforms" -c ("unfreezeTopLevelTransforms();");
+		menuItem -l "Center In World and Freeze Transforms" -c "centerObjectInWorldAndFreezeTransforms";	
+	setParent -menu..;	
+	
+	menuItem -l "Set Pivot To World Center" -c ("xform -ws -piv 0 0 0;");
+	menuItem -l "Straighten" -ecr true -c ("openCurrentOptions(\"straightenRotationsOptionsMenu\");float $precision = `floatSliderGrp -q -v fixTransformsStraightenPrecisionFloatSliderGrp`;"
+		+ "straightenRotationsOnSelected(`ls -sl`,$precision);");
+		menuItem -ob true -c ("openCurrentOptionsLayout(\"straightenRotationsOptionsMenu\");");
+		
+	
+//setParent -menu..;
+	
+}
+
+global proc cameraTransformsMenuItems()
+{
+	//menuItem -l "Cameras" -sm true;	
+	menuItem -l "Set Selected Camera To Current Camera View" -c ("moveSelectedCameraToCameraView(`ls -sl`)");
+	
+	//setParent -menu..;	
+}
+
+global proc transformBookmarkMenuItems()
+{
+	//menuItem -l "Bookmarks" -sm true;		
+	menuItem  -l "Create Transform Bookmark From Selected" -c ("createTransformBookmarkLocatorFromSelected(`ls -typ transform -sl`)");
+			
+	//setParent -menu..;
+}
+
+global proc mirrorTransformsMenuItems()
+{
+	string $duplicateMirrorCommand = ("string $dup[] = wizDuplicate(`ls -sl`);"
+	+"mirrorSelectedObjects($dup);");
+	
+	//menuItem -l "Mirror" -sm true;	
+	menuItem -l "Mirror Object" -c ("mirrorSelectedObjects(`ls -fl -sl`);");
+		menuItem -ob true -c ("openCurrentOptionsLayout(\"mirrorObjectsOptions\");");
+	menuItem -l "Duplicate Mirror Object" -c ("wizMirrorDuplicate(`ls -sl`);");
+		menuItem -ob true -c ("openMultiCurrentOptionsLayouts({ \"duplicationMethodOptions\", \"mirrorObjectsOptions\" });");	
+	menuItem  -l "Create Mirrored Instanced Group" -c "createMirroredInstancedGroup(`ls -sl`)";
+	
+	menuItem -l "Create Mirrored TranslateX Connection" -c ("wizCreateMirroredConnections(\"-sl -t -x\");");
+	menuItem -l "Create Mirrored RotateY Connection" -c ("wizCreateMirroredConnections(\"-sl -r -y\");");
+	
+	// transform wiz 
+	menuItem -l "Copy ARMS Joint Orients From Left To Right" -c ("WizCopyJointOrientsFromLeftToRight(\"-arms\");");
+	
+	menuItem -l "Copy LEGS Joint Orients From Left To Right" -c ("WizCopyJointOrientsFromLeftToRight(\"-legs\");");
+			
+	//setParent -menu..;
+}
+
+global proc lodTransformsMenuItems()
+{
+	menuItem -l "Set All LOD Levels" -c ("openCurrentOptionsLayout(\"setAllLODOptions\");");
+		menuItem -ob true -c ("openCurrentOptionsLayout(\"setAllLODOptions\");");
+		
+	menuItem -l "Delete All Extra LOD Indices" -c ("deleteAllExtraLODIndices();");
+	menuItem -l "Create Delete All Extra LOD Indices Script Node" -c ("createDeleteAllExtraLODIndicesScriptNode();");
+	menuItem -l "Create Bounding Box Proxy LOD Group" -c ("createBoundingBoxProxyLODGroupForSelected(`ls -sl`);");
+		menuItem -ob true -c ("openCurrentOptionsLayout(\"createBoundingBoxProxyLODGroupForSelectedOptions\");");	
+	
+
+}
+
+//========================================================================================================
+//()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//                     FUNCTIONS
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()
+//========================================================================================================
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         SCALE
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//SCALE SELECTED OBJECT BY AMOUNT
+//-------------------------------------------------------
+global proc scaleSelectedObjectsByAmount()
+{
+	string $sel[] = `ls -sl`;
+	float $scaleBy = `floatSliderButtonGrp -q -v scaleSelectedObjects`;
+	int $i;
+	for($i=0;$i<`size $sel`;$i++){
+		float $curScale[] = `xform -q -r -s $sel[$i]`;
+		float $newScale[3] = { ($curScale[0] + $scaleBy),($curScale[1] + $scaleBy),($curScale[2] + $scaleBy)};
+		xform -r -s $newScale[0] $newScale[1] $newScale[2] $sel[$i];
+		
+	}
+
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         RANDOMIZE
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//RANDOM ROTATIONS
+//-------------------------------------------------------
+global proc doRandomRotations()
+{
+	string $sel[] = `ls -sl`;
+	float $minRotationX = `floatField -q -v minRanRotationX`;
+	float $minRotationY = `floatField -q -v minRanRotationY`;
+	float $minRotationZ = `floatField -q -v minRanRotationZ`;
+	
+	float $maxRotationX = `floatField -q -v maxRanRotationX`;
+	float $maxRotationY = `floatField -q -v maxRanRotationY`;
+	float $maxRotationZ = `floatField -q -v maxRanRotationZ`;
+	
+	int $i;
+	for($i=0;$i<`size $sel`;$i++){
+		float $rotateX = (rand($minRotationX,$maxRotationX));
+		float $rotateY = (rand($minRotationY,$maxRotationY));
+		float $rotateZ = (rand($minRotationZ,$maxRotationZ));	
+		
+		rotate -r -os $rotateX $rotateY $rotateZ $sel[$i];
+		
+	}
+
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         DUPLICATION
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+/*****************************************************************//**
+*	This just duplicates and mirrors selected objects.
+*
+*********************************************************************/
+global proc wizMirrorDuplicate( string $sel[] )
+{
+
+	string $dup[] = wizDuplicate($sel);
+	$dup = wizRenameMirroredObjects($sel, $dup);
+	mirrorSelectedObjects($dup);
+	
+}
+
+//@ WIZ DUPLICATE
+//====================================================================
+/*****************************************************************//**
+*	This will duplicate by duplicating, instancing, and REFERENCING.
+*   The settings can be set in the wiz duplication options.    
+/*=======================| USAGE |====================================	
+*	optionMenuGrp -e -sl 3 duplicationMethodOptionMenuGrp;
+*	string $dup[] = wizDuplicate(`ls -sl`);
+*********************************************************************/
+global proc string[] wizDuplicate( string $sel[] )
+{
+	//Valid methods: duplicate, instance, reference copy
+	string $dupMethod = `optionMenuGrp -q -v duplicationMethodOptionMenuGrp`;
+	string $dupCommand = getWizDuplicationCommand();
+	string $duplicates[];
+	string $dup[];
+	for ($i=0;$i<`size $sel`;$i++){
+		if ($dupMethod == "duplicate"){
+			string $duplicateCommand = getWizDuplicationCommand();
+			$duplicateCommand = $duplicateCommand + $sel[$i];
+			$dup = `eval($duplicateCommand)`;
+			appendStringArray($duplicates, $dup, `size $dup`);
+		} else if ($dupMethod == "instance"){
+			$dup = `instance $sel[$i]`;	
+			appendStringArray($duplicates, $dup, `size $dup`);
+		} else if ($dupMethod == "referenceCopy"){
+			$dup = duplicateReferenceObject($sel[$i]);
+			appendStringArray($duplicates, $dup, `size $dup`);
+		}
+		
+	}
+	return $duplicates;
+}
+
+//@ WIZ DO DUPLICATE
+//====================================================================
+/***********************| SUMMARY |*******************************//**
+*   This will duplicate by duplicating, instancing, and REFERENCING
+*   You can pass any tags for duplicating and instancing to it.
+*========================| USAGE |====================================	
+*   You can also specify the number of copys to make with -c
+*	string $dup[] = wizDoDuplicate(`ls -sl`, "-meth referenceCopy -c 2 -n SomeObjectName");
+*********************************************************************/
+global proc string[] wizDoDuplicate( string $sel[], string $tags )
+{
+	print("@wizDoDuplicate\n");
+    string $newName, $dupMethod, $dupCommand;
+    int $rc, $un, $ic, $po, $ilf;
+    int $count = 1;
+    string $tok[] = tokenizeString($tags, " ");
+    for ($i=0;$i<`size $tok`;$i++){
+        switch ($tok[$i]){
+            case "-n" : case "-name" :
+            $newName = $tok[($i + 1)];
+            $dupCommand = $dupCommand + "-n " + $newName + " ";
+            break;
+            
+            case "-meth" : case "-m" : case "-method" :
+            $dupMethod = $tok[($i + 1)];
+            break;
+            
+            case "-c" : case "-count" : case "-num" : case "-number" :
+            $count = int($tok[($i + 1)]);
+            break;
+            
+            case "-rc" : case "-renameChildren" :
+            if ($dupMethod == "instance"){ break ;}
+            $dupCommand = $dupCommand + "-rc ";
+            break;
+            
+            case "-un" : case "-upstreamNodes" :
+            if ($dupMethod == "instance"){ break ;}
+            $dupCommand = $dupCommand + "-un ";
+            break;
+            
+            case "-ic" : case "-inputConnections" :
+            if ($dupMethod == "instance"){ break ;}
+            $dupCommand = $dupCommand + "-ic ";
+            break;
+            
+            case "-po" : case "-parentsOnly" :
+            if ($dupMethod == "instance"){ break ;}
+            $dupCommand = $dupCommand + "-po ";
+            break;
+            
+            case "-ilf" : case "-instanceLeafNodes" :
+            if ($dupMethod == "instance"){ 
+                $dupCommand = $dupCommand + "-lf ";
+                break;
+            }
+            $dupCommand = $dupCommand + "-ilf ";
+            break;
+            
+            case "-st" : case "-smartTransform" :
+            $dupCommand = $dupCommand + "-st ";
+            break;
+            
+            case "-rr" : case "-returnRootsOnly" :
+            if ($dupMethod == "instance"){ break ;}
+            $dupCommand = $dupCommand + "-rr ";
+            break;
+            
+            case "-lf" : case "-leaf" :
+            if ($dupMethod == "duplicate"){ 
+                $dupCommand = $dupCommand + "-ilf ";
+                break;
+            }
+            $dupCommand = $dupCommand + "-lf ";
+            break;
+            
+        }
+    }
+    if ($dupMethod == ""){
+        warning ("WIZ| wizDoDuplication : duplicationMethod was not specified.\n Use -meth to specify duplication method. Using duplicate method.\n");
+        $dupMethod = "duplicate";
+    }
+    //Valid methods: duplicate, instance, reference copy
+	string $duplicates[];
+	string $dup[];
+	for ($i=0;$i<`size $sel`;$i++){
+		if ($dupMethod == "duplicate" || $dupMethod == "copy"){
+			$dupCommand = "duplicate " + $dupCommand + " " + $sel[$i];            
+            for ($p=0;$p<$count;$p++){
+                $dup = `eval($dupCommand)`;
+                //printNiceArrayList ("Duplicates : ", $dup);
+                appendStringArray($duplicates, $dup, `size $dup`);
+            }
+		} else if ($dupMethod == "instance"){
+			$dupCommand = "instance " + $dupCommand + " " + $sel[$i];	
+            
+            for ($p=0;$p<$count;$p++){
+                $dup = `eval($dupCommand)`;
+                appendStringArray($duplicates, $dup, `size $dup`);
+				//printNiceArrayList ("Duplicates : ", $dup);
+            }
+		} else if ($dupMethod == "referenceCopy" || $dupMethod == "referenceDuplicate"){
+            for ($p=0;$p<$count;$p++){
+                $dup = duplicateReferenceObject($sel[$i]);
+				appendStringArray($duplicates, $dup, `size $dup`);
+                //$duplicates[`size $duplicates`] = $dup[0];
+				printNiceArrayList ("Duplicates : ", $dup);
+            }
+		}
+		
+	}
+    //print ("Duplication Command : " + $dupCommand + "\n");
+    if (`size $duplicates` == 0){
+        warning ("WIZ| wizDoDuplicate : Could Not Duplicate Object :( " + "\n");
+    }
+	return $duplicates;
+}
+
+//DUPLICATE OBJECT ON TRANSORMS
+//-------------------------------------------------------
+global proc duplicateObjectOnTransforms()
+{
+	string $transform[] = `textScrollList -q -ai getDuplicateObjectTransforms`;
+	string $obj = `textFieldButtonGrp -q -text getObjectToDuplicateOnTransforms`;
+	string $dupType = `optionMenuGrp -q -v duplicateObjectOnTransformsDuplicateType`;
+	
+	int $i;
+	for ($i=0;$i<`size $transform`;$i++){
+		string $objDup[];
+		
+		$objDup = wizDoDuplicate({$obj}, ("-meth " + $dupType));
+		
+		float $pos[] = `xform -q -a -ws -t $transform[$i]`;
+		float $rot[] = `xform -q -a -ws -ro $transform[$i]`;
+		select -r $objDup;
+		xform -a -ws -t $pos[0] $pos[1] $pos[2];
+		xform -a -ws -ro $rot[0] $rot[1] $rot[2];
+		
+	}
+}
+
+//DUPLICATE OBJECT USING DUPLICATION METHOD
+//-------------------------------------------------------
+global proc string duplicateObjectUsingDuplicationMethod(string $obj, string $method)
+{
+	string $dup[];
+	string $dupMethod = `optionMenuGrp -q -v $method`;
+	
+	if($dupMethod == "duplicate"){
+		string $duplicateCommand = getWizDuplicationCommand();
+		$duplicateCommand = $duplicateCommand + $obj;
+		$dup = `eval($duplicateCommand)`;
+		//$dup = `duplicate -rc -un $obj`;	
+	} else if($dupMethod == "instance"){
+		$dup = `instance $obj`;	
+	} else if($dupMethod == "referenceCopy"){
+		$dup = duplicateReferenceObject($obj);	
+	} else {
+		print("WIZ| duplicateObjectUsingDuplicationMethod | Was Not Passed Valid Method. Method: " + $method + "\n");
+	}
+	
+	return $dup[0];
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         MIRROR
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//MIRROR SELECTED OBJECTS
+//-----------------------------------------------
+global proc mirrorSelectedObjects(string $sel[])
+{
+	for($i=0;$i<`size $sel`;$i++){
+		mirrorObject($sel[$i]);	
+	}
+}
+
+//MIRROR OBJECT
+//-----------------------------------------------
+global proc mirrorObject(string $sel)
+{
+	string $axis = `optionMenuGrp -q -v mirrorObjectsAxisOptionMenuGrp`;
+	float $s[] = `xform -q -r -s $sel`;
+	switch($axis){
+		case "x" : case "-x" :
+		$s[0] = invertFloat($s[0]);
+		break;
+		
+		case "y" : case "-y" :
+		$s[1] = invertFloat($s[1]);
+		break;
+		
+		case "z" : case "-z" :
+		$s[2] = invertFloat($s[2]);
+		break;
+	}
+	xform -a -s $s[0] $s[1] $s[2] $sel;
+	
+	if(`checkBox -q -v mirrorObjectsFreezeScaleCheckBox`){
+		if(isGroup($sel) == 1){
+			freezeScaleOfHeirarchy({$sel});
+			
+		}
+		makeIdentity -apply true -t 0 -r 0 -s 1 -n 1 -pn 1;
+	}
+}
+
+//MIRRORED INSTANCE GROUP
+//--------------------------------
+global proc createMirroredInstancedGroup(string $sel[])
+{
+	if(`size $sel` > 1){
+		debugML1("Can only Mirror Instance One Object at a time." + "\n");
+		return;
+	}
+	//int $mirrorAxis = guessMirrorAxis($sel[0]);
+	string $mirrorAxis = `optionMenuGrp -q -v mirroredInstancedGroupAxis`;
+	string $axis;
+	//int $mirrorDir = guessMirrorDirection($sel[0]);
+	string $groupName = $sel[0] + "MirrorGroupSide1";
+	string $mirrorGroupName = $sel[0] + "MirrorGroupSide2";
+	group -n $groupName;
+	xform -os -piv 0 0 0;
+	select -r $groupName;
+	string $inst[] = `instance -n $mirrorGroupName $groupName`;
+	if($mirrorAxis == "X"){
+		$axis = ".scaleX";
+	} else if($mirrorAxis == "Y"){
+		$axis = ".scaleY";
+	} else if($mirrorAxis == "Z"){
+		$axis = ".scaleZ";
+	}
+	setAttr ($inst[0] + $axis) -1;
+
+}
+
+//GUESS MIRROR AXIS
+//--------------------------------
+global proc int guessMirrorAxis(string $obj)
+{
+	float $bboxMin[] = `getAttr ($obj + ".boundingBoxMin")`;
+	float $bboxMax[] = `getAttr ($obj + ".boundingBoxMax")`;
+	int $posX, $negX, $posZ, $negZ, $posY, $negY;
+	if($bboxMin[0] > 0 && $bboxMax[0] > 0){	$posX = true;}
+	if($bboxMin[0] < 0 && $bboxMax[0] < 0){	$negX = true;}
+	if($bboxMin[1] > 0 && $bboxMax[1] > 0){	$posY = true;}
+	if($bboxMin[1] < 0 && $bboxMax[1] < 0){	$negY = true;}
+	if($bboxMin[2] > 0 && $bboxMax[2] > 0){	$posZ = true;}
+	if($bboxMin[2] < 0 && $bboxMax[2] < 0){	$negZ = true;}
+	if($posX || $negX){
+		return 0;		
+	} else if($posZ || $negZ){
+		return 2;
+	} else if(!$posX && !$negX && !$posZ && !$negZ){
+		return 1;
+	}
+}
+
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                      TRANSFER TRANSFORMS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//TRANSFER TRANSFORMS
+//-------------------------------------
+global proc transferTransforms( string $from, string $to)
+{
+    //print ("Transfer Transforms : From : " + $from + " To : " + $to + "\n");
+	
+	float $pos[] = `xform -q -ws -t $from`;
+	xform -ws -t $pos[0] $pos[1] $pos[2] $to;	
+	
+	float $rot[] = `xform -q -ws -ro $from`;
+	xform -ws -ro $rot[0] $rot[1] $rot[2] $to;	
+	
+	//float $scale[] = `xform -q -r -os -s $from`;
+	//xform -r -s $scale[0] $scale[1] $scale[2] $to;	
+	float $scale[] = `xform -q -os -s $from`;
+	xform -os -s $scale[0] $scale[1] $scale[2] $to;
+	
+	/*
+	float $pos[] = `xform -q -os -t $from`;
+	xform -os -t $pos[0] $pos[1] $pos[2] $to;	
+	
+	float $rot[] = `xform -q -os -ro $from`;
+	xform -os -ro $rot[0] $rot[1] $rot[2] $to;	
+	
+	//float $scale[] = `xform -q -r -os -s $from`;
+	//xform -r -s $scale[0] $scale[1] $scale[2] $to;	
+	float $scale[] = `xform -q -os -s $from`;
+	xform -os -s $scale[0] $scale[1] $scale[2] $to;
+	*/
+}
+
+global proc wizTransferTransforms( string $flags )
+{
+	string $sel[] = `ls -sl`;
+	int $t, $r, $s;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+		
+			case "-t" : case "-translate" :
+			$t = 1;
+			break ;
+			
+			case "-r" : case "-rotate" :
+			$r = 1;
+			break ;
+			
+			case "-s" : case "-scale" :
+			$s = 1;
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+						
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+
+	float $pos[] = `xform -q -ws -t $sel[0]`;
+	float $rot[] = `xform -q -ws -ro $sel[0]`;
+	float $scale[] = `xform -q -r -os -s $sel[0]`;
+	
+	for ($i=1;$i<`size $sel`;$i++){
+		if ($t){
+			xform -ws -t $pos[0] $pos[1] $pos[2] $sel[$i];
+		}
+		if ($r){
+			xform -ws -ro $rot[0] $rot[1] $rot[2] $sel[$i];
+		}
+		if ($s){
+			xform -a -s $scale[0] $scale[1] $scale[2] $sel[$i];
+		}
+	}
+
+}
+
+//TRANSFER MIRROR TRANSFORMS
+//-------------------------------------
+global proc transferMirrorTransforms( string $from, string $to)
+{
+	print("WIZ| transferMirrorTransforms : This function is incomplete and will not work!\n");
+	float $pos[] = `xform -q -ws -t $from`;
+	xform -ws -t $pos[0] $pos[1] $pos[2] $to;	
+	
+	float $rot[] = `xform -q -ws -ro $from`;
+	xform -ws -ro $rot[0] $rot[1] $rot[2] $to;	
+	
+	float $scale[] = `xform -q -r -os -s $from`;
+	xform -r -s $scale[0] $scale[1] $scale[2] $to;	
+
+}
+
+//3D ARRAY OF LOCATORS
+//==========================================
+global proc create3dArrayOfLocators(float $bboxMin[],float $bboxMax[], float $divLength, float $xi,float $yi,float $zi)
+{
+	float $min[] = {$bboxMin[0], $bboxMin[1], $bboxMin[2]};
+	float $max[] = {($bboxMin[0] + $divLength), ($bboxMin[1] + $divLength), ($bboxMin[2] + $divLength)};
+	
+	int $i = 0;
+	for($z=0;$z<$zi;$z++){
+		for($y=0;$y<$yi;$y++){
+			for($x=0;$x<$xi;$x++){	
+				spaceLocator -p $min[0] $min[1] $min[2] -n ("AreaMin" + $i);
+				spaceLocator -p $max[0] $max[1] $max[2] -n ("AreaMax" + $i);
+				group -n ("AreaLocatorsGroup" + $i) ("AreaMin" + $i) ("AreaMax" + $i);
+			
+				$min[0] = $max[0];
+				$max[0] = $max[0] + $divLength;
+							
+				$i++;				
+			}
+			$min[0] = $bboxMin[0];
+			$max[0] = $bboxMin[0] + $divLength;
+	
+			$min[1] = $max[1];
+			$max[1] = $max[1] + $divLength;
+			
+		}
+		$min[1] = $bboxMin[1];
+		$max[1] = $bboxMin[1] + $divLength;
+	
+		$min[2] = $max[2];
+		$max[2] = $max[2] + $divLength;	
+	}
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         FIX TRANSFORMS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//FIX TRANSFORMS IN HIERARCHY
+//--------------------------------
+global proc fixTransformsInSelectedHeirarchy()
+{
+	global int $WIZ_dm;	
+	if($WIZ_dm){debugML1("Fix Transforms" + "\n");}
+	
+	string $sel[] = `ls -sl`;
+	string $t[];
+	appendStringArray($t, $sel, `size $sel`);
+	string $children[];
+	while(`size $t` > 0){
+		if($WIZ_dm){debugML1("Transforms: " + stringArrayToString($t, " ") + "\n");}	
+		fixSelectedTransforms($t);
+		for($i=0;$i<`size $t`;$i++){
+			string $rel[] = `listRelatives -type "transform" $t[$i]`;		
+			appendStringArray($children, $rel, `size $rel`);	
+		}
+		clear $t;
+		appendStringArray($t, $children, `size $children`);
+		clear $children;
+	}
+
+}
+
+//FIX SELECTED TRANSFORMS
+//--------------------------------
+global proc fixSelectedTransforms(string $sel[])
+{
+	debugML1("FIXING TRANSFORMS..." + "\n");
+	for($i=0;$i<`size $sel`;$i++){	
+		fixTransform($sel[$i]);
+	}	
+}
+
+
+//FIX TRANSFORM
+//----------------------------
+global proc fixTransform(string $sel)
+{
+	string $alignTo = `optionMenuGrp -q -v fixTransformsAlignToOption`;
+	debugML1("		* Fixing Transforms For: " + $sel + "\n");
+	//Create a duplicate to compare positions and rotations
+	string $dup[];
+	select -r $sel;
+	float $c[] = `getAttr ($sel + ".center")`;
+	
+	//Get the original position
+	float $t[];
+	//Get the original rotation and then zero out the rotation
+	float $rot[] = `getAttr ($sel + ".rotate")`;
+	
+	//See if the translate was frozen off center
+	$frozenOffCenter = isFrozenOffCenter($sel);
+		
+	//Center the pivot
+	xform -cp $sel;
+	
+	//Zero out the rotation
+	setAttr ($sel + ".rotate") 0 0 0;
+	
+	//Get the translate we want to return the object to
+	if($alignTo == "worldCenterGround"){
+		//Use the bottom of the bounding box as the translate
+		$t = `getAttr ($sel + ".center")`;
+		float $bboxMinY = `getAttr ($sel + ".boundingBoxMinY")`;
+		debugML1("			- OrginalPosition(Center of Bounding Box): " + $t[0] + " | " + $t[1] + " -bboxMinY: " + $bboxMinY + " | " + $t[2] + "\n");
+	} else {
+		//Use the center of the bounding box as the translate	
+		$t = `getAttr ($sel + ".center")`;
+		debugML1("			- OrginalPosition(Center of Bounding Box): " + $t[0] + " | " + $t[1] + " | " + $t[2] + "\n");
+	}
+	
+	//Move the object to the center of the world
+	move -rpr 0 0 0 $sel;
+	makeIdentity -apply true -t 1 -r 1 -s 0 -n 0;	
+	
+	float $return[];
+	
+	$return = {($t[0]),($t[1]),($t[2])};
+	
+	setAttr ($sel + ".translate") $return[0] $return[1] $return[2];
+	//move -rpr $t[0] $t[1] $t[2] $sel[$i];
+	float $newPos[] = `getAttr ($sel + ".translate")`;
+	debugML1("			- NewPosition: " + $newPos[0] + " | " + $newPos[1] + " | " + $newPos[2] + "\n");
+	
+	//Reset the rotation to where it was orginally
+	setAttr ($sel + ".rotate") $rot[0] $rot[1] $rot[2];		
+
+}
+
+//FIX GEOMETRY TRANSFORMS
+//--------------------------------
+global proc fixGeometryTransforms(string $sel[])
+{
+	debugML1("FIXING TRANSFORMS..." + "\n");
+	/*
+	string $geo[] = getGeometryTransforms($sel);
+	for($i=0;$i<`size $geo`;$i++){	
+		fixGeometryTransform($geo[$i]);
+	}
+	*/
+	//string $geo[] = getGeometryTransforms($sel);
+	for($i=0;$i<`size $sel`;$i++){	
+		fixGeometryTransform($sel[$i]);
+	}	
+}
+
+//FIX GEOMETRY TRANSFORM
+//--------------------------------
+global proc fixGeometryTransform(string $sel)
+{
+	//Todo: unparent and reparent when done
+	string $alignTo = `optionMenuGrp -q -v fixTransformsAlignToOption`;
+	debugML1("		* Fixing Transforms For: " + $sel + "\n");
+	//Create a duplicate to compare positions and rotations
+	string $dup[];
+	select -r $sel;
+	float $c[] = `getAttr ($sel + ".center")`;
+	
+	//Get the original position
+	float $t[];
+	//Get the original rotation and then zero out the rotation
+	float $rot[] = `getAttr ($sel + ".rotate")`;
+	
+	//See if the translate was frozen off center
+	$frozenOffCenter = isFrozenOffCenter($sel);
+		
+	//Center the pivot
+	xform -cp $sel;
+	
+	//Zero out the rotation
+	setAttr ($sel + ".rotate") 0 0 0;
+	
+	//Get the translate we want to return the object to
+	if($alignTo == "worldCenterGround"){
+		//Use the bottom of the bounding box as the translate
+		$t = `getAttr ($sel + ".center")`;
+		float $bboxMinY = `getAttr ($sel + ".boundingBoxMinY")`;
+		debugML1("			- OrginalPosition(Center of Bounding Box): " + $t[0] + " | " + $t[1] + " -bboxMinY: " + $bboxMinY + " | " + $t[2] + "\n");
+	} else {
+		//Use the center of the bounding box as the translate	
+		$t = `getAttr ($sel + ".center")`;
+		debugML1("			- OrginalPosition(Center of Bounding Box): " + $t[0] + " | " + $t[1] + " | " + $t[2] + "\n");
+	}
+	
+	//Move the object to the center of the world
+	move -rpr 0 0 0 $sel;
+	makeIdentity -apply true -t 1 -r 1 -s 0 -n 0;	
+	
+	float $return[];
+	
+	$return = {($t[0]),($t[1]),($t[2])};
+	
+	setAttr ($sel + ".translate") $return[0] $return[1] $return[2];
+	//move -rpr $t[0] $t[1] $t[2] $sel[$i];
+	float $newPos[] = `getAttr ($sel + ".translate")`;
+	debugML1("			- NewPosition: " + $newPos[0] + " | " + $newPos[1] + " | " + $newPos[2] + "\n");
+	
+	//Reset the rotation to where it was orginally
+	setAttr ($sel + ".rotate") $rot[0] $rot[1] $rot[2];		
+
+}
+
+//UNFREEZE TOP LEVEL TRANSFORMS
+//================================================
+global proc unfreezeTopLevelTransforms()
+{
+	string $topTr[] = getAllTopLevelTransforms();
+	fixGeometryTransforms($topTr);
+	
+	
+}
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         ALIGN
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//ALIGN OBJECTS TO WORLD CENTER
+//----------------------------------
+
+global proc alignObjectsToWorldCenter(string $sel[])
+{
+	for($i=0;$i<`size $sel`;$i++){
+		alignObjectToWorldCenter($sel[$i]);
+	}	
+}
+
+//ALIGN OBJECT TO WORLD CENTER
+//--------------------------------------------------------------
+global proc alignObjectToWorldCenter(string $obj)
+{
+	setAttr ($obj + ".rotate") 0 0 0;	
+	xform -cp $obj;
+	move -rpr 0 0 0 $obj;	
+	//makeIdentity -apply true -t 1 -r 1 -s 1 -n 0;
+
+}
+
+global proc centerObjectInWorldAndFreezeTransforms()
+{
+	string $sel[] = `ls -sl`;
+	string $obj;
+	for ($obj in $sel){
+		// center $obj's pivot
+		xform -cp $obj;
+		
+		// move the $obj to the global origin using move
+		// relative to the rotation pivot -rpr
+		move -rpr 0 0 0 $obj;
+		
+		select -r $obj ;
+		FreezeTransformations;
+	makeIdentity -apply true -t 1 -r 1 -s 1 -n 0;
+	}
+
+	// restore the original selection
+	select -r $sel;
+}
+
+global proc alignToWorldCenterAndReturn()
+{
+	string $sel[] = `ls -sl`;
+	for($i=0;$i<`size $sel`;$i++){
+		
+	}
+}
+
+//ALIGN OBJECTS TO WORLD CENTER GROUND
+//--------------------------------------------------------------
+global proc alignObjectsToWorldCenterGround( string $sel[] )
+{
+	for($i=0;$i<`size $sel`;$i++){
+		centerToWorldAlignToWorldGround($sel[$i]);
+	}
+}
+
+//ALIGN OBJECTS TO WORLD CENTER UNDER GROUND
+//--------------------------------------------------------------
+global proc alignObjectsToWorldCenterUnderGround( string $sel[] )
+{
+	for ($i=0;$i<`size $sel`;$i++){
+		centerToWorldAlignToWorldUnderGround($sel[$i]);
+	}
+}
+
+//ALIGN OBJECTS TO WORLD GROUND
+//--------------------------------------------------------------
+global proc alignObjectsToWorldGround(string $sel[])
+{
+	//string $sel[] = `ls -sl`;
+	for($i=0;$i<`size $sel`;$i++){
+		//alignObjectToWorldCenter($sel[$i]);
+		alignObjectToWorldGround($sel[$i]);
+	}
+}
+
+//ALIGN OBJECT TO WORLD GROUND
+//--------------------------------------------------------------
+global proc alignObjectToWorldGround(string $obj)
+{
+
+	float $bboxMinY = `getAttr ($obj + ".boundingBoxMinY")`;
+	float $piv[] = `xform -q -ws -piv $obj`;
+	xform -piv $piv[0] $bboxMinY $piv[2];
+	xform -ws -a -t 0 (0 - $bboxMinY) 0 $obj;
+	//makeIdentity -apply true -t 1 -r 1 -s 0 -n 0 $obj;
+	makeIdentity -apply true -t 1 -r 1 -s 1 -n 0;
+}
+
+//CENTER TO WORLD ALIGN TO WORLD GROUND
+//--------------------------------------------------------------
+global proc centerToWorldAlignToWorldGround(string $obj)
+{
+	//string $sel[] = `ls -sl`;
+	//string $obj = $sel[0];
+	select -r $obj;
+	xform -ws -ro 0 0 0;
+	xform -cp;
+	xform -ws -t 0 0 0;
+	move -rpr 0 0 0;
+	makeIdentity -apply true -t 1 -r 1 -s 1 -n 0;
+	
+	float $bboxMinY = `getAttr ($obj + ".boundingBoxMinY")`;
+	float $piv[] = `xform -q -ws -piv $obj`;
+	xform -piv $piv[0] $bboxMinY $piv[2];
+	xform -ws -a -t 0 (0 - $bboxMinY) 0 $obj;
+	makeIdentity -apply true -t 1 -r 1 -s 1 -n 0;
+	
+	
+}
+
+global proc wizAlignSelectedToWorldGround( string $sel[], string $alignment )
+{
+	for ($i=0;$i<`size $sel`;$i++){
+		wizAlignToWorldGround($sel[$i], $alignment);
+	}
+}
+
+global proc wizAlignToWorldGround( string $obj, string $alignment )
+{
+
+	select -r $obj;
+	xform -ws -ro 0 0 0;
+	xform -cp;
+	xform -ws -t 0 0 0;
+	move -rpr 0 0 0;
+	makeIdentity -apply true -t 1 -r 1 -s 1 -n 0;
+	float $bboxMinY = `getAttr ($obj + ".boundingBoxMinY")`;
+	float $piv[] = `xform -q -ws -piv $obj`;
+	/* it would be better to just calculate each xyz by themselves and then do all transforms
+	float $x,$y,$z;
+
+	switch($alignment){
+		case "worldCenterGround" :
+			$x = 0;
+			$y = `getAttr ($obj + ".boundingBoxMinY")`;
+			$z = 0;
+		break ;
+	}
+	
+	float $piv[] = `xform -q -ws -piv $obj`;
+	xform -piv $piv[0] $y $piv[2];
+	xform -ws -a -t 0 (0 - $bboxMinY) 0 $obj;
+		*/
+		
+	float $bboxMin[] = `getAttr ($obj + ".boundingBoxMin")`;
+	float $bboxMax[] = `getAttr ($obj + ".boundingBoxMax")`;
+	
+	switch($alignment){
+		case "worldCenterGround" :		
+			xform -piv $piv[0] $bboxMin[1] $piv[2];
+			xform -ws -a -t 0 (0 - $bboxMin[1]) 0 $obj;
+		break ;
+		case "worldCenterGroundRight" :
+			xform -piv $bboxMin[0] $bboxMin[1] $piv[2];
+			xform -ws -a -t (0 - $bboxMin[0] ) (0 - $bboxMin[1]) 0 $obj;
+		break ;
+		case "worldCenterGroundLeft" :
+			xform -piv $bboxMax[0] $bboxMin[1] $piv[2];
+			xform -ws -a -t (0 - $bboxMax[0]) (0 - $bboxMin[1]) 0 $obj;
+		break ;
+		case "worldCenterGroundFront" :
+			xform -piv $piv[0] $bboxMin[1] $bboxMin[2];
+			xform -ws -a -t 0 (0 - $bboxMin[1]) (0 - $bboxMin[2]) $obj;
+		break ;
+		case "worldCenterGroundBack" :
+			xform -piv $piv[0] $bboxMin[1] $bboxMax[2];
+			xform -ws -a -t 0 (0 - $bboxMin[1]) (0 - $bboxMax[2]) $obj;
+		break ;
+		
+		case "worldCenterGroundFrontRight" :
+			xform -piv $bboxMin[0] $bboxMin[1] $bboxMin[2];
+			xform -ws -a -t (0 - $bboxMin[0]) (0 - $bboxMin[1]) (0 - $bboxMin[2]) $obj;
+		break ;
+		case "worldCenterGroundFrontLeft" :
+			xform -piv $bboxMax[0] $bboxMin[1] $bboxMax[2];
+			xform -ws -a -t (0 - $bboxMax[0]) (0 - $bboxMin[1]) (0 - $bboxMax[2])  $obj;
+		break ;
+		case "worldCenterGroundBackRight" :
+			xform -piv $bboxMin[0] $bboxMin[1] $bboxMax[2];
+			xform -ws -a -t (0 - $bboxMin[0]) (0 - $bboxMin[1]) (0 - $bboxMax[2]) $obj;
+		break ;
+		case "worldCenterGroundBackLeft" :
+			xform -piv $bboxMax[0] $bboxMin[1] $bboxMax[2];
+			xform -ws -a -t (0 - $bboxMax[0]) (0 - $bboxMin[1]) (0 - $bboxMax[2]) $obj;
+		break ;
+		
+		//Underground
+		case "worldCenterUnderGroundRight" :
+			xform -piv $bboxMin[0] $bboxMax[1] $piv[2];
+			xform -ws -a -t (0 - $bboxMin[0] ) (0 - $bboxMax[1]) 0 $obj;
+		break ;
+		case "worldCenterUnderGroundLeft" :
+			xform -piv $bboxMax[0] $bboxMax[1] $piv[2];
+			xform -ws -a -t (0 - $bboxMax[0]) (0 - $bboxMax[1]) 0 $obj;
+		break ;
+		case "worldCenterUnderGroundFront" :
+			xform -piv $piv[0] $bboxMax[1] $bboxMin[2];
+			xform -ws -a -t 0 (0 - $bboxMax[1]) (0 - $bboxMin[2]) $obj;
+		break ;
+		case "worldCenterUnderGroundBack" :
+			xform -piv $piv[0] $bboxMax[1] $bboxMax[2];
+			xform -ws -a -t 0 (0 - $bboxMax[1]) (0 - $bboxMax[2]) $obj;
+		break ;
+		
+		case "worldCenterUnderGroundFrontRight" :
+			xform -piv $bboxMin[0] $bboxMax[1] $bboxMin[2];
+			xform -ws -a -t (0 - $bboxMin[0]) (0 - $bboxMax[1]) (0 - $bboxMin[2]) $obj;
+		break ;
+		case "worldCenterUnderGroundFrontLeft" :
+			xform -piv $bboxMax[0] $bboxMax[1] $bboxMax[2];
+			xform -ws -a -t (0 - $bboxMax[0]) (0 - $bboxMax[1]) (0 - $bboxMax[2])  $obj;
+		break ;
+		case "worldCenterUnderGroundBackRight" :
+			xform -piv $bboxMin[0] $bboxMax[1] $bboxMax[2];
+			xform -ws -a -t (0 - $bboxMin[0]) (0 - $bboxMax[1]) (0 - $bboxMax[2]) $obj;
+		break ;
+		case "worldCenterUnderGroundBackLeft" :
+			xform -piv $bboxMax[0] $bboxMax[1] $bboxMax[2];
+			xform -ws -a -t (0 - $bboxMax[0]) (0 - $bboxMax[1]) (0 - $bboxMax[2]) $obj;
+		break ;
+		
+	}
+	
+	makeIdentity -apply true -t 1 -r 1 -s 1 -n 0;
+	
+	
+}
+
+
+
+//CENTER TO WORLD ALIGN TO WORLD UNDER GROUND
+//--------------------------------------------------------------
+global proc centerToWorldAlignToWorldUnderGround(string $obj)
+{
+	//string $sel[] = `ls -sl`;
+	//string $obj = $sel[0];
+	select -r $obj;
+	xform -ws -ro 0 0 0;
+	xform -cp;
+	xform -ws -t 0 0 0;
+	move -rpr 0 0 0;
+	makeIdentity -apply true -t 1 -r 1 -s 1 -n 0;
+	
+	float $bboxMaxY = `getAttr ($obj + ".boundingBoxMaxY")`;
+	float $piv[] = `xform -q -ws -piv $obj`;
+	xform -piv $piv[0] $bboxMaxY $piv[2];
+	xform -ws -a -t 0 (0 - $bboxMaxY) 0 $obj;
+	makeIdentity -apply true -t 1 -r 1 -s 1 -n 0;
+	
+	
+}
+
+
+global proc alignToWorldGroundAndReturn()
+{
+	string $sel[] = `ls -sl`;
+	for($i=0;$i<`size $sel`;$i++){	
+		//Get the original position
+		float $t[];
+		//Get the original rotation
+		float $rot[] = `getAttr ($sel[$i] + ".rotate")`;
+		setAttr ($sel[$i] + ".rotate") 0 0 0;
+		//See if the translate was frozen off center
+		$frozenOffCenter = isFrozenOffCenter($sel[$i]);
+		if($frozenOffCenter){
+			//If it was frozen off center, use the center of the bounding box as the translate
+			$t = `getAttr ($sel[$i] + ".center")`;
+		} else {
+			$t = `getAttr ($sel[$i] + ".translate")`;
+		}
+	
+		//Center the pivot
+		xform -cp $sel[$i];
+		
+		//Get the transform after the pivot has been centered
+		float $tc[] = `getAttr ($sel[$i] + ".translate")`;
+		
+		//Move the object to the center of the world
+		move -rpr 0 0 0 $sel[$i];
+		makeIdentity -apply true -t 1 -r 1 -s 1 -n 0;	
+		
+		//Get the bottom of the bounding box
+		float $bboxMinY = `getAttr ($sel[$i] + ".boundingBoxMinY")`;
+	
+		//Set the pivot to the bottom of the bounding box
+		float $piv[] = `xform -q -ws -piv $sel[$i]`;
+		$piv[1] = $bboxMinY;
+		xform -piv $piv[0] $piv[1] $piv[2];
+		
+		//Move the object by the difference between the center of the world and the bottom of the bounding box
+		xform -ws -a -t 0 (0 - $bboxMinY) 0 $sel[$i];
+		makeIdentity -apply true -t 1 -r 1 -s 1 -n 0 $sel[$i];	
+		
+		//Put the object back to where it was orginally
+		float $return[] = {($t[0]),($t[1] + $bboxMinY),($t[2])};	
+		//xform -ws -t $return[0] $return[1] $return[2] $sel[$i];
+		setAttr ($sel[$i] + ".translate") $return[0] $return[1] $return[2];
+		
+		//Reset the rotation to where it was orginally
+		setAttr ($sel[$i] + ".rotate") $rot[0] $rot[1] $rot[2];
+			
+	}	
+}
+
+//IS TRANSFORM FROZEN OFF CENTER
+//-----------------------------------------
+global proc int isFrozenOffCenter(string $obj)
+{
+	float $center[] = `getAttr ($obj + ".center")`;
+	float $pos[] = `getAttr ($obj + ".translate")`;
+	//float $piv[] = `getAttr ($obj + ".rotatePivotTranslate")`;
+	//xform -cp $obj;
+	if($pos[0] == 0 && $pos[1] == 0 && $pos[2] == 0){
+		if($center[0] != 0 && $center[1] != 0 && $center[2] != 0){
+			return 1;
+		} else {
+			//xform -piv $piv[0] $piv[1] $piv[2] $obj;
+			return 0;
+		}
+	} else {
+		//xform -piv $piv[0] $piv[1] $piv[2] $obj;
+		return 0;
+	}
+}
+
+//FIX ROTATIONS
+//===========================================================================
+global proc straightenRotationsOnSelected(string $sel[], float $precision)
+{
+	for($i=0;$i<`size $sel`;$i++){
+		straightenRotations($sel[$i], $precision);
+	}	
+	}
+	
+	global proc straightenRotations(string $sel, float $precision)
+	{
+	//<DEBUG>	
+	int $debug = `menuItem -q -cb StraightenRotationsDebugMenuItem`;
+	string $dbl = "Straighten Rotations";
+	string $dbm = "add";
+	int $dbc = 1;
+	//<DEBUG>
+	
+	//Which axises we want to straighten
+	int $sx = `checkBox -q -v fixTransformsStraightenStraightenXCheckBox`;
+	int $sy = `checkBox -q -v fixTransformsStraightenStraightenYCheckBox`;
+	int $sz = `checkBox -q -v fixTransformsStraightenStraightenZCheckBox`;
+	
+	//This is the starting rotation
+	//float $r = 180.0;
+	float $r = `floatSliderGrp -q -v fixTransformsStraightenInitRotationFloatSliderGrp`;
+	
+	//Center the pivot and move to world center
+	xform -cp $sel;
+	//move -rpr 0 0 0 $sel;	
+	
+	//Get the current rotation of the object
+	float $curRot[] = `getAttr ($sel + ".rotate")`;
+	int $frozenRot = 0;
+	if($curRot[0] == 0 && $curRot[1] == 0 && $curRot[2] == 0){
+		$frozenRot = 1;
+	}
+	
+	//Bounding box size attributes
+	string $bboxAttr[];
+	if($sx == 1){$bboxAttr[`size $bboxAttr`] = ".boundingBoxSizeX";}
+	if($sy == 1){$bboxAttr[`size $bboxAttr`] = ".boundingBoxSizeY";}
+	if($sz == 1){$bboxAttr[`size $bboxAttr`] = ".boundingBoxSizeZ";}
+	
+	//<DEBUG>
+	if($debug){
+		debugList($dbl,{ (" - Straighttening: " + $sel) }, $dbc, $dbm);	
+		debugList($dbl,{ ("------------------------------") }, $dbc, $dbm);	
+	}
+	//<DEBUG>
+	
+	float $initRot = $r;
+	int $notStraight = 1; //If the straightening was succesfull this iteration or not
+	int $fail = 0; //How many axis straightening attemps fail
+	int $dir = 1; //The direction we are rotating to straighten
+	int $lastDir = 1; //The direction of last iteration of rotation
+	float $pLevel = 1; //Precision level
+	float $sizeComp; //Size comparision
+	float $lastSizeComp = 0; //Size comparision of last iteration
+	int $possiblyStraight = 0; //If the object is possibly straight on specified axis
+	int $firstRot = 0; //0 = this is the first rotation we are doing on this axis 1 = this is not the first rotation
+	int $firstDirChange = 0;
+	
+	string $bboxCube = createRotationFrozenBBoxCube($sel);
+	
+	select -r $sel;
+		
+	for($i=0;$i<`size $bboxAttr`;$i++){
+		string $axis;
+		$firstRot = 0;	
+		$lastDir = 0;
+		if($bboxAttr[$i] == ".boundingBoxSizeX"){ $axis = "X";}
+		if($bboxAttr[$i] == ".boundingBoxSizeY"){ $axis = "Y";}
+		if($bboxAttr[$i] == ".boundingBoxSizeZ"){ $axis = "Z";}
+		//<DEBUG>
+		if($debug){
+			debugList($dbl,{ (" - Axis: " + $axis) }, $dbc, $dbm);
+			debugList($dbl,{ ("------------------------------") }, $dbc, $dbm);
+		}
+		//<DEBUG>
+		
+		float $totalRotation = 0;
+		
+		
+		while($notStraight){
+			//Get the size of the bboxCube before rotating
+			float $bboxBe = `getAttr ($bboxCube + $bboxAttr[$i])`;
+			float $bboxBefore[] = `getAttr ($bboxCube + ".boundingBoxSize")`;
+			float $ro[];
+			
+			//Set which axis we are rotating on
+			if($axis == "X"){ 
+				$ro[0] = $r; $ro[1] = 0; $ro[2] = 0;
+				if($firstRot = 0){
+					if($curRot[0] == 0){ $possiblyStraight = 1;} else { $possiblyStraight = 0;}
+				}
+			}
+			if($axis == "Y"){
+				$ro[0] = 0; $ro[1] = $r; $ro[2] = 0;
+				if($firstRot = 0){
+					if($curRot[1] == 0){ $possiblyStraight = 1;} else { $possiblyStraight = 0;}
+				}
+			}
+			if($axis == "Z"){ 
+				$ro[0] = 0; $ro[1] = 0; $ro[2] = $r;
+				if($firstRot = 0){
+					if($curRot[2] == 0){ $possiblyStraight = 1;} else { $possiblyStraight = 0;}
+				}
+			}
+			
+			//Do the rotation
+			xform -r -ro $ro[0] $ro[1] $ro[2] $sel;
+			
+			//If the object was frozen before we started to straighten it...
+			//We should freeze it again every rotation
+			if($frozenRot == 1){
+				makeIdentity -apply true -t 1 -r 1 -s 0 -n 0;	
+			}
+			
+			//<DEBUG>
+			refreshStep();		
+			//<DEBUG>
+			
+			//Get the size of the bbox cube after rotating
+			float $bboxAf = `getAttr ($bboxCube + $bboxAttr[$i])`;
+			float $bboxAfter[] = `getAttr ($bboxCube + ".boundingBoxSize")`;
+			
+			//Compare size of bbox before rotating and after rotating		
+			if($axis == "X"){ $sizeComp =  $bboxAfter[2] - $bboxBefore[2];}
+			if($axis == "Y"){ $sizeComp =  $bboxAfter[0] - $bboxBefore[0];}
+			if($axis == "Z"){ $sizeComp =  $bboxAfter[0] - $bboxBefore[0];}
+			
+			//It this axis might already be straight and the bbox is getting bigger... then it is probably straight.
+			if($possiblyStraight){
+				if($sizeComp > 0){
+					//<DEBUG>
+					if($debug){
+						debugList($dbl,{ (" - " + $axis + " AXIS ALREADY STRAIGHT - ") }, $dbc, $dbm);				
+						debugList($dbl,{ ("------------------------------") }, $dbc, $dbm);	
+					}
+					//<DEBUG>
+					$notStraight = 0;
+					break;
+				}
+			}
+			//If the bbox is getting bigger
+			if($sizeComp > $lastSizeComp){			
+				$dir = 1;
+				
+				//<DEBUG>
+				if($debug){
+					debugList($dbl,{ (" > BBox Diff: " + $sizeComp + " > LastDiff: " + $lastSizeComp) }, $dbc, $dbm);					
+					debugList($dbl,{ (" - Dir: " + $dir + " | LastDir: " + $lastDir) }, $dbc, $dbm);
+				}
+				//<DEBUG>
+					
+			} else {			
+				$dir = -1;
+				
+				//<DEBUG>
+				if($debug){
+					debugList($dbl,{ (" < BBox Diff: " + $sizeComp + " < LastDiff: " + $lastSizeComp) }, $dbc, $dbm);					
+					debugList($dbl,{ (" - Dir: " + $dir + " | LastDir: " + $lastDir) }, $dbc, $dbm);
+				}
+				//<DEBUG>
+					
+			}
+				
+			//If we've changed directions from growing to shrinking...
+			//then stop rotating one way, change precision levels, and rotate the other way
+			if($dir != $lastDir && $lastDir != 0){
+				//Dont do anything the first time we change directions
+				if($firstDirChange == 0){
+					//<DEBUG>
+					if($debug){				
+						debugList($dbl,{ (" - First Direction Change - ") }, $dbc, $dbm);				
+						debugList($dbl,{ ("------------------------------") }, $dbc, $dbm);	
+					}
+					//<DEBUG>
+					$firstDirChange = 1;
+					continue;
+				}
+				//<DEBUG>
+				if($debug){									
+					debugList($dbl,{ (" - STRAIGHT : Precision: " + $pLevel) }, $dbc, $dbm);				
+					debugList($dbl,{ ("------------------------------") }, $dbc, $dbm);	
+				}
+				//<DEBUG>	
+				
+				//If we havn't reached our requested level of precision
+				if(abs($r) > $precision){	
+					//Reduce the amount of rotation each step by 0.1
+					$r = $r * (0.1 * $dir);	
+					$pLevel = $r * 0.1;
+				} else {
+					$notStraight = 0;
+					break;				
+				}
+			} else {
+				//<DEBUG>
+				if($debug){					
+					debugList($dbl,{ (">------NOT STRAIGHT------<") }, $dbc, $dbm);
+				}
+				//<DEBUG>
+				
+			}
+			
+			//If we've rotated 180 degrees then give up
+			if($totalRotation == 360){
+				$notStraight = 0;			
+				if($fail == 2){
+					//<DEBUG>
+					if($debug){
+						debugList($dbl,{ (" - Cannot Straighten This Object: " + $sel) }, $dbc, $dbm);
+						debugList($dbl,{ (" - Is It a Sphere Or Something? ") }, $dbc, $dbm);
+						debugList($dbl,{ ("------------------------------") }, $dbc, $dbm);
+					}	
+					//<DEBUG>
+					
+					break;
+				} else {
+					//<DEBUG>
+					if($debug){
+						debugList($dbl,{ (" - Cannot Straighten This Object Completely: " + $sel) }, $dbc, $dbm);
+						debugList($dbl,{ (" - It must be Rounded On It's " + $axis + " Axis") }, $dbc, $dbm);
+						debugList($dbl,{ ("------------------------------") }, $dbc, $dbm);
+					}
+					//<DEBUG>
+					
+				}
+				break;	
+				$fail++;
+			}
+			
+			//Store the dir and size comparison for next iteration comparision
+			$lastDir = $dir;
+			$lastSizeComp = $sizeComp;
+			//Keep track of how much we've rotated so we don't rotate more than 180
+			$totalRotation = $totalRotation + $r;
+			//This is not the first rotation any more
+			$firstRot = 1;
+			
+			if(`checkBox -q -v fixTransformsStraightenSingleStraightenRotationCheckBox` == 1){
+				$notStraight = 0;
+				break;			
+			}
+			
+		}
+		
+		$r = $initRot;
+		
+		$pLevel = 1;
+		$lastDir = 1;
+		$lastSizeComp = 0;
+		$notStraight = 1;
+		if(`checkBox -q -v fixTransformsStraightenSingleStraightenRotationCheckBox` == 1){
+			break;			
+		}
+		
+	}
+	
+	delete $bboxCube;
+	
+	//<DEBUG>
+	if($debug){
+		debugList($dbl,{ (" [END STRAIGHTENING] " + $sel) }, $dbc, $dbm);
+		debugList($dbl,{ (">--------------------<") }, $dbc, $dbm);
+	}
+	//<DEBUG>
+
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         CONFORM SCALE
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//CONFORM SCALE OF SELECTED
+//----------------------------
+global proc conformScaleOfSelected( string $sel[] )
+{
+	string $scaleObjects = `optionMenuGrp -q -v conformScaleObjects`;
+	string $conformTo;
+	if ($scaleObjects == "Selected Only"){
+		for ($i=0;$i<`size $sel`;$i++){
+			conformScaleOfObject("-sl -ds");
+		}
+	} else if ($scaleObjects == "All Top Level Transforms To Selected"){
+		$conformTo = $sel[0];
+		$sel = getAllTopLevelTransforms();	
+		float $scaleBy = conformScaleOfObject("-obj " + $conformTo + " -ds");
+		for ($i=1;$i<`size $sel`;$i++){
+			conformScaleOfObjectDoScale($sel[$i],$scaleBy);
+		}
+	}
+
+
+}
+
+//@ CONFORM SCALE OF OBJECT
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-fa string] [-fb linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-fa, -fb
+	
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName("-fa aString -fb anotherString");
+	
+	</code>
+*********************************************************************/
+global proc float conformScaleOfObject( string $flags )
+{/*
+global proc float conformScaleOfObject( string $obj, int $doScale)
+{*/
+	string $obj;
+	int $doScale, $sma;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break;
+				
+			case "-sl" : case "-selected" :
+			string $sel[] = `ls -sl`;
+			$obj = $sel[0];
+			break;
+			
+			case "-ds" : case "-doScale" :
+			$doScale = 1;
+			break;	
+
+			case "-sma" : case "-scaleMeasureAxus" :
+			$sma = 1;
+			break;
+			
+		}
+	}
+
+	
+	string $curUnit = `currentUnit -query -linear`;
+	float $currentUnit = getUnitConstant($curUnit);
+	string $conUnit = `optionMenuGrp -q -v conformScaleUnits`;
+	float $convertUnit = getUnitConstant($conUnit);
+	
+	float $convertFactor;
+	if($currentUnit == $convertUnit){
+		$convertFactor = 1;
+	} else {
+		$convertFactor = $currentUnit / $convertUnit;
+	}
+	
+	float $desiredSize = `floatFieldGrp -q -v1 conformScaleSizeOfObject_floatFieldGrp`; 
+	string $axis = `optionMenuGrp -q -v conformScaleUnitsAxis`;
+	
+	float $size[] = `getAttr ($obj + ".boundingBoxSize")`;
+	float $axisSize;
+	float $scale[] = `getAttr ($obj + ".scale")`;
+	float $scaleSize;
+	if ($axis == "X"){
+		$axisSize = $size[0];	
+		$scaleSize = $scale[0];
+	} else if($axis == "Y"){
+		$axisSize = $size[1];
+		$scaleSize = $scale[1];	
+	} else if($axis == "Z"){
+		$axisSize = $size[2];
+		$scaleSize = $scale[2];	
+	}
+	float $curSizeCurUnit = $axisSize;
+	float $curSizeConverted = $axisSize * $convertFactor;
+	float $scaleBy = $desiredSize / $curSizeConverted;
+	
+	debugML1("Current Size : " + $curSizeCurUnit + " " + $curUnit + " | " + $curSizeConverted + " " + $conUnit + "\n");
+	debugML2("Conversion : " + $desiredSize + " / " + $curSizeConverted + " = " + $scaleBy + "\n");
+	
+	if ($doScale == 1){
+		float $scale[] = `getAttr ($obj + ".scale")`;	
+		xform -s ($scale[0] * $scaleBy) ($scale[1] * $scaleBy) ($scale[2] * $scaleBy) $obj;
+		
+		//Confirm new size
+		debugML1("New Size : ");
+		measureAndConvertSize($obj);
+		
+		if (`checkBox -q -v conformScaleFreezeScale`){
+			makeIdentity -apply true -t 0 -r 0 -s 1 -n 0 $obj;		
+		}
+	}
+	
+	return $scaleBy;
+	
+}
+	
+global proc conformScaleOfObjectDoScale( string $obj, float $scaleBy )
+{
+	float $scale[] = `getAttr ($obj + ".scale")`;	
+	xform -s ($scale[0] * $scaleBy) ($scale[1] * $scaleBy) ($scale[2] * $scaleBy) $obj;
+	
+	//Confirm new size
+	debugML1("New Size : ");
+	measureAndConvertSize($obj);
+	
+	if (`checkBox -q -v conformScaleFreezeScale`){
+		makeIdentity -apply true -t 0 -r 0 -s 1 -n 0 $obj;		
+	}
+
+}
+
+//@ SCALE OBJECT TO FIT OBJECT
+//====================================================================
+/*****************************************************************//**
+	Scales the 2nd selected object to fit into the 1st selected object.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-fa string] [-fb linear] <br>
+	Does not freeze scale transform so object does not loose it's scaling relationship.
+	Uses bounding box size to fit.
+	
+	<b>Return value</b><br>
+	none
+	
+	<b>Flags</b><br>
+	
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	scaleObjectToFitObject(`ls -sl`);
+	
+	</code>
+*********************************************************************/
+global proc scaleObjectToFitObject( string $sel[] )
+{
+	float $bbs1[] = `getAttr ($sel[0] + ".boundingBoxSize")`; 
+	float $bbs2[] = `getAttr ($sel[1] + ".boundingBoxSize")`;
+	float $sb[] = { ($bbs2[0] / $bbs1[0]), ($bbs2[1] / $bbs1[1]), ($bbs2[2] / $bbs1[2]) };
+
+	float $scale[] = `getAttr ($sel[1] + ".scale")`;
+	float $newScale[] = { ($scale[0] / $sb[0]), ($scale[1] / $sb[1]), ($scale[2] / $sb[2]) };
+
+	xform -s $newScale[0] $newScale[1] $newScale[2] $sel[1];
+
+}
+
+
+//MEASURE AND CONVERT SIZE
+//----------------------------------
+global proc string measureAndConvertSize(string $obj)
+{
+	string $curUnit = `currentUnit -query -linear`;
+	float $currentUnit = getUnitConstant($curUnit);
+	string $conUnit = `optionMenuGrp -q -v conformScaleUnits`;
+	float $convertUnit = getUnitConstant($conUnit);
+	float $convertFactor;
+	if ($currentUnit == $convertUnit){
+		$convertFactor = 1;
+	} else {
+		$convertFactor = $currentUnit / $convertUnit;
+	} 
+	string $axis = `optionMenuGrp -q -v conformScaleUnitsAxis`;
+	float $size[] = `getAttr ($obj + ".boundingBoxSize")`;
+	float $axisSize;
+	if ($axis == "X"){
+		$axisSize = $size[0];
+	} else if($axis == "Y"){
+		$axisSize = $size[1];	
+	} else if($axis == "Z"){
+		$axisSize = $size[2];
+	}
+	float $curSizeCurUnit = $axisSize;
+	float $curSizeConverted = $axisSize * $convertFactor;
+	debugML1($obj + " : Size : " + $curSizeCurUnit + " " + $curUnit + " | " + $curSizeConverted + " " + $conUnit + "\n");
+	string $measurement = $curSizeCurUnit + " " + $curUnit + " | " + $curSizeConverted + " " + $conUnit + "\n";
+	return $measurement;
+}
+
+//MEASURE OBJECT
+//----------------------------
+global proc measureSelectedObject(string $sel[])
+{
+	string $obj = $sel[0];
+	string $measurement = measureAndConvertSize($obj);
+	string $output = $obj + "\n" + $measurement;
+	text -edit -l $output conformScaleObjectMeasurements;
+
+}
+
+//GET UNIT CONSTANT
+//----------------------------
+global proc float getUnitConstant(string $unit)
+{
+	float $u;
+	/*
+	switch($unit){
+		case "millimiter" :
+		case "mm" :
+		$u = 0.0001; break;
+		case "centimeter" :
+		case "cm" :
+		$u = 0.01; break;
+		case "meter" :
+		case "m" :
+		$u = 1; break;
+		case "kilometer" :
+		case "km" :
+		$u = 1000; break;
+		case "inch" : 
+		case "in" : 
+		$u = 0.0254; break;
+		case "foot" :
+		case "ft" :
+		$u = 0.3048; break;
+		case "yard" :
+		case "yd" :
+		$u = 0.9144; break;
+		case "mile" : 
+		case "ml" : 
+		$u = 1609.34; break;	
+	}
+	*/
+	switch($unit){
+		case "millimiter" :
+		case "mm" :
+		$u = 0.001; break;
+		case "centimeter" :
+		case "cm" :
+		$u = 0.01; break;
+		case "meter" :
+		case "m" :
+		$u = 1; break;
+		case "kilometer" :
+		case "km" :
+		$u = 1000; break;
+		case "inch" : 
+		case "in" : 
+		$u = 0.0254; break;
+		case "foot" :
+		case "ft" :
+		$u = 0.3048; break;
+		case "yard" :
+		case "yd" :
+		$u = 0.9144; break;
+		case "mile" : 
+		case "ml" : 
+		$u = 1609.34; break;	
+	}
+	
+	return $u;
+}
+
+//GET UNIT LONG NAME
+//----------------------------
+global proc string getCurrentUnitLongName()
+{
+	string $unit = `currentUnit -query -linear`;
+	string $longUnit;
+	switch($unit){
+		case "mm" :
+		$longUnit = "milimeter"; break;
+		case "cm" :
+		$longUnit = "centimeter"; break;
+		case "m" :
+		$longUnit = "meter"; break;
+		case "km" :
+		$longUnit = "kilometer"; break;
+		case "in" : 
+		$longUnit = "inch"; break;
+		case "ft" :
+		$longUnit = "foot"; break;
+		case "yd" :
+		$longUnit = "yard"; break; 
+		case "ml" : 
+		$longUnit = "mile"; break;	
+	}
+	return $longUnit;
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         BBOX CUBE
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//CREATE BBOX CUBE
+//-------------------------------
+/*======================| SUMMARY |===================================
+    Makes a cube that is the same size and position as object
+/*=======================| USAGE |====================================	
+    
+string $sel[] = `ls -sl`;
+createBBoxCube($sel[0]);
+====================================================================*/
+
+// REPLACE THIS FUNCTION WITH BOUNDING BOX WIZ FUNCTION
+/*
+global proc string createBBoxCube( string $sel )
+{
+    string $name = $sel + "BBoxCube";
+	float $size[] = `getAttr ($sel + ".boundingBoxSize")`;
+	float $t[] = `getAttr ($sel + ".translate")`;
+	float $ro[] = `getAttr ($sel + ".rotate")`;
+	float $center[] = `getAttr ($sel + ".center")`;
+	
+    float $piv[] = `xform -q -ws -piv $sel`;
+    
+	//Create the cube
+	string $pcube[] = `polyCube -ch true -w $size[0] -h $size[1] -d $size[2]`;
+	string $bbox = `rename $pcube[0] $name`;
+    
+    //Move the pivot of the bbox to the same place as object's os pivot
+    //xform -piv $piv[0] $piv[1] $piv[2] $bbox;
+    
+    
+    
+	//Make the cube look like wireframe
+	setAttr ($bbox + ".overrideEnabled") 1;
+	setAttr ($bbox + ".overrideShading") 0;
+	setAttr ($bbox + ".overrideTexturing") 0;
+	setAttr ($bbox + ".overrideColor") 17;
+	
+    //Move it to the objects location
+    transferTransforms($sel, $bbox);
+    
+    move -r $piv[0] $piv[1] $piv[2] ($bbox + ".scalePivot") ($bbox + ".rotatePivot");
+    
+    //make the bbox un-renderable
+    select -r $bbox;
+    makeSelectedUnrenderable();
+    
+    //select -r $sel;
+    
+	return $bbox;
+
+}
+*/
+//CREATE ROTATION FROZEN BBOX CUBE
+//--------------------------------------
+global proc string createRotationFrozenBBoxCube(string $sel)
+{
+	string $bbox = createBBoxCube($sel);
+	
+	string $shape[] = `listRelatives -s $bbox`;
+	string $pcubes[] = `listConnections -t polyCube $shape[0]`;
+	string $pcubeNode = $pcubes[0];
+	
+	connectAttr ($sel + ".boundingBoxSizeX") ($pcubeNode + ".width");
+	connectAttr ($sel + ".boundingBoxSizeY") ($pcubeNode + ".height");
+	connectAttr ($sel + ".boundingBoxSizeZ") ($pcubeNode + ".depth");
+	
+	connectAttr ($sel + ".translate") ($bbox + ".translate");
+	/*
+	global int $WIZ_debugHud;
+	if ($WIZ_debugHud){
+		string $debugHudCommand = (
+		"getDebugWizAttr("
+		+ "\"" + $pcubeNode + ".width\","
+		+ "\"" + $pcubeNode + ".height\","
+		+ "\"" + $pcubeNode + ".depth\");"
+		);
+	
+		string $ac = $sel + ".rotate";
+		debugHud("BBox Cube", $debugHudCommand, $ac);
+	}
+	*/
+	return $bbox;
+
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         DISTANCE FUNCTIONS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+global proc float absDiff( float $a, float $b)
+{
+	float $dis = sqrt(($a - $b) * ($a - $b));
+	return $dis;
+}
+
+global proc float[] absDiffPos( float $a[], float $b[] )
+{
+	float $diff[];
+	$diff[0] = absDiff($a[0], $b[0]);
+	$diff[1] = absDiff($a[1], $b[1]);
+	$diff[2] = absDiff($a[2], $b[2]);
+	return $diff;
+	
+}
+//DISTANCE BETWEEN 3D POINTS
+//============================================
+global proc float getDistanceBetween( float $a[], float $b[])
+{
+	float $dis = sqrt( (($a[0] - $b[0]) * ($a[0] - $b[0])) + (($a[1] - $b[1]) * ($a[1] - $b[1]))+(($a[2] - $b[2]) * ($a[2] - $b[2])));
+	return $dis;
+}
+
+//@ GET MIDPOINT BETWEEN POINTS
+//====================================================================
+/*======================| SUMMARY |===================================
+
+/*=======================| USAGE |====================================	
+    getMidpointBetweenPoints({ 10, 20, 30 }, { -15, -35, -60 });
+====================================================================*/
+global proc float[] getMidpointBetweenPoints( float $a[], float $b[] )
+{
+    float $mp[] = { ($b[0] - (($b[0] - $a[0]) / 2)), ($b[1] - (($b[1] - $a[1]) / 2)), ($b[2] - (($b[2] - $a[2]) / 2))};
+    
+    return $mp;
+}
+
+//DIRECTION
+//===============================================================================
+//GET DIRECTION FROM TWO POINTS
+//---------------------------------------------------
+/*****************************************************************//**
+*	Pass two points in space and this will give you a direction
+*	More information.
+*	USAGE : 
+*
+*********************************************************************/
+global proc float[] getDirectionFromTwoPoints( float $a[], float $b[])
+{	
+	float $dir[] = {($b[0] - $a[0]),($b[1] - $a[1]),($b[2] - $a[2])};
+	return $dir;	
+}
+
+//@ GET ROTATION FROM DIRECTION
+//====================================================================
+/*****************************************************************//**
+*	Given a direction { 0.0, 1.0, 0.1 } this will return a rotation.
+*	float $rot[] = getRotationFromDirection({ 0, 1, 0 });
+*	it's important to note that the orientation of the rotation will be
+*	relative to the aimVector 0 0 -1 and upVector 0 1 0
+*
+*********************************************************************/
+global proc float[] getRotationFromDirection( float $dir[] )
+{
+	string $sl1[] = `spaceLocator -p 0 0 0`;
+
+	string $sl2[] = `spaceLocator -p 0 0 0`;
+
+	//setAttr ($sl2[0] + ".translateZ") 1;
+	
+	select -r $sl2[0];
+	select -add $sl1[0];
+	//doCreateAimConstraintArgList 1 { "0","0","0","0","0","0","1","0","1","0","0","1","0","1","scene","","0","0","0","","1" };
+	aimConstraint -offset 0 0 0 -weight 1 -aimVector 0 1 0 -upVector 0 1 0 -worldUpType "scene" $sl2[0] $sl1[0];
+
+	select -r $sl2[0];
+	move -r -os -wd $dir[0] $dir[1] $dir[2] $sl2[0];
+	
+	float $rot[] = `xform -q -ws -ro $sl1[0]`;
+	//delete $sl1[0];
+	//delete $sl2[0];
+	
+	return $rot;
+
+}
+
+//@ GET ANGLE FROM THREE POINTS
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-fa string] [-fb linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-fa, -fb
+	
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $sel[] = `ls -fl -sl`;
+	float $t1[] = `xform -q -ws -t $sel[0]`;
+	float $t2[] = `xform -q -ws -t $sel[1]`;
+	float $t3[] = `xform -q -ws -t $sel[2]`;
+	float $angle = getAngleFromThreePoints($t1, $t2, $t3);
+	
+	
+	</code>
+*********************************************************************/
+global proc float getAngleFromThreePoints( float $p1[] , float $p2[], float $p3[] )
+{
+	float $dir1[] = getDirectionFromTwoPoints($p1, $p2);
+	float $dir2[] = getDirectionFromTwoPoints($p2, $p3);
+	vector $v1 = <<$dir1[0],$dir1[1],$dir1[2]>>;
+	vector $v2 = <<$dir2[0],$dir2[1],$dir2[2]>>;
+
+	float $angle = rad_to_deg(`angle $v1 $v2`);
+	return $angle;
+
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         REPLACE
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//REPLACE INSTANCES WITH DUPLICATES
+//--------------------------------------------
+global proc string[] replaceInstancesWithDuplicates(string $sel[])
+{
+	printProc("replaceInstancesWithDuplicates");		
+	
+	string $inst[] = getAllInstancesFromSelection($sel);
+	if(`size $inst` == 0){
+		print("WIZ| replaceInstancesWithDuplicates : No Instances Found\n");
+		return {};
+	}
+	string $duplicate[];
+	string $remove[];
+	
+	for($i=0;$i<`size $inst`;$i++){
+		if(`objExists $sel[$i]` == false){ continue;}
+		
+		string $o[] = getOriginalOfInstance({$sel[$i]});
+		string $original = $o[0];
+		string $parent = firstParentOf($inst[$i]);
+				
+		string $dup[] = `duplicate -rc -n $original $original`;
+		$duplicate[`size $duplicate`] = $dup[0];
+		
+		transferTransforms($inst[$i],$dup[0]);
+		
+		//Parent the duplicate to the instances parent
+		if($parent != ""){
+			parent $dup[0] $parent;
+		}
+		
+		//Put the object in our remove list
+		$remove[`size $remove`] = $inst[$i];
+		
+		
+	}
+	//Remove the matched items from our list of objects
+	$sel = stringArrayRemove($remove,$sel);
+	
+	appendStringArray($sel, $duplicate, `size $duplicate`);
+	
+	//Delete all the matched items
+	deleteSelectedObjects($remove);
+	
+	return $sel;
+
+}
+
+//REPLACE SELECTED WITH INSTANCES
+//==============================================================================
+global proc string[] replaceSelectedWithInstances(string $sel[])
+{
+	string $instances[];
+	for($i=1;$i<`size $sel`;$i++){
+		$instances[`size $instances`] = replaceObjectWithInstance($sel[0], $sel[$i]);	
+	}
+	return $instances;				
+}
+
+global proc string[] replaceAllDuplicatesWithInstances()
+{
+	string $sel[] = `listTransforms -g`;
+	/*
+	for ($i=1;$i<`size $sel`;$i++)
+	{
+	
+	}
+	*/
+	//string $replacedGroups[] = replaceGroupsWithMatchingGeometryWithInstances($sel);
+	
+	$sel = removeObjectsThatDontExist($sel);
+	$sel = getGeometryTransforms($sel);
+	
+	$sel = replaceMatchingGeometryWithInstancesMaintainGroups($sel);
+	
+	
+	return $sel;
+
+
+	
+}
+//REPLACE OBJECT WITH INSTANCE
+//----------------------------------------------------
+global proc string replaceObjectWithInstance(string $obj, string $replace)
+{
+	//Instance the object
+	string $inst[] = `instance $obj`;
+	string $parentA = firstParentOf($obj);
+	string $parentB = firstParentOf($replace);
+	
+	//Transfer the transforms from the object we are replacing to the instance
+	transferTransforms($replace,$inst[0]);
+	
+	//Parent the instance to the parent of the object that we are replacing
+	if($parentA != "" || $parentB != ""){
+		if($parentA != $parentB){
+			parent $inst[0] $parentB;
+		}
+	}
+	delete $replace;
+	return $inst[0];	
+}
+
+//REPLACE SELECTED WITH DUPLICATES
+//==============================================================================
+global proc string[] replaceSelectedWithDuplicates(string $sel[])
+{
+	string $duplicates[];
+	for($i=1;$i<`size $sel`;$i++){
+		$duplicates[`size $duplicates`] = replaceObjectWithDuplicate($sel[0], $sel[$i]);	
+	}
+	return $duplicates;				
+}
+
+//REPLACE OBJECT WITH DUPLICATE
+//----------------------------------------------------
+global proc string replaceObjectWithDuplicate(string $obj, string $replace)
+{
+	//Duplicate the object
+	string $dup[] = `duplicate $obj`;
+	string $parentA = firstParentOf($obj);
+	string $parentB = firstParentOf($replace);
+	
+	//Transfer the transforms from the object we are replacing to the duplicate
+	transferTransforms($replace,$dup[0]);
+	
+	//Parent the duplicate to the parent of the object that we are replacing
+	if($parentA != "" || $parentB != ""){
+		if($parentA != $parentB){
+			parent $dup[0] $parentB;
+		}
+	}
+	delete $replace;
+	return $dup[0];	
+}
+
+//GET DISTANCE BETWEEN POINTS
+//========================================================================
+global proc float getDistanceBetweenPoints(float $pos1[], float $pos2[])
+{
+	float $dis = sqrt((($pos1[0] - $pos2[0]) * ($pos1[0] - $pos2[0])) + (($pos1[1] - $pos2[1]) * ($pos1[1] - $pos2[1]))+(($pos1[2] - $pos2[2]) * ($pos1[2] - $pos2[2])));
+	return $dis;	
+}
+
+//GET DISTANCE BETWEEN OBJECTS
+//========================================================================
+global proc float getDistanceBetweenObjects(string $obj1, string $obj2)
+{
+	float $t1[] = `xform -q -ws -a -t $obj1`;
+	float $t2[] = `xform -q -ws -a -t $obj2`;	
+	float $dis = getDistanceBetweenPoints($t1, $t2);
+	return $dis;
+}
+
+//CONVERT AXIS DIRECTION
+//===============================================================================
+global proc float[] convertAxisDirection( string $axis, int $dir, string $method)
+{
+	int $i;
+	switch($axis){
+		case "X" : case "x" :
+		$i = 0;
+		break;	
+		case "Y" : case "y" :
+		$i = 1;
+		break;
+		case "Z" : case "z" :
+		$i = 2;
+		break;
+	}
+	
+	float $return[];
+	float $pxyz[];
+	float $vxyz[];
+	float $min = 0;
+	float $max = 99999999;
+	switch($method){
+		case "polySelectConstraintAxis" : case "polySelectConstraint" :
+		float $max = 100;
+		$pxyz = { 0 , 0 , 0 };
+		$vxyz = { 0 , 0 , 0 };
+		$pxyz[$i] = ($max * $dir);
+		$vxyz[$i] = $max;
+		$return = { $max, $pxyz[0] , $pxyz[1], $pxyz[2], $vxyz[0] , $vxyz[1], $vxyz[2] };
+		return $return;
+		
+	}
+}
+/*
+global proc string convertDirection(float $dir[], string $method)
+{
+	int $i;
+	switch($axis){
+		case "X" : case "x" :
+		$i = 0;
+		break;	
+		case "Y" : case "y" :
+		$i = 1;
+		break;
+		case "Z" : case "z" :
+		$i = 2;
+		break;
+	}
+	float $return[];
+	float $pxyz[];
+	float $vxyz[];
+	float $min = 0;
+	float $max = 99999999;
+	switch($method){
+		case "directionToFloatIndex" : 
+		
+	}	
+}
+*/
+
+//TRANSFORM BOOKMARKS
+//========================================================================================
+//CREATE TRANSFORM BOOKMARK LOCATOR FROM SELECTED
+//---------------------------------------------------------
+global proc createTransformBookmarkLocatorFromSelected(string $sel[])
+{
+	for($i=0;$i<`size $sel`;$i++){
+		createTransformBookmarkLocator($sel[$i]);
+	}
+}
+
+//CREATE TRANSFORM BOOKMARK LOCATOR
+//---------------------------------------------------------
+global proc createTransformBookmarkLocator(string $obj)
+{
+	string $transformBookmarks = "TransformBookmarks";
+	if(`objExists $transformBookmarks` == 0){
+		group -em -n $transformBookmarks;		
+	}
+	
+	float $t[] = `xform -q -a -ws -t $obj`;
+	float $ro[] = `xform -q -a -ws -ro $obj`;
+	float $s[] = `xform -q -a -ws -s $obj`;
+	
+	string $name = $obj + "NewTransformBookmark";
+	string $sl[] = `spaceLocator -n $name`;
+	
+	xform -a -ws -t $t[0] $t[1] $t[2] $sl[0];
+	xform -a -ws -ro $ro[0] $ro[1] $ro[2] $sl[0];
+	xform -a -ws -s $s[0] $s[1] $s[2] $sl[0];
+	
+	parent $sl[0] $transformBookmarks;
+	rename $sl[0] ($obj + "TransformBookmark");
+	select -r $obj;
+}
+
+//OPTIONS
+//==============================================================================
+//OPEN TRANSFORM WIZ OPTIONS
+//-------------------------------
+global proc openTransformWizOptions()
+{
+	openCurrentOptions("straightenRotationsOptionsMenu");	
+}
+
+//FREEZE
+//=============================================================================
+global proc freezeScaleOfHeirarchy(string $sel[])
+{
+	select -r -hi $sel;
+	string $hi[] = `ls -sl`;
+	$hi = stringArrayRemove($sel, $hi);
+	makeIdentity -apply true -t 0 -r 0 -s 1 -n 1 -pn 1 $hi;
+	string $shapes[] = `listRelatives -type mesh -type nurbsSurface $hi`;
+	setAttrOnAllObjects($shapes, "opposite", 0);
+	
+}
+
+//GET OBJECT FACING ROTATION
+//=============================================================================
+global proc float[] getObjectFacingRotation(string $obj, float $forward[], float $up[])
+{
+	//This is crap
+	
+	string $dbl = "-dmi GetObjectFacingRotationDebugMenuItem -t Object Facing Rotation"; string $dbm = "add"; int $dbc = 1;
+	
+	debugListString($dbl, (" - Object: " + $obj), $dbc, $dbm);
+	debugListString($dbl, (" - Forward: " + $forward[0] + " " + $forward[1] + " " + $forward[2]), $dbc, $dbm);
+	debugListString($dbl, (" - Up: " + $up[0] + " " + $up[1] + " " + $up[2]), $dbc, $dbm);
+	debugList($dbl, {(tslDiv(""))}, $dbc, $dbm);
+	
+	//Valid upDir: world, scene, object, objectrotation, none
+	float $t[] = `xform -q -ws -t $obj`;
+	float $p[] = { ($t[0] - $forward[0] - $up[0]),($t[1] - $forward[1] - $up[1]),($t[2] - $forward[2] - $up[2]) };
+	string $sl[] = `spaceLocator -n ($obj + "FacingRotationLocator") -p $p[0] $p[1] $p[2]`;
+	xform -cp $sl[0];
+	select -cl;
+	select -r $obj;
+	select -add $sl;
+	aimConstraint -offset 0 0 0 -weight 1 -aimVector $forward[0] $forward[1] $forward[2] -upVector $up[0] $up[1] $up[2] -worldUpType "scene" ;
+	
+	float $ro[] = `xform -q -ws -ro $sl`;
+	debugListString($dbl, (" - Facing Rotation: " + $ro[0] + " " + $ro[1] + " " + $ro[2]), $dbc, $dbm);
+	
+	delete $sl;
+	return $ro;	
+}
+
+//REPLACE OBJECT WITH OBJECT
+//============================================================================
+global proc string replaceObjectWithObject(string $remove, string $keep)
+{
+	
+	assignSelectedAShaderToAllSelected(`ls -sl`);
+
+	string $parent = firstParentOf($remove);
+	
+	//nodeCast -cda on -sn on -sv on -f on $remove $keep;
+	
+	transferTransforms($remove, $keep);
+	
+	if(`objExists $parent` == true){		
+		parent $keep $parent;
+	}
+	
+	string $rename = $remove;
+	
+	delete $remove;
+	
+	rename $keep $rename;
+	$keep = $rename;
+	
+	return $keep;
+		
+}
+
+
+
+//CREATE LOCATOR FOR EACH POSITION IN ARRAY
+//=============================================================================
+
+global proc string[] createLocatorForEachPositionInArray(float $pos[])
+{
+	string $locators[];
+	for($i=0;$i<`size $pos`;$i = $i + 3){
+		//string $loc[] = `spaceLocator -p $pos[$i] $pos[($i + 1)] $pos[($i + 2)]`;
+		string $loc[] = `spaceLocator -p 0 0 0`;
+		xform -ws -t $pos[$i] $pos[($i + 1)] $pos[($i + 2)] $loc[0];
+		$locators[`size $locators`] = $loc[0];
+		
+	}
+	return $locators;
+}
+
+//MOVE SELECTED INTO VIEW
+//=============================================================================
+global proc moveSelectedIntoView( string $sel[] )
+{
+
+	string $cc = getCurrentCamera();
+	if(`size $cc` == 0){
+		print("Camera Not Found. Try Again");
+		return;
+	}
+	//string $currentCam = getCurrentCameraTransform();
+	float $camPos[] = `xform -q -ws -t $cc`;
+	float $camRot[] = `xform -q -ws -ro $cc`;
+	
+	//print $camPos;
+	
+	for($i=0;$i<`size $sel`;$i++){
+		float $curRot[] = `xform -q -ws -ro $sel[$i]`;
+		xform -ws -t $camPos[0] $camPos[1] $camPos[2] $sel[$i];
+		xform -ws -ro $camRot[0] $camRot[1] $camRot[2] $sel[$i];
+		
+		float $sizeZ = `getAttr ($sel[$i] + ".boundingBoxSizeZ")`;
+		$sizeZ = 0 - ($sizeZ * 2);
+		move -r -os 0 0 $sizeZ $sel[$i];
+		xform -ws -ro $curRot[0] $curRot[1] $curRot[2] $sel[$i];
+	}
+	
+}
+
+//GET CURRENT CAMERA TRANSFORM
+//=============================================================================
+global proc string getCurrentCameraTransform()
+{
+	string $camShape = getCurrentCamera();
+	select -r $camShape;
+	string $cam[] = `listTransforms "-sl"`;
+	return $cam[0];
+}
+
+//WIZ TRANSFORM COMPARE
+//=============================================================================
+global proc int wizTransformCompare(string $sel1, string $sel2)
+{
+	float $t1[] = `xform -q -ws -t $sel1`;
+	float $t2[] = `xform -q -ws -t $sel2`;
+	float $r1[] = `xform -q -ws -ro $sel1`;
+	float $r2[] = `xform -q -ws -ro $sel2`;
+	float $s1[] = `xform -q -ws -s $sel1`;
+	float $s2[] = `xform -q -ws -s $sel2`;
+	if (`checkBox -q -v sortByMatchingTransformsCompareTranslateCheckBox`){
+		if(wizFloatArrayCompare($t1,$t2) == 1){
+			return 1;	
+		}
+	}
+	if (`checkBox -q -v sortByMatchingTransformsCompareRotationCheckBox`){
+		if (wizFloatArrayCompare($r1,$r2) == 1){
+			return 1;	
+		}
+	}
+	if (`checkBox -q -v sortByMatchingTransformsCompareScaleCheckBox`){
+		if (wizFloatArrayCompare($s1,$s2) == 1){
+			return 1;	
+		}
+	}
+	return 0;
+	
+}
+
+//WIZ FLOAT ARRAY COMPARE
+//=============================================================================
+global proc int wizFloatArrayCompare(float $v1[], float $v2[])
+{
+	if (`size $v1` != `size $v2`){
+		print("WIZ| wizFloatArrayCompare : Trying to compare arrays that are differenct sizes. Skipping.\n");
+		return 1;
+	}
+	for ($i=0;$i<`size $v1`;$i++){
+		if($v1[$i] != $v2[$i]){
+			return 1;	
+		}
+	}
+	return 0;
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                               LOD
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//SET ALL LOD THRESHOLD
+//=============================================================================
+global proc setAllLODThreshold( int $lodLevel, float $val )
+{
+	string $lod[] = `ls -typ lodGroup`;
+	for($i=0;$i<`size $lod`;$i++){
+		
+		catchQuiet(`setAttr ($lod[$i] + ".threshold[" + $lodLevel + "]") $val`);
+		
+	}
+}
+
+//SET ALL LOD LEVEL COUNT
+//=============================================================================
+global proc setAllLODLevelCount( int $levelCount)
+{
+	string $lod[] = `ls -type lodGroup`;
+	print("SetAllLODLevelCount\n");
+	
+	for ($i=0;$i<`size $lod`;$i++){
+		int $ti[] = `getAttr -mi ($lod[$i] + ".threshold")`;
+		print("WIZ| " + $lod[$i] + " Has : " + (`size $ti`) + " : LOD Threshold Indices\n");
+		
+		if (`size $ti` > $levelCount){
+			for ($p=($levelCount); $p < (`size $ti`); $p++){
+				removeMultiInstance -break true ($lod[$i] + ".threshold[" + $p + "]");
+			}
+		} else {
+			for ($p=`size $ti`; $p < ($levelCount); $p++){
+				setAttr ($lod[$i] + ".threshold[" + $p + "]") 0;
+			}
+			
+		}
+		
+		int $dli[] = `getAttr -mi ($lod[$i] + ".displayLevel")`;
+		print("WIZ| " + $lod[$i] + " Has : " + (`size $dli`) + " : LOD Display Level Indices\n");
+		
+		if (`size $dli` > $levelCount){
+			for ($p=($levelCount); $p < (`size $dli`); $p++){
+				removeMultiInstance -break true ($lod[$i] + ".displayLevel[" + $p + "]");
+			}
+		} else {
+			for ($p=`size $dli`; $p < ($levelCount); $p++){
+				setAttr ($lod[$i] + ".displayLevel[" + $p + "]") 0;
+			}
+			
+		}
+		
+	}
+
+}
+
+//DELETE ALL EXTRA LOD INDICES
+//=============================================================
+global proc deleteAllExtraLODIndices()
+{
+	string $lod[] = `ls -type lodGroup`;
+	print("WIZ| deleteAllExtraLODIndices\n");
+	for ($i=0;$i<`size $lod`;$i++){
+		string $children[] = getTransformsBelow({$lod[$i]});
+		
+		int $ti[] = `getAttr -mi ($lod[$i] + ".threshold")`;
+		print("WIZ| " + $lod[$i] + " Has : " + `size $ti` + " : LOD Threshold Indices And : " + `size $children` + " : Transforms In LOD Group\n");
+		
+		if (`size $ti` > `size $children`){
+			print("WIZ| Deleting " + (`size $ti` - `size $children`) + " Extra Threshold Indices\n");
+			for ($p=(`size $children`); $p < (`size $ti`); $p++){
+				print("WIZ| 	removeMultiInstance -break true " + $lod[$i] + ".threshold[" + $p + "];\n");
+				removeMultiInstance -break true ($lod[$i] + ".threshold[" + $p + "]");				
+			}
+		} 
+		
+		int $dli[] = `getAttr -mi ($lod[$i] + ".displayLevel")`;
+		print("WIZ| " + $lod[$i] + " Has : " + `size $dli` + " : LOD Display Level Indices And : " + `size $children` + " : Transforms In LOD Group\n");
+		
+		if (`size $dli` > `size $children`){
+			print("WIZ| Deleting " + (`size $dli` - `size $children`) + " Extra DisplayLevel Indices\n");
+			for ($p=(`size $children`); $p < (`size $dli`); $p++){
+				print("WIZ| 	removeMultiInstance -break true " + $lod[$i] + ".displayLevel[" + $p + "];\n");
+				removeMultiInstance -break true ($lod[$i] + ".displayLevel[" + $p + "]");
+				
+			}
+		} 
+	}
+	
+}
+
+//CREATE DELETE ALL EXTRA LOD INDICES SCRIPT NODE
+//=============================================================
+global proc createDeleteAllExtraLODIndicesScriptNode()
+{
+	print("WIZ| Adding : DeleteAllExtraLODIndicesScriptNode To Scene : \n"
+	+"	This script node will automatically delete any extra threshold and display level indices \n"
+	+"	created when LOD group nodes contain referenced objects.\n");
+	
+	string $scriptNodeName = "DeleteAllExtraLODIndicesScriptNode";
+	
+	string $bs = (
+	"evalDeferred(\"deleteAllExtraLODIndices();\");"+"\n"
+	+"global proc deleteAllExtraLODIndices()" + "\n"
+	+"{"+"\n"
+	+"string $lod[] = `ls -type lodGroup`;"+"\n"
+	+"for ($i=0;$i<`size $lod`;$i++){"+"\n"
+	+"	string $children[] = getTransformsBelow({$lod[$i]});"+"\n"
+	+"	int $ti[] = `getAttr -mi ($lod[$i] + \".threshold\")`;"+"\n"
+	+"	print(\"WIZ| \" + $lod[$i] + \" Has : \" + `size $ti` + \" : LOD Threshold Indices And : \" + `size $children` + \" : Transforms In LOD Group\\n\");"+"\n"
+	+"	if (`size $ti` > `size $children`){"+"\n"
+	+"		print(\"WIZ| Deleting \" + (`size $ti` - `size $children`) + \" Extra Threshold Indices\\n\");"+"\n"
+	+"		for ($p=(`size $children`); $p < (`size $ti`); $p++){"+"\n"	
+	+"			removeMultiInstance -break true ($lod[$i] + \".threshold[\" + $p + \"]\");"+"\n"				
+	+"		}"+"\n"
+	+"	}"+"\n"		
+	+"	int $dli[] = `getAttr -mi ($lod[$i] + \".displayLevel\")`;"+"\n"
+	+"	print(\"WIZ| \" + $lod[$i] + \" Has : \" + `size $dli` + \" : LOD Display Level Indices And : \" + `size $children` + \" : Transforms In LOD Group\\n\");"+"\n"
+	+"	if (`size $dli` > `size $children`){"+"\n"
+	+"		print(\"WIZ| Deleting \" + (`size $dli` - `size $children`) + \" Extra DisplayLevel Indices\\n\");"+"\n"
+	+"		for ($p=(`size $children`); $p < (`size $dli`); $p++){"+"\n"
+	+"			removeMultiInstance -break true ($lod[$i] + \".displayLevel[\" + $p + \"]\");"+"\n"
+	+"		}"+"\n"
+	+"	}"+"\n"
+	+"}"+"\n"
+	+"}"+"\n"
+	);
+	
+	catchQuiet(`delete $scriptNodeName`);
+	
+	scriptNode -st 1 -bs $bs -n $scriptNodeName;
+	
+}
+
+// CREATE BOUNDING BOX PROXY LOD GROUP FOR SELECTED
+//=======================================================
+/*======================| SUMMARY |===================================
+	- Using this you can create lod groups for transforms that may be referenced or are
+	parented to other objects.
+	- This proc creates a bounding box cube for the selected transforms.
+	- The lod grounds will be created in the order of the selection.
+	- Only one lod group will be made per call to the function.
+	- Then it makes an lod group for the objects.
+	- The bounding box cubes visibility is connected to the corresponding transforms
+	so when the bounding boxes get switched the objects visibility get switched
+	- The bouding box lod group is then parent constrained and scaled constrained to 
+	orginal object.	
+
+====================================================================*/
+
+global proc string createBoundingBoxProxyLODGroupForSelected( string $sel[] )
+{
+
+	wizlog ("[!] createBoundingBoxProxyLODGroupForSelected WAS DISABLED BECAUSE OF performSetupLod problem[!]");
+	/*
+	string $namePrefix = `textFieldGrp -q -tx createBoundingBoxProxyLODGroupNameTextFieldGrp`;
+	string $bbox[];
+	select -cl;
+	for ($i=0;$i<`size $sel`;$i++){
+		string $newBBox = createBBoxCube($sel[$i]);
+		$bbox[`size $bbox`] = $newBBox;
+		connectAttr ($newBBox + ".lodVisibility") ($sel[$i] + ".lodVisibility");
+		//parent -w $newBBox;
+		//select -add $newBBox;
+		
+	}
+	select -cl;
+	select -r $bbox;	
+		
+	//LevelOfDetailGroup;
+	string $lodGroup[] = `performSetupLod`;	
+	//string $newLODGroup = renameWizRenameWithNiceName($lodGroup[0]);
+	string $newLODGroupName;
+	if ($namePrefix == ""){
+		$newLODGroupName = makeNiceName(($sel[0] + "LODGroup1"));	
+	} else {
+		$newLODGroupName = $namePrefix + "LODGroup1";
+	}
+	string $newLODGroup = `rename $lodGroup[0] $newLODGroupName`;
+	print ("New LOD Group : " + $newLODGroup + wizDiv("s") + " - " + stringArrayToString($bbox, "\n - ") + "\n");
+	select -add $sel[0];
+	select -r $newLODGroup;
+	parentConstraint -mo -weight 1 $sel[0] $newLODGroup;
+	scaleConstraint -mo -weight 1 $sel[0] $newLODGroup;
+    
+    if (`checkBox -q -v createBoundingBoxProxyLODGroupHideLODGroupsCheckBox`){
+        hide $newLODGroup;
+        print ("LOD Groups Are Hidden In Viewport!\n");
+    }
+    
+    if (`checkBox -q -v createBoundingBoxProxyLODGroupHideLODGroupsInOutlinerCheckBox`){
+        doHideInOutliner 1; 
+        print ("LOD Groups Are Hidden In Outliner!\n");
+    }
+    
+	return $newLODGroup;
+	*/
+	return {};
+}
+
+
+/*
+
+global proc float[] transformDirection( float dir[])
+{
+	
+}
+*/
+
+/*
+global proc createLODGroupsForMatchingNamedObjects()
+{
+	string $sel[] = `ls -tr`;
+	for ($i=0;$i<`size $sel`;$i++){
+			
+	}
+}
+*/
+
+global proc replaceNClothMeshWithMesh( string $sel[] )
+{
+	//disconnectAttr 
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         NODE CAST
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//WIZ NODE CAST SELECTED
+//==================================================
+//@ PROC NAME
+//====================================================================
+/*****************************************************************//**
+	Replaces selected node 0 with selected node 1
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-tag1 string] [-tag2 linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-tag1, -tag2
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	wizNodeCastSelected(`ls -sl`);
+	
+	</code>
+*********************************************************************/
+global proc wizNodeCastSelected( string $sel[] )
+{
+	wizlog("[@] wizNodeCastSelected");
+	
+	//string $sel[] = `ls -sl`;
+	string $c = "nodeCast ";
+	if (`checkBox -q -v wizNodeCastCopyDynamicAttrCheckBox`){
+		$c = $c + "-f true ";	
+	} else {
+		$c = $c + "-f false ";
+	}
+	if (`checkBox -q -v wizNodeCastSwapValuesCheckBox`){
+		$c = $c + "-sv true ";	
+	} else {
+		$c = $c + "-sv false ";
+	}
+	if (`checkBox -q -v wizNodeCastSwapNamesCheckBox`){
+		$c = $c + "-sn true ";	
+	} else {
+		$c = $c + "-sn false ";
+	}
+	if (`checkBox -q -v wizNodeCastDisconnectUnmatchedAttrCheckBox`){
+		$c = $c + "-dua true ";	
+	} else {
+		$c = $c + "-dua false ";
+	}
+	if (`checkBox -q -v wizNodeCastCopyDynamicAttrCheckBox`){
+		$c = $c + "-cda true ";	
+	} else {
+		$c = $c + "-cda false ";
+	}
+	
+	
+	$c = $c + "\"" + $sel[0] + "\"" + " " + "\"" + $sel[1] + "\"" + ";";
+	wizLog ("	[-] wizNodeCastSelected : \n" + $c + "\n");
+	
+	catchQuiet(eval($c));
+	
+	//nodeCast -sn true -dua true $sel[0] $sel[1];
+	//nodeCast -sn false -dua true $sel[0] $sel[1];
+	//nodeCast -f true -sn true -cda true -sv true -dua false $sel[0] $sel[1];
+	//nodeCast -f true -sn true -cda true -sv true -dua true $sel[0] $sel[1];
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         CURVE LENGTH
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//GET CURVE LENGTH
+//==========================================
+/*
+	getCurveLength(`ls -sl`);
+*/
+global proc float getCurveLength( string $sel[] )
+{
+	if (`size $sel` == 0){
+		return 0.0;
+	}
+	string $curveA[] = `ls -l $sel[0]`;
+	string $curveB[] = `listRelatives -f -ni -s $curveA[0]`;
+
+	int $spans = `getAttr ($sel[0] + ".spans")`;
+
+	string $arcLengthNode = `arcLengthDimension ($sel[0] + ".u[" + $spans + "]")`;
+	string $p[] = `listRelatives -p $arcLengthNode`;
+
+	float $curveLength = `getAttr ($arcLengthNode + ".al")`;
+
+	delete $p;
+	
+	return $curveLength;
+	
+}
+
+//ADD CURVE MEASURING TO SELECTED CURVE
+//==========================================
+/*
+	This adds an arc length dimension shape to the selected curve
+	The output length of the arc length dimension is added to a new attr on curve called curveLength.
+	
+	addCurveMeasuringToSelectedCurve(`ls -sl`);
+	
+*/
+global proc addCurveMeasuringToSelectedCurve( string $sel[] )
+{
+	if (`size $sel` == 0){
+		return ;
+	}
+	string $curveA[] = `ls -l $sel[0]`;
+	string $curveB[] = `listRelatives -f -ni -s $curveA[0]`;
+
+	int $spans = `getAttr ($sel[0] + ".spans")`;
+
+	string $arcLengthNode = `arcLengthDimension ($sel[0] + ".u[" + $spans + "]")`;
+	string $p[] = `listRelatives -p $arcLengthNode`;
+
+	float $curveLength = `getAttr ($arcLengthNode + ".al")`;
+	if (`attributeExists "curveLength" $sel[0]` == 0){
+		addAttr -ln "curveLength" -at double $sel[0];
+		connectAttr -f ($arcLengthNode + ".al")($sel[0] + ".curveLength");
+	}
+	
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                     MOVE BY BOUNDING BOX SIZE
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+global proc wizMoveByBoundingBoxSizeLayout( string $parent )
+{
+	string $layout = `frameLayout
+		-l "Move By Bounding Size"
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10				
+		-cll true
+		-cl true		
+		-p $parent
+		transformWiz_moveByBoundBoxSize_frameLayout
+		`;
+		/*
+		gridLayout
+			-nc 2
+			-nr 3
+			;
+		*/	
+		button 
+			-l "-X"
+			-c ("moveSelectedObjectsByBoundingBoxSize(`ls -tr -sl`, { -1, 0, 0 });")
+			;
+		
+		button 
+			-l "+X"
+			-c ("moveSelectedObjectsByBoundingBoxSize(`ls -tr -sl`, { 1, 0, 0 });")
+			;
+			
+		button 
+			-l "-y"
+			-c ("moveSelectedObjectsByBoundingBoxSize(`ls -tr -sl`, { 0, -1, 0 });")
+			;
+		
+		button 
+			-l "+y"
+			-c ("moveSelectedObjectsByBoundingBoxSize(`ls -tr -sl`, { 0, -1, 0 });")
+			;	
+			
+		button 
+			-l "-z"
+			-c ("moveSelectedObjectsByBoundingBoxSize(`ls -tr -sl`, { 0, 0, -1 });")
+			;
+		
+		button 
+			-l "+z"
+			-c ("moveSelectedObjectsByBoundingBoxSize(`ls -tr -sl`, { 0, 0, 1 });")
+			;	
+			
+		
+}
+
+/*======================| SUMMARY |===================================
+
+/*=======================| USAGE |===================================
+	string $sel[] = `ls -sl`;
+	moveSelectedObjectsByBoundingBoxSize($sel, { 1, 0, 0 });
+====================================================================*/
+
+
+global proc moveSelectedObjectsByBoundingBoxSize( string $sel[], int $dir[])
+{
+		for ($i=0;$i<`size $sel`;$i++){
+			moveSelectedObjectByBoundingBoxSize($sel[$i], $dir);
+		}
+}
+
+global proc moveSelectedObjectByBoundingBoxSize( string $obj , int $dir[])
+{
+		float $size[] = `getAttr ($obj + ".boundingBoxSize")`;
+		printNiceArrayList(" - Move Size : ", (floatArrayToStringArray($size)));
+		float $moveBy[] = { ($size[0] * $dir[0]), ($size[1] * $dir[1]), ($size[2] * $dir[2]) };
+		printNiceArrayList(" - Move By : ", (floatArrayToStringArray($moveBy)));
+		move -r -os -wd $moveBy[0] $moveBy[1] $moveBy[2] $obj;
+		
+		
+}
+
+//@ DELETE EMPTY TOP LEVEL TRANSFORMS
+//====================================================================
+/*****************************************************************//**
+*	This just deletes all top level transforms that have no children or shape nodes.
+*	Use this for cleanup after complicated procedures.
+	deleteEmptyTopLevelTransforms();
+*
+*********************************************************************/
+global proc deleteEmptyTopLevelTransforms()
+{
+	string $nias[] = `ls -ni -as`;
+	for ($i=0;$i<`size $nias`;$i++){
+		string $c[] = `listRelatives -c $nias[$i]`;
+		string $sh[] = `listConnections -sh on $nias[$i]`;
+		if (`size $c` == 0 && `size $sh` == 0){
+			delete $nias[$i];
+		}
+	}
+}
+
+
+//@ FIX DOSCHE MODELS
+//====================================================================
+global proc fixDoscheModels()
+{
+	string $cameras[] = `listTransforms -ca`;
+	catchQuiet(`delete $cameras`);
+	string $lights[] = `listTransforms -lt`;
+	catchQuiet(`delete $lights`);
+	
+	string $tr[] = `ls -tr`;
+	select -r $tr;
+	xform -ws -ro -90 0 0;
+	makeIdentity -apply true -t 1 -r 1 -s 1 -n 0 -pn 1;
+	
+	
+
+}
+
+
+//@ wizAddTransformCurveHandle
+//====================================================================
+/*****************************************************************//**
+	Creates a curve under a transform for selection purposes.
+	<hr>
+	<b>Synopsis</b><br>
+	wizExportSet [-obj string] [-typ linear] <br>
+	Using "all" in set name will export the objects in set in all supported formats. <br>
+	Warning : Using underscores in reference files will mess up file naming. <br>
+	A export set should be named as follows: <br>
+		wiz_(name)_(fileType)_exportSet <br>
+		e.g. wiz_sphere1_all_exportSet <br>
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-newSet(-ns) <br>
+	-export(-ex) <br>
+	-exportAll(-ea) <br>
+	-name(-n) <br>
+	-extension(-ext) <br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	wizExportCacheFile(),
+	
+	<b>Examples</b><br>
+	<code>
+	wizAddTransformCurveHandle("-sl");
+	wizExportSet("-exportAll");
+	
+	</code>
+*********************************************************************/
+global proc wizAddTransformCurveHandle( string $flags )
+{
+	string $obj;
+	string $sel[];
+	float $col[];
+	string $name;
+	int $v;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			$sel[0] = $obj;
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -tr -sl`;
+			break ;
+		
+		}
+	}
+	
+	for ($i=0;$i<`size $sel`;$i++){
+		float $bboxSize[] = `getAttr ($sel[$i] + ".boundingBoxSize")`;
+		string $circle[] = `circle -ch on -o on -nr 0 1 0 -r $bboxSize[0] -s 8` ;
+		string $nShape[] = `listRelatives -s $circle[0]`;
+		setAttr ($nShape[0] + ".overrideEnabled") 1;
+		setAttr ($nShape[0] + ".overrideColor") 17;
+		
+		select -r $nShape[0];
+		select -add $sel[$i];
+		parent -r -s;
+		
+		delete $circle[0];
+		
+	}
+	
+	
+}
+
+
+//@ WIZ CREATE MIRRORED CONNECTIONS
+//====================================================================
+/*****************************************************************//**
+	Use to make a reverse connection along an axis to transform objects mirrored.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	wizCreateMirroredConnections("-sl -t -x");
+	
+	</code>
+*********************************************************************/
+global proc wizCreateMirroredConnections( string $flags )
+{
+	string $obj, $t, $r, $s;
+	string $sel[];
+	string $axis;
+	string $attrPrefix;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-t" : case "-translate" :
+			$t = 1;
+			$attrPrefix = "translate";
+			break ;
+			
+			case "-r" : case "-rotate" :
+			$r = 1;
+			$attrPrefix = "rotate";
+			break ;
+			
+			case "-s" : case "-scale" :
+			$s = 1;
+			$attrPrefix = "scale";
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-ax" : case "-axis" :
+			$axis = capitalize($tok[($i + 1)]);
+			break ;
+			
+			case "-x" : 
+			$axis = "X";
+			break ;
+			
+			case "-y" : 
+			$axis = "Y";
+			break ;
+			
+			case "-z" : 
+			$axis = "Z";
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	//_________________________________________
+	// Create a reverse utility
+	string $rev = `shadingNode -asUtility reverse`;
+	
+	//_________________________________________
+	// Connect reverse to specified transform type and axis
+	connectAttr ($sel[0] + "." + $attrPrefix + $axis) ($rev + ".input" + $axis);
+	connectAttr ($rev + ".output" + $axis) ($sel[1] + "." + $attrPrefix + $axis);
+
+	//_________________________________________
+	// Connect the rest of the axis directly
+	string $axi[] = { "X", "Y", "Z" };
+	
+	for ($i=0;$i<`size $axi`;$i++){
+		if ($axis != $axi[$i]){			
+			connectAttr ($sel[0] + "." + $attrPrefix + $axi[$i]) ($sel[1] + "." + $attrPrefix + $axi[$i]);
+		}		
+	}
+	
+}
+
+
+//@ WIZ CAMERA DOF RIG
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = wizCameraDOFRig("-sl");
+	
+	</code>
+*********************************************************************/
+global proc string[] wizCameraDOFRig( string $flags )
+{
+	string $cam;
+	string $camShape;
+	string $sel[];
+	int $useBokeh;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			string $camS[] = smartSelectObjectsOfType($sel, "-type camera");
+			if (`size $camS` > 0){
+				$camShape = $camS[0];
+				select -r $camS;
+				string $lt[] = `listTransforms -sl`;
+				$cam = $lt[0];
+			} else {
+				wizlog ("[!] No Camera Selected");
+			}		
+			
+			break ;			
+			
+			case "-b" : case "-bokeh" :
+			$useBokeh = 1;
+			break ;
+
+			
+		}
+	}
+
+	
+	select -cl  ;
+	
+	string $disDem = `distanceDimension -sp 0.0 0.0 0.0 -ep 0.0 0.0 1.0 `;
+	
+	string $locShapes[] = smartSelectObjectsOfType({$disDem}, "-type locator");
+	select -r $locShapes;
+	string $loc[] = `listTransforms -sl`;
+	
+	//string $focusLoc = renameWizRenameObject($loc[0], "Focus");
+	//string $camLoc = renameWizRenameObject($loc[1], ($cam + "Position"));
+	select -r $loc[0];
+	string $focusLoc, $camLoc;
+	string $fl[] = renameWizDoRename(($cam + "Focus"));
+	$focusLoc = $fl[0];
+	select -r $loc[1];
+	string $cl[] = renameWizDoRename(($cam + "Position"));
+	$camLoc = $cl[0];
+		
+	select -r $focusLoc ;	
+	select -r $disDem;
+	string $disDemT[] = `listTransforms -sl`;
+	select -r $focusLoc $camLoc $disDemT[0];
+	string $disDemGroup = `group -n ($cam + "DistanceRigGroup")`;
+	
+	//select -r $camLoc;
+	
+	select -r $cam;
+	
+	select -add $disDemGroup;
+	//doCreateParentConstraintArgList 1 { "0","0","0","0","0","0","0","1","","1" };
+	
+	select -r $cam;
+
+	wizTransferTransforms("-sl -t -r -s");
+	
+	//parentConstraint -weight 1;
+	parent -a $disDemGroup $cam;
+	
+	setAttr ($disDemGroup + ".translate") 0.0 0.0 0.0 ;
+	setAttr ($disDemGroup + ".rotate") 0.0 0.0 0.0 ;	
+	//setAttr ($focusLoc + ".translate") 0.0 0.0 -49.0;
+	
+	//select -r $disDemGroup;
+
+	connectAttr -f ($disDem + ".distance") ($camShape + ".focusDistance");
+	
+	if ($useBokeh){
+		string $bokeh = `mrCreateCustomNode -asUtility "" mia_lens_bokeh`;
+		connectAttr ($bokeh + ".message") ($cam + ".miLensShaderList[0]");
+		connectAttr -f ($disDem + ".distance") ($bokeh + ".plane");
+		//connectAttr -f ($cam + ".focusRegionScale") ($bokeh + ".radius");
+	} else {
+		setAttr ($camShape + ".depthOfField") 1;
+	}
+	
+	if (`attributeExists "focusTranslateZ" $cam` == 0){
+		addAttr -ln "focusTranslateZ"  -at double -max 0 -dv -50 $cam;
+		setAttr -e-keyable true( $cam + ".focusTranslateZ");
+		connectAttr -f ($cam + ".focusTranslateZ") ($focusLoc + ".translateZ");
+	}
+	
+	/*
+defaultNavigation -createNew -destination "cameraShape1.miLensShader";
+createRenderNode -allWithMentalUp "defaultNavigation -connectToExisting -destination cameraShape1.miLensShader -source %node.message " "";
+defaultNavigation -defaultTraversal -destination "cameraShape1.miLensShader";
+defaultNavigation -connectToExisting -destination cameraShape1.miLensShader -source mia_lens_bokeh1.message; window -e -vis false createRenderNodeWindow;
+connectAttr -force mia_lens_bokeh1.message cameraShape1.miLensShader;
+
+
+connectAttr mia_lens_bokeh2.message cameraShape1.miLensShaderList[0]; window -e -vis false createRenderNodeWindow;
+
+
+connectAttr -f distanceDimensionShape1.distance mia_lens_bokeh2.plane;
+connectAttr -f cameraShape1.focusRegionScale mia_lens_bokeh2.radius;
+*/
+	return { $disDemGroup };
+}
+
+
+
+//@ WIZ PROPORTIONAL SCALE
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = wizProportionalScaleConnect("-sl");
+	
+	</code>
+*********************************************************************/
+global proc wizProportionalScaleConnect( string $flags )
+{
+	string $sel[];
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+
+			case "-sl" : case "-selected" :
+			$sel = `ls -tr -sl`;
+			break ;			
+
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	for ($i=0;$i<`size $sel`;$i++){
+		connectAttr ($sel[$i] + ".scaleY") ($sel[$i] + ".scaleX");
+		connectAttr ($sel[$i] + ".scaleY") ($sel[$i] + ".scaleZ");
+		
+	}
+	
+	
+}
+
+global proc wizMirrorFinalIKJoints()
+{
+
+	// This is for mirroring joints so that the work with finalIK rig in Unity
+	//string $sel[] = `ls -sl`;
+	//string $boneName = "RArmCollarbone";
+	//float $bt[] = `xform -q -t $boneName`;
+	$sel = `ls -sl`;
+	//mirrorJoint -mirrorYZ -mirrorBehavior -searchReplace "L" "R";
+	mirrorJoint -mirrorXZ -searchReplace "L" "R";
+	//string $boneName = "RArmCollarbone";
+	$boneName = "RArmCollarbone";
+	select -r $boneName;
+	
+	// RArmCollarbone = + - - > - + -
+	//float $br[] = `xform -q -ro $boneName`;
+	$br = `xform -q -ro $boneName`;
+	$bt = `xform -q -t $boneName`;
+	rotate -pcp (0 - $br[0]) (0 - $br[1]) $br[2] $boneName;
+	
+	
+	// ArmUpper1 = + - + > - + +
+	$boneName = "RArmUpper1";
+	select -r $boneName;
+	$br = `xform -q -ro $boneName`;
+	rotate -pcp (0 - $br[0]) (0 - $br[1]) $br[2] $boneName;
+	
+	// ArmUpper2 = + + + > - + -
+	$boneName = "RArmUpper2";
+	select -r $boneName;
+	$br = `xform -q -ro $boneName`;
+	rotate -pcp (0 - $br[0]) ($br[1]) (0 - $br[2]) $boneName;
+	
+	// ArmForearm1 = + + + > - - +
+	$boneName = "RArmForearm1";
+	select -r $boneName;
+	$br = `xform -q -ro $boneName`;
+	rotate -pcp (0 - $br[0]) (0 - $br[1]) ($br[2]) $boneName;
+
+	// ArmForearm2 = + - + > - - +
+	$boneName = "RArmForearm2";
+	select -r $boneName;
+	$br = `xform -q -ro $boneName`;
+	rotate -pcp (0 - $br[0]) ($br[1]) (0 - $br[2]) $boneName;
+	
+	// ArmHand = - + + > + - +
+	$boneName = "RArmHand";
+	select -r $boneName;
+	$br = `xform -q -ro $boneName`;
+	rotate -pcp (0 - $br[0]) (0 - $br[1]) ($br[2]) $boneName;
+	
+	//========================================
+	// copy from original skeleton to new skeleton and preserve position of children
+	$sel = `ls -sl`;
+	$br = `xform -q -ro $sel[0]`;
+	rotate -pcp $br[0] $br[1] $br[2] $sel[1];
+	
+	// copy from original skeleton to new skeleton
+	$sel = `ls -sl`;
+	$br = `xform -q -ro $sel[0]`;
+	rotate  $br[0] $br[1] $br[2] $sel[1];
+}
+
+global proc WizCopyJointOrientsFromLeftToRight( string $flags )
+{
+
+	string $sel[];
+	int $doArms = 0;
+	int $doLegs = 0;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+
+			case "-leg" : case "-legs" :
+			$doLegs = 1;
+			break ;	
+			
+			case "-arm" : case "-arms" :
+			$doArms = 1;
+			break ;	
+			
+		}
+	}
+	
+	string $l = "L";
+	string $r = "R";
+	
+	if ($doArms == 1){
+		string $upArm = "ArmUpper1";
+		string $foreArm = "ArmForearm1";
+		string $hand = "Hand";
+		
+		float $jOr[] = `getAttr ($l + $upArm + ".jointOrient")`;
+		setAttr ($r + $upArm + ".jointOrient") $jOr[0] $jOr[1] $jOr[2];
+		
+		$jOr = `getAttr ($l + $foreArm + ".jointOrient")`;
+		setAttr ($r + $foreArm + ".jointOrient") $jOr[0] $jOr[1] $jOr[2];
+		
+		$jOr = `getAttr ($l + $hand + ".jointOrient")`;
+		setAttr ($r + $hand + ".jointOrient") $jOr[0] $jOr[1] $jOr[2];
+	}
+	
+	if ($doLegs == 1){
+		string $legUp = "LegUpper";
+		string $calf = "LegCalf";
+		string $ankle = "LegAnkle";
+		float $jOr[] = `getAttr ($l + $legUp + ".jointOrient")`;
+		//$jOr = `getAttr ($l + $legUp + ".jointOrient")`;
+		setAttr ($r + $legUp + ".jointOrient") $jOr[0] $jOr[1] $jOr[2];
+		
+		$jOr = `getAttr ($l + $calf + ".jointOrient")`;
+		setAttr ($r + $calf + ".jointOrient") $jOr[0] $jOr[1] $jOr[2];
+		
+		$jOr = `getAttr ($l + $ankle + ".jointOrient")`;
+		setAttr ($r + $ankle + ".jointOrient") $jOr[0] $jOr[1] $jOr[2];
+	}
+	
+}

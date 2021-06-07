@@ -1,0 +1,795 @@
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//|||||||||||||||||||||||||:::WIZ:::||||||||||||||||||||||||||||||||||
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//                         NAME WIZ
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+/*====================================================================
+Author: Glen Johnson
+Email: plasticarm@gmail.com
+Website: plasticarm.com / hrpictures.com
+----------------------------------------------------------
+Summary:
+// batchProcessor V1.0 (01/2005)
+// by Edvard Toth
+
+
+====================================================================*/
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                     BATCH PROCESSING FILES
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//BATCH PROCESSING FILES
+//========================================================
+
+
+//=================================
+
+
+
+global proc batchProcessorLayout( string $parent )
+{
+
+    // GET MOST RECENT DIRECTORY
+    string $WIZ_batchProcessRecentDirectory = `optionVar -q "WIZ_batchProcessRecentDirectory"`;	
+         
+    //-------------------------------------------------------
+	//|||||||||||||||||||||||<COLUMN>||||||||||||||||||||||||    
+	string $layout = `columnLayout
+		//-adj 1
+		-p $parent
+		batchProcessWizColumnLayout
+		`;
+            
+            
+    addBatchProcessMenuBarLayout();
+
+    //-------------------------------------------------------
+	//########################<TAB>##########################
+	
+/*
+    // ==== TABS
+    string $batchProcessTabs = `tabLayout 
+        -sc "scrollField -e -text $WIZ_batchProcessLog batchProcessLogField" 
+        batchProcessWizTabLayout
+        `;
+
+   */
+   
+    // OPTIONS LAYOUT
+    batchProcessWizOptionsLayout($layout);
+    
+
+        
+/*
+    tabLayout 
+        -e
+        -tabLabel batchProcessWizOptionsColumnLayout "Options"
+        -tabLabel batchProcessWizLogColumnLayout "Log"
+        $batchProcessTabs
+        ;     
+*/
+    
+    batchProcessWizCommandFieldLayout($layout);
+	//######################<END-TAB>########################
+	//-------------------------------------------------------
+
+    // LOG LAYOUT
+    batchProcessWizLogLayout($layout);
+        
+    
+}
+
+global proc batchProcessWizCommandFieldLayout( string $parent )
+{
+        
+    /************ IMPORTANT **********************************************
+        // COMMANDFIELD   
+    *********************************************************************/
+    string $layout = `columnLayout
+		//-adj 1
+		-p $parent
+		batchProcessWizCommandFieldColumnLayout
+		`;
+        
+    // COMMANDFIELD   
+    string $batchProcessWizCommandField = `scrollField 
+        -h 300 
+        -ww 1 
+        -ed 1 
+        -fn "smallPlainLabelFont" 
+        -text "" 
+        -ann "" 
+        batchProcessWizCommandField
+        `;    
+     /*   
+    // STATUSLINE    
+    string $BP_statusline = `progressBar
+        -h 10 
+        BP_status
+        `;
+    */
+    // STARTBUTTON
+    button 
+        -l "Process Files" 
+        -c ("wizBatchProcess(\"\");")
+        ;
+    
+    // RESETBUTTON
+    button  
+        -l "Reset"
+        -ann "Reset if processing is interrupted due to command-errors or other problems, then check the log for details."
+        -c ("wizBatchProcess(\"\");")
+        ;
+        
+        
+}
+
+global proc batchProcessWizOptionsLayout( string $parent )
+{
+    string $WIZ_batchProcessRecentDirectory = `optionVar -q "WIZ_batchProcessRecentDirectory"`;
+    // OPTIONS
+    string $batchProcessTab1 = `columnLayout 
+
+        batchProcessWizOptionsColumnLayout
+        `;
+    
+    wizCheckBox(
+        "-l Increment And Save Current File "
+        +"-v false "
+        +"-n batchProcessWizIncrementAndSaveCurrentFile"
+        );
+    
+	wizCheckBox(
+        "-l Save File "
+        +"-v 1 "
+        +"-n batchProcessWizSaveCurrentFile"
+		);
+		
+    intSliderGrp 
+        -l "Iterations" 
+        -min 1		
+        -v 10 
+        -f true	
+        -ann ""
+        -cal 1 "left"
+        -cw3 150 50 90
+        -adj 3
+        batchProcessWizIncrementAndSaveIterationsIntSliderGrp		
+        ; 
+        
+    textFieldButtonGrp 
+        -l "Directory"
+        -text $WIZ_batchProcessRecentDirectory 
+        -cw3 70 220 50            
+        -bc "batchProcessorGetDirectory()"
+        -bl " Select "
+        -ann "Sets the directory in which Maya-files are going to be processed (example: C:/myfiles/maya/)"  
+        batchProcessDirectory    
+        ;
+        
+    separator -height 15 -st "none";       
+
+    radioButtonGrp
+        -cw3 70 60 120 
+        -l "Filter pattern" 
+        -nrb 2 -l1 "All files" 
+        -l2 "Use wildcard" 
+        -sl 1 
+        -offCommand1 "textFieldGrp -e -en 1 batchProcessWildcard" 
+        -onCommand1 "textFieldGrp -e -en 0 batchProcessWildcard"
+        batchProcessFilter
+        ;
+        
+    textFieldGrp 
+        -l "Wildcard"
+        -text ""
+        -en 0 
+        -cw2 70 220    
+        -ann "Defines the wildcard-string to filter the files with (examples: *ground* or *.ma)" batchProcessWildcard
+        ;
+        
+    separator -height 10 -st "none";       
+ 
+    radioButtonGrp
+        -cw4 70 75 75 100
+        -l "Saving" 
+        -nrb 3 
+        -l1 "Overwrite" 
+        -l2 "Add prefix" 
+        -l3 "Add suffix" 
+        -sl 1 
+        -offCommand1 "textFieldGrp -e -en 1 batchProcessSuffix" 
+        -onCommand1 "textFieldGrp -e -en 0 batchProcessSuffix"
+        batchProcessSaving
+        ;
+        
+    textFieldGrp 
+        -en 0 
+        -cw2 70 220 
+        -l "Prefix/Suffix" 
+        -text "" 
+        -ann "Defines the prefix/suffix string to be attached to the name of processed files for saving (examples: new- or _test)" 
+        batchProcessSuffix
+        ;
+
+    //setParent ..;  
+	//|||||||||||||||||||||<END-COLUMN>||||||||||||||||||||||
+	//-------------------------------------------------------
+
+}
+
+//# BATCH PROCESS WIZ LOG LAYOUT
+//====================================================================
+global proc batchProcessWizLogLayout( string $parent )
+{
+    
+    //-------------------------------------------------------
+	//|||||||||||||||||||||||<COLUMN>||||||||||||||||||||||||
+	
+    // LOG
+    string $batchProcessTab2 = `columnLayout 
+
+        -p $parent
+        batchProcessWizLogColumnLayout
+        `;
+    
+    text 
+        -l "Recent Processing Log"
+        -fn "smallPlainLabelFont"        
+        ;
+    
+    separator -height 5 -st "none"; 
+    
+    scrollField 
+        -text ""
+        -h 150 
+        -ww 1 
+        -ed 0 
+        -cc "scrollField -e -text $WIZ_batchProcessLog batchProcessLogField" 
+        -fn "smallPlainLabelFont"         
+        batchProcessLogField
+        ;  
+    
+    /*
+    popupMenu 
+        -p batchProcessLogField
+        ;
+        
+    menuItem 
+        -label "Refresh log" 
+        -c "scrollField -e -text $WIZ_batchProcessLog batchProcessLogField"
+        ;
+      */  
+    //setParent ..;
+	//|||||||||||||||||||||<END-COLUMN>||||||||||||||||||||||
+	//-------------------------------------------------------
+
+}
+
+//@ ADD BATCH PROCESS MENU BAR LAYOUT
+//====================================================================
+global proc addBatchProcessMenuBarLayout( )
+{
+    string $menuBarLayout = `menuBarLayout batchProcessMainMenuBarLayout`;
+	batchProcessMainMenuItems();
+}
+
+//@ BATCH PROCESS MAIN MENU ITEMS
+//====================================================================
+global proc batchProcessMainMenuItems()
+{
+    menu -l "Add Process"; 
+        menuItem -l "Randomize All Ramputations" -c ("addProcessToBatchProcessor(\"randomizeAllRamputations();\");");
+        menuItem -l "Increment All Output Textures And Render" -c ("addProcessToBatchProcessor(\"wizIncrementAllOutputTexturesAndRender();\");");
+        menuItem -l "Export No History LOD Group Copy" -c ("addProcessToBatchProcessor(\"autoExportNoHisLODGrpCopyOfSel();\");");
+        menuItem -l "Save Poster Image" -c ("addProcessToBatchProcessor(\"saveScenePosterImage();\");");
+		menuItem -l "Save Thumbnail Image" -c ("addProcessToBatchProcessor(\"saveSceneThumbnailImage();\");");
+		menuItem -l "Batch Render" -c ("addProcessToBatchProcessor(\"batchRender;\");");
+		menuItem -l "Export Cache File" -c ("addProcessToBatchProcessor(\"wizExportAbcCache();\")");
+		menuItem -l "Export All Export Sets" -c ("addProcessToBatchProcessor(\"wizExportSet(\\\"-exportAll -noOverwrite\\\");\");");
+		
+        menuItem -sm true -l "Wiz Assets";
+      
+        string $removeRenEnvCom = ("removeAllWizReferencedAssetsOfType(" + "\\" + "\"" + "renderEnvAsset" + "\\" + "\"" + ");");
+        string $unloadCameraCom = ("removeAllWizReferencedAssetsOfType(" + "\\" + "\"" + "cameraAsset" + "\\" + "\"" + ");");
+        menuItem -l "Unload Render Env References" -c ("addProcessToBatchProcessor(\"unloadRenderEnvReferences();\");");
+        menuItem -l "Remove Render Env References" -c ("addProcessToBatchProcessor(\"" + $removeRenEnvCom + "\");");
+        menuItem -l "Unload Camera Asset References" -c ("addProcessToBatchProcessor(\"" + $unloadCameraCom + "\");");
+		
+	menu -l "Convert";
+		string $cc = ("string $dir = `textFieldButtonGrp -q -tx batchProcessDirectory`;"+"\n"
+		+"string $evalCom = `scrollField -q -tx batchProcessWizCommandField`;"+"\n"
+		+"convertAllFilesInDirectory((\"-dir \" + $dir + \" -com \" + $evalCom + "
+		);
+		
+		string $fbxCom = $cc + "\" -typ fbx\"));";
+		string $objCom = $cc + "\" -typ obj\"));";
+		
+		menuItem -l "FBX To MB" -c $fbxCom ;		
+		menuItem -l "OBJ To MB" -c $objCom ;
+		menuItem -l "Batch Process Cad Files" -c ("batchProcessCadFiles(\"\");");
+		
+		
+ }
+
+//@ ADD PROCESS TO BATCH PROCESSOR
+//====================================================================
+global proc addProcessToBatchProcessor( string $process )
+{
+    string $bp = `scrollField -q -tx batchProcessWizCommandField`;
+    $bp = $bp + "\n" + $process;
+    
+    scrollField 
+        -e
+        -tx $bp
+        batchProcessWizCommandField
+        ;
+    
+}
+
+//@ BATCH PROCESSOR PROCESS
+//====================================================================
+
+global proc wizBatchProcess( string $flags )
+{/*
+global proc batchProcessorProcess()
+{*/          
+    
+	string $obj, $type;
+	string $sel[];
+	int $edit;
+	int $useTSL;
+	int $si;
+	string $tsl;
+	
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-typ" : case "-type" :
+			$type = wizFlagString($tok, $i);
+			break ;
+			
+			case "-tsl" : case "-textScrollList" :
+			$useTSL = 1;
+			$tsl = $tok[($i + 1)];
+			break ;		
+
+			case "-si" : case "-selectedItems" :
+			$si = 1;
+			break ;
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	
+    int $BP_unsaved = `file -q -mf`;
+    
+    if ($BP_unsaved == 1){
+		string $confirm = `confirmDialog -t "Save?" -m ("Save Changes Before Continuing?") -b "Yes" -b "No" -db "Yes" -cb "No"`;
+		if ($confirm=="Yes"){
+			return;
+		}
+     
+    } 
+    
+    
+    if (`checkBox -q -v batchProcessWizIncrementAndSaveCurrentFile`){
+        batchProcessWizIncrementAndSave();
+        return;
+    }
+           
+    // CLEAR LOG
+    global string $WIZ_batchProcessLog;
+    $WIZ_batchProcessLog = "";
+    
+    scrollField
+        -e
+        -cl
+        batchProcessLogField
+        ;
+      
+    string $batchProcessPath = `textFieldButtonGrp -q -text batchProcessDirectory`;
+    string $batchProcessFile;
+    
+    string $batchProcessFileList[];
+    string $batchProcessFileListmb[];
+    string $BP_filteredlist[];
+    
+    string $batchProcessWildcard;
+    int $BP_wildcardmatch;
+    
+    int $batchProcessSaving = `radioButtonGrp -q -sl batchProcessSaving`;
+    string $batchProcessSuffix = `textFieldGrp -q -text batchProcessSuffix`;
+    
+    string $batCommand = `scrollField -q -text batchProcessWizCommandField`;
+    int $batCommandsize = `size $batCommand`;
+    
+    string $BP_errorcheck;
+        
+            
+    // PUT TOGETHER .MA AND .MB FILES
+	if ($useTSL){
+		// If we are using a bookmark wiz list
+		if ($si){
+			$batchProcessFileList = `textScrollList -q -si ($tsl + "BookmarksTextScrollList")`;
+		} else {
+			$batchProcessFileList = `textScrollList -q -ai ($tsl + "BookmarksTextScrollList")`;
+		}
+		wizlog (niceArrayList("[USE BOOKMARK WIZ FILES]", $batchProcessFileList));
+	
+	} else {
+		// Else we are using the sryptkeeper List
+		$batchProcessFileList = `getFileList -fld $batchProcessPath -fs "*.ma"`;   
+		$batchProcessFileListmb = `getFileList -fld $batchProcessPath -fs "*.mb"`;   
+		appendStringArray ($batchProcessFileList, $batchProcessFileListmb, size($batchProcessFileListmb));  
+	}
+	
+    int $batchProcessFilter = `radioButtonGrp -q -sl batchProcessFilter`;
+    
+    // FILTER THE FILELIST USING THE WILDCARD STRING          
+    if ($batchProcessFilter == 2){   
+        int $j = 0;
+        $batchProcessWildcard = `textFieldGrp -q -text batchProcessWildcard`;
+    
+        if (size ($batchProcessWildcard) == 0){
+            confirmDialog -t "Oops..." -m ("Please specify a wildcard string.") -b "Continue";
+            return;   
+        }
+            int $BP_listsize = size ($batchProcessFileList);
+    
+            for ($i=0; $i < $BP_listsize; $i++){
+                $BP_wildcardmatch = `gmatch $batchProcessFileList[$i] $batchProcessWildcard`;
+                   
+                if ($BP_wildcardmatch == 1) {
+                    $BP_filteredlist[$j] = $batchProcessFileList[$i];
+                    $j++;    
+                }                                              
+            }      
+           
+            $batchProcessFileList = $BP_filteredlist;
+    }
+      
+    int $BP_listsize = size ($batchProcessFileList);
+    
+    if ($BP_listsize == 0){
+        confirmDialog -t "Oops..." -m ("Directory [" + $batchProcessPath + "] contains no matching files to process.") -b "Continue";
+        return;         
+    }
+     
+    
+    // CHECK PREFIXSUFFIX FOR SIZE AND ILLEGAL CHARACTERS
+    if ($batchProcessSaving == 2 || $batchProcessSaving == 3){
+
+        if (size ($batchProcessSuffix) == 0){
+            confirmDialog -t "Oops..." -m ("Please specify a prefix/suffix string.") -b "Continue";
+            return;   
+        } else {
+            string $BP_prefixsuffixcheck = `match "[@#$%&*?\\/.;:|~]" $batchProcessSuffix`; 
+                       
+            if (size ($BP_prefixsuffixcheck) != 0){
+
+                confirmDialog -t "Oops..." -m ("The prefix/suffix contains illegal characters.") -b "Continue";
+                return;       
+            }               
+        }  
+        
+    }
+      
+	wizlog (niceArrayList("[FILES]", $batchProcessFileList));
+	if (wizInformationDialog("Process Files?", ("Process " + `size $batchProcessFileList` + " Files?"), "OK", "Cancel") == 0){return;}
+		
+    //progressBar -e -beginProgress -maxValue $BP_listsize BP_status;
+	wizProgressWindowStart("Batch Processing", "Starting", 1);
+    wizProgressWindowMinMax(0,$BP_listsize);
+    // === OPENING / SAVING FILES
+        
+    $WIZ_batchProcessLog = ($WIZ_batchProcessLog + "\n === Starting processing in path " + $batchProcessPath); 
+        
+    for ($i=0; $i < $BP_listsize; $i++){
+                                           
+       // progressBar -e -step 1 BP_status;                
+        wizProgressWindowStatus(("Processing File : " + $i + " -Of- " + $BP_listsize));
+		wizProgressWindowStep(1);
+	
+		if ($useTSL){
+			$batchProcessFile = $batchProcessFileList[$i]; 
+		} else {
+			$batchProcessFile = $batchProcessPath + $batchProcessFileList[$i];  
+		}
+		
+        $WIZ_batchProcessLog = ($WIZ_batchProcessLog + "\n\n Opening file " + ($i+1) + " / " + $BP_listsize + ": " + $batchProcessFileList[$i]);
+        
+        // ==========================     
+        file -f -prompt 0 -open $batchProcessFile;
+        $WIZ_batchProcessLog = ($WIZ_batchProcessLog + "\n   File opened.");             
+                    
+        // EXECUTE COMMAND
+        if ($batCommandsize != 0){           
+            $WIZ_batchProcessLog = ($WIZ_batchProcessLog + "\n       Executing processing commands...");              
+            //$BP_errorcheck = `eval $batCommand`;  
+			eval ($batCommand);
+            $WIZ_batchProcessLog = ($WIZ_batchProcessLog + "\n       Commands executed."); 
+        }               
+        
+        autoSaveSceneThumbnailImage();
+        
+		if (`checkBox -q -v batchProcessWizSaveCurrentFile`){
+			switch ($batchProcessSaving){
+
+				// OVERWRITE
+				case 1:
+				$WIZ_batchProcessLog = ($WIZ_batchProcessLog + "\n Saving file as: " + $batchProcessFileList[$i]);  
+				file -prompt 0 -save;              
+				$WIZ_batchProcessLog = ($WIZ_batchProcessLog + "\n   File saved.");  
+				break;
+				
+				// PREFIX
+				case 2:
+				string $BP_modifiedfile = $batchProcessPath + $batchProcessSuffix + $batchProcessFileList[$i];
+				$WIZ_batchProcessLog = ($WIZ_batchProcessLog + "\n Saving file as: " + $batchProcessSuffix + $batchProcessFileList[$i]);              
+				file -rn $BP_modifiedfile;
+				file -prompt 0 -save;
+				$WIZ_batchProcessLog = ($WIZ_batchProcessLog + "\n   File saved."); 
+				break;
+				
+				// SUFFIX
+				case 3:
+				string $batchProcessFilenamesplit[];
+				int $BP_tokens = `tokenize $batchProcessFileList[$i] "." $batchProcessFilenamesplit`;        
+				string $BP_modifiedfile = ($batchProcessPath + $batchProcessFilenamesplit[0] + $batchProcessSuffix + "." + $batchProcessFilenamesplit[1]);
+				$WIZ_batchProcessLog = ($WIZ_batchProcessLog + "\n Saving file as: " + $batchProcessFilenamesplit[0] + $batchProcessSuffix + "." + $batchProcessFilenamesplit[1]); 
+				file -rn $BP_modifiedfile;
+				file -prompt 0 -save;
+				$WIZ_batchProcessLog = ($WIZ_batchProcessLog + "\n   File saved.");            
+				break;  
+			}  
+		} else {
+			wizlog (" [!] File Is Not Being Saved [!] Check 'Save File' if you are seeing this in error [!]");
+		}
+		
+		if (wizProgressCancelled() == 1) return;	
+		
+    }
+        // ===========================   
+        wizProgressWindowEnd();
+        //progressBar -e -endProgress BP_status;
+
+        $WIZ_batchProcessLog = ($WIZ_batchProcessLog + "\n\n === Successfully processed " + $BP_listsize + " files.\n");    
+
+        scrollField -e -text $WIZ_batchProcessLog batchProcessLogField;   
+        
+}
+
+global proc batchProcessWizIncrementAndSave()
+{
+    
+    int $iterations = `intSliderGrp -q -v batchProcessWizIncrementAndSaveIterationsIntSliderGrp`;
+    
+    string $batCommand = `scrollField -q -text batchProcessWizCommandField`;
+    int $batCommandSize = `size $batCommand`;
+
+    // CLEAR LOG
+    global string $WIZ_batchProcessLog;
+    $WIZ_batchProcessLog = "";
+    wizProgressWindowStart("Batch Processing", "Starting", 1);
+	wizProgressWindowMinMax(0,$iterations);
+	
+    string $WIZ_batchProcessLog = ($WIZ_batchProcessLog + "\n === Starting processing Increment And Save "); 
+        
+    for ($i=0;$i<$iterations;$i++){
+        wizProgressWindowStatus(("Processing File : " + $i + " -Of- " + $iterations));
+		wizProgressWindowStep(1);                                 
+        //progressBar -e -step 1 BP_status;                
+               
+        $WIZ_batchProcessLog = ($WIZ_batchProcessLog + "\n\n " + " / " + $iterations + ": " + (`file -q -sn`));
+              
+                    
+        // EXECUTE COMMAND
+        if ($batCommandSize != 0){           
+            $WIZ_batchProcessLog = ($WIZ_batchProcessLog + "\n       Executing processing commands...");              
+            $BP_errorcheck = `eval $batCommand`;         
+            $WIZ_batchProcessLog = ($WIZ_batchProcessLog + "\n       Commands executed."); 
+        }    
+        
+        refresh;
+        refreshAE;
+        
+        autoSaveSceneThumbnailImage();
+        
+        incrementAndSaveWiz();
+        
+        $WIZ_batchProcessLog = ($WIZ_batchProcessLog + "\n   File saved.");  
+        
+		if (wizProgressCancelled() == 1) return;	
+		
+    }
+    // ===========================   
+    
+    //progressBar -e -endProgress BP_status;
+	wizProgressWindowEnd();
+	
+    $WIZ_batchProcessLog = ($WIZ_batchProcessLog + "\n\n === Successfully processed " + $iterations + " files.\n");    
+
+    scrollField -e -text $WIZ_batchProcessLog batchProcessLogField;   
+        
+}
+
+// ==== BROWSE
+
+global proc batchProcessorGetDirectory ()
+{
+
+    string $dir = wizGetDirectory();
+    
+    optionVar -sv "WIZ_batchProcessRecentDirectory" $dir;
+    
+    textFieldButtonGrp
+        -e 
+        -text 
+        $dir batchProcessDirectory
+        ;
+}
+
+
+global proc batchProcessCadFiles( string $flags )
+{
+	wizlog ("[@] batchProcessCadFiles");
+	
+	string $dir, $type;
+	string $sel[];
+	int $edit;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-dir" : case "-directory" :
+			$dir = $tok[($i + 1)];
+			break ;
+				
+			case "-typ" : case "-type" :
+			$type = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+			case "-dp" : case "-directoryPrompt" :
+			$dir = wizGetDirectory();
+			break ;
+			
+		}
+	}
+	
+	if (`size $dir` == 0){
+		$dir = `textFieldButtonGrp -q -tx batchProcessDirectory`;  
+		
+	}
+	
+	string $iges[] = wizGetAllFilesOfTypeInAllSubfoldersOfDirectory($dir, "IGS");
+	string $step[] = wizGetAllFilesOfTypeInAllSubfoldersOfDirectory($dir, "STEP");
+	string $stl[] = wizGetAllFilesOfTypeInAllSubfoldersOfDirectory($dir, "STL");
+	string $stp[] = wizGetAllFilesOfTypeInAllSubfoldersOfDirectory($dir, "STP");
+	string $import[];
+	
+	appendStringArray($import, $iges, `size $iges`);
+	appendStringArray($import, $step, `size $step`);
+	appendStringArray($import, $stl, `size $stl`);
+	appendStringArray($import, $stp, `size $stp`);
+	/*
+	if (`size $step` > 0){
+		$import = $step;
+	} else {
+		$import = $iges;
+	}
+	*/
+	wizlog (niceArrayList("[IMPORTING]", $import));
+	
+	for ($i=0;$i<`size $import`;$i++){
+		wizlog ("[#] Processing : " + $import[$i]);
+		
+		if ((catchQuiet("file -f -i " + $import[$i])) == 1){
+			wizlog ("[!] Error Importing File : " + $import[$i]);
+			continue;
+		} else {
+			file -f -i $import[$i];
+		}
+		
+		/*
+		string $vg[] = `ls -tr -v`;
+		select -r $vg;
+		makeSelectMasterSelection("selectMasterListA","replace");
+		//autoPrepForPainting();
+		
+		//string $vg[] = `listTransforms "-v -g"`;
+		//string $vg[] = `ls -v -g`;
+		//select -r $vg;
+		//makeSelectMasterSelection("selectMasterListA","replace");
+		for ($s=0;$s<`size $vg`;$s++){	
+			if (`checkBox -q -v prepForPainting_useNurbsToPolyCount_checkBox` == 1){
+				wizlog ("[#] Using Poly Count Converting Nurbs To Poly");
+			
+				int $polyCount = `intSliderGrp -q -v prepForPainting_nurbsToPolyCount_intSliderGrp`;
+				$new = `nurbsToPoly -f 0 -pt 1 -pc $polyCount $vg[$s]`;
+			
+				wizlog ("nurbsToPoly -f 0 -pt 1 -pc " + $polyCount + " " + $vg[$s] + ";");
+			} else {
+				$new = `nurbsToPoly $vg[$s]`;
+			}
+			
+		}
+		
+		//convertSelectedNurbsSurfacesToPolygons($vg);
+		//autoPrepForPainting();
+		
+		*/
+		
+		
+		//string $sel[] = getRootTransformsOfSelectedObjects(`ls -v -tr`);
+		string $sel[] = `ls -v -g`;
+		select -r $sel;
+		
+		for ($s=0;$s<`size $sel`;$s++){	
+			if (`checkBox -q -v prepForPainting_useNurbsToPolyCount_checkBox` == 1){
+				wizlog ("[#] Using Poly Count Converting Nurbs To Poly");
+			
+				int $polyCount = `intSliderGrp -q -v prepForPainting_nurbsToPolyCount_intSliderGrp`;
+				$new = `nurbsToPoly -f 0 -pt 1 -pc $polyCount $sel[$s]`;
+			
+				wizlog ("nurbsToPoly -f 0 -pt 1 -pc " + $polyCount + " " + $sel[$s] + ";");
+			} else {
+				$new = `nurbsToPoly $sel[$s]`;
+			}
+			
+		}
+		
+		string $mesh[] = `listTransforms "-typ mesh"`;
+		
+		select -r $mesh;
+		
+		//_________________________________________
+		// Combine - MergeVertices - Break Apart
+		maximizeMergeVertices(`ls -sl`);
+		
+		//delete $vg;
+		
+		//_________________________________________
+		// Save And Start New File
+		string $filePathSplice[] = wizSpliceFilePath($import[$i], "-fn");
+		string $newFile = ($dir + $filePathSplice[0] + ".mb");
+		wizlog ("[#] Saving File : " + $newFile);
+		wizExportMA($newFile);
+		
+		refresh -f;
+		refreshAE;
+		
+		file -f -new;
+		
+	}
+	
+}
+
+global proc wizConvertCadFile( string $file )
+{
+
+
+}

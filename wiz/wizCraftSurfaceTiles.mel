@@ -1,0 +1,1172 @@
+
+
+
+//X BUILDER LAYOUT
+//=======================================================
+global proc surfaceTileLayout( string $parent)
+{
+	string $layout = `frameLayout
+		-l "Surface Tiles"	
+		-ann "Tile the surface of a quad mesh with other square meshes."
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $parent		
+		wizCraft_surfaceTiles_frameLayout
+		`;
+		
+	wizCraftSurfaceTilesMainMenuBarLayout($layout);
+	
+	wizColumnLayout("-n wizCraft_surfaceTiles_columnLayout -p " + $layout);
+	
+	string $dupType[] = { "copy", "instance", "reference copy" };
+	string $dupTypeOmg = wizOptionMenuGrpMenuItems("Duplicate Type", "surfaceTile_DuplicateType_optionMenuGrp", $dupType);
+	
+    //-----------------------------
+    wizSeparator();
+    //-----------------------------
+
+	wizIntSliderGrp(
+		"-l U Tiles "
+		+"-min 1 "
+		+"-max 50 "
+		+"-fmn 1 "
+		+"-fmx 99999999 "
+		+"-v 3 "
+		+"-n surfaceTile_UTiles_intSliderGrp"
+		);
+		
+	wizIntSliderGrp(
+		"-l V Tiles "
+		+"-min 1 "
+		+"-max 50 "
+		+"-fmn 1 "
+		+"-fmx 99999999 "
+		+"-v 3 "
+		+"-n surfaceTile_VTiles_intSliderGrp"
+		);
+	
+	string $bc = ("int $uTiles = `intSliderGrp -q -v surfaceTile_UTiles_intSliderGrp`;"+"\n"
+	+"int $vTiles = `intSliderGrp -q -v surfaceTile_VTiles_intSliderGrp`;"+"\n"
+	+"wizCraftTileSurface(\"-sl -wiz -u \" + $uTiles + \" -v \" + $vTiles);");
+
+	//-----------------------------
+    wizSeparator();
+    //-----------------------------
+
+	
+	global string $WIZCRAFT_setOrdering[];	
+	string $stoomg = wizOptionMenuGrpMenuItems("Tile Order", "wizCraft_surfaceTileOrdering_optionMenuGrp", $WIZCRAFT_setOrdering);
+	
+	global string $WIZCRAFT_surfaceTilesRandFreqType[];
+	string $sftomg = wizOptionMenuGrpMenuItems("Tile Random Frequency", "wizCraft_tileRandomFrequency_optionMenuGrp", $WIZCRAFT_surfaceTilesRandFreqType);
+
+	//-----------------------------
+    wizSeparator();
+    //-----------------------------
+	text -l "Blind Data"
+    	-fn "boldLabelFont"
+    	-h 30
+    	-al "left"
+    	;
+		
+	wizBlindDataAssignmentLayout("-lt columnLayout -n surfaceTile");
+	
+	setParent $layout;
+	
+	wizCheckBox(
+		"-l Use Blind Data To Tile Surface "
+		+"-v 1 "
+		+"-ann Blind data must be named surfaceTile. "
+		+"-n surfaceTile_useBlindData_checkBox"
+		);
+			
+	//-----------------------------
+    wizSeparator();
+    //-----------------------------
+	
+	button 
+		-l "Grid Snap Tiles Onto Vertices" 
+		-c ("wizCraftGridSnapTileOntoVertices(\"-sl\");")
+		;
+	
+    button
+		-l "Tile Surface"
+		-ann "First Select Object To Tile Onto, Then Select Tiles."
+		-c $bc
+		;
+		
+}	
+
+global proc wizCraftSurfaceTilesMainMenuBarLayout( string $parent )
+{
+	menuBarLayout ;
+	
+	menu -l "Tiles";	
+	wizCraftSurfaceTilesMainMenuItems();
+	setParent -menu ..;
+	
+}
+
+global proc wizCraftSurfaceTilesMainMenuItems()
+{
+	menuItem -l "Create Marching Tile Select Sets" -c ("wizCraftCreateMarchingTileSelectSets(\"-sl\");");
+			menuItem -ob true -c  ("openCurrentOptionsLayout(\"marchingTileSelectSetOptions\");");
+			
+	menuItem -l "Grid Snap Tiles Onto Vertices" -c ("wizCraftGridSnapTileOntoVertices(\"-sl\");");
+	menuItem -l "Tile Surface" -c ("wizCraftTileSurface(\"-sl\");");		
+	//menuItem -l "Create Surface Tile Set" -c ("wizCraftMGMT(\"-s 
+}
+
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         TILES
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+
+//@ CREATE SURFACE TILE ASSET
+//====================================================================
+/*****************************************************************//**
+	This will create a wizCraft Asset.
+	<hr>
+	<b>Synopsis</b><br>
+	createWizCraftAsset [-edit bool] [-wizCraftAsset string] [-name string]<br>
+	Pass the flag -e to edit the selected wizCraft asset and update it's attributes
+	
+	<b>Return value</b><br>
+	string the wizCraftAsset
+	
+	<b>Flags</b><br>
+	-edit(-e) <br>
+	-wizCraftAsset(-wca) <br>
+	-name(-n) <br>
+	-addFeatureType(-aft) <br>
+
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	
+	</code>
+*********************************************************************/
+global proc string createWizCraftSurfaceTileAsset( string $flags )
+{
+	wizlog ("[@] createWizCraftSurfaceTileAsset");
+	wizlog ("	[*] createWizCraftSurfaceTileAsset(\"" + $flags + "\");");
+	//wizCraft_surfaceTiles_frameLayout
+	int $edit;
+	string $sel[];
+	string $asset;
+	string $name;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+	
+			case "-wca" : case "-wizCraftAsset" :
+			$asset = $tok[(`size $tok` + 1)];
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;
+			
+			case "-n" : case "-name" :
+			$name = $tok[(`size $tok` + 1)];
+			break ;
+			
+		}
+	}
+	if ($name == ""){
+		//$name = $flags;
+		$name = $sel[0];
+	}
+	
+	string $assetName = $name + "_surfaceTileBldr";
+	
+	if ($edit == 0){
+		$asset = `container -n $assetName -type dagContainer -ind "inputs" -includeHierarchyBelow -includeShapes -includeTransform`;
+		addWizAssetTypeAttributeToSelectedAsset($asset, "surfaceTileBldrAsset");	
+		setAttr -type "string" ($asset + ".rmbCommand") "assetWiz";
+		string $layout = ("wizCraft_surfaceTiles_columnLayout");
+		createObjAttributesFromGUIObjectsInLayout($asset, $layout, "");
+	} else {
+		if ($asset == ""){
+			string $sel[] = `ls -typ dagContainer -sl`;
+			if (`size $sel` == 0){
+				wizLog("-w	[!] You must select a surfaceTileBldrAsset to update [!]");
+				return "";
+			}
+			$asset = $sel[0];
+		}		
+	}
+	
+	
+	
+	
+	
+	
+  
+	string $sSet = createSetFromSelection({$sel[0]}, ($assetName + "SurfaceSet"));
+	stringArrayRemoveAtIndex(0, $sel);
+	
+	string $tSet = createSetFromSelection($sel, ($assetName + "TileSet"));
+	
+	addAttr -ln "surface" -at message $asset;
+	connectAttr ($sSet + ".message") ($asset + ".surface");
+	
+	addAttr -ln "tiles" -at message $asset;
+	connectAttr ($tSet + ".message") ($asset + ".tiles");
+	
+	return $asset;
+	
+	
+
+}
+
+
+global proc rmbWizCraftTileSurface( string $object )
+{
+	string $asset[] = `ls -typ dagContainer -sl`;
+	string $surfaceSet[] = `listConnections ($asset[0] + ".surface")`;
+	string $tileSet[] = `listConnections ($asset[0] + ".tiles")`;
+	
+	string $s[] = `sets -q $surfaceSet[0]`;
+	string $t[] = `sets -q $tileSet[0]`;
+	select -r $s;
+	select -add $t;
+	
+	
+	wizCraftTileSurface("-sl -sta " + $asset[0]);
+	
+	
+
+}
+
+//@ WIZ CRAFT TILE SURFACE
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-tiles(-t) <br>
+	-featureType(-ft) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = wizCraftTileSurface("-sl -u 3 -v 3");
+	
+	</code>
+*********************************************************************/
+global proc string[] wizCraftTileSurface( string $flags )
+{
+	string $dbl = "-dmi WizCraftGridSnapTileOntoVerticesDebugMenuItem -t Some Proc Name"; string $dbm = "add"; int $dbc = 1;
+	menuItem -e -cb true WizCraftGridSnapTileOntoVerticesDebugMenuItem;
+	
+	string $obj, $wc;
+	string $ft = "featureType";
+	string $sel[];
+	string $tiles[];
+	int $edit;
+	int $wiz;
+	int $sta;
+	string $stAsset;
+	int $blind = `checkBox -q -v surfaceTile_useBlindData_checkBox`;
+	//int $u = 4;
+	//int $v = 4;
+	string $seqType = `optionMenuGrp -q -v wizCraft_surfaceTileOrdering_optionMenuGrp`;
+	string $freqType = `optionMenuGrp -q -v wizCraft_tileRandomFrequency_optionMenuGrp`;
+	
+	int $u = `intSliderGrp -q -v surfaceTile_UTiles_intSliderGrp`;
+	int $v = `intSliderGrp -q -v surfaceTile_VTiles_intSliderGrp`;
+	string $dt = `optionMenuGrp -q -v surfaceTile_DuplicateType_optionMenuGrp`;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-ft" : case "-featureType" :
+			$ft = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			$obj = $sel[0];
+			stringArrayRemoveAtIndex(0, $sel);
+			$tiles = $sel;
+			break ;
+
+			case "-t" : case "-tiles" :
+			$tiles = wizFlagArray($tok, $i);
+			break ;
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+			case "-wc" : case "-wizCraftAsset" :
+			$wc = $tok[($i + 1)];
+			break ;
+			
+			case "-sta" : case "-surfaceTileAsset" :
+			$stAsset = $tok[($i + 1)];;
+			$sta = 1;
+			break ;
+			
+			case "-dt" : case "-duplicateType" :
+			$dt = $tok[($i + 1)];
+			break ;
+			
+			case "-u" :
+			$u = int($tok[($i + 1)]);
+			break ;
+			
+			case "-v" :
+			$v = int($tok[($i + 1)]);
+			break ;
+			
+			case "-st" : case "-sequenceType" :
+			$seqType = $tok[($i + 1)];
+			break ;
+			
+			case "-ft" : case "-frequencyType" :
+			$freqType = $tok[($i + 1)];
+			break ;
+			
+			// if wiz use values from wiz ui
+			case "-wiz" :
+			$wiz = 1;
+			break ;
+			
+			case "-ubd" : case "-useBlindData" :
+			$blind = 1;
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+
+	//_________________________________________
+	// Selection Sets
+	// See if a select set exists first.
+	string $selSets[];
+	string $selSetName[] = wizCraftMGMT("-q -s -ft " + $ft + " -ot SurfaceTileSelSets");
+	if (`objExists $selSetName[0]` == 1){
+		wizlog ("	[#] Using Marching Tile Sel Set : " + $selSetName[0] + " [#]");
+		$selSets = `sets -q $selSetName`;
+	} else {	
+		wizlog ("	[!] No Selection Set Exists. Creating New Marching Tile Selection Set [!]");
+		// Create the selection set if it doesn't exist.
+		$selSets = wizCraftCreateMarchingTileSelectSets("-obj " + $obj + " -ft " + $ft + " -u " + $u + " -v " + $v + " -ct f -uvr");
+	}
+	
+	debugListArray($dbl, "[#] Selection Sets : ", $selSets, $dbc, $dbm, "[NEXT]", 100);
+	
+	
+	wizProgressWindowStart((" - wizCraft Surface Tiles - "), ("Starting..."), 1);
+    wizProgressWindowMinMax(0,(`size $selSets`));     
+	
+	//_________________________________________
+	// Create A Sequence Of Tiles
+	if (`size $tiles` == 0){
+		if (`size $wc` > 0){
+			$tiles = wizCraftMGMT("-pool SurfaceTilePool -ft " + $ft);
+		}
+	}
+	
+	if ($wiz){
+		$seqType = `optionMenuGrp -q -v wizCraft_surfaceTileOrdering_optionMenuGrp`;
+		$freqType = `optionMenuGrp -q -v wizCraft_tileRandomFrequency_optionMenuGrp`;
+	} else if ($sta){	
+		$u = `getAttr ($stAsset + ".utiles")`;
+		$v = `getAttr ($stAsset + ".vtiles")`;
+		$dupType = `getAttr -as ($stAsset + ".duplicateType")`;
+		$seqType = `getAttr -as ($stAsset + ".surfaceTileOrdering")`;
+		$freqType = `getAttr -as ($stAsset + ".tileRandomFrequency")`;
+		$blind = `getAttr ($stAsset + ".useBlindData")`;
+		
+	} else {
+		$seqType = getWizCraftAttr("-obj " + $obj + " -attr SurfaceTileOrdering -ft " + $ft);
+		$freqType = getWizCraftAttr("-obj " + $obj + " -attr TileRandomFrequency -ft " + $ft);
+	}
+	
+	if ($seqType == ""){
+		$seqType = "random";
+	}
+	if ($freqType == ""){
+		$freqType = "everyStep";
+	}
+	
+	int $tileSeq[] = wizIndiceSequence("-c " + (`size $selSets`) + " -as " + (`size $tiles`) + " -st " + $seqType);
+	string $tSeqStr[] = intArrayToStringArray($tileSeq);	
+	debugListArray($dbl, "[#] Tiles : ", $tiles, $dbc, $dbm, "[NEXT]", 100);
+	debugListArray($dbl, "[#] Tile Sequence: ", $tSeqStr, $dbc, $dbm, "[NEXT]", 100);
+		
+	//_________________________________________
+	// Duplicate And Place Tiles
+	string $allTiles[];
+	float $lastMidUV[];
+	int $s;
+	for ($i=0;$i<`size $selSets`;$i++){
+				
+		// Get the vertices of the tile set
+		//string $vert[] = `sets -q $selSets[$i]`;
+		select -r $selSets[$i];
+		string $vert[] = `ls -fl -sl`;
+		select -r $vert;		
+				
+		//debugListArray($dbl, "[#] Selection Set Vertices : ", $vert, $dbc, $dbm, "[NEXT]", 100);		
+		
+		//_________________________________________
+		// Tile Source Switching
+		float $uvBBox[] = `polyEvaluate -bc2`;
+		float $midUV[] = getMidpointBetweenPoints({ $uvBBox[0], $uvBBox[2], 0.0 }, { $uvBBox[1], $uvBBox[3], 0.0 });
+		if ($midUV[0] < $lastMidUV[0] && $freqType == "u" || $freqType == "randomU"){
+				// Switch Every Random U Row
+			if ($freqType == "randomU"){
+				int $ranChange = randInt(0,1);
+				if ($ranChange == 0){
+					$s++;
+				}
+			} else {
+				// Switch Every U Row
+				$s++;			
+			}
+		} else if ($midUV[1] > $lastMidUV[1] && $freqType == "v" || $freqType == "randomV"){
+				// Switch Every Random V Column
+			if ($freqType == "randomV"){
+				int $ranChange = randInt(0,1);
+				if ($ranChange == 0){
+					$s++;
+				}
+			} else {
+				// Switch Every V Col
+				$s++;
+			}
+		} else if ($freqType == "everyStep"){
+			// Switch Every Step
+			$s++;
+		} else if ($freqType == "random"){
+			// Switch Every Random Step
+			int $ranChange = randInt(0,1);
+			if ($ranChange == 1){
+				$s++;
+			} 
+		}		
+			
+		string $dupTileSource = $tiles[($tileSeq[$s])];
+		
+		// Get blind data named surfaceTile
+		if ($blind){
+			wizlog ("[+] Searching Blind Data [+]");
+			wizlog (niceArrayList("[Vertices]", $vert));
+			string $bd[] = `polyQueryBlindData -ldn "surfaceTile"`;
+			wizlog (niceArrayList("[BlindData]", $bd));
+			
+			if (`size $bd` > 0){				
+				for ($ti=0;$ti<`size $tiles`;$ti++){
+					int $match = gmatch($tiles[$ti], ("*" + $bd[0] + "*"));	
+					if ($match == 1){
+						wizlog ("	[+] Object : " + $tiles[$ti] + " Matches Blind Data : " + $bd[0]);
+						$dupTileSource = $tiles[$ti];
+						//$s = $ti;
+						break ;
+					}
+				}
+				wizlog ("	[!] No Blind Data Matches [!]");
+				
+			} else {
+				wizlog ("	[!] No Blind Data Found [!]");
+			}
+		}
+		
+		$lastMidUV = $midUV;
+					
+		//_________________________________________
+		// Duplication
+		wizlog ("\n	[#] Current Tile : " + ($dupTileSource));
+		
+		string $dup[] = wizCraftDuplicateObject($dupTileSource, 1, $dt);		
+		wizlog (niceArrayList("	[#] Duplicate Object [#] ", $dup));
+		
+		debugListArray ($dbl, "[#] Duplicate Tile : ", $dup, $dbc, $dbm, "[NEXT]", 100);		
+		wizProgressWindowStatus((" - Placing Tile " + $i + " Of " + `size $selSets` + "\n - Tile : " + $dup[0]));
+		
+		//_________________________________________
+		// Snap To Vertices
+		select -r $vert;
+		// Snap the duplicate onto the vertices with a lattice
+		wizlog ("wizCraftGridSnapTileOntoVertices(\"-obj \"" + $dup[0] + "\" -ft \"" + $ft + "\" -v \"" + "(stringArrayToString($vert, \" \")))");
+		
+		wizCraftGridSnapTileOntoVertices("-obj " + $dup[0] + " -ft " + $ft + " -v " + (stringArrayToString($vert, " ")));
+		
+		refreshStep();
+		
+		$allTiles[`size $allTiles`] = $dup[0];
+		
+		wizProgressWindowStep(1);        
+		if (wizProgressCancelled() == 1){ return {""}; }
+		
+	}
+	select -r $allTiles;
+	
+	string $surfTileGrp[] = wizCraftMGMT("-g -sl -ot surfaceTile");
+		
+	wizProgressWindowEnd();
+	
+	return $allTiles;
+	
+}
+
+//@ WIZ CRAFT CREATE MARCHING TILE SELECT SETS
+//====================================================================
+/*****************************************************************//**
+	This creates area selection sets by moving a white tile texture over the object and making
+	a selection from the texture.
+	<hr>
+	<b>Synopsis</b><br>
+	wizCraftCreateMarchingTileSelectSets [-obj string] [-typ linear] <br>
+	Two Methods - Texture Method and UV Range Method
+	
+	<b>Return value</b><br>
+	string[] selection sets
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-featureType(-ft) <br>
+	-componentType(-ct) <br>
+	-u <br>
+	-v <br>
+	-uvRange(-uvr) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $selSets[] = wizCraftCreateMarchingTileSelectSets("-obj " + $obj + " -ft " + $ft + " -u " + $u + " -v " + $v + " -ct f");
+
+	wizCraftCreateMarchingTileSelectSets("-sl -u 4 -v 4 -ct v -uvr");
+
+	</code>
+*********************************************************************/
+global proc string[] wizCraftCreateMarchingTileSelectSets( string $flags )
+{
+	wizlog ("[@] wizCraftCreateMarchingTileSelectSets");
+	
+	wizProgressWindowStart((" - wizCraft Marching Tile Select Sets - "), ("Starting..."), 1);
+	
+	string $obj;
+	string $ct = "face";
+	string $ft = "featureType";
+	string $sel[];
+	int $edit;
+	int $u = 10;
+	int $v = 10;
+	
+	int $uvr = 1;
+	
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-ft" : case "-featureType" :
+			$ft = $tok[($i + 1)];
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			$obj = $sel[0];
+			break ;			
+			
+			case "-u" : 
+			$u = int($tok[($i + 1)]);
+			break ;
+			
+			case "-v" : 
+			$v = int($tok[($i + 1)]);
+			break ;
+			
+			case "-ct" : case "-componentType" :
+			$ct = $tok[($i + 1)];
+			break ;
+			
+			case "-uvr" : case "-uvRange" :
+			$uvr = 1;
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	wizlog ("	[#] Object : " + $obj);
+	
+	wizProgressWindowMinMax(0,($u + $v)); 
+	
+	string $selSets[];	
+	
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//	METHODS
+	//
+	//	* The UVR method just searches through uvs manually and gets the uvs within a specified range.
+	//	
+	//	* The Marching Tile method is slow buy more things could be done with it.
+	//	
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//	UV Range Method
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	if ($uvr){
+		float $lowU = 0.0;
+		float $lowV = 0.0;
+		float $hiU = 1.0 / $u;
+		float $hiV = 1.0 / $v;
+		float $uMove = $hiU;
+		float $vMove = $hiV;
+		//wizlog ("	[#] U Count : " + $u + " V Count : " + $v);
+				
+		//wizlog ("	[#] UV Range : Low U : " + $lowU + " Low V : " + $lowV + " High U : " + $hiU + " High V : " + $hiV);
+		
+		//_________________________________________
+		// Partition
+		// Make a partition to keep the sets from overlapping
+		string $partition[] = wizCraftMGMT("-q -s -n -ft " + $ft + " -ot TilePartition");
+		partition -name $partition[0];
+		
+		int $i = 0;	
+		for ($ui=0;$ui<$u;$ui++){
+			for ($vi=0;$vi<$v;$vi++){
+				wizProgressWindowStatus((" - Tile " + $i + " Of " + ($ui + $vi)));
+				
+				select -r $obj;
+				
+				//_________________________________________
+				// Select UVs within a specified range
+				//wizlog ("	[#] UV Range : Low U : " + $lowU + " Low V : " + $lowV + " High U : " + $hiU + " High V : " + $hiV);
+				string $uvsInRange[] = wizSelectUVsInRange("-sl -lowU " + $lowU + " -lowV " + $lowV + " -hiU " + $hiU + " -hiV " + $hiV);
+				
+				select -r $uvsInRange;
+				
+				//_________________________________________
+				// Component Conversion
+				// Convert the selection to component type specified
+				if ($ct == "faces" || $ct == "face" || $ct == "f"){
+					ConvertSelectionToFaces;
+				} else if ($ct == "vertices" || $ct == "vertice" || $ct == "vertex" || $ct == "v"){
+					ConvertSelectionToVertices;
+				} else if ($ct == "edges" || $ct == "edge" || $ct == "e"){
+					ConvertSelectionToEdges;
+				}				
+				//wizlog ((niceArrayList("	[#] Selected : ", `ls -fl -sl`)));			
+				
+				//_________________________________________
+				// Create The Selection Set
+				/*	
+				string $newSet[] = wizCraftMGMT("-q -s -n -ft " + $ft + " -ot MarchingTileSelSet" + $ui + $vi);
+				$selSets[`size $selSets`] = createSetFromSelection(`ls -fl -sl`, $newSet[0]);
+				*/
+				
+				// Create set and add to a partition by making exclusive
+				string $newSet = `sets -name $newSet -em`;
+				partition -e -addSet $partition[0] $newSet;
+				sets -edit -forceElement $newSet;
+				$selSets[`size $selSets`] = $newSet;
+					
+				// increment the u and v tile search size	
+				$lowU = $lowU + $uMove;
+				$hiU = $hiU + $uMove;
+				
+				wizProgressWindowStep(1);        
+				if (wizProgressCancelled() == 1){ return {""}; }	
+				
+				$i++;
+			}			
+			$lowV = $lowV + $vMove;
+			$hiV = $hiV + $vMove;
+			$lowU = 0;
+			$hiU = $uMove;
+			
+		}	
+		
+		//_________________________________________
+		// Combine The Sets Into One Set
+		string $allSetsName[] = wizCraftMGMT("-q -s -n -ft " + $ft + " -ot SurfaceTileSelSets");
+		string $allSets = createSetFromSelection($selSets, $allSetsName[0]);
+		wizProgressWindowEnd();
+		return $selSets;
+		
+	}
+	
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//	Marching Texture Tile Method
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	
+	// make a ramp that just has a white color and make it not wrap
+	string $rampName[] = wizCraftMGMT("-q -n -ft " + $ft + " -ot MarchingTileRamp");
+	
+	string $ramp = `shadingNode -asTexture ramp -n $rampName[0]`;
+    string $pt = `shadingNode -asUtility place2dTexture -n ($rampName[0] + "Place2dTexture")`;
+    connectAttr ($pt + ".outUV") ($ramp + ".uv");
+    connectAttr ($pt + ".outUvFilterSize") ($ramp + ".uvFilterSize");
+	
+	removeMultiInstance -break true ($ramp + ".colorEntryList[1]");
+	setAttr ($ramp + ".colorEntryList[0].color") -type double3 1 1 1 ;
+	// set the default color to black
+	setAttr  ($ramp + ".defaultColor") -type double3 0 0 0 ;
+	setAttr ($pt + ".wrapU") 0;
+	setAttr ($pt + ".wrapV") 0;
+	wizlog ("	[+] Ramp : " + $ramp + " Place2dTexture : " + $pt);
+	
+	
+	// make a shader for the ramp tile
+	string $shaderName[] = wizCraftMGMT("-q -n -ft " + $ft + " -ot MarchingTileLambert");
+	string $shader[] = wizCreateNewShader($shaderName[0], "lambert");
+	connectAttr -force  ($ramp + ".outColor") ($shader[0] + ".incandescence");
+	
+	// assign the material to the object
+	wizAssignMaterialToSelected("-obj " + $obj + " -mat " + $shader[0]);
+	wizlog ("	[+] Shader : " + $shader[0]);
+	
+	float $uSize = 1.0 / (float($u));
+	float $vSize = 1.0 / (float($v));
+	wizlog ("	[#] U Tile Count : " + $u + " coverageU : " + $uSize);
+	wizlog ("	[#] V Tile Count : " + $v + " coverageV: " + $vSize);
+	setAttr  ($pt + ".coverageU") $uSize;
+	setAttr  ($pt + ".coverageV")  $vSize;
+		
+	// make a file texture to render the tile mask too
+	string $tileFileName[] = wizCraftMGMT("-q -n -ft " + $ft + " -ot MarchingTileMask");
+	string $tileFile = wizNewFileTexture($tileFileName[0]);
+	
+	string $tileFilePath[] = wizCraftGetFileOutputPaths(("-typ " + $tileFileName[0] + " -ext tif"));	
+	wizlog ("	[+] Tile File : " + $tileFile);
+	wizlog ("	[+] Tile File Path : " + $tileFilePath[0]);	
+	
+	setAttr -type "string" ($tileFile + ".fileTextureName") $tileFilePath[0];
+	
+	addTextureOutputFilePathAttr($ramp, $tileFilePath[0]);
+	
+	if (`attributeExists $tileFilePath[0] $ramp` == 0){
+		wizlog ("	[!] Error Adding Texture Output Path To Ramp [!]");
+	}
+	
+	// do the tile movement and texture updating
+	float $tfU, $tfV;
+	
+	
+	int $i = 0;
+	for ($ui=0;$ui<$u;$ui++){
+		for ($vi=0;$vi<$v;$vi++){
+			wizProgressWindowStatus((" - Tile " + $i + " Of " + ($ui + $vi)));
+			
+			select -r $obj;
+			// move the ramp uv
+			setAttr ($pt + ".translateFrameU") $tfU;
+			setAttr ($pt + ".translateFrameV") $tfV;	
+			wizlog ("	[#] TranslateFrameU : " + $tfU + " TranslateFrameV : " + $tfV);
+			
+			// update the texture file
+			wizlog ("	[#] Update Texture Output On : " + $ramp);
+			wizUpdateTextureFromTestTextureOutputPath({$ramp});
+			
+			wizlog ("	[#] Refresh Texture File On File : " + $tileFile);	
+			wizRefreshSelectedFileTextures({$tileFile});
+			
+			refresh -f;
+			refreshAE;
+			
+			selectType -allComponents false;
+			
+			// make the selection and a set
+			if ($ct == "faces" || $ct == "face" || $ct == "f"){
+				selectType -pf true;
+			} else if ($ct == "vertices" || $ct == "vertice" || $ct == "vertex" || $ct == "v"){
+				selectType -v true;
+			} else if ($ct == "edges" || $ct == "edge" || $ct == "e"){
+				selectType -pe true;
+			}
+			
+			string $newSel[] = wizMakeSelectionFromTextureMap({$obj}, $tileFilePath[0]);
+
+			//refresh -f;
+			//refreshAE;
+			
+			// convert the selection to component type specified
+			if ($ct == "faces" || $ct == "face" || $ct == "f"){
+				ConvertSelectionToFaces;
+			} else if ($ct == "vertices" || $ct == "vertice" || $ct == "vertex" || $ct == "v"){
+			
+			} else if ($ct == "edges" || $ct == "edge" || $ct == "e"){
+				ConvertSelectionToEdges;
+			}
+			
+			wizlog ((niceArrayList("	[#] Selected : ", `ls -fl -sl`)));			
+					
+			string $newSet[] = wizCraftMGMT("-q -s -n -ft " + $ft + " -ot MarchingTileSelSet" + $ui + $vi);
+			
+			$selSets[`size $selSets`] = createSetFromSelection(`ls -sl`, $newSet[0]);
+			
+			wizlog ("	[+] New Selection Set : " + $selSets[$i]);
+						
+			$tfU = $tfU + $uSize;
+			
+			//refresh -f;
+			//refreshAE;
+			
+			setToolTo moveSuperContext;
+			selectType -allObjects true;
+			selectMode -o;
+			select -cl;
+			
+			$i++;
+			wizProgressWindowStep(1);        
+			if (wizProgressCancelled() == 1){ return {""}; }
+		}
+		$tfV = $tfV + $vSize;	
+		$tfU = 0;
+		
+	}
+	string $allSetsName[] = wizCraftMGMT("-q -s -n -ft " + $ft + " -ot SurfaceTileSelSets");
+	string $allSets = createSetFromSelection($selSets, $allSetsName[0]);
+	wizProgressWindowEnd();
+	//return {$tileFile};
+	return $selSets;
+	
+}
+
+//@ WIZ CRAFT GRID SNAP TILE ONTO VERTICES
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	This will only work properly if supplied vertices that make up
+	a rectangular uv area.
+	If using sl flag : select object first, then vertices. <br>
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	wizCraftGridSnapTileOntoVertices("-sl");
+	
+	</code>
+*********************************************************************/
+global proc wizCraftGridSnapTileOntoVertices( string $flags )
+{
+	wizlog ("[@] wizCraftGridSnapTileOntoVertices");
+	string $dbl = "-dmi WizCraftGridSnapTileOntoVerticesDebugMenuItem -t Some Proc Name"; string $dbm = "add"; int $dbc = 1;
+	//menuItem -e -cb true WizCraftGridSnapTileOntoVerticesDebugMenuItem;
+	
+	string $obj, $type;
+	string $ft = "featureType";
+	string $sel[], $v[];
+	int $edit;
+	int $uvSel;
+	int $fSel;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" : case "-t" : case "-tile" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-ft" : case "-featureType" :
+			$ft = $tok[($i + 1)];
+			break ;
+			
+			case "-v" : case "-vertices" :
+			$v = wizFlagArray($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -fl -sl`;
+			string $tr[] = `ls -tr -sl`;
+			$obj = $tr[0];
+			stringArrayRemoveAtIndex(0, $sel);
+			$v = $sel;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+			case "-uvSel" : case "-uvSelection" :
+			$uvSel = 1;
+			break ;
+		}
+	}
+	
+	//_________________________________________
+	// Get Component Selection
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	string $mesh[] = getObjectsFromComponents($v);
+	if ($mesh[0] == $obj){
+		wizlog ("	[!] Cannot Place Object On Itself [!]");
+	}
+	//debugListString($dbl, ("[#] Snap Object : " + $obj), $dbc, $dbm);
+	//debugListArray($dbl, "[#] Snap Components [#] ", $v, $dbc, $dbm, "[NEXT]", 100);
+	
+	if (`size $v` == 0){
+		wizlog ("	[!] No Vertices Or Components Selected [!]");
+	}
+	wizlog ("	[#] Object : " + $obj);
+	if (`size $obj` == 0 || `objExists $obj` == 0){
+		wizlog ("	[!] No Tile Objects Selected [!]");
+	}
+	
+	select -r $v;
+	
+	//_________________________________________
+	// Convert The Selection
+	
+	// convert selection to contained faces first to resolve issue of vertices have 2 associated uvs
+	//ConvertSelectionToVertices;
+	ConvertSelectionToFaces;
+	//ConvertSelectionToContainedFaces;
+	ConvertSelectionToUVs;	
+	string $uvs[] = `ls -fl -sl`;
+	debugListArray($dbl, "[#] UVs : ", $uvs, $dbc, $dbm, "[NEXT]", 100);
+	
+	//_________________________________________
+	// Sort The UVs
+	
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//	This sorts the uv's in both the u direction and then the v direction.
+	//	This is because we can use maya's sorting by putting the uv pos in front of the uvName
+	//	and then when we sort the other way we can determine how many columns we have.
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	// sort the uvs by u direction so we have a order to use to correspond our lattice with our vertices	
+	//string $uSort[] = sortPolyComponentByUVSpaceU($uvs);
+	//string $uSort[] = sortUVsIntoRowColumns("-sl -u");
+	string $uSort[] = wizSortUVs("-sl -u");
+	debugListArray($dbl, " - [U Sorted] ", $uSort, $dbc, $dbm, "[NEXT]", 100);
+	
+	select -r $uvs;
+	
+	// we need to sort the uvs in the other direction so we can determine how many rows and columns we have.
+	//string $vSort[] = sortPolyComponentByUVSpaceV($uvs);
+	//wizlog ((niceArrayList("	[V Sorted] ", $vSort)));
+	//string $vSort[] = sortUVsIntoRowColumns("-sl -v");
+	string $vSort[] = wizSortUVs("-sl -v");
+	debugListArray($dbl, " - [V Sorted] ", $vSort, $dbc, $dbm, "[NEXT]", 100);
+	
+	// this will give us our row and column count
+	int $rowColCount[] = getRowColumnCountFromIntersectingArrays($uSort, $vSort);
+	debugListString($dbl, ("	[#] Rows : " + $rowColCount[0] + " [#] Columns : " + $rowColCount[1]), $dbc, $dbm);
+		
+	// sort the uv's and figure out how many rows and columns we have selected.
+	/*	
+	int $rowColCount[];
+	string $sortUVs[];
+	float $uvPos[];
+	for ($i=0;$i<`size $uvs`;$i++){
+		$uvPos = `polyEditUV -q -u -v $uvs[$i]`;
+		debugListString ($dbl, ("[UV Positions] : " + $uvPos[0] + " " + $uvPos[1]), $dbc, $dbm);
+		
+		//$sortUVs[`size $sortUVs`] = $uvPos[0] + $uvPos[1] + " " + $uv[$i];
+		//$sortUVs[`size $sortUVs`] = ($uvPos[0] + $uvPos[1]) + " " + $uv[$i];
+		$sortUVs[`size $sortUVs`] = $uvPos[0] + " " + $uvs[$i];
+	}
+	
+	debugListArray ($dbl, "[U][V] [UVName]", $sortUVs, $dbc, $dbm, "[NEXT]", 1000);
+	
+	string $sorted[] = sort($sortUVs);
+	debugListArray ($dbl, "[SORTED]", $sorted, $dbc, $dbm, "[NEXT]", 1000);
+	
+	$sorted = getStringArrayAfterSpace($sorted);
+	debugListArray ($dbl, "[SORTED Names]", $sorted, $dbc, $dbm, "[NEXT]", 1000);
+	
+	float $lastUV[] = `polyEditUV -q -u -v $sorted[0]`;
+	for ($i=0;$i<`size $sorted`;$i++){
+		$uvPos = `polyEditUV -q -u -v $sorted[$i]`;	
+		if ($lastUV[0] < $uvPos[0] && $lastUV[1] > $uvPos[1] && $rowColCount[0] == 0){
+			$rowColCount[0] = $i;
+			$rowColCount[1] = `size $sorted` / $rowColCount[0];
+			debugListString ($dbl, ("[ROW COUNT] : " + $rowColCount[0]), $dbc, $dbm);
+			debugListString ($dbl, ("[COLUMN COUNT] : " + $rowColCount[1]), $dbc, $dbm);
+		}
+		$lastUV = $uvPos;
+	}
+	*/
+	
+	select -cl;
+	select -r $obj;
+	
+	if ($rowColCount[0] < 2 || $rowColCount[1] < 2){
+		wizlog ("	[!] Error : Vertice Array Must Be 2 Dimensional [!]");
+		return ;
+	}	
+	
+	string $sl[] = `ls -sl`;
+	wizlog ("	[#] Attaching Lattice To Object : " + $obj + " [#]");
+	wizlog ("	[#] Attaching Lattice To Selection: " + (stringArrayToString($sl, ", ")) + " [#]");
+	
+	//_________________________________________
+	// Create Lattice To Deform Tile
+	
+	// create a lattice with rows and columns corresponding to the uvs
+	string $lat[] = `lattice -divisions $rowColCount[0] 2 $rowColCount[1] -cp -objectCentered true -ldv 2 2 2 -ol 1`;
+	//wizCraftMGMT("-s -grp -ft " + $ft + " -ot SurfaceTile -sl");
+	
+	cycleCheck -e off;
+	
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//	For Every Vertice Create A Lattice Point And Cluster To Deform Tile	
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	int $i = 0;
+	for ($c=0;$c<$rowColCount[1];$c++){
+		for ($r=0;$r<$rowColCount[0];$r++){
+		
+			// select the lattice points in row - col - order
+			select -r ($lat[1] + ".pt[" + $r + "][0:1][" + $c + "]") ;
+			debugListString ($dbl, ($lat[1] + ".pt[" + $r + "][0:1][" + $c + "]"), $dbc, $dbm);
+			debugListString ($dbl, ("[Cluster] : [Vertex]"), $dbc, $dbm);
+			//debugListString($dbl, ($lat[1] + ".pt[" + $r + "][0:1][" + $c + "]"), $dbc, $dbm);
+						
+			// create a cluster handle for the top and bottom lattice points
+			string $cluster[] = `newCluster " -envelope 1"`;
+			debugListString ($dbl, ($cluster[1]), $dbc, $dbm);
+			
+			// Result: cluster4 cluster4Handle // 
+			// Move the cluster to the location of the vertice
+			select -r $uSort[$i];
+			ConvertSelectionToVertices;
+			
+			string $v[] = `ls -fl -sl`;
+			debugListString ($dbl, ($v[0]), $dbc, $dbm);
+			
+			float $pos[] = `xform -q -ws -t $v[0]`;
+			
+			string $sl[] = `spaceLocator -p 0 0 0`;
+			xform -a -ws -t $pos[0] $pos[1] $pos[2] $sl[0];
+			debugListString ($dbl, ("xform -ws -t " + $pos[0] + " " + $pos[1] + " " + $pos[2]), $dbc, $dbm);
+
+			select -r $mesh;
+			select -add $sl[0];
+			
+			// geometry and normal constrain the cluster to the object vertices
+			geometryConstraint -weight 1;
+ 
+			normalConstraint -weight 1 -aimVector 0 1 0 -upVector 0 1 0 -worldUpType "vector" -worldUpVector 0 1 0;
+			
+			select -r $sl[0];
+			select -add $cluster[1];
+			
+			parentConstraint -weight 1;
+			
+			wizCraftMGMT("-s -grp -ft " + $ft + " -ot SurfaceTile -sl");
+
+			$i++;
+			
+		}	
+	}
+	
+	
+}
+
+/*
+global proc string[] wizCraftSurfaceTileSet( string $flags )
+{
+	string $name;	
+	int $query;
+	int $bd; // blind data
+	string $return[];
+
+	string $sel[];
+
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+
+			case "-n" : case "-name" :
+			$returnType = "name";
+			break;
+			
+			case "-ex" : case  "-exists" :
+			$returnType = "exists";
+			break;
+			
+			case "-sl" : case  "-selected" :
+			$sel = `ls -sl`;
+			break;
+				
+			case "-bd" : case "-blindData" :
+			$bd = 1;
+			break ;
+			
+			
+		}
+	}
+
+	// construct name
+	string $nameBody = $ft + $ct + $ot;
+	$name = "WIZ_name_surfaceTileSet";
+
+	if (`objExists $name` == 0){
+		string $returnSet = createSetFromSelection($sel, $name);
+		$return[`size $return`] = $returnSet;
+	}
+	// string $newSet = addSelectedObjectsToSet($sel, $name);					
+
+	return $return;
+
+}
+*/
+

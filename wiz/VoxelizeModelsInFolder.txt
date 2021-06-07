@@ -1,0 +1,48 @@
+//this is callback for dialog that asks if user needs to save scene after New command
+void ModalDialogCallbackDontSave(){
+	cmd("$DialogButton#2");/*press Don't save - second button*/		
+}
+//this is callback to press OK when user is asked to keep scale or not
+void ModalDialogCallbackOk(){
+	cmd("$DialogButton#1");/*press OK*/
+
+}
+//this is callback for decimation dialog
+void ModalDialogCallbackDecimation(){
+	SetSliderValue("$DecimationParams::ReductionPercent",80.0);
+	cmd("$DialogButton#1");/*press Ok*/		
+}
+int nfiles;
+void main(){
+	nfiles=0;
+	//This function will call void ForAnyFile(string &in FileName) for each file in user defined folder - stl and obj are just for example 	
+	ForEachFileInFolder("","*.stl;*.obj","ForAnyFile");
+	ModalDialog(formatInt(nfiles,'l')+" files processed."," ");	
+}
+
+void ForAnyFile(string &in FileName){ 
+	nfiles++;
+	//During the New command 3D-Coat will ask what to do with the scene - save or not, this dialog intended to skip it
+	SetModalDialogCallback("ModalDialogCallbackDontSave");
+	cmd("$CLEARSCENE");/*New*/
+	//Substitute filename for the next file dialog
+	SetFileForFileDialogs(FileName);
+	//Import model 
+	cmd("$ImportForVoxelizing");/*Import mesh for voxelizing*/
+	//This is intended to press OK when user will be asked if scale should be kept
+	SetModalDialogCallback("ModalDialogCallbackOk");
+	//ensure that model will be voxelized
+	SetBoolField("$VoxelSculptTool::MergeWithoutVoxelizing",false);
+	//press apply button
+	apply();
+	//smooth voxelized mesh
+	cmd("$[Page4]Smooth all");/*Smooth all*/
+	string filename;
+	filename=RemoveExtension(FileName);
+	filename+="_smoothed.Obj";
+	SetFileForFileDialogs(filename);
+	//set output filename
+	SetModalDialogCallback("ModalDialogCallbackDecimation");
+	//and finally export
+	cmd("$ExportScene");/*Export scene*/
+}

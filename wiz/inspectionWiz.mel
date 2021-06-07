@@ -1,0 +1,1932 @@
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//|||||||||||||||||||||||||:::WIZ:::||||||||||||||||||||||||||||||||||
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+/*====================================================================
+Author: Glen Johnson
+Email: plasticarm@gmail.com
+Website: plasticarm.com / hrpictures.com
+----------------------------------------------------------
+Summary:
+
+
+
+====================================================================*/
+
+//====================================================================
+//			GLOBAL VARS
+
+global int $WIZ_isolatedView;
+$WIZ_isolatedView = 0;
+
+//====================================================================
+
+global proc inspectionWiz()
+{
+
+}
+
+//========================================================================================================
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//			LAYOUTS
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//========================================================================================================
+
+global proc inspectionFrameLayout(string $parent)
+{
+	global string $WIZ_activeSelectList;
+	
+	//string $layout = wizStandardFrameLayout($parent, "Inspection", "selectionMasterInspectionFrameLayout");
+	string $layout = `frameLayout
+			-l "Inspection"	
+			-ann ""
+			-bv true
+			-la "center"
+			-li 10
+			-lv true
+			-mw 0
+			-mh 0		
+			
+			-cll true
+			-cl true
+			-parent $parent	
+			selectionMasterInspectionFrameLayout
+			`;
+			
+	
+	string $inspectionType[] = getInspectionWizInfo("inspectionType");
+	
+	inspectionWizMenuBarLayout($layout);
+	
+	string $rowLayout = `rowLayout
+		-numberOfColumns 3
+		-p $layout
+		`;	
+	
+	
+	button 
+		-l "Start Checking"
+		-c ("string $activeList = getInspectionWizSelectionList();inspectionWizStartChecking($activeList);")
+		;
+	/*	
+	button
+		-l "Next"
+		-c ("inspectionWizCheckNext(" + "\"" + $WIZ_activeSelectList + "\"" + ");")
+		;
+	*/	
+	iconTextButton
+		-i "wiz/checkBoxIcon1.png"
+		-c ("string $activeList = getInspectionWizSelectionList();inspectionWizCheckNext($activeList);")
+		-l "Next"
+		;
+	
+	button 
+		-l "End Checking"
+		-c ("string $activeList = getInspectionWizSelectionList();inspectionWizCancelChecking($activeList);")
+		;
+		
+	setParent..;
+	
+	//Tabs
+	string $tabLayout = `tabLayout
+		-scr false
+		-cr true
+		-iv true
+		-p $layout
+		-cc ("showBelowSelectedTabsHideBelowUnselectedTabs(\"inspectionWizTabs\");")
+		inspectionWizTabs
+		`;	
+		
+	normalsInspectionTabLayout($tabLayout);
+	
+	mudboxInspectionLayout($tabLayout);
+	
+	compareMeshInspectionLayout($tabLayout);
+	
+	uvShellInspectionTabLayout($tabLayout);
+	
+	instanceInspectionLayout($tabLayout);
+	
+	tabLayout
+		-e
+		-tli 1 $inspectionType[0]
+		-tli 2 $inspectionType[1]
+		-tli 3 $inspectionType[2]
+		-tli 4 $inspectionType[3]
+		-tli 5 $inspectionType[4]
+		inspectionWizTabs
+		;
+
+
+}
+
+//INSPECTION REPORT LAYOUT
+//------------------------------------------------------
+global proc inspectionReportLayout(string $parent)
+{
+	string $layout = `columnLayout
+		-adjustableColumn true
+		-p $parent
+		inspectionReportColumnLayout
+		`;
+		
+	inspectionReportMenuBarLayout($layout);	
+}
+
+//NORMALS INSPECTION TAB LAYOUT
+//-----------------------------------
+global proc normalsInspectionTabLayout(string $parent)
+{
+	
+	string $normalsLayout = `columnLayout
+		-adjustableColumn true
+		-p $parent
+		Normals
+		`;
+		
+	string $normalsRowLayout = `rowLayout
+		-numberOfColumns 3
+		-p $normalsLayout
+		`;
+		/*	
+		button 
+			-l "Reverse Normals"
+			-c ("reverseNormalsOnAllSelected(`ls -sl`);")
+			;
+		*/
+				
+		button 
+			-l "Double Sided Off"
+			-c ("setDoubleSided(`ls -sl`,0)")
+			;
+			
+		button 
+			-l "Double Sided On"
+			-c ("setDoubleSided(`ls -sl`,1)")
+			;
+						
+		button
+			-l "Opposite Off"
+			-c ("string $sel[] = `ls -sl`;string $shapes[] = `listRelatives -type mesh -type nurbsSurface $sel`;setAttrOnAllObjects($shapes, \"opposite\", 0);")
+			;
+
+			
+	setParent..;
+	
+	string $normalsRowLayout2 = `rowLayout
+		-numberOfColumns 5
+		-p $normalsLayout
+		`;
+		
+		button 
+			-l "Reverse"
+			-c ("reverseNormalsOnAllSelected(`ls -sl`);")
+			;
+		/*	
+		button 
+			-l "Lock Normals"
+			-c ""
+			;
+		*/
+		button 
+			-l "Unlock"
+			-c ("polyNormalPerVertex -ufn true;")
+			;
+		
+		button 
+			-l "Average"
+			-c "polyAverageNormal"
+			;
+		
+		button 
+			-l "Set To Face"
+			-c "polySetToFaceNormal"
+			;
+		button 
+			-l "Conform"
+			-c ("polyNormal -normalMode 2 -userNormalMode 0 -ch 1 (`ls -sl`)")
+			;
+
+	setParent..;
+	
+		string $normalsRowLayout3 = `rowLayout
+		-numberOfColumns 2
+		-p $normalsLayout
+		
+		`;
+			
+		button 
+			-l "Set Normal Angle"
+			-c "setNormalAngleOnSelected(`ls -sl`)"
+			;
+			
+		intSliderGrp 
+			-l "Angle:" 
+			//-cal 1 "left"
+			-minValue 1		
+			-maxValue 180
+			-value 30 
+			-fmn 1
+			-fmx 180
+			-field true			
+			-ann ""
+			-cw 1 35			
+			checkNormalsNormalAngle			
+			;
+			
+		
+					
+	setParent..;
+	
+		string $normalsRowLayout4 = `rowLayout
+		-numberOfColumns 2
+		-p $normalsLayout		
+		`;
+		
+		string $normalSizeChangeCommand = ("float $sn = `floatSliderGrp -q -v inspectNormalsNormalSizeFloatSliderGrp`;"
+		+"polyOptions -sn $sn;");
+		
+		button 
+			-l "Toggle Normals Display"
+			-c ("toggle -nr;")
+			;
+			
+		floatSliderGrp 
+			-l "Normal Size:" 
+			-cal 1 "left"
+			-minValue 0.001		
+			-maxValue 1
+			-value 0.5 
+			-fmn 0.001
+			-fmx 1000
+			-field true
+			-pre 2
+			-ann ""	
+			-cw 1 65
+			-cc $normalSizeChangeCommand
+			inspectNormalsNormalSizeFloatSliderGrp		
+			;
+			
+		
+					
+	setParent..;
+	
+}
+
+//MUDBOX INSPECTION LAYOUT
+//-----------------------------------
+global proc mudboxInspectionLayout(string $parent)
+{
+	string $columnLayout = `columnLayout
+		-adjustableColumn true
+		-p $parent
+		`;
+		
+	string $align = "left";
+	int $cNum = 1;
+	int $cwNum = 2;
+	int $cw = 80;
+	int $cw1 = 130;
+	int $cwNum1 = 1;
+	int $adj = 1;
+
+	
+	string $rowColumnLayout = `rowColumnLayout
+		-nc 2
+		`;
+	
+	string $hvvBC = ("string $hvv[] = inspectHighValenceVertices(`ls -fl -sl`, \"inspectionWiz\");"
+	+"textFieldButtonGrp -e -tx $hvv[0] inspectHighValenceVerticesCountTextFieldButtonGrp;");
+	
+	string $tsBC = ("string $ts[] = inspectTShapes(`ls -fl -sl`, \"inspectionWiz\");"
+	+"textFieldButtonGrp -e -tx $ts[0] inspectTShapeCountTextFieldButtonGrp;");
+	
+	string $tmsBC = ("string $tms[] = inspectTooManySides(`ls -fl -sl`, \"inspectionWiz\");"
+	+"textFieldButtonGrp -e -tx $tms[0] inspectToManySidesTextFieldButtonGrp;");
+	
+	string $umfBC = ("string $umf[] = inspectUnmappedFaces(`ls -fl -sl`, \"inspectionWiz\");"
+	+"textFieldButtonGrp -e -tx $umf[0] inspectUnmappedFacedTextFieldButtonGrp;");
+	
+	string $nmvBC = ("string $nmv[] = inspectNonManifoldVertices(`ls -fl -sl`, \"inspectionWiz\");"
+	+"textFieldButtonGrp -e -tx $nmv[0] inspectNonManifoldVerticesTextFieldButtonGrp;");
+
+	
+	string $allBC = ("string $sel[] = `ls -fl -sl`;"
+	+"wizProgressWindowStart(\"Inspecting All Polygon Problems\", \"Starting\", 1);"
+	+"int $maxProgress = `size $sel` * 6;"
+	+"wizProgressWindowMinMax(0,(100 * $maxProgress));"
+	+"int $pStep = wizProgressWindowGetStepValue(6);"
+	+"wizProgressWindowStatus(\"Inspecting High Valence Vertices\");"
+	+ $hvvBC
+	+"wizProgressWindowStep($pStep);"
+	+"select -r $sel;"
+	+"wizProgressWindowStatus(\"Inspecting T Shapes\");"
+	+ $tsBC
+	+"wizProgressWindowStep($pStep);"
+	+"select -r $sel;"
+	+"wizProgressWindowStatus(\"Inspecting Faces With Too Many Sides\");"
+	+ $tmsBC
+	+"wizProgressWindowStep($pStep);"
+	+"select -r $sel;"
+	+"wizProgressWindowStatus(\"Inspecting Unmapped Faces\");"
+	+ $umfBC
+	+"wizProgressWindowStep($pStep);"
+	+"select -r $sel;"
+	+"wizProgressWindowStatus(\"Inspecting Non Manifold Vertices\");"
+	+ $nmvBC
+	+"wizProgressWindowStep($pStep);"
+	+"select -r $sel;"
+	+"int $allCount = (int($hvv[0])) + (int($ts[0])) + (int($tms[0])) + (int($umf[0])) + (int($nmv[0]));"
+	+"textFieldButtonGrp -e -tx $allCount inspectAllMudboxProblemsTextFieldButtonGrp;"
+	+"wizProgressWindowEnd();");
+	
+	
+	textFieldButtonGrp
+		-l "All"
+		-cal $cNum $align
+		-adj $adj
+		-cw $cwNum $cw
+		-bl "Count"
+		-bc $allBC		
+		inspectAllMudboxProblemsTextFieldButtonGrp
+		;			
+
+	textFieldButtonGrp
+		-l "To Many Sides"
+		-cal $cNum $align
+		-adj $adj
+		-cw $cwNum $cw
+		-bl "Count"
+		-bc $tmsBC
+		inspectToManySidesTextFieldButtonGrp
+		;
+		
+	textFieldButtonGrp
+		-l "High Valence Vertices"
+		-cal $cNum $align
+		-adj $adj
+		-cw $cwNum $cw
+		-bl "Count"
+		-bc $hvvBC
+		inspectHighValenceVerticesCountTextFieldButtonGrp
+		;	
+
+	textFieldButtonGrp
+		-l "T Shapes"
+		-cal $cNum $align
+		-adj $adj
+		-cw $cwNum $cw
+		-bl "Count"
+		-bc $tsBC 
+		inspectTShapeCountTextFieldButtonGrp
+		;
+
+	textFieldButtonGrp
+		-l "Non Manifold Vertices"
+		-cal $cNum $align
+		-adj $adj
+		-cw $cwNum $cw
+		-bl "Count"
+		-bc $nmvBC
+		inspectNonManifoldVerticesTextFieldButtonGrp
+		;
+		
+	textFieldButtonGrp
+		-l "Unmapped Faces"
+		-cal $cNum $align
+		-adj $adj
+		-cw $cwNum $cw
+		-bl "Count"
+		-bc $umfBC
+		inspectUnmappedFacedTextFieldButtonGrp
+		;
+		
+	setParent..;
+}
+
+//MESH COMPARE LAYOUT
+//-----------------------------------
+global proc compareMeshInspectionLayout(string $parent)
+{
+	string $columnLayout = `columnLayout
+		-adjustableColumn true
+		-p $parent
+		`;	
+		
+	string $align = "left";
+	int $cNum = 1;
+	int $cwNum = 2;
+	int $cw = 80;
+	int $cw1 = 130;
+	int $cwNum1 = 1;
+	int $adj = 1;
+	
+	string $rowColumnLayout = `rowColumnLayout
+		-nc 2
+		`;
+	
+	string $cType[] = { "faces", "vertices", "edges", "uvs", "uvSetIndices", "all" };
+	string $tfbg[] = { "inspectPolyCompareCompareFacesTextFieldButtonGrp", 
+		"inspectPolyCompareCompareVerticesTextFieldButtonGrp",
+		"inspectPolyCompareCompareEdgesTextFieldButtonGrp",
+		"inspectPolyCompareCompareUVsTextFieldButtonGrp",
+		"inspectPolyCompareCompareUVSetIndicesTextFieldButtonGrp",
+		"inspectPolyCompareCompareAllTextFieldButtonGrp" };
+			
+	string $bc[];
+	for($i=0;$i<`size $cType`;$i++){
+		
+		$bc[`size $bc`] = ("int $same = polyCompareSelected(`ls -sl`,\"" + $cType[$i] + "\");"
+		+"string $tx = \"No Match\";"
+		+"if($same == 0){"
+		+"$tx = \"Match\";"
+		+"}"
+		+"textFieldButtonGrp -edit -tx $tx " + $tfbg[$i] + ";");
+		
+		//print("BC: " + $bc[$i] + "\n");
+			
+	}
+		
+		textFieldButtonGrp
+			-l "Compare Faces"
+			-cal $cNum $align
+			-adj $adj
+			-cw $cwNum $cw
+			-bl "Compare"
+			-bc $bc[0]
+			inspectPolyCompareCompareFacesTextFieldButtonGrp
+			;
+			
+		textFieldButtonGrp
+			-l "Compare Vertices"
+			-cal $cNum $align
+			-adj $adj
+			-cw $cwNum $cw
+			-bl "Compare"
+			-bc $bc[1]
+			inspectPolyCompareCompareVerticesTextFieldButtonGrp
+			;
+			
+		textFieldButtonGrp
+			-l "Compare Edges"
+			-cal $cNum $align
+			-adj $adj
+			-cw $cwNum $cw
+			-bl "Compare"
+			-bc $bc[2]
+			inspectPolyCompareCompareEdgesTextFieldButtonGrp
+			;
+	
+		textFieldButtonGrp
+			-l "Compare UVs"
+			-cal $cNum $align
+			-adj $adj
+			-cw $cwNum $cw
+			-bl "Compare"
+			-bc $bc[3]
+			inspectPolyCompareCompareUVsTextFieldButtonGrp
+			;	
+	
+		textFieldButtonGrp
+			-l "Compare UV Set Indices"
+			-cal $cNum $align
+			-adj $adj
+			-cw $cwNum $cw
+			-bl "Compare"
+			-bc $bc[4]
+			inspectPolyCompareCompareUVSetIndicesTextFieldButtonGrp
+			;
+			
+		textFieldButtonGrp
+			-l "Compare All"
+			-cal $cNum $align
+			-adj $adj
+			-cw $cwNum $cw
+			-bl "Compare"
+			-bc ($bc[0] + $bc[1] + $bc[2] + $bc[3] + $bc[4] + $bc[5])
+			inspectPolyCompareCompareAllTextFieldButtonGrp
+			;
+		
+			
+		
+		setParent..;
+		
+		/*
+		textFieldButtonGrp
+			-l "Symetrical Axis"
+			-cal $cNum $align
+			-adj $adj
+			-cw $cwNum $cw
+			-bl "Get Axis"
+			-bc ("string $axis = getMeshSymetricalAxis(`ls -sl`); textFieldButtonGrp -e -tx $axis inspectSymetricalAxisTextFieldButtonGrp;")
+			inspectSymetricalAxisTextFieldButtonGrp
+			;
+		*/	
+	setParent..;	
+
+}
+
+//UV SHELL INSPECTION TAB LAYOUT
+//=============================================================================
+global proc uvShellInspectionTabLayout(string $parent)
+{
+	string $columnLayout = `columnLayout
+		-adjustableColumn true
+		-p $parent
+		`;	
+
+	textFieldButtonGrp
+		-l "Perimeter Of Shell"
+		-cal 1 "left"
+		//-adj 1
+		-bl "Measure"
+		-bc ("float $perimeter = getPerimeterOfShellFaces(`ls -sl`); textFieldButtonGrp -e -tx $perimeter inspectShellPerimeterTextFieldButtonGrp;")
+		inspectShellPerimeterTextFieldButtonGrp
+		;
+		
+	textFieldButtonGrp
+		-l "Area Of Shell"
+		-cal 1 "left"
+		//-adj 1
+		-bl "Measure"
+		-bc ("float $area = getAreaOfShellFaces(`ls -sl`); textFieldButtonGrp -e -tx $area inspectShellAreaTextFieldButtonGrp;")
+		inspectShellAreaTextFieldButtonGrp
+		;
+		
+}
+
+//INSTANCE INSPECTION LAYOUT
+//--------------------------------------
+global proc instanceInspectionLayout(string $parent)
+{
+	string $columnLayout = `columnLayout
+		-adjustableColumn true
+		-p $parent
+		`;	
+	
+	string $isInstanceCommand = ("string $answer = \"No\";"
+	+"int $isInstance = isInstance(`ls -sl`);"
+	+"if($isInstance == 1){ $answer = \"Yes\";}"
+	+"textFieldButtonGrp -e -tx $answer inspectInstanceIsInstanceTextFieldButtonGrp;");
+	
+	textFieldButtonGrp
+		-l "Is Selected Instance?"
+		-cal 1 "left"
+		-bl "?"
+		-bc $isInstanceCommand
+		inspectInstanceIsInstanceTextFieldButtonGrp
+		;
+		
+		
+}
+
+//OTHER TAB LAYOUT
+//-----------------------------------
+global proc otherTabLayout(string $parent)
+{
+	
+	string $normalsLayout = `columnLayout
+		-adjustableColumn true
+		-p $parent
+		Other
+		`;
+		
+	string $normalsRowLayout = `rowLayout
+		-numberOfColumns 4
+		-p $normalsLayout
+		`;
+			
+		button 
+			-l "Reverse Normals"
+			-c ("reverseNormalsOnAllSelected(`ls -sl`);")
+			;
+
+		button 
+			-l "Toggle Normals Display"
+			-c ("toggle -nr;")
+			;
+		
+		button 
+			-l "Double Sided On"
+			-c ("setDoubleSided(`ls -sl`,1)")
+			;
+			
+		button 
+			-l "Double Sided Off"
+			-c ("setDoubleSided(`ls -sl`,0)")
+			;
+			
+	setParent..;
+	
+		string $normalsRowLayout2 = `rowLayout
+		-numberOfColumns 2
+		-p $normalsLayout
+		`;
+			
+		intSliderGrp 
+			-l "Angle:" 
+			-minValue 1		
+			-maxValue 180
+			-value 30 
+			-fmn 1
+			-fmx 180
+			-field true	
+			-ann ""
+			-cw 1 150
+			checkNormalsNormalAngle			
+			;
+		
+		button 
+			-l "Set Normal Angle"
+			-c "setNormalAngleOnSelected(`ls -sl`)"
+			;
+		
+			
+	setParent..;
+	
+	string $normalsRowLayout3 = `rowLayout
+		-numberOfColumns 5
+		-p $normalsLayout
+		`;
+			
+		button 
+			-l "Lock Normals"
+			-c ""
+			;
+		
+		button 
+			-l "Unlock Normals"
+			-c ("toggle -nr;")
+			;
+		
+		button 
+			-l "Average Normals"
+			-c "polyAverageNormal"
+			;
+		
+		button 
+			-l "Set To Face"
+			-c "polySetToFaceNormal"
+			;
+		button 
+			-l "Conform Normals"
+			-c ("polyNormal -normalMode 2 -userNormalMode 0 -ch 1 (`ls -sl`)")
+			;
+
+	setParent..;
+}
+
+//========================================================================================================
+//""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//			MENUS
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+//========================================================================================================
+
+//INSPECTION WIZ MENU BAR LAYOUT
+//=============================================================================
+global proc inspectionWizMenuBarLayout(string $parent)
+{
+	string $menuBarLayout = `menuBarLayout -p $parent inspectionWizMenuBar`;
+	
+	//INSPECTION TYPE
+	menu -l "Inspection Type" inpectionWizInspectionTypeMenu;
+	string $inspectionType[] = getInspectionWizInfo("inspectionType");
+	radioMenuItemCollection;
+	int $sti = 1;
+	
+	for($i=0;$i<`size $inspectionType`;$i++){
+		string $miName = (removeAllSpaces($inspectionType[$i]) + "InspectionMenuItem");
+		$rb = false;
+		if($i == 0){
+			$rb = true;	
+		} else {
+			$rb = false;	
+		}
+		menuItem -rb $rb -l $inspectionType[$i] $miName;
+		
+	}
+	
+	//ACTIVE LIST
+	menu -l "Inspect List" inspectionWizInspectListMenu;
+	string $selectionLists[] = { "selectMasterListA","selectMasterListB" };
+	
+	string $activeList = getActiveSelectionList();
+	
+	radioMenuItemCollection;
+	for($i=0;$i<`size $selectionLists`;$i++){
+		string $miName = $selectionLists[$i] + "InspectionMenuItem";
+		$rb = false;
+		if($selectionLists[$i] == $activeList){
+			$rb = true;	
+		} else {
+			$rb = false;	
+		}
+		menuItem -rb $rb -l $selectionLists[$i] $miName;
+	}
+	
+	//OPTIONS
+	menu -l "Options";
+		menuItem -cb true -l "Isolate Selected" inspectionWizIsolateSelectedMenuItem;
+		menuItem -cb true -l "Focus On Selected" inspectionWizFocusOnSelectedMenuItem;
+			menuItem -ob true -c ("openCurrentOptionsLayout(\"focusOnSelectedObjectOptionsMenu\");");
+		
+	
+}
+
+//INSPECTION REPORT MENU BAR LAYOUT
+//=============================================================================
+global proc inspectionReportMenuBarLayout(string $parent)
+{
+	string $menuBarLayout = `menuBarLayout -p $parent inspectionReportMenuBarLayout`;
+	menu -l "Options";
+		menuItem -cb false -l "Inspection Reports Enabled" inspectionReportsEnabledMenuItem;
+		
+}
+
+
+//========================================================================================================
+//()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//			FUNCTIONS
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()
+//========================================================================================================
+
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//			ISOLATING AND FOCUS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//FOCUS ON SELECTED
+//----------------------------------------
+global proc int toggleWizIsolateView()
+{
+	global int $WIZ_isolatedView;	
+	string $sel[] = `ls -sl`;
+	
+	if (`size $sel` == 0){
+		$WIZ_isolatedView = 0;		
+		//zoomOutOnSelected(`ls -sl`);		
+		setIsolateSelectState(0);
+		setToggleAutoLoadState(0);
+		
+		selectNothing();
+	} else {
+		$WIZ_isolatedView = 1;
+		loadIsolateAndViewSelected(`ls -sl`);
+	}
+	/*
+	if($WIZ_isolatedView == 0){
+		$WIZ_isolatedView = 1;
+		loadIsolateAndViewSelected(`ls -sl`);
+	} else {
+		$WIZ_isolatedView = 0;		
+		//zoomOutOnSelected(`ls -sl`);		
+		setIsolateSelectState(0);
+		setToggleAutoLoadState(0);
+		
+		selectNothing();
+	}
+	*/
+	return $WIZ_isolatedView;
+}
+
+//LOAD ISOLATE AND VIEW SELECTED
+//----------------------------------------
+global proc loadIsolateAndViewSelected(string $sel[])
+{
+	select -r $sel;
+	setToggleAutoLoadState(1);
+	setIsolateSelectState(1);
+	//inspectWizViewFit($sel);
+	setToggleAutoLoadState(0);
+	
+}
+
+//FOCUS ON SELECTED
+//----------------------------------------
+global proc focusOnSelected(string $sel[])
+{
+	setIsolateSelectState(0);
+	if(`size $sel` == 0){
+		$sel = `ls -v -dag`;
+		select -r $sel;
+		inspectWizViewFit($sel);
+		return;
+	}
+	select -r $sel;
+	inspectWizViewFit($sel);
+	select -cl;
+}
+
+//FOCUS ON AND SELECT
+//----------------------------------------
+global proc focusOnAndSelect(string $sel[])
+{
+	
+	setIsolateSelectState(0);	
+	select -r $sel;
+	inspectWizViewFit($sel);
+}
+
+
+//FOCUS ON SELECTED LIST
+//----------------------------------------
+global proc focusOnSelectList(string $sel[])
+{
+	select -r $sel;
+	inspectWizViewFit($sel);
+	select -cl;
+}
+
+//FOCUS ON AND SHOW ALL
+//----------------------------------------
+global proc focusOnAndShowAllSelected(string $sel[])
+{
+	$sel = removeSeparators($sel);	
+	setIsolateSelectState(0);
+	setToggleAutoLoadState(1);
+	inspectWizViewFit($sel);	
+	setToggleAutoLoadState(0);
+	select -cl;
+}
+
+//ISOLATE AND FOCUS ON SELECTED
+//----------------------------------------
+global proc isolateAndFocusOnSelected(string $sel[])
+{
+	if(`size $sel` == 0){
+		$sel = `ls -sl`;
+	}
+	$sel = removeObjectsThatDontExist($sel);
+	select -r $sel;
+	string $panel = getCurrentPanel();
+	setIsolateSelectState(1);
+	setToggleAutoLoadState(1);
+	inspectWizViewFit($sel);
+	setToggleAutoLoadState(0);
+	select -cl;
+}
+
+//FOCUS ON AND ISOLATE ALL SELECTED
+//----------------------------------------
+global proc focusOnAndIsolateAllSelected(string $sel[])
+{	
+	$sel = removeSeparators($sel);
+	setIsolateSelectState(1);
+	setToggleAutoLoadState(1);
+	select -r $sel;
+	inspectWizViewFit($sel);
+	setToggleAutoLoadState(0);
+	select -cl;
+}
+
+//INSEPCT WIZ VIEW FIT
+//-----------------------------------------
+global proc inspectWizViewFit(string $sel[])
+{
+	float $f = 1;
+	if(`size $sel` == 1 && isComponentSelection($sel[0]) == 1){
+		/*
+		if(isFaceSelection($sel) == 1){	
+			select -r $sel;
+			AlignCameraToPolygon;
+			return;
+		}
+		*/
+		$f = 0.25;
+	}
+	viewFit -an true -f $f;	
+
+}
+
+//ZOOM OUT ON SELECTED
+//----------------------------------------
+global proc zoomOutOnSelected(string $sel[])
+{	
+	if(`size $sel` > 0){
+		viewFit -an true -f 0.25;	
+	}
+			
+}
+
+//GET CURRENT PANEL
+//----------------------------------------
+global proc string getCurrentPanel()
+{
+	string $panel = `playblast -activeEditor`;
+	return $panel;
+}
+
+//SET ISOLOATE SELECT STATE
+//----------------------------------------
+global proc setIsolateSelectState(int $state)
+{
+	string $panel = getCurrentPanel();
+	if(`isolateSelect -q -state $panel` != $state){
+		isolateSelect -state $state $panel;	
+	}
+}
+
+//SET TOGGLE AUTO LOAD STATE
+//----------------------------------------
+global proc setToggleAutoLoadState(int $state)
+{
+	string $panel = getCurrentPanel();
+	toggleAutoLoad $panel $state;	
+}
+
+
+//@ FIT VISIBLE OBJECTS IN VIEW
+//====================================================================
+global proc fitVisibleObjectsInView()
+{
+	lookThru persp;
+	string $visTr[] = `ls -tr -v`;
+	select -r $visTr;
+	
+	// deselect assetWiz renderEnvAssets
+	//assetWizSelection("-d -sl -type renderEnvAsset");
+	wizIgnoreFitViewSet("-deselect");
+	
+	xform -ws -t -500 0 500 persp;
+	xform -ws -ro -20 -45 0 persp;
+
+	
+	viewFit -an true -f 1.0;	
+
+	//move -r -os -z -200;
+
+}
+
+//@ FIT VISIBLE OBJECTS IN VIEW
+//====================================================================
+global proc wizFitVisibleObjectsInView( string $flags)
+{
+	string $camAngle;
+	string $sel[];
+
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-ca" : case "-cameraAngle" :
+			$camAngle = $tok[($i + 1)];
+			break ;
+			
+		}
+	}
+	
+	lookThru persp;
+	string $visTr[] = `ls -tr -v`;
+	select -r $visTr;
+
+	wizIgnoreFitViewSet("-deselect");
+
+	string $visSel[] = `ls -sl`;
+	//wizlog (niceArrayList("Fit View Selection : ", $visSel));
+	
+	if ($camAngle == "Default"){
+		xform -ws -t -500 0 500 persp;
+		xform -ws -ro -20 -45 0 persp;
+	} else if ($camAngle == "Persp"){
+	
+	} else if ($camAngle == "HeadLevel"){
+		xform -ws -t -500 0 500 persp;
+		xform -ws -ro -20 -45 0 persp;
+	} else if ($camAngle == "WaistLevel"){
+		xform -ws -t -500 0 500 persp;
+		xform -ws -ro -20 0 0 persp;
+	} else if ($camAngle == "FootLevel"){
+		xform -ws -t -500 0 500 persp;
+		xform -ws -ro -20 45 0 persp;
+	}
+	
+	viewFit -an true -f 1.0;	
+
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//			GET SELECTION
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//GET INSPECTION WIZ SELECTION LIST
+//====================================
+global proc string getInspectionWizSelectionList()
+{
+	string $textScrollList;
+	int $a = `menuItem -q -rb selectMasterListAInspectionMenuItem`;	
+	int $b = `menuItem -q -rb selectMasterListBInspectionMenuItem`;	
+	if($a){
+		$textScrollList = "selectMasterListA";	
+		return $textScrollList;
+	} else {
+		$textScrollList = "selectMasterListB";
+		return $textScrollList;
+	}
+	
+}
+
+//GET INSPECTION WIZ SELECTION TYPE INDEX
+//===========================================
+global proc int getInspectionWizInspectionTypeIndex()
+{
+	string $inspectionType[] = `menu -q -ia inpectionWizInspectionTypeMenu`;
+	int $i;
+	for($i=0;$i<`size $inspectionType`;$i++){
+		int $rb = `menuItem -q -rb $inspectionType[$i]`;
+		if($rb == 1){
+			return $i;	
+		}
+	}
+}
+
+//INSPECTION TABS
+//==============================================================================
+
+global proc string[] getInspectionWizInfo(string $request)
+{
+	switch($request){
+		case "inspectionType" :
+		string $inspectionType[] = { "Normals", "Mudbox", "CompareMesh", "UV Shells", "Instances", "None" };
+		return $inspectionType;
+		
+		//This is a list of all the inspection functions corresponding to their tab numbers
+		case "inspectionFunctions" : 
+		string $inspectionFunctions[] = { "checkObjectNormals", "inspectPolyUVs", "", "", "", "", ""};
+		return $inspectionFunctions;
+		
+		case "resetFunctions" : 
+		string $reset[] = { "resetCheckObjectNormals", "", "", "", "", "", ""};
+		return $reset;
+		
+		
+	}
+	
+}
+
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//			INSPECTION
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//START INSPECTION
+//=====================================
+global proc inspectionWizStartChecking(string $textScrollList)
+{
+	printProc("inspectionWizStartChecking");
+	
+	$textScrollList = getActiveSelectionList();
+	
+	//Reset things	
+	global string $WIZ_tempResetObjects[];
+	clear $WIZ_tempResetObjects;
+	
+	//If there is nothing currently selected start at the top of the list
+	int $sii[] = `textScrollList -q -sii $textScrollList`;
+	if(`size $sii` == 0){
+		textScrollList -e -sii 1 $textScrollList;
+	}
+	string $sel[] = `textScrollList -q -si $textScrollList`;
+	
+	//Check the object
+	inspectionWizInspectObjects($sel);
+
+}
+
+//INSPECT OBJECTS
+//=======================================
+global proc inspectionWizInspectObjects(string $sel[])
+{	
+	int $isolate = `menuItem -q -cb inspectionWizIsolateSelectedMenuItem`;
+	if($isolate){
+		isolateAndFocusOnSelected($sel);
+	} else {
+		focusOnAndSelect($sel);
+	}
+	
+	string $inspectionFunction = getInspectionFunction("inspection");
+	if($inspectionFunction == ""){
+		return;	
+	}
+	string $selString = stringArrayToStringArrayString($sel);
+	string $eval = $inspectionFunction + "(" + $selString + ")";
+	eval($eval);
+	//debugML1("InspectionFunction: " + $eval + "\n");
+}
+
+//INSPECT NEXT
+//======================================
+global proc inspectionWizCheckNext(string $textScrollList)
+{
+	getActiveSelectionList();
+	showAllIndexedItemsInTextScrollList($textScrollList);
+	
+	//printProc("inspectionWizCheckNext");	
+	//Reset the last objects
+	resetInspectionObjects();
+	
+	string $sel[] = selectNextInDirection($textScrollList, 1);
+	inspectionWizInspectObjects($sel);
+
+}
+
+//CANCEL INSPECTION
+//======================================
+global proc inspectionWizCancelChecking(string $textScrollList)
+{
+	getActiveSelectionList();
+	global string $WIZ_tempResetObjects[];
+	clear $WIZ_tempResetObjects;
+	string $sel[] = `textScrollList -q -ai $textScrollList`;
+	focusOnAndShowAllSelected($sel);
+
+}
+
+//RESET INSPECTION OBJECTS
+//======================================
+global proc resetInspectionObjects()
+{
+	global string $WIZ_tempResetObjects[];	
+	//If we don't have any objects to reset then skip everything else
+	if(`size $WIZ_tempResetObjects` == 0){return;}
+	
+	//Find out what function we need to call to reset things by what tab is selected
+	string $resetFunction = getInspectionFunction("reset");
+	if($resetFunction == ""){
+		return;	
+	}
+	eval($resetFunction);
+		
+}
+
+//GET INSPECTION FUNCTIONS
+//======================================
+global proc string getInspectionFunction(string $returnFunction)
+{
+	
+	//int $isp = `tabLayout -q -sti inspectionWizTabs`;
+	//$isp = $isp - 1;
+	int $isp = getInspectionWizInspectionTypeIndex();
+	
+	string $inspection[] = getInspectionWizInfo("inspectionFunctions");
+	string $reset[] = getInspectionWizInfo("resetFunctions");
+	
+	if($returnFunction == "inspection"){
+		return $inspection[$isp];	
+	} else if($returnFunction == "reset"){
+		return $reset[$isp];
+	}
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//			INSPECT NORMALS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//CHECKING NORMALS
+//================================================
+//CHECK NORMALS
+//-----------------------------------
+global proc checkObjectNormals(string $sel[])
+{
+	global string $WIZ_tempResetObjects[];
+	clear $WIZ_tempResetObjects;
+	for($i=0;$i<`size $sel`;$i++){
+		if(isGeometryTransform($sel[$i])){
+			int $ds = `getAttr ($sel[$i] + ".doubleSided")`;
+			if($ds == 1){
+				setAttr ($sel[$i] + ".doubleSided") 0;
+				$WIZ_tempResetObjects[`size $WIZ_tempResetObjects`] = $sel[$i];
+			}		
+		}
+	}
+}
+
+//RESET CHECK NORMALS
+//---------------------------------
+global proc resetCheckObjectNormals()
+{
+	global string $WIZ_tempResetObjects[];
+	for($i=0;$i<`size $WIZ_tempResetObjects`;$i++){
+		setAttr ($WIZ_tempResetObjects[$i] + ".doubleSided") 1;
+	}
+}
+
+//REVERSE NORMALS ON SELECTED
+//---------------------------------
+global proc reverseNormalsOnSelectedObject(string $sel[])
+{
+	string $obj = $sel[0];
+	int $isNurbs = isNurbsSurface($obj);
+	if($isNurbs == 1){
+		//Reverse Surface
+		reverseSurface -d 0 -ch 1 -rpo 1 $obj;
+	} else {
+		//Reverse Poly normals
+		polyNormal -nm 4 $obj;
+	}
+}
+
+//REVERSE NORMALS ON ALL SELECTED
+//---------------------------------
+global proc reverseNormalsOnAllSelected(string $sel[])
+{
+	for($i=0;$i<`size $sel`;$i++){
+		reverseNormalsOnSelectedObject({$sel[$i]});
+	}	
+}
+
+//REVERSE NORMALS ANGLE
+//---------------------------------
+global proc setNormalAngleOnSelected(string $sel[])
+{
+	float $angle = `intSliderGrp -q -v checkNormalsNormalAngle`;
+	for($i=0;$i<`size $sel`;$i++){
+		polySoftEdge -angle $angle $sel[$i];	
+	}
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//			INSPECT UVS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//INSPECT UVS
+//==============================================================================
+global proc inspectPolyUVs(string $sel[])
+{
+	select -r $sel;
+	string $c1 = ("string $sel[] = `ls -sl`; int $faceCount[] = `polyEvaluate -f $sel`; textFieldButtonGrp -e -tx $faceCount[0] inspectFaceCountTextFieldButtonGrp;");
+	string $c2 = ("int $count = countUnmappedFaces(`ls -sl`); textFieldButtonGrp -e -tx $count inspectUnmappedFacedTextFieldButtonGrp;");
+	string $c3 = ("int $shellCount = getUVShellCount(`ls -sl`); textFieldButtonGrp -e -tx $shellCount inspectShellCountTextFieldButtonGrp;");
+	string $c4 = ("int $highV = getHighValenceVerticesCount(`ls -sl`); textFieldButtonGrp -e -tx $highV inspectHighValenceVerticesCountTextFieldButtonGrp;");
+	string $c5 = ("string $ts[] = getTShapes(`ls -sl`);int $tsCount = `size $ts`; textFieldButtonGrp -e -tx $tsCount inspectTShapeCountTextFieldButtonGrp;");
+	eval($c1);
+	eval($c2);
+	eval($c3);
+	eval($c4);
+	eval($c5);
+
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//			INSPECT INSTANCES
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//INSPECT INSTANCES
+//==========================================================
+global proc string[] inspectInstances(string $sel[], string $results)
+{
+	string $instances[] = getAllInstancesFromSelection($sel);
+	
+	switch($results){
+		case "prepForPainting" :	
+		if(`size $instances` > 0){
+			string $activeSelectList = getActiveSelectionList();
+			string $instancesMessage = ("There Are " + `size $instances` + " Instanced Objects In Selection\n"
+			+"Recommended To Convert Instances To Duplicates");	
+			addRecommendedSetting("convertInstancesToDuplicatesRecommendedSetting", $instancesMessage, ("replaceInstancesWithDuplicates(" + (stringArrayToStringArrayString($instances)) + ")"),
+			"Remove Instances From Selection", "removeFromTextScrollList(" + (stringArrayToStringArrayString($instances)) + ", " + "\"" + $activeSelectList + "\"" + ");");	
+			return { "1" };	
+		} else {
+			return { "0" };
+		}	
+		break;
+	
+	}
+
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//			INSPECT POLYS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//INSPECT HIGH VALENCE VERTICES
+//==========================================================
+global proc string[] inspectHighValenceVertices(string $sel[], string $results)
+{
+	string $highV[] = getHighValenceVertices($sel);
+	
+	switch($results){
+		case "prepForPainting" :	
+		if(`size $highV` > 0){
+			string $activeSelectList = getActiveSelectionList();
+			string $highVMessage = ("Object Contains " + `size $highV` + " High Valence Vertices : Recommended To Turn On Fix Common Polygon Problems");
+			if(`checkBox -q -v fixCommonPolygonProblemsPrepForPaintingCheckBox` == 0){
+				string $highVMessage = ("Object Contains " + `size $highV` + " High Valence Vertices : Recommended To Not Turn Off Fix Common Polygon Problems");	
+			}
+			addRecommendedSetting("highValenceVerticesRecommendedSetting", $highVMessage, "checkBox -e -v true fixCommonPolygonProblemsPrepForPaintingCheckBox", 
+			"", "");	
+			return { "1" };	
+		} else {
+			return { "0" };
+		}	
+		break;
+		
+		case "inspectionWiz" :
+		string $highVCount = string(`size $highV`);
+		return {($highVCount)};
+		break;
+	}
+}
+
+//INSPECT T SHAPES
+//==========================================================
+global proc string[] inspectTShapes(string $sel[], string $results)
+{
+	string $ts[] = getTShapes($sel);
+	switch($results){
+		case "prepForPainting" :	
+		if(`size $ts` > 0){
+			string $activeSelectList = getActiveSelectionList();
+			string $tsMessage = ("Object Contains " + `size $ts` + " T Shapes : Recommended To Turn On Fix Common Polygon Problems");
+			if(`checkBox -q -v fixCommonPolygonProblemsPrepForPaintingCheckBox` == 0){
+				$tsMessage = ("Object Contains " + `size $ts` + " T Shapes : Recommended To Not Turn Off Fix Common Polygon Problems");	
+			}
+			addRecommendedSetting("tShapesRecommendedSetting", $tsMessage, "checkBox -e -v true fixCommonPolygonProblemsPrepForPaintingCheckBox", 
+			"", "");	
+			return { "1" };	
+		} else {
+			return { "0" };
+		}	
+		break;
+		
+		case "inspectionWiz" :
+		string $tsCount = string(`size $ts`);
+		return {($tsCount)};
+		break;
+	}
+}
+
+//INSPECT MESH PREPPED FOR PAINTING
+//==========================================================
+global proc string[] inspectMeshPreppedForPainting(string $sel[], string $results)
+{
+	//Too Many Sides
+	string $tms[] = inspectTooManySides($sel, "prepForPainting");
+	
+	//T Shapes
+	string $ts[] = inspectTShapes($sel, "prepForPainting");
+	
+	//Non Manifold Vertices
+	string $nmv[] = inspectNonManifoldVertices($sel, "prepForPainting");
+	
+	//High Valence Vertices
+	string $highV[] = inspectHighValenceVertices($sel, "prepForPainting");
+	
+	return $sel;
+}
+
+//INSPECT TOO MANY SIDES
+//==========================================================
+global proc string[] inspectTooManySides(string $sel[], string $results)
+{
+	string $tms[] = getFacesWithTooManySides($sel);
+	switch($results){
+		case "prepForPainting" :	
+		if(`size $tms` > 0){
+			string $activeSelectList = getActiveSelectionList();
+			string $tmsMessage = ("Object Contains " + `size $tms` + " Faces With Too Many Sides : Recommended To Turn On Fix Common Polygon Problems");
+			if(`checkBox -q -v fixCommonPolygonProblemsPrepForPaintingCheckBox` == 0){
+				$tsMessage = ("Object Contains " + `size $tms` + " Faces With Too Many Sides : Recommended To Not Turn Off Fix Common Polygon Problems");	
+			}
+			addRecommendedSetting("tooManySidesRecommendedSetting", $tmsMessage, "checkBox -e -v true fixCommonPolygonProblemsPrepForPaintingCheckBox", 
+			"", "");	
+			return { "1" };	
+		} else {
+			return { "0" };
+		}	
+		break;
+		
+		case "inspectionWiz" :
+		string $tmsCount = string(`size $tms`);
+		return {($tmsCount)};
+		break;
+	}
+}
+
+//INSPECT NON-MANIFOLD(VERTEX SPLICES)
+//==========================================================
+global proc string[] inspectNonManifoldVertices(string $sel[], string $results)
+{
+	string $nmv[] = getNonManifoldVertices($sel);
+	switch($results){
+		case "prepForPainting" :	
+		if(`size $nmv` > 0){
+			string $activeSelectList = getActiveSelectionList();
+			string $nmvMessage = ("Object Contains " + `size $nmv` + " Non-Manifold(Vertex Splices) : Recommended To Turn On Fix Common Polygon Problems");
+			if(`checkBox -q -v fixCommonPolygonProblemsPrepForPaintingCheckBox` == 0){
+				$tsMessage = ("Object Contains " + `size $nmv` + " Non-Manifold(Vertex Splices) : Recommended To Not Turn Off Fix Common Polygon Problems");	
+			}
+			addRecommendedSetting("nonManifoldVerticesRecommendedSetting", $nmvMessage, "checkBox -e -v true fixCommonPolygonProblemsPrepForPaintingCheckBox", 
+			"", "");	
+			return { "1" };	
+		} else {
+			return { "0" };
+		}	
+		break;
+		
+		case "inspectionWiz" :
+		string $nmvCount = string(`size $nmv`);
+		return {($nmvCount)};
+		break;
+	}
+}
+
+
+//INSPECT OBJECTS WITH MULTIPLE MATERIALS
+//==========================================================
+global proc string[] inspectObjectsWithMultipleMaterials(string $sel[], string $results)
+{
+	string $mm[] = getObjectsWithMultipleMaterials($sel);
+	switch($results){
+		case "prepForPainting" :
+		string $bmwmmMessage;
+		if(`size $mm` == 0 && `checkBox -q -v breakApartMeshesWithMultipleMaterialsPrepForPaintingCheckBox` == 1){
+			$bmwmmMessage = ("There Are No Objects With Multiple Materials In Selection\n"
+			+"Recommended To Turn Off Break Apart Meshes With Multiple Materials");	
+			addRecommendedSetting("breakApartMeshsWithMultipleMaterialsRecommendedSetting", $bmwmmMessage, "checkBox -e -v false breakApartMeshesWithMultipleMaterialsPrepForPaintingCheckBox", 
+			"", "");	
+			return { "1" };
+		}
+		if(`size $mm` > 0){
+			$bmwmmMessage = ("There Are " + `size $mm` + " Objects With Multiple Materials In Selection\n"
+			+"Recommended To Break Apart Meshes With Multiple Materials");	
+			addRecommendedSetting("breakApartMeshsWithMultipleMaterialsRecommendedSetting", $bmwmmMessage, "checkBox -e -v true breakApartMeshesWithMultipleMaterialsPrepForPaintingCheckBox", 
+			"", "");	
+			return { "1" };	
+		} else {
+			return { "0" };
+		}	
+		break;
+	}
+}
+
+//INSPECT CONVERT NURBS SURFACES
+//==========================================================
+global proc string[] inspectConvertNurbsSurfaces(string $sel[], string $results)
+{
+	string $nurbs[] = getNurbsTransforms($sel);
+	switch($results){
+		case "prepForPainting" :
+		string $nurbsMessage;
+		if(`size $nurbs` == 0){
+			if(`checkBox -q -v convertNurbsPrepForPaintingCheckBox` == 1){
+				$nurbsMessage = ("There Are No Nurbs Surfaces In Selection\n"
+				+"Recommended To Turn Off Convert Nurbs To Polygons");	
+				addRecommendedSetting("convertNurbsRecommendedSetting", $nurbsMessage, "checkBox -e -v false convertNurbsPrepForPaintingCheckBox", 
+				"", "");	
+				return { "1" };
+			}
+		}
+		if(`size $nurbs` > 0){		
+			$nurbsMessage = ("There Are " + `size $nurbs` + " Nurbs Surfaces In Selection\n"
+			+"Recommended To Convert Nurbs To Polygons");	
+			addRecommendedSetting("convertNurbsRecommendedSetting", $nurbsMessage, "checkBox -e -v true convertNurbsPrepForPaintingCheckBox", 
+			"", "");	
+			return { "1" };	
+		} else {
+			return { "0" };
+		}	
+		break;
+	}
+}
+
+//INSPECT UNMAPPED FACES
+//==========================================================
+global proc string[] inspectUnmappedFaces(string $sel[], string $results)
+{
+	int $unmapped = countUnmappedFaces($sel);
+	switch($results){
+		case "prepForPainting" :	
+		if($unmapped > 0){
+			string $autoMapUVMesaage = ("There Are " + $unmapped + " Unmapped Faces In Selection\n"
+			+"Recommended To Auto Project UVs");	
+			addRecommendedSetting("autoProjectUVsRecommendedSetting", $autoMapUVMesaage, "checkBox -e -v true autoProjectUVsPrepForPaintingCheckBox", 
+			"", "");	
+			return { "1" };	
+		} else {
+			return { "0" };
+		}	
+		break;
+		
+		case "inspectionWiz" :
+		string $umfCount = string($unmapped);
+		return {($umfCount)};
+		break;
+	}
+}
+
+//INSPECT UNMAPPED FACES
+//==========================================================
+global proc string[] inspectNSidedFaces(string $sel[], string $results)
+{
+	string $nsf[] = getNSidedFaces($sel);
+	switch($results){
+		case "prepForPainting" :	
+		if(`size $nsf` > 0){
+			string $nsfMessage = ("There Are " + `size $nsf` + " N Sided Faces\n"
+			+"Recommended To Triangulate");	
+			addRecommendedSetting("nSidedFacesRecommendedSetting", $nsfMessage, "checkBox -e -v true triangulatePrepForPaintingCheckBox", 
+			"", "");	
+			return { "1" };	
+		} else {
+			return { "0" };
+		}	
+		break;
+		
+		case "inspectionWiz" :
+		string $nsfCount = string(`size $nsf`);
+		return {($nsfCount)};
+		break;
+	}
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//			INSPECTION WIZ OPTIONS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//OPTIONS
+//==============================================================================
+
+global proc focusOnSelectedObjectOptionsMenu(string $parent)
+{
+	string $columnLayout = wizCurrentOptionsColumnLayout("focusOnSelectedObjectOptionsMenuColumnLayout");
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		setParent $columnLayout;
+		
+		floatSliderGrp
+			-l "Fit Amount"
+			-cal 1 "left"
+			-adj 3
+			-f true
+			-v 1
+			-min 0.001
+			-max 10
+			-fmn 0.001
+			-fmx 10
+			-pre 3
+			-s 0.1
+			focusOnSelectedObjectFitFloatSliderGrp
+			;
+				
+		checkBox
+			-l "Animated Transition"
+			-v true
+			focusOnSelectedObjectAnimatedTransitionCheckBox
+			;		
+		
+	}
+	if(`columnLayout -q -vis $columnLayout` == 0){
+		columnLayout -e -vis true $columnLayout;
+	}
+
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//			INSPECTION REPORTS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//INSPECTION REPORTS
+//==============================================================================
+/*====================== USAGE ======================================
+	
+	string $rl = ("-t Some Inspection Report -w 400 -lmt 100 -p parent -n reportListName");
+
+	reportList(($rl + "-af -head Some Inspection List: -div NEXT -lmt 100"), $arr); 
+	reportList(($rl, {(" - Some Meassage: " + $var)}); 
+	
+====================================================================*/
+global proc string reportList(string $arg, string $stringArray[])
+{
+	if(`menuItem -q -cb inspectionReportsEnabledMenuItem` == 0){
+		return "";	
+	}
+		
+	string $arr[];
+	appendStringArray($arr, $stringArray, `size $stringArray`);
+	string $reportName;
+	string $p;
+	string $title;
+	string $div;
+	string $header;
+	
+	int $w;
+	int $h = 200;
+	int $limit;
+	int $arrayFormat;
+	//int $itci;
+	//float $itc[];
+	
+	//Pull apart the arguments
+	string $tok[] = tokenizeString($arg, " ");
+	for($i=0;$i<`size $tok`;$i++){
+		switch($tok[$i]){
+			case "-n" : case "-name" : 			
+			$reportName = $tok[($i + 1)];
+			continue;
+								
+			case "-p" : case "-parent" : 
+			$p = $tok[($i + 1)];
+			continue;
+			
+			case "-w" : case "-width" : 
+			$w = int($tok[($i + 1)]);
+			continue;
+			
+			case "-h" : case "-height" : 
+			$h = int($tok[($i + 1)]);
+			continue;
+			
+			case "-lmt" : case "-limit" : 
+			$limit = int($tok[($i + 1)]);
+			continue;
+			
+			case "-af" : case "-arrayFormat" : 
+			$arrayFormat = 1;
+			continue;
+			
+			/*
+			case "-itc" : case "-itemTextColor" : 
+			$itci = int($tok[($i + 1)]);
+			string $itcString[] = getStringArrayFromCurrentIndexToNextTagIndex($tok, ($i + 1));
+			$itc = stringArrayToFloatArray($itcString);
+			continue;
+			*/
+			
+			case "-t" : case "-title" : 
+			string $tsa[] = getStringArrayFromCurrentIndexToNextTagIndex($tok, ($i + 1));
+			$title = stringArrayToString($tsa, " ");
+			continue;
+			
+			case "-head" : case "-header" :
+			string $hsa[] = getStringArrayFromCurrentIndexToNextTagIndex($tok, ($i + 1));
+			$header = stringArrayToString($hsa, " ");
+			continue;
+			
+			case "-d" : case "-div" :
+			string $divsa[] = getStringArrayFromCurrentIndexToNextTagIndex($tok, ($i + 1));
+			$div = stringArrayToString($divsa, " ");
+			continue;
+			
+		}
+	}
+	
+	//Make the name for the list
+	if($reportName == ""){
+		$reportName = makeNiceUIName($title);
+	}
+	
+	//Make the textScrollList for the report
+	string $inspectionReport;
+	if(`textScrollList -q -ex $reportName` == 0){	
+		
+		string $textName = $reportName + "Text";		
+		string $al = "center";
+		text -l $title -al $al -p $p $textName;
+	
+		$inspectionReport = `textScrollList
+			-h $h
+			-ams true
+			-dkc ("doSelectWizDeleteKeyCommand(" + "\"" + $reportName + "\"" + ");")
+			-dcc ("doSelectWizDoubleClickCommand(" + "\"" + $reportName + "\"" + ");")
+			-sc ("doSelectWizSelectCommand(" + "\"" + $reportName + "\"" + ");")
+			-dgc dragTextScrollListSelection
+			-dpc dropTextScrollListSelection
+			-p $p
+			$reportName
+			`;
+		
+	} else {
+		$inspectionReport = $reportName;
+	}
+	
+	//Add divs to the array if it's an array formatted array
+	if($arrayFormat == 1){
+		if(`size $arr` > $limit && $limit != 0){
+			string $limitArr[];
+			for($i=0;$i<$limit;$i++){
+				$limitArr[`size $limitArr`] = $arr[$i];	
+			}
+			string $more = ("... + " + (`size $arr` - $limit) + " More");
+			$limitArr[`size $limitArr`] = $more;
+			clear $arr;
+			appendStringArray($arr, $limitArr, `size $limitArr`);
+		}
+		if(`size $header` > 0){
+			stringArrayInsertAtIndex(0, $arr, $header);
+		}
+		stringArrayInsertAtIndex(0, $arr, (tslDiv("")));
+		stringArrayInsertAtIndex((`size $arr`), $arr, (tslDiv($div)));
+		
+	}
+	
+	//Add the arr objects to the list
+	addSelectedObjectsToTextScrollList($arr,$inspectionReport);
+	
+	return $inspectionReport;
+}
+
+global proc openInspectionReports()
+{
+	
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//			NOTES
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//WIZ GET ALL NOTES
+//================================================
+global proc string[] wizGetAllNotes()
+{
+	string $sceneFile = `file -q -sn`;
+	$sceneFile = getFileNameNoPathNoExt($sceneFile);
+	
+	string $sel[] = `ls`;
+	string $allNotes[];
+	$allNotes[`size $allNotes`] = (" - " + $sceneFile + " - ALL NOTES\n================================================\n\n");
+	
+	for ($i=0;$i<`size $sel`;$i++){
+		if	(`attributeQuery -n $sel[$i] -ex "notes"`){
+			string $note = `getAttr ($sel[$i] + ".notes")`;
+			$note = ("	- " + $sel[$i] + " - NOTES\n" + "-------------------------------------\n" + $note + "\n\n");
+			$allNotes[`size $allNotes`] = $note;
+		}
+	}
+	return $allNotes;
+	
+}
+
+//WIZ SHOW ALL NOTES
+//================================================
+global proc wizShowAllNotes()
+{
+	string $allNotes[] = wizGetAllNotes();
+	for ($i=0;$i<`size $allNotes`;$i++){
+		print($allNotes[$i]);
+		
+	}
+	print ("\nWIZ| - PLEASE READ NOTES IN SCRIPT EDITOR - " + "\n");
+	headsUpMessage -t 5.0 "PLEASE READ NOTES IN SCRIPT EDITOR";
+}
+
+//WIZ SHOW ALL NOTES ON OPEN
+//================================================
+global proc showAllNotesOnOpen()
+{
+	string $name = "WizShowAllNotesOnOpen";
+	string $script = (
+	"wizShowAllNotes();" + "\n"
+	+"global proc string[] wizGetAllNotes()" + "\n"
+	+"{" + "\n"
+	+"	string $sceneFile = `file -q -sn`;" + "\n"
+	+"	$sceneFile = getFileNameNoPathNoExt($sceneFile);" + "\n"	
+	+"	string $sel[] = `ls`;" + "\n"
+	+"	string $allNotes[];" + "\n"
+	+"	$allNotes[`size $allNotes`] = (\" - \" + $sceneFile + \" - ALL NOTES\\n================================================\\n\\n\");" + "\n"
+	+"	for ($i=0;$i<`size $sel`;$i++){" + "\n"
+	+"		if	(`attributeQuery -n $sel[$i] -ex \"notes\"`){" + "\n"
+	+"			string $note = `getAttr ($sel[$i] + \".notes\")`;" + "\n"
+	+"			$note = (\"	- \" + $sel[$i] + \" - NOTES\\n\" + \"-------------------------------------\\n\" + $note + \"\\n\\n\");" + "\n"
+	+"			$allNotes[`size $allNotes`] = $note;" + "\n"
+	+"		}" + "\n"
+	+"	}" + "\n"
+	+"	return $allNotes;	" + "\n"
+	+"}" + "\n"
+	+"\n"
+	+"global proc wizShowAllNotes()" + "\n"
+	+"{" + "\n"
+	+"	string $allNotes[] = wizGetAllNotes();" + "\n"
+	+"	for ($i=0;$i<`size $allNotes`;$i++){" + "\n"
+	+"		print($allNotes[$i]);" + "\n"
+	+"	}" + "\n"
+	+"	print(\"WIZ| - PLEASE READ NOTES IN SCRIPT EDITOR - \\n\");" + "\n"
+	+"	headsUpMessage -t 5.0 \"PLEASE READ NOTES IN SCRIPT EDITOR\";" + "\n"
+	+"}"+"\n"
+	);
+	
+	if (`objExists $name`){
+		delete $name;		
+	}
+	scriptNode -st 1 -bs $script -n "WizShowAllNotesOnOpen";
+	
+}
+
+
+//########################################################################################################
+//########################################################################################################
+///////////////////                                 //////////////////////////////////////////////////////
+//			GARBAGE PILE
+///////////////////                                 //////////////////////////////////////////////////////
+//########################################################################################################
+//########################################################################################################
+
+//OBSOLETE
+//==============================================================================
+//==============================================================================
+//==============================================================================
+//INSPECTION LAYOUT - OLD -
+//===========================================
+global proc inspectionLayout(string $parent)
+{
+
+	string $layout = `columnLayout
+		-adjustableColumn true
+		-p $parent
+		Inspection
+		`;
+		
+	button 
+		-l "Select Objects"
+		-c ("replaceTextScrollListWithSelectedObjects(`ls -sl`,\"checkNormalsObjects\");")
+		;
+	
+	textScrollList
+		-h 200
+		-ams true
+		-dkc ("removeSelectedItemFromTextScrollList(\"checkNormalsObjects\");")
+		checkNormalsObjects		
+		;
+	
+	string $rowLayout = `rowLayout
+			-numberOfColumns 3
+			-p $layout
+			`;			
+			
+		button 
+			-l "Start Checking"
+			-c ("inspectionWizStartChecking(\"checkNormalsObjects\");")
+			;
+		
+		iconTextButton
+			-i "wiz/checkBoxIcon1.png"
+			-c ("inspectionWizCheckNext(\"checkNormalsObjects\");")
+			-l "Next"
+			;
+			
+		/*
+		button 
+			-l "Next Object"
+			-c "checkNextObject()"
+			;
+		*/
+		button 
+			-l "End Checking"
+			-c ("inspectionWizCancelChecking(\"checkNormalsObjects\");")
+			;
+			
+	setParent..;
+
+	//Tabs
+	string $tabLayout = `tabLayout
+		//-scr true
+		-cr true
+		-iv true
+		-p $layout
+		inspectorTabs
+		`;
+		
+	normalsInspectionTabLayout($tabLayout);
+	
+	otherTabLayout($tabLayout);
+	
+}
+

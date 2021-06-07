@@ -1,0 +1,85 @@
+global proc timeWiz()
+{
+
+}
+
+global proc timeModule(string $parent)
+{
+	
+	//____________TIME FUNCTIONS____________
+	string $timeLayout = `frameLayout
+		-l "Time"
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true		
+		-parent $parent`;
+	
+		 
+	floatSliderButtonGrp 
+		-cal 1 "left" 
+		-cw3 140 70 100
+		-l "Playback By" 
+		-minValue 0.001		
+		-maxValue 1
+		-value 1 
+		-precision 3
+		-fieldMinValue 0.0001 
+		-fieldMaxValue 100
+		-fs 0.05
+		-sliderStep 1
+		-step 1
+		-changeCommand "setPlaybackBy"
+		-buttonLabel "Reset"
+		-buttonCommand "resetPlaybackBy"
+		-field true	
+		-ann "This sets the playbackBy setting in the preferences window.<br> Set this to something lower than 1 if your particles are moving to fast to get nice smooth trails."
+		 playbackBy;
+
+}
+
+global proc setPlaybackBy()
+{
+float $by = `floatSliderButtonGrp -q -v playbackBy`;
+playbackOptions -by $by;
+
+}
+
+global proc resetPlaybackBy()
+{
+floatSliderButtonGrp
+	-e
+	-v 1
+	playbackBy;
+	
+playbackOptions -by 1;
+
+}
+
+global proc wizGoToFrameZero()
+{
+	currentTime -e 0;
+}
+
+//@ WIZ RESET REWIND
+//============================
+global proc wizResetRewind()
+{
+	
+	float $startTime = `playbackOptions -q -min`;	
+	play -st 0;
+	currentTime -e $startTime;
+	string $sel[] = `ls -sl`;
+	if(`size $sel` > 0){
+		performResetTransformations(0);
+	}
+	currentTime -e $startTime;
+	
+	
+}

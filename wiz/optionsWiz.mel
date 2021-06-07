@@ -1,0 +1,5363 @@
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//|||||||||||||||||||||||||:::WIZ:::||||||||||||||||||||||||||||||||||
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//                         NAME WIZ
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+/*====================================================================
+Author: Glen Johnson
+Email: plasticarm@gmail.com
+Website: plasticarm.com / hrpictures.com
+----------------------------------------------------------
+Summary:
+
+
+
+====================================================================*/
+
+// <ToDoWiz!> REMEMBER TO ALWAY ADD NEW OPTION MENUS TO THE GETWIZOPTIONMENUS FUNCTION~
+
+//OPTIONS MENU LAYOUTS
+//===============================================================================
+//===============================================================================
+
+/* USAGE:
+	// To make a new currentOptions Layout:
+	
+	string $columnLayout = "someProcOptionsMenuColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Some Proc Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	
+*/
+
+//========================================================================================================
+//[][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][]
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//                     WINDOWS
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//[][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][]
+//========================================================================================================
+
+global proc optionsWiz()
+{
+	string $window = "optionsWizWindow";
+	if(`window -exists $window`){
+		deleteUI $window;
+	}
+	
+	window
+		-title "Options Wiz"
+		-widthHeight 600 900
+		-menuBar on
+		-menuBarVisible on
+		-minimizeButton on
+		-maximizeButton on
+		-sizeable on		
+		-resizeToFitChildren on
+		-titleBar on
+		$window
+		;
+		
+	string $columnlayout = `columnLayout
+		-adjustableColumn true
+		`;
+		
+	currentOptionsLayout($columnlayout);
+	
+	showWindow $window;
+
+}
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         OPTION MENU INIT
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//INIT OPTION MENUS
+//================================================================================
+global proc initOptionMenus()
+{
+	string $currentOptionsLayout = "currentOptionsLayout_frameLayout";
+	string $optionMenus[] = getWizOptionMenus("all");
+	for($i=0;$i<`size $optionMenus`;$i++){
+		loadCurrentOptions($optionMenus[$i]);	
+	}
+	setCurrentOptionsTabName("CurrentOptions");
+}
+
+
+//GET WIZ OPTION MENUS
+//================================================================================
+global proc string[] getWizOptionMenus(string $request)
+{
+	string $all[];
+	
+	//POLY WIZ OPTIONS
+	string $polyWizOptions[] = {
+	"polyLayoutUVOptionsMenu",
+	"creaseEdgesOptionsMenu",
+	"highValenceVerticesOptions",
+	"tooManySidesOptions",
+	"tShapesOptionsMenu",
+	"maximizeMergeVerticesOptionsMenu",
+	"mergeVerticesOptionsMenu",
+	"fixCommonPolygonProblemsOptions",
+	"getComponentsInDirectionOptions",
+	"polyReduceOptions",
+	"closestPointFollicleOptions",
+	"convertVertexColorsToTextureMapOptions",
+	"terrainTileBlanketOptions"
+	};
+	appendStringArray($all, $polyWizOptions, `size $polyWizOptions`);
+	
+	//CURVE WIZ OPTIONS
+	string $curveWizOptions[] = {
+	"bevelCurvePlusPresetOptions",
+	"bendCurveCVsOptions"
+	};
+	appendStringArray($all, $curveWizOptions, `size $curveWizOptions`);
+	
+	//CURVE WIZ OPTIONS
+	string $fileWizOptions[] = {
+	"referenceFileOptions"	
+	};
+	appendStringArray($all, $fileWizOptions, `size $fileWizOptions`);
+	
+	//UV WIZ OPTIONS
+	string $uvWizOptions[] = {
+	"fitSelectedObjectsUVsIntoSingleUVSpaceOptions",
+	"transferUVsOptions",
+	"sortUVShellsIntoGridAreasOutputOptionsMenu",
+	"wizSelectUVsInRangeOptions"
+	};
+	appendStringArray($all, $polyWizOptions, `size $uvWizOptions`);
+	
+	//SELECT WIZ OPTIONS
+	string $selectWizOptions[] = {
+	"propogateFaceSelectionMaxAngleOptions",
+	"getComponentsOfTypeInMinMaxAreaOptionsMenu",
+	"getComponentsOfTypeInAxisDirectionOptionsMenu",
+	"getComponentsOfTypeOnBorderOptionsMenu",
+	"getComponentsOfTypeAtMinMaxAngleOptionsMenu",
+	"applyAttributePresetToSelectedNodesOptions",
+	"getComponentsOnBoundingBoxSideOptions",
+	"getComponentsInBoundingBoxSideOptions",
+	"expandPointSelectConstraintUntilTypeIsSelectedOptions",
+	"marchingTileSelectSetOptions"
+	};
+	appendStringArray($all, $selectWizOptions, `size $selectWizOptions`);
+	
+	//TRANSFORM WIZ OPTIONS
+	string $transformWizOptions[] = {
+	"straightenRotationsOptionsMenu",
+	"duplicationMethodOptions",
+	"mirrorObjectsOptions",
+	"transferMirrorTransformsOptions",
+	"setAllLODOptions",
+	"wizNodeCastOptions",
+	"createBoundingBoxProxyLODGroupForSelectedOptions",
+	"wizDuplicateOnParticlesOptions"
+	};
+	appendStringArray($all, $transformWizOptions, `size $transformWizOptions`);
+	
+	//SORT WIZ OPTIONS
+	string $sortWizOptions[] = {
+	"sortMethodOptionsMenu",
+	"sortByMatchingGeometryOptionsMenu",
+	"sortByMatchingTransformsOptionsMenu",
+	"sortByClosestToPointOptions",
+	"sortByDirectionOptions"
+	};
+	appendStringArray($all, $sortWizOptions, `size $sortWizOptions`);
+	
+	//SHADING WIZ OPTIONS
+	string $shadingWizOptions[] = {
+	"assignShaderToEachSelectedObjectOptionsMenu",
+	"globalShaderAttributesOptions"
+	};
+	appendStringArray($all, $shadingWizOptions, `size $shadingWizOptions`);
+	
+	//TEXTURE WIZ OPTIONS
+	string $textureWizOptions[] = {
+	"globalTextureAttributesOptions",
+	"changeFileExtensionOnTexturesOptions",
+    "textureOutputPathOptions",
+	"texturePoolOptions",
+	"steppedRemapperOptions",
+	"wizCornerMaskTextureOptions"
+	};
+	appendStringArray($all, $textureWizOptions, `size $textureWizOptions`);
+	
+	
+	//PREP FOR PAINTING WIZ OPTIONS
+	string $pfpWizOptions[] = {
+	"optimizePrepForPaintingOptions",	
+	"convertNurbsToPolyPrepForPaintingOptions",
+	"autoProjectUVsPrepForPaintingOptions"
+	};
+	appendStringArray($all, $pfpWizOptions, `size $pfpWizOptions`);
+	
+	//CONTROL WIZ OPTIONS
+	string $controlWizOptions[] = {
+	"floatSliderGrpOptions"
+	};
+	appendStringArray($all, $controlWizOptions, `size $controlWizOptions`);
+	
+	//STRING WIZ OPTIONS
+	string $stringWizOptions[] = {
+	"csvFormattingOptions"
+	};
+	appendStringArray($all, $stringWizOptions, `size $stringWizOptions`);
+	
+	//MISC WIZ OPTIONS
+	string $miscWizOptions[] = {
+	"printTestArrayOptions",
+	"addRandomizationAttributesOptions"
+	};
+	appendStringArray($all, $miscWizOptions, `size $miscWizOptions`);
+	
+	//SELECT WIZ OPTIONS
+	string $selectWizOptions[] = {
+	"selectWizSelectCommandsOptions",
+	"getNextComponentInDirectionOptions"
+	};
+	appendStringArray($all, $selectWizOptions, `size $selectWizOptions`);
+	
+	//RECOMMENDED SETTINGS OPTIONS
+	string $recommendedSettingsOptions[] = {
+	"recommendedSettingsOptionMenu"
+	};
+	appendStringArray($all, $recommendedSettingsOptions, `size $recommendedSettingsOptions`);
+	
+	//DEBUG WIZ OPTIONS
+	string $debugWizOptions[] = {
+	"refreshStepOptions"
+	};
+	appendStringArray($all, $debugWizOptions, `size $debugWizOptions`);
+	
+	//FILE WIZ OPTIONS
+	string $fileWizOptions[] = {
+	"wizDirmapLayout",
+    "sceneThumbnailOptions",
+	"objectIconOptions",
+	"wizExportSetOptions",
+	"wizCacheFileOptions",
+	"wizExportEachSelectionToFileOptions",
+	"xgenArchiveThumbnailOptions"
+	};
+	appendStringArray($all, $fileWizOptions, `size $fileWizOptions`);
+	
+	//RENDER WIZ OPTIONS
+	string $renderWizOptions[] = {
+	"batchRenderRenderDirectoryOptions",
+	"defaultRenderEnvOptions",
+	"posterImageOptions",
+	"tileCameraOptions"
+	};
+	appendStringArray($all, $renderWizOptions, `size $renderWizOptions`);
+	
+	
+	return $all;
+}
+
+//========================================================================================================
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//                     LAYOUTS
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//========================================================================================================
+
+//GENERIC WIZ OPTIONS MENU LAYOUT
+//=======================================================
+/* USAGE:
+	Add to the begining of any options layout to create column and activation controls
+	global proc someOptions( string $parent )
+	{
+		genericWizOptionsMenuLayout("someProcOptionsColumnLayout", "Some Proc Options", $parent);
+		//... content...
+		
+	
+	}
+*/
+global proc genericWizOptionsMenuLayout( string $layoutName, string $uiName, string $parent )
+{
+	//Usage:
+	
+	//print("referenceFileOptions\n");
+	string $columnLayout = $layoutName;
+	if (`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, $uiName, $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+}
+
+//CURRENT OPTIONS
+//=================================================================================
+//CURRENT OPTIONS FRAME LAYOUT
+//-------------------------------
+global proc currentOptionsLayout(string $parent)
+{
+	string $layout = `frameLayout
+		-l "Current Options"
+		-bv false
+		-la "center"
+		-li 10
+		-lv false
+		-mw 0
+		-mh 0		
+		
+		-cll true
+		-cl true	
+		-p $parent
+		currentOptionsLayout_frameLayout
+		`;
+
+	//Content is placed below currentOptionsLayout_frameLayout
+	
+}
+
+//CURRENT OPTIONS TAB
+//=============================================================================
+//LOAD OPTIONS (does not open layout)
+//-------------------------------------
+global proc loadCurrentOptions(string $options)
+{
+	string $dbl = "-dmi WizCurrentOptionsDebugMenuItem -t Current Options"; string $dbm = "add"; int $dbc = 1;
+	
+	global string $WIZ_currentOptionsLoaded;
+	string $currentOptionsLayout = "currentOptionsLayout_frameLayout";
+	
+	//Send the command to open the options layout
+	string $eval = $options + "(\"" + $currentOptionsLayout + "\")"; //"
+	eval($eval);
+	
+	//Set the global var for the currunt options loaded
+	//$WIZ_currentOptionsLoaded = $options;
+	if(`frameLayout -q -cl $currentOptionsLayout` == 1 && `tabLayout -q -sti wizSelectionTab` != 3){ 
+		hideAllLayoutsBelowLayout($currentOptionsLayout);
+	}
+	
+	debugList($dbl, { (" * Load Current Options *") }, $dbc, $dbm);
+	debugList($dbl,  { (" - Options: " + $options) }, $dbc, $dbm);
+	debugList($dbl,  { ("-----------------------------") }, $dbc, $dbm);
+
+}
+
+//OPEN OPTIONS (does not open layout)
+//-------------------------------------
+global proc openCurrentOptions(string $options)
+{
+	loadCurrentOptions($options);
+}
+
+//OPEN OPTIONS LAYOUT (opens layout)
+//-------------------------------------
+/*======================| USAGE |=====================================
+	-c ("openCurrentOptionsLayout(\"someProcOptions\");");	
+	
+	openCurrentOptionsLayout("someProcOptions");
+	
+	-c ("openMultiCurrentOptionsLayouts({ \"someProcOptions\", \"anotherProcOptions\" });");	
+	
+	openMultiCurrentOptionsLayouts({ "someProcOptions", "anotherProcOptions" });
+====================================================================*/
+
+global proc openCurrentOptionsLayout(string $options)
+{
+	int $debug = 0;
+	if(`menuItem -q -ex WizCurrentOptionsDebugMenuItem` == 1){	
+		int $debug = `menuItem -q -cb WizCurrentOptionsDebugMenuItem`;
+	}
+	global string $WIZ_currentOptionsLoaded;
+	string $currentOptionsLayout = "currentOptionsLayout_frameLayout";
+	
+	if($debug){
+		debugList("Current Options", { (" * Open Current Options Layout *") }, 1, "add");
+		debugList("Current Options", { (" - WIZ | Current Options: " + $WIZ_currentOptionsLoaded) }, 1, "add");
+		debugList("Current Options", { (" - Requested Options: " + $options) }, 1, "add");
+	}
+	
+	//If the same options were requested twice in a row close the options layout and the current options are already open
+	if($WIZ_currentOptionsLoaded == $options && `frameLayout -q -cl $currentOptionsLayout` == 0 && `tabLayout -q -sti wizSelectionTab` == 3){ 
+		if($debug){
+			debugList("Current Options", { (" * OPTIONS ALREADY LOADED * ") }, 1, "add");
+			debugList("Current Options", { ("-----------------------------") }, 1, "add");
+		}
+		closeWizCurrentOptions();
+		return;
+	}
+	
+	//Select the current options tab
+	tabLayout -e -sti 3 wizSelectionTab;
+	
+	//Set the global var for the currunt options loaded
+	$WIZ_currentOptionsLoaded = $options;
+	
+	//Open the current options tab
+	openWizCurrentOptions();
+	if($debug){
+		debugList("Current Options", { (" - WIZ | Updated Current Options: " + $WIZ_currentOptionsLoaded) }, 1, "add");
+		debugList("Current Options", { ("-----------------------------") }, 1, "add");
+	}
+}
+
+//OPEN MULTI OPTIONS LAYOUT (opens layout)
+//-------------------------------------
+global proc openMultiCurrentOptionsLayouts(string $options[])
+{
+	int $debug = `menuItem -q -cb WizCurrentOptionsDebugMenuItem`;	
+	global string $WIZ_currentOptionsLoaded;
+	string $currentOptionsLayout = "currentOptionsLayout_frameLayout";
+	
+	if($debug){
+		debugList("Current Options", { (" * Open Current Options Layout *") }, 1, "add");
+		debugList("Current Options", { (" - WIZ | Current Options: " + $WIZ_currentOptionsLoaded) }, 1, "add");
+		debugList("Current Options", { (" - Requested Options: " + `size $options`) }, 1, "add");
+		debugList("Current Options", $options, 1, "add");
+	}
+	
+	string $currentLoadedOptions = stringArrayToString($options,"");
+	//If the same options were requested twice in a row close the options layout and the current options are already open
+	if($WIZ_currentOptionsLoaded == $currentLoadedOptions && `frameLayout -q -cl $currentOptionsLayout` == 0 && `tabLayout -q -sti wizSelectionTab` == 3){ 
+		if($debug){
+			debugList("Current Options", { (" * OPTIONS ALREADY LOADED * ") }, 1, "add");
+			debugList("Current Options", { ("-----------------------------") }, 1, "add");
+		}
+		closeWizCurrentOptions();
+		return;
+	}
+	
+	//Select the current options tab
+	tabLayout -e -sti 3 wizSelectionTab;
+	
+	//Set the global var for the currunt options loaded
+	$WIZ_currentOptionsLoaded = $currentLoadedOptions;
+	
+	//Open the current options tab
+	openMultiWizCurrentOptions($options);
+	
+	if($debug){
+		debugList("Current Options", { (" - WIZ | Updated Current Options: " + $WIZ_currentOptionsLoaded) }, 1, "add");
+		debugList("Current Options", { ("-----------------------------") }, 1, "add");
+	}
+}
+
+// OPEN WIZ HELP OPTIONS LAYOUT
+//===========================================================
+global proc openWizHelpOptionsLayout(string $options)
+{
+	int $debug = 0;
+	if(`menuItem -q -ex WizCurrentOptionsDebugMenuItem` == 1){	
+		int $debug = `menuItem -q -cb WizCurrentOptionsDebugMenuItem`;
+	}
+	global string $WIZ_currentOptionsLoaded;
+	string $currentOptionsLayout = "currentOptionsLayout_frameLayout";
+	
+	if($debug){
+		debugList("Current Options", { (" * Open Current Options Layout *") }, 1, "add");
+		debugList("Current Options", { (" - WIZ | Current Options: " + $WIZ_currentOptionsLoaded) }, 1, "add");
+		debugList("Current Options", { (" - Requested Options: " + $options) }, 1, "add");
+	}
+	
+	//If the same options were requested twice in a row close the options layout and the current options are already open
+	if($WIZ_currentOptionsLoaded == $options && `frameLayout -q -cl $currentOptionsLayout` == 0 && `tabLayout -q -sti wizSelectionTab` == 3){ 
+		if($debug){
+			debugList("Current Options", { (" * OPTIONS ALREADY LOADED * ") }, 1, "add");
+			debugList("Current Options", { ("-----------------------------") }, 1, "add");
+		}
+		closeWizCurrentOptions();
+		return;
+	}
+	
+	//Select the current options tab
+	tabLayout -e -sti 3 wizSelectionTab;
+	
+	//Set the global var for the currunt options loaded
+	$WIZ_currentOptionsLoaded = $options;
+	
+	//Open the current options tab
+	openWizCurrentOptions();
+	if($debug){
+		debugList("Current Options", { (" - WIZ | Updated Current Options: " + $WIZ_currentOptionsLoaded) }, 1, "add");
+		debugList("Current Options", { ("-----------------------------") }, 1, "add");
+	}
+}
+
+//OPENING AND CLOSING TAB AND FRAME FOR CURRENT OPTIONS
+//========================================================
+//OPEN CURRENT OPTIONS
+//-------------------------------
+global proc openWizCurrentOptions()
+{
+	int $debug = `menuItem -q -cb WizCurrentOptionsDebugMenuItem`;	
+	
+	global string $WIZ_currentOptionsLoaded;
+	string $currentOptionsLayout = "currentOptionsLayout_frameLayout";
+	
+	//Open the frame layout
+	frameLayout -e -cl false $currentOptionsLayout;	
+	
+	//Make sure there's nothing visible before we open the requested options layout
+	hideAllLayoutsBelowLayout($currentOptionsLayout);
+	
+	//Send the command to open the options layout
+	string $eval = $WIZ_currentOptionsLoaded + "(\"" + $currentOptionsLayout + "\")"; //"
+	catchQuiet(eval($eval));
+	if($debug){
+		debugList("Current Options", { (" [WIZ OPEN CURRENT OPTIONS TAB] ") }, 1, "add");
+		debugList("Current Options", { (" - Opening Options Layout: " + $WIZ_currentOptionsLoaded) }, 1, "add");
+		debugList("Current Options", { ("-----------------------------") }, 1, "add");
+	}
+}
+
+//OPEN MULTI CURRENT OPTIONS
+//-------------------------------
+global proc openMultiWizCurrentOptions(string $options[])
+{
+	int $debug = `menuItem -q -cb WizCurrentOptionsDebugMenuItem`;	
+	
+	global string $WIZ_currentOptionsLoaded;
+	string $currentOptionsLayout = "currentOptionsLayout_frameLayout";
+	
+	//Open the frame layout
+	frameLayout -e -cl false $currentOptionsLayout;	
+	
+	//Make sure there's nothing visible before we open the requested options layout
+	hideAllLayoutsBelowLayout($currentOptionsLayout);
+	
+	//Send the commands to open the options layouts
+	for($i=0;$i<`size $options`;$i++){
+		string $eval = $options[$i] + "(\"" + $currentOptionsLayout + "\")"; //"	
+		eval($eval);
+	}
+	if($debug){
+		debugList("Current Options", { (" [WIZ OPEN CURRENT OPTIONS TAB] ") }, 1, "add");
+		debugList("Current Options", { (" - Opening Options Layouts: " + `size $options`) }, 1, "add");
+		debugList("Current Options", $options, 1, "add");
+		debugList("Current Options", { ("-----------------------------") }, 1, "add");
+	}
+}
+
+
+//CLOSE CURRENT OPTIONS
+//-------------------------------
+global proc closeWizCurrentOptions()
+{
+	int $debug = `menuItem -q -cb WizCurrentOptionsDebugMenuItem`;		
+	global string $WIZ_currentOptionsLoaded;
+	string $currentOptionsLayout = "currentOptionsLayout_frameLayout";
+	
+	//Close the frame layout
+	frameLayout -e -cl true $currentOptionsLayout;	
+	
+	//Make all the child layouts invisible
+	hideAllLayoutsBelowLayout($currentOptionsLayout);
+	
+	//$WIZ_currentOptionsLoaded = "";
+	if($debug){
+		debugList("Current Options", { (" [WIZ CLOSE CURRENT OPTIONS TAB] ") }, 1, "add");
+		debugList("Current Options", { (" - WIZ | Current Options: " + $WIZ_currentOptionsLoaded) }, 1, "add");
+		debugList("Current Options", { ("-----------------------------") }, 1, "add");
+	}
+	setCurrentOptionsTabName("");
+}
+
+global proc selectWizSelectionTab()
+{
+	int $selTab = `tabLayout -q -sti wizSelectionTab`;
+	
+	if($selTab == 1){	
+		
+	} else if($selTab == 2){
+		listAttributesOfSelected();
+	}	
+}
+
+//SET CURRENT OPTIONS TAB NAME
+//----------------------------------
+global proc setCurrentOptionsTabName(string $name)
+{
+	if($name == ""){
+		$name = "CurrentOptions";	
+	}
+	tabLayout -e -tli 3 $name wizSelectionTab;
+	
+}
+//========================================================================================================
+//********************************************************************************************************
+//********************************************************************************************************
+//********************************************************************************************************
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                      OPTION MENU LAYOUTS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//********************************************************************************************************
+//********************************************************************************************************
+//********************************************************************************************************
+//========================================================================================================
+
+//OPTIONS MENU LAYOUTS
+//===============================================================================
+//===============================================================================
+
+/* USAGE:
+	// To make a new currentOptions Layout:
+	
+	string $columnLayout = "someProcOptionsMenuColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Some Proc Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	
+*/
+
+
+//WIZ NODE CAST OPTIONS
+//--------------------------------------------
+/*
+global proc wizCopyParticlesIntoParticleSystemOptions( string $parent )
+{
+	string $columnLayout = "wizCopyParticlesIntoParticleSystemOptionsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Particle Copy Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	
+	text -l "Attributes To Copy" -fn "boldLabelFont" -h 20 -al "left";
+		
+	wizCheckBox( 
+		"-l Age " 
+		+"-ann Copy Age Values "
+		+"-v 1 "
+		+"-n wizCopyParticlesIntoParticleSystem_copyAge_checkBox"
+		);
+		
+	wizCheckBox( 
+		"-l Radius " 
+		+"-ann Copy Radius Values "
+		+"-v 1 "
+		+"-n wizCopyParticlesIntoParticleSystem_copyRadius_checkBox"
+		);
+		
+	wizCheckBox( 
+		"-l Velocity " 
+		+"-ann Copy Velocity Values "
+		+"-v 0 "
+		+"-n wizCopyParticlesIntoParticleSystem_copyVelocity_checkBox"
+		);
+		
+	wizCheckBox( 
+		"-l RGB " 
+		+"-ann Copy RGB Values "
+		+"-v 1 "
+		+"-n wizCopyParticlesIntoParticleSystem_copyRGB_checkBox"
+		);
+					
+	wizCheckBox( 
+		"-l Incandescence " 
+		+"-ann Copy Incandescence Values "
+		+"-v 0 "
+		+"-n wizCopyParticlesIntoParticleSystem_copyIncandescence_checkBox"
+		);
+		
+	wizCheckBox( 
+		"-l Opacity " 
+		+"-ann Copy Opacity Values "
+		+"-v 1 "
+		+"-n wizCopyParticlesIntoParticleSystem_copyOpacity_checkBox"
+		);
+		
+	wizCheckBox( 
+		"-l Rotation " 
+		+"-ann Copy Rotation Values "
+		+"-v 0 "
+		+"-n wizCopyParticlesIntoParticleSystem_copyRotation_checkBox"
+		);		
+		
+	wizSeparator();
+	text -l "Copy Into" -fn "boldLabelFont" -h 20 -al "left";
+			
+	wizCheckBox( 
+		"-l Random Particle System " 
+		+"-ann Copies randomly into multiple new particle systems "
+		+"-v 1 "
+		+"-n wizCopyParticlesIntoParticleSystem_randomParticleSystem_checkBox"
+		);
+		
+	wizCheckBox( 
+		"-l New Particle System " 
+		+"-ann Copies randomly into multiple new particle systems "
+		+"-v 1 "
+		+"-n wizCopyParticlesIntoParticleSystem_newParticleSystem_checkBox"
+		);
+		
+	wizIntFieldGrp(
+		"-l New Particle System Count "
+		+"-nf 1 "
+		+"-v 0 "
+		+"-n wizCopyParticlesIntoParticleSystem_newParticleSystemCount_intFieldGrp"
+		);
+	
+	wizCheckBox( 
+		"-l Connect Internal Ramps " 
+		+"-ann Connects Internal Ramps "
+		+"-v 1 "
+		+"-n wizCopyParticlesIntoParticleSystem_connectInternalRamps_checkBox"
+		);
+		
+	wizSeparator();
+	
+	wizIntFieldGrp(
+		"-l Skip Particles "
+		+"-nf 1 "
+		+"-v 0 "
+		+"-n wizCopyParticlesIntoParticleSystem_skipParticles_intFieldGrp"
+		);
+	
+	wizSeparator();
+	
+	string $com = ("int $skipP = `intFieldGrp -q -v1 wizCopyParticlesIntoParticleSystem_skipParticles_intFieldGrp`;"+"\n"
+	+"int $copyVel = `checkBox -q -v wizCopyParticlesIntoParticleSystem_copyVelocity_checkBox`;"+"\n"
+	+"int $randPart = `checkBox -q -v wizCopyParticlesIntoParticleSystem_randomParticleSystem_checkBox`;"+"\n"
+	+"int $npsc = `intFieldGrp -q -v1 wizCopyParticlesIntoParticleSystem_newParticleSystemCount_intFieldGrp`;"+"\n"
+	+"int $nps = `checkBox -q -v wizCopyParticlesIntoParticleSystem_newParticleSystem_checkBox`;"+"\n"
+	);
+	
+	string $ncom = $com + "wizCopyParticlesIntoParticleSystem(\"-sl -skip \" + $skipP + \" -rps \" + $randPart + \" -new \" + $nps + \" -nc \" + $npsc);"+"\n";
+		
+	
+	
+	string $ccom = $com + "wizCopyParticlesIntoParticleSystem(\"-sl -classic -skip \" + $skipP + \" -rps \" + $randPart + \" -nc \" + $npsc);"+"\n";
+	
+	button
+		-l "Copy Particles Into Particle System"
+		-c $ncom
+		;	
+	
+	button
+		-l "Copy Particles Into Classic Particle System"
+		-c $ccom
+		;
+		
+}
+*/
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         POLY WIZ OPTIONS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//POLY LAYOUT OPTIONS
+//-------------------------------------------------------
+
+global proc polyLayoutUVOptionsMenu(string $parent)
+{
+	//print("polyLayoutUVsOptionsMenu\n");
+	string $columnLayout = "polyLayoutUVOptionsMenuColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Poly Layout Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	
+	string $fsg = `floatSliderGrp 
+		-l "UV Percentage Space"
+		-minValue 0
+		-maxValue 5
+		-value 0.1
+		-f true
+		-fmn 0 
+		-fmx 5 
+		-pre 4
+		-cal 1 "left"
+		polyLayoutUVPercentageSpace
+		`;
+	
+	checkBox -l "Flip Reveresed" -v false polyLayoutUVFlipReversedOption;
+	
+	optionMenuGrp 
+		-l "Layout:"
+		-cal 1 "left"
+		-cal 2 "left"
+		-ann ("")
+		polyLayoutUVLayoutOption
+		;
+		menuItem -label "none";
+		menuItem -label "along U";
+		menuItem -label "into square";		
+	optionMenuGrp -e -sl 3 polyLayoutUVLayoutOption;
+	
+	optionMenuGrp 
+		-l "Prescale:"
+		-cal 1 "left"
+		-cal 2 "left"
+		-ann ("")
+		polyLayoutUVPrescaleOption
+		;
+		menuItem -label "none";
+		menuItem -label "objectSpace";
+		menuItem -label "worldSpace";		
+	optionMenuGrp -e -sl 3 polyLayoutUVPrescaleOption;
+	
+	optionMenuGrp 
+		-l "Scale:"
+		-cal 1 "left"
+		-cal 2 "left"
+		-ann ("")
+		polyLayoutUVScaleOption
+		;
+		menuItem -label "none";
+		menuItem -label "uniform";
+		menuItem -label "non proportional";
+	optionMenuGrp -e -sl 2 polyLayoutUVScaleOption;
+	
+	optionMenuGrp 
+		-l "Separate:"
+		-cal 1 "left"
+		-cal 2 "left"
+		-ann ("")
+		polyLayoutUVSeparateOption
+		;
+		menuItem -label "none";
+		menuItem -label "along folds";
+		menuItem -label "no intersections";
+	optionMenuGrp -e -sl 3 polyLayoutUVSeparateOption;
+	
+	optionMenuGrp 
+		-l "Rotate For Best Fit:"
+		-cal 1 "left"
+		-cal 2 "left"
+		-ann ("")
+		polyLayoutUVRotateForBestFit
+		;
+		menuItem -label "none";
+		menuItem -label "only 90 degrees";
+		menuItem -label "free rotation";
+	optionMenuGrp -e -sl 3 polyLayoutUVRotateForBestFit;
+	
+	optionMenuGrp 
+		-l "Layout Method:"
+		-cal 1 "left"
+		-cal 2 "left"
+		-ann ("")
+		polyLayoutUVLayoutMethod
+		;
+		menuItem -label "Block Stacking";
+		menuItem -label "Shape Stacking";
+	optionMenuGrp -e -sl 2 polyLayoutUVLayoutMethod;
+	
+	checkBox -l "WorldSpace" -v false polyLayoutUVWorldSpaceOption;
+	
+	button
+		-l "Layout Selected Objects"
+		-c ("polyLayoutUVSelected(`ls -sl`);")
+		;
+
+}
+
+global proc string getPolyLayoutUVSettings(string $request)
+{
+	string $polyLayoutUV;
+	float $ps = `floatSliderGrp -q -v polyLayoutUVPercentageSpace`;
+	$polyLayoutUV+= " -ps " + $ps;
+	
+	int $fr = `checkBox -q -v polyLayoutUVFlipReversedOption`;
+	$polyLayoutUV+= " -fr " + $fr;
+	
+	int $psc;
+	if($request == "polyMultiLayoutUV"){
+		$psc = `optionMenuGrp -q -sl polyLayoutUVPrescaleOption`;
+		$polyLayoutUV+= " -psc " + ($psc -1);
+	}
+	
+	int $l = `optionMenuGrp -q -sl polyLayoutUVLayoutOption`;
+	$l = $l - 1;
+	$polyLayoutUV+= " -l " + $l;
+	
+	int $sc = `optionMenuGrp -q -sl polyLayoutUVScaleOption`;
+	$sc = $sc - 1;
+	$polyLayoutUV+= " -sc " + $sc;
+	
+	
+	int $se;
+	if($request == "polyLayoutUV"){
+		$se = `optionMenuGrp -q -sl polyLayoutUVSeparateOption`;
+		$se = $se - 1;
+		$polyLayoutUV+= " -se " + $se;
+	}
+	
+	
+	int $rbf = `optionMenuGrp -q -sl polyLayoutUVRotateForBestFit`;
+	$rbf = $rbf - 1;
+	$polyLayoutUV+= " -rbf " + $rbf;
+	
+	int $lm = `optionMenuGrp -q -sl polyLayoutUVLayoutMethod`;
+	$lm = $lm - 1;
+	$polyLayoutUV+= " -lm " + $lm;
+	
+	
+	int $ws;
+	if($request == "polyLayoutUV"){
+		$ws = `checkBox -q -v polyLayoutUVWorldSpaceOption`;
+		$polyLayoutUV+= " -ws " + $ws;
+	}
+		
+	switch($request){	
+		case "ps" : case "-ps" : case "percentageSpace" :	
+		return string($ps);
+		break;
+		
+		case "fr" : case "-fr" : case "flipReversed" :	
+		return string($fr);
+		break;
+		
+		case "psc" : case "-psc" : case "prescale" :	
+		return string($psc);
+		break;
+		
+		case "l" : case "-l" : case "layout" :	
+		return string($l);
+		break;
+		
+		case "sc" : case "-sc" : case "scale" :	
+		return string($sc);
+		break;
+		
+		case "se" : case "-se" : case "separate" :	
+		return string($se);
+		break;
+		
+		case "rbf" : case "-rbf" : case "rotateForBestFit" :	
+		return string($rbf);
+		break;
+		
+		case "lm" : case "-lm" : case "layoutMethod" :	
+		return string($lm);
+		break;
+		
+		case "ws" : case "-ws" : case "worldSpace" :	
+		return string($ws);
+		break;
+		
+		case "polyMultiLayoutUV" :
+		return $polyLayoutUV;
+		break;
+		
+		case "polyLayoutUV" :
+		return $polyLayoutUV;
+		break;
+	}
+}
+
+//@ POLY LAYOUT UV SETTINGS
+//=======================================================
+global proc polyLayoutUVSettings(string $request)
+{
+	float $ps;
+	int $fr, $psc, $l, $sc, $se, $rbf, $lm, $ws;
+	
+	string $tok[];
+	int $numTok = `tokenize $request " " $tok`;
+	for($i=0;$i<`size $tok`;$i++){
+		switch($tok[$i]){
+			case "-ps" :
+			$ps = float($tok[($i + 1)]);
+			floatSliderGrp -e -v $ps polyLayoutUVPercentageSpace;
+			continue;
+			
+			case "-fr" :
+			$fr = int($tok[($i + 1)]);
+			checkBox -e -v $fr polyLayoutUVFlipReversedOption;
+			continue;
+			
+			case "-psc" :
+			$psc = int($tok[($i + 1)]);
+			optionMenuGrp -e -sl $psc polyLayoutUVPrescaleOption;
+			continue;
+			
+			case "-l" :
+			$l = int($tok[($i + 1)]);
+			optionMenuGrp -e -sl $l polyLayoutUVLayoutOption;
+			continue;
+			
+			case "-sc" :
+			$sc = int($tok[($i + 1)]);
+			optionMenuGrp -e -sl $sc polyLayoutUVScaleOption;
+			continue;
+			
+			case "-se" :
+			$se = int($tok[($i + 1)]);
+			optionMenuGrp -e -sl $se polyLayoutUVSeparateOption;
+			continue;
+			
+			case "-rbf" :
+			$rbf = int($tok[($i + 1)]);
+			optionMenuGrp -e -sl $rbf polyLayoutUVRotateForBestFit;
+			continue;
+			
+			case "-lm" :
+			$lm = int($tok[($i + 1)]);
+			optionMenuGrp -e -lm $lm polyLayoutUVLayoutMethod;
+			continue;
+			
+			case "-ws" :
+			$ws = int($tok[($i + 1)]);
+			checkBox -e -v $ws polyLayoutUVWorldSpaceOption;
+			continue;
+		}
+	}
+
+}
+
+
+//CREASE EDGES OPTIONS MENU
+//---------------------------------------------------
+global proc creaseEdgesOptionsMenu(string $parent)
+{
+	string $columnLayout = "creaseEdgesOptionsMenuColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Crease Edges Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	
+		
+	string $c = (
+	"float $min = `floatSliderGrp -q -v creaseEdgesMinAngleFloatSliderGrp`;\n"
+	+"float $max = `floatSliderGrp -q -v creaseEdgesMaxAngleFloatSliderGrp`;\n"	
+	+"creaseEdgesOnSelectedObjects(`ls -sl`);"
+	+"if(`checkBox -q -v creaseEdgesCreaseBorderCheckBox`){\n"
+	+"		creaseBorderEdgesOnSelectedObjects(`ls -sl`);\n"
+	+"}\n"
+	);
+	
+	floatSliderGrp
+		-l "Min"
+		-f true
+		-cal 1 "left"
+		-v 30
+		-min 0
+		-max 360
+		-pre 0
+		//-cc $c	
+		creaseEdgesMinAngleFloatSliderGrp
+		;
+		
+	floatSliderGrp
+		-l "Max"
+		-f true
+		-cal 1 "left"
+		-v 360
+		-min 0
+		-max 360
+		-pre 0
+		//-cc $c
+		creaseEdgesMaxAngleFloatSliderGrp
+		;	
+	
+	checkBox -l "Crease Border Edges" -v true creaseEdgesCreaseBorderCheckBox;
+	
+	button
+		-l "Crease Edges On Selected Objects"
+		-c $c
+		;
+	
+	button
+		-l "Crease Border Edges On Selected Objects"
+		-c ("creaseBorderEdgesOnSelectedObjects(`ls -sl`);")
+		;
+		
+	button
+		-l "Remove Creases On Selected Objects"
+		-c ("removeCreasesFromSelectedObjects(`ls -sl`);")
+		;	
+}
+
+//FIX COMMON POLYGON PROBLEMS OPTIONS
+//---------------------------------------------------
+global proc fixCommonPolygonProblemsOptions(string $parent)
+{
+	string $columnLayout = "fixCommonPolygonProblemsOptionsColumnLayout";
+	if (`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Fix Common Poly Problem Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	
+	string $layout = wizFrameLayoutNoBorder($columnLayout, "fixCommonPolygonProblemsOptionsFrameLayout");
+	setParent $layout;
+	
+	string $textScrollList = getActiveSelectionList();
+	
+	//wizSep();
+	checkBox -l "History" -v false fixCommonPolygonProblemsHistoryCheckBox;
+	
+	wizText("Too Many Sides");
+	
+	button
+		-l "Fix Faces With Too Many Sides"
+		-c ("fixFacesWithTooManySides(`ls -fl -sl`);")
+		;
+	
+	wizSep();
+	wizText("T-Shapes");
+	
+	button
+		-l "Fix T-Shapes"
+		-c ("fixTShapes(`ls -fl -sl`);")		
+		;
+	
+	wizSep();
+	wizText("High Valence Vertices");
+	
+	string $highvMethod = `optionMenuGrp 
+		-label "Fix Method"
+		-cal 1 "left"
+		-cal 2 "left"
+		fixHighValenceVerticesMethodOptionMenuGrp
+		`;
+		
+		menuItem -l "Chamfer" -p ($highvMethod + "|OptionMenu");
+		menuItem -l "Spin Edges" -p ($highvMethod + "|OptionMenu");
+		
+	string $chamferOMG = `optionMenuGrp 
+		-label "Chamfer Method"
+		-cal 1 "left"
+		-cal 2 "left"
+		highValenceVerticesChamferOptionOptionMenuGrp
+		`;
+		
+		menuItem -l "Close Hole Vertices Tightly" -p ($chamferOMG + "|OptionMenu");
+		menuItem -l "Fill Hole" -p ($chamferOMG + "|OptionMenu");
+	
+	checkBox -l "Smooth Chamfer" -v false fixHighValenceVerticesSmoothChamferCheckBox;
+	
+	button
+		-l "Fix High Valence Vertices"
+		-c ("fixHighValenceVertices(`ls -fl -sl`);")		
+		;
+		
+	wizSep();
+	wizText("Triangulate");
+	
+	checkBox -l "Triangulate Meshes With Non-Quad Geometry" -v true fixHighValenceVerticesTriangulateNonQuadGeometryCheckBox;
+	
+	wizSep();
+	wizText("Fix All");
+	
+	button
+		-l "Fix Common Polygon Problems"
+		-c ("fixCommonPolygonProblemsOnSelected(`ls -fl -sl`);")
+		;
+}
+
+//HIGH VALENCE VERTICES OPTIONS
+//---------------------------------------------------
+global proc highValenceVerticesOptions(string $parent)
+{
+	string $columnLayout = "highValenceVerticesOptionsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "High Valence Vertices Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	
+	string $textScrollList = getActiveSelectionList();
+	
+	string $omg = `optionMenuGrp 
+		-label "Type"
+		-cal 1 "left"
+		-cal 2 "left"
+		highValenceVerticesChamferOptionOptionMenuGrp
+		`;
+		
+		menuItem -l "Close Hole Vertices Tightly" -p ($omg + "|OptionMenu");
+		menuItem -l "Fill Hole" -p ($omg + "|OptionMenu");
+	
+		
+	button
+		-l "Select High Valence Vertices"
+		-c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"getHighValenceVertices\")");
+		;
+	
+	button
+		-l "Fix High Valence Vertices"
+		-c ("passSelectionListToCommand(" + "\"" + $textScrollList + "\"" + ",\"fixHighValenceVertices\")");
+		;	
+}
+
+
+//T SHAPES OPTIONS
+//---------------------------------------------------
+global proc tShapesOptionsMenu(string $parent)
+{
+	global string $WIZ_activeSelectList;
+	string $fName = "tShapesOptions";	
+	/*	
+	string $columnLayout = wizCurrentOptionsColumnLayout("getComponentsOfTypeInAxisDirectionColumnLayout");
+	if(`columnLayout -q -ex $columnLayout` == 0){
+		setParent $columnLayout;
+	*/
+	string $columnLayout = "tShapesOptionsColumnLayout";
+	//Test to see if the elements exist then create the elements
+	if(`columnLayout -q -ex $columnLayout` == 0){
+		$columnLayout = `columnLayout
+			-adj true
+			-columnOffset "both" 10
+			-p $parent
+			$columnLayout
+			`;
+	
+		button
+			-l "Get T Shapes"
+			-c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $WIZ_activeSelectList + "\"" + ",\"getTShapes\")");
+			;
+			
+		button
+			-l "Get Interior Faces Of T Shape Edges"
+			-c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $WIZ_activeSelectList + "\"" + ",\"getInteriorFacesOfEdges\")");
+			;
+			
+		button
+			-l "Get T Shape Faces On Borders"
+			-c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $WIZ_activeSelectList + "\"" + ",\"getTShapeFacesOnBorder\")");
+			;	
+	
+	}
+	if(`columnLayout -q -vis $columnLayout` == 0){
+		columnLayout -e -vis true $columnLayout;
+		setCurrentOptionsTabName("T Shapes Options");
+	}
+	
+	setParent..;		
+}
+
+//TOO MANY SIDES OPTIONS
+//---------------------------------------------------
+global proc tooManySidesOptions(string $parent)
+{
+	string $columnLayout = "tooManySidesOptionsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Too Many Sides Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	
+	string $textScrollList = getActiveSelectionList();
+	
+	string $omg = `optionMenuGrp 
+		-label "Fix To Many Sides Method"
+		-cal 1 "left"
+		-cal 2 "left"
+		tooManySidesFixMethodOptionMenuGrp
+		`;
+		
+		menuItem -l "Triangulate And Spin Edges" -p ($omg + "|OptionMenu");
+		menuItem -l "Triangulate" -p ($omg + "|OptionMenu");
+		//menuItem -l "Separate Face And Triangulate" -p ($omg + "|OptionMenu");
+	
+	
+	button
+		-l "Select Faces With Too Many Sides"
+		-c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"getFacesWithTooManySides\")");
+		;
+	
+	button
+		-l "Fix Faces With Too Many Sides"
+		-c ("passSelectionListToCommand(" + "\"" + $textScrollList + "\"" + ",\"fixFacesWithTooManySides\")");
+		;	
+	
+		
+}
+
+
+//MAXIMIZE MERGE VERTICES OPTION MENU
+//---------------------------------------------------
+global proc maximizeMergeVerticesOptionsMenu(string $parent)
+{
+	string $fName = "maximizeMergeVerticesOptions";	
+	
+	string $columnLayout = "maximizeMergeVerticesOptionsColumnLayout";
+	//Test to see if the elements exist then create the elements
+	if(`columnLayout -q -ex $columnLayout` == 0){
+		$columnLayout = `columnLayout
+			-adj true
+			-columnOffset "both" 10
+			-p $parent
+			$columnLayout
+			`;
+	
+	string $minDis = `floatSliderGrp
+		-l "Min Distance"
+		-v 0.0001
+		-min 0.00001
+		-max 1.0	
+		-fmn 0.00001
+		-fmx 9999999	
+		-step 0.1
+		-ss 0.1
+		-f true
+		-pre 5
+		maximizeMergeVerticesMinDistanceFloatSliderGrp
+		`;
+		
+	string $incDis = `floatSliderGrp
+		-l "Increment Distance"
+		-v 0.1
+		-min 0.00001
+		-max 2.0
+		-fmn 0.00001
+		-fmx 9999999	
+		-step 0.1
+		-ss 0.1
+		-f true
+		-pre 5
+		maximizeMergeVerticesIncrementDistanceFloatSliderGrp
+		`;
+			
+	string $maxDis = `floatSliderGrp
+		-l "Max Distance"
+		-v 1.0
+		-min 0.00001
+		-max 2.0
+		-fmn 0.00001
+		-fmx 9999999	
+		-step 0.1
+		-ss 0.1
+		-f true
+		-pre 5
+		maximizeMergeVerticesMaxDistanceFloatSliderGrp
+		`;
+		
+		button
+			-l "Maximize Merge Vertices"
+			-c ("maximizeMergeVertices(`ls -sl`);")
+			;
+	
+	
+	}
+	if(`columnLayout -q -vis $columnLayout` == 0){
+		columnLayout -e -vis true $columnLayout;
+		setCurrentOptionsTabName("Maximize Merge Vertices Options");
+	}
+	
+	setParent..;		
+}
+
+//MERGE VERTICES OPTIONS MENU
+//---------------------------------------
+global proc mergeVerticesOptionsMenu(string $parent)
+{
+	//PolyMergeOptions;	
+}
+
+
+//CONVERT VERTEX COLORS TO TEXTURE MAP OPTIONS
+//---------------------------------------
+global proc convertVertexColorsToTextureMapOptions(string $parent)
+{
+	//print("polyLayoutUVsOptionsMenu\n");
+	string $columnLayout = "convertVertexColorsToTextureMapOptionsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Convert Vertex Colors Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	
+	wizIntFieldGrp(
+		"-l Size X "
+		+"-nf 1 "
+		+"-v1 512 "
+		+"-n convertVertexColors_sizeX_intFieldGrp"
+		);
+		
+	wizIntFieldGrp(
+		"-l Size Y "
+		+"-nf 1 "
+		+"-v1 512 "
+		+"-n convertVertexColors_sizeY_intFieldGrp"
+		);
+		
+	string $tfbg = wizTextFieldButtonGrp(
+		"-l File Name "
+		+"-bl Browse "
+		+"-ann File To Write Image Too "
+		+"-bc nf "
+		+"-n convertVertexColors_fileName_textFieldButtonGrp");
+	
+		
+	string $c = ("int $sizeX = `intFieldGrp -q -v1 convertVertexColors_sizeX_intFieldGrp`;"+"\n"
+		+"int $sizeY = `intFieldGrp -q -v1 convertVertexColors_sizeY_intFieldGrp`;"+"\n"
+		+"string $filename = `textFieldButtonGrp -q -tx convertVertexColors_fileName_textFieldButtonGrp`;"+"\n"
+		+"convertVertexColorsToTextureMap(\"-fsx \" + $sizeX + \" -fsy \" + $sizeY + \" -fn \" + $filename);"
+		);
+		
+	
+		
+	button
+		-l "Convert"
+		-c $c
+		;
+		
+}
+
+/*
+//PROCESS VUE TERRAIN TILE OPTIONS
+//-----------------------------------------------------------------
+global proc processVueTerrainTilesOptions( string $parent )
+{
+	string $columnLayout = "processVueTerrainTilesOptionsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Process Vue Terrain Tile Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+		
+	//checkBox -l "Create Auto UVs" -v false processVueTerrainTilesCreateAutoUVsCheckBox;
+	//checkBox -l "Create Y Planar UVs" -v true processVueTerrainTilesCreateYPlanarUVsCheckBox;
+	
+	string $saveAs = wizOptionMenuGrp("Save Tile As","processVueTerrainTilesSaveAsOptionMenuGrp");
+		menuItem -label "mb";
+		menuItem -label "obj";
+		
+	optionMenuGrp -edit -sl 1 $saveAs;
+
+	
+	text
+		-l "Step 1: Delete Extra Sides Of Tiles"
+		-al "left"
+		;
+	string $max = `floatSliderGrp 
+		-l "Edge Cleanup Tolerance Max"
+		-ann "This will find poly faces at this distance from bounding box edge and delete.\nUse higher values for lower resolution tiles. And Lower values for higher resolution tiles." 
+		-f true
+		-cal 1 "left"
+		-cw 1 120		
+		-adj 2
+		-v 0.01
+		-min 0.0001				
+		-pre 4
+		processVueTerrainTilesMaxAngleFloatSliderGrp
+		`;
+		
+	string $normalAngle = `floatSliderGrp 
+		-l "Normal Angle"
+		-f true
+		-ann "This is the normal smoothing angle to apply to faces"
+		-cal 1 "left"
+		-cw 1 80		
+		-adj 2
+		-v 80
+		-min 1
+		-max 180				
+		-pre 0
+		processVueTerrainTilesNormalAngleFloatSliderGrp
+		`;
+
+	
+    button
+		-l "Prep Selected Terrain Object"
+		-c ("prepVueTerrainTiles(`ls -sl`);")
+		;
+        
+	button
+		-l "Remove Extra Sides From Vue Terrain Mesh Objects -OLD"
+		-c ("removeExtraSidesFromVueTerrainMeshObjects(`ls -sl`);")
+		;
+	
+
+	
+	text
+		-l "Step 2: Bridge Edges Of Tiles"
+		-al "left"
+		;
+		
+	string $max = `floatSliderGrp 
+		-l "Edge Selection Size"
+		-ann "This will find poly edges at this distance from bounding box edge and delete.\nUse higher values for lower resolution tiles. And Lower values for higher resolution tiles." 
+		-f true
+		-cal 1 "left"
+		-cw 1 120		
+		-adj 2
+		-v 0.01
+		-min 0.0001				
+		-pre 4
+		processVueTerrainTilesEdgeSelectionSizeFloatSliderGrp
+		`;
+	
+	button
+		-l "Bridge Terrain Tile Edges"
+		-c ("bridgeSelectedTerrainTileEdges(`ls -sl`);")
+		;
+		
+	checkBox 
+		-l "Remove Extra Sides" 
+		-v true 
+		processVueTerrainTilesRemoveExtraSidesCheckBox
+		;
+		
+	checkBox 
+		-l "Remove Bottom Side Only" 
+		-v false 
+		processVueTerrainTilesRemoveBottomSideOnlyCheckBox
+		;
+	
+	string $uvType = wizOptionMenuGrp("Generate UVs","processVueTerrainTilesUVsOptionMenuGrp");
+		menuItem -label "none";
+		menuItem -label "planar";
+		menuItem -label "auto";
+		
+	//Select planar by default	
+	optionMenuGrp -e -sl 2 $uvType;
+		
+	
+	checkBox 
+		-l "Assign Default Shader" 
+		-v true 
+		processVueTerrainTilesAssignDefaultShaderCheckBox
+		;
+		
+	checkBox 
+		-l "Reduce Poly" 
+		-v false 
+		processVueTerrainTilesReducePolyCheckBox
+		;
+		
+	string $reductionPercent = `intSliderGrp 
+		-l "Reduction Percent"
+		-ann "" 
+		-f true
+		-cal 1 "left"
+		-cw 1 120		
+		-adj 2
+		-v 80
+		-min 0
+		-max 99
+		processVueTerrainTilesPolyReductionPercentIntSliderGrp
+		`;
+		
+	button
+		-l "Process Selected Terrain Tile OBJ Files"
+		-c ("processSelectedTerrainTileObjFiles();")
+		;
+	
+	button
+		-l "Process All Terrain OBJ Files In Directory"
+		-c ("string $dir = getDirectoryFileDialog();processAllTerrainTilesInDirectory($dir);")
+		;	
+	
+	button
+		-l "Rename Terrain Tiles After File Names"
+		-c ("renameTerrainTilesAfterFileNames();")
+		;
+	
+	
+}
+*/
+
+
+//@ TERRAIN TILE BLANKET OPTIONS
+//====================================================================
+global proc terrainTileBlanketOptions( string $parent )
+{
+	//genericWizOptionsMenuLayout("polyReduceOptionsColumnLayout", "Poly Reduce Options", $parent);
+	string $columnLayout = "terrainTileBlanketOptionsColumnLayout";
+	if (`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Terrain Tile Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+    
+	wizIntFieldGrp("-l Divisions Squared -nf 1 -v 10 -n terrainTileBlanket_divisions_intFieldGrp");
+	
+	wizIntFieldGrp("-l Subdivisions -nf 1 -v 100 -n terrainTileBlanket_subdivisions_intFieldGrp");
+	
+	string $tfbg = wizTextFieldGrp(
+		"-l Name "
+		+"-n terrainTileBlanket_name_textFieldButtonGrp");
+		
+	string $com = ("int $tileDiv = `intFieldGrp -q -v1 terrainTileBlanket_divisions_intFieldGrp`;"+"\n"
+	+"int $subDiv = `intFieldGrp -q -v1 terrainTileBlanket_subdivisions_intFieldGrp`;"+"\n"
+	+"string $tileName = `textFieldGrp -q -tx terrainTileBlanket_name_textFieldButtonGrp`;"+"\n"
+	+"wizTerrainTileBlanket(\"-sl -xt \" + $tileDiv + \" -yt \" + $tileDiv + \" -xs \" + $subDiv + \" -ys \" + $subDiv + \" -name \" + $tileName);"+"\n"
+	);
+	
+	button
+		-l "Create Terrain Tile Blanket"
+		-c $com
+		;
+		
+	setParent..;
+}
+
+
+
+//@ POLY REDUCE OPTIONS
+//====================================================================
+global proc polyReduceOptions( string $parent )
+{
+	//genericWizOptionsMenuLayout("polyReduceOptionsColumnLayout", "Poly Reduce Options", $parent);
+	string $columnLayout = "polyReduceOptionsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Poly Reduce Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+    
+	string $maxDis = `floatSliderGrp
+		-l "Percent Reduction"
+		-v 80.0
+		-min 0.01
+		-max 99.999
+		-fmn 0.001
+		-fmx 99.999	
+		-step 0.1
+		-ss 0.1
+		-f true
+		-pre 4
+		polyWizReductionPercentFloatSliderGrp
+		`;
+	
+	button
+		-l "Reduce All"
+		-c ("wizPolyReduceAll();")
+		;
+		
+	setParent..;
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         UV WIZ OPTIONS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//FIT SELECTED OBJECTS UVS INTO SINGLE UV SPACE OPTIONS
+//-----------------------------------------------------------------
+global proc fitSelectedObjectsUVsIntoSingleUVSpaceOptions(string $parent)
+{
+	string $columnLayout = "fitSelectedObjectsUVsIntoSingleUVSpaceOptionsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Fit Mulit UV Sets Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;	
+	
+	intSliderGrp 
+		-l "Grid Area" 
+		-minValue 1		
+		-maxValue 10
+		-value 1 
+		-fmn 1
+		-fmx 99999
+		-field true	
+		fitSelectedObjectsUVsIntoSingleUVSpaceGridAreaIntSliderGrp		
+		;
+		
+	button
+		-l "Fit Selected Objects UVs Into Single UV Space"
+		-c ("fitSelectedObjectsUVsIntoSingleUVSpace(`ls -sl`);")
+		;
+			
+}
+
+//TRANSFER UVS SETTINGS OPTIONS
+//--------------------------------
+global proc transferUVsOptions(string $parent)
+{
+	string $columnLayout = "transferUVsOptionsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Transfer UVs Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	
+	string $flipUVsOMG = wizOptionMenuGrp("Flip UVs","transferUVsFlipUVsOptionMenuGrp");
+		menuItem -label "none";
+		menuItem -label "Flip U";
+		menuItem -label "Flip V";
+		menuItem -label "Flip Both";
+	optionMenuGrp -edit -sl 1 $flipUVsOMG;
+	
+	string $sampleSpaceOMG = wizOptionMenuGrp("Sample Space","transferUVsSampleSpaceOptionMenuGrp");
+		menuItem -label "World Space";
+		menuItem -label "Model Space";
+		menuItem -label "";
+		menuItem -label "";
+		menuItem -label "Component Based";
+		menuItem -label "Topology Based";
+	optionMenuGrp -edit -sl 6 $sampleSpaceOMG;
+	
+	string $searchMethodOMG = wizOptionMenuGrp("Search Method","transferUVsSeachMethodOptionMenuGrp");
+		menuItem -label "Closest Along Normal";
+		menuItem -label "";
+		menuItem -label "";
+		menuItem -label "Closest To Point";
+	optionMenuGrp -edit -sl 4 $searchMethodOMG;
+	
+	button
+		-l "Transfer UVs On Selected Objects"
+		-c ("transferUVsOnSelected(`ls -sl`);")
+		;
+
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                      TRANSFORM WIZ OPTIONS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//DUPLICATION METHOD OPTIONS
+//-----------------------------------------
+global proc duplicationMethodOptions(string $parent)
+{
+	string $columnLayout = "duplicationMethodOptionsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Duplication Method Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	
+	string $dupMethod = duplicationMethodOptionMenuGrp($parent, "duplicationMethodOptionMenuGrp");
+	
+	checkBox -l "Upstream Nodes" -v false duplicationMethodUpstreamNodesCheckBox;
+	checkBox -l "Input Connections" -v false duplicationMethodInputConnectionsCheckBox;
+	checkBox -l "Instance Leaf Nodes" -v false duplicationMethodInstanceLeafNodesCheckBox;
+	checkBox -l "Rename Children" -v true duplicationMethodRenameChildrenCheckBox;
+	checkBox -l "Parents Only" -v false duplicationMethodParentsOnlyCheckBox;
+
+	button
+		-l "Duplicate"
+		-c ("wizDuplicate(`ls -sl`);")
+		;
+}
+
+//GET WIZ DUPLICATION COMMAND
+//------------------------------------------
+global proc string getWizDuplicationCommand()
+{
+	string $c = "duplicate ";	
+	if (`checkBox -q -v duplicationMethodRenameChildrenCheckBox`){
+		$c = $c + "-rc ";	
+	}
+	if (`checkBox -q -v duplicationMethodUpstreamNodesCheckBox`){
+		$c = $c + "-un ";	
+	}
+	if (`checkBox -q -v duplicationMethodInputConnectionsCheckBox`){
+		$c = $c + "-ic ";
+	}
+	if (`checkBox -q -v duplicationMethodParentsOnlyCheckBox`){
+		$c = $c + "-po ";
+	}
+	if (`checkBox -q -v duplicationMethodInstanceLeafNodesCheckBox`){
+		$c = $c + "-ilf ";
+	}
+	return $c;
+}
+
+//SET ALL LOD OPTIONS
+//------------------------------------------
+global proc setAllLODOptions( string $parent )
+{
+	
+	string $columnLayout = "setAllLODOptionsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Set All LOD Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	
+	string $lodLevels = `intSliderGrp
+		-l "Number Of Levels"
+		-cw 1 80
+		-cal 1 "left"
+		-adj 2
+		-f true
+		-min 1
+		-max 99
+		-s 1
+		-v 1
+		setAllLODlodLevelCountIntSliderGrp
+		`;
+		
+	button
+		-l "Set Level Count"
+		-c ("int $levelCount = `intSliderGrp -q -v setAllLODlodLevelCountIntSliderGrp`;setAllLODLevelCount($levelCount);")
+		;
+		
+	//int $numOfLevels = `intSliderGrp -q -v setAllLODlodLevelCountIntSliderGrp`;
+	int $numOfLevels = 10;
+	
+	for ($i=0;$i<$numOfLevels;$i++){
+		lodFloatSliderButtonGrp($i);	
+	}
+}
+
+
+global proc lodFloatSliderButtonGrp(int $lodLevel)
+{
+	string $ffbgName = "lodLevel" + $lodLevel + "FloatSliderButtonGrp";
+	string $l = "LOD " + $lodLevel + ":";
+	string $bl = "Set LOD " + $lodLevel;
+	string $bc = (
+	"float $val = `floatSliderButtonGrp -q -v " + $ffbgName + "`;"
+	+"setAllLODThreshold(" + $lodLevel + ",$val);");
+	
+	float $v = (float($lodLevel) * 300) + 300;
+	string $ffbg = `floatSliderButtonGrp
+		-l $l
+		-f true
+		-cal 1 "left"
+		-cw 1 40
+		-cw 2 90
+		-adj 3
+		-min 0
+		-max 999999999
+		-pre 4
+		-v $v
+		-bl $bl
+		-bc $bc
+		$ffbgName
+		`;
+		
+		
+}
+
+// CREATE BOUNDING BOX PROXY LOD GROUP FOR SELECTED OPTIONS
+//=======================================================
+global proc createBoundingBoxProxyLODGroupForSelectedOptions( string $parent )
+{
+	//genericWizOptionsMenuLayout("createBoundingBoxProxyLODGroupForSelectedOptionsColumnLayout", "Proxy LOD", $parent);
+	string $columnLayout = "createBoundingBoxProxyLODGroupForSelectedOptionsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Proxy LOD", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	
+	string $text = ("- Using this you can create lod groups for transforms that may be referenced or are\n"
+	+"parented to other objects.\n"
+	+"- This proc creates a bounding box cube for the selected transforms.\n"
+	+"- The lod grounds will be created in the order of the selection.\n"
+	+"- Only one lod group will be made per call to the function.\n"
+	+"- Then it makes an lod group for the objects.\n"
+	+"- The bounding box cubes visibility is connected to the corresponding transforms\n"
+	+"so when the bounding boxes get switched the objects visibility get switched\n"
+	+"- The bouding box lod group is then parent constrained and scaled constrained to \n"
+	+"orginal object.\n"
+	);
+	
+	text
+		-l $text
+		-al "left"
+		;
+		
+	textFieldGrp
+		-l "LOD Group Name Prefix"
+		-tx ""
+		-cal 1 "left"
+		createBoundingBoxProxyLODGroupNameTextFieldGrp
+		;
+		
+    checkBox
+        -l "Hide LOD Groups"
+        -v true
+        createBoundingBoxProxyLODGroupHideLODGroupsCheckBox
+        ;
+    
+    checkBox
+        -l "Hide LOD Groups In Outliner"
+        -v true
+        createBoundingBoxProxyLODGroupHideLODGroupsInOutlinerCheckBox
+        ;    
+        
+	button
+		-l "Create Bounding Box Proxy LOD Group"
+		-c ("createBoundingBoxProxyLODGroupForSelected(`ls -sl`);")
+		;
+		
+	setParent..;
+}
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			RENDER WIZ
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//====================================================================
+
+//BATCH RENDER RENDER DIRECTORY OPTIONS
+//==========================================================================
+global proc batchRenderRenderDirectoryOptions( string $parent )
+{
+	genericWizOptionsMenuLayout("batchRenderRenderDirectoryOptionsColumnLayout", "Render Directory", $parent);
+	//string $rd = wizGetDirectory();
+	string $bc = ("global string $WIZ_renderingWizRenderDirectoryFlag;"+"\n"
+	+"$WIZ_renderingWizRenderDirectoryFlag = wizGetDirectory();"+"\n"
+	+"textFieldButtonGrp -e -tx $WIZ_renderingWizRenderDirectoryFlag batchRenderRenderDirectoryTextFieldButtonGrp;"+"\n"
+	);
+	
+	wizTextFieldButtonGrp(
+	"-l Render Directory "
+	+"-bl Select "
+	+"-tx Directory "
+	+"-bc ad "
+	+"-n batchRenderRenderDirectoryTextFieldButtonGrp"
+	);
+	
+	//string $tfbg = wizGetDirectoryTextFieldButtonGrp("Render Directory", $bc, "Select", "batchRenderRenderDirectoryTextFieldButtonGrp");
+	
+	//global string $WIZ_renderingWizRenderDirectoryFlag;
+	//$WIZ_renderingWizRenderDirectoryFlag = $rd;
+	setParent..;
+	
+}
+
+// DEFAULT RENDER ENV OPTIONS
+global proc defaultRenderEnvOptions( string $parent )
+{
+	string $columnLayout = "defaultRenderEnvOptionsColumnLayout";
+	if (`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Default Render Environment", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+
+	//string $dretfbg = wizNewFileTextFieldButtonGrp("Default Render Env", "defaultRenderEnv");
+
+	// get option var text value
+	string $ovName = "WIZ_defaultRenderEnv";
+	string $tx = "";
+	if (`optionVar -ex $ovName`){
+		$tx = `optionVar -q $ovName`;
+	}
+	
+	string $bc = (
+	"string $newFile = wizGetMayaFile();"+"\n"
+	+"textFieldButtonGrp -e -tx $newFile wizDefaultRenderEnv_textFieldButtonGrp;"+"\n"
+	+"optionVar -sv " + $ovName + " $newFile;"+"\n"	
+	);
+	
+	string $tfbg = `textFieldButtonGrp
+		-l "Default Render Env"
+		-tx $tx
+		-cal 1 "left"
+		-bl "Select"
+		-bc $bc
+		wizDefaultRenderEnv_textFieldButtonGrp
+		`;
+	
+	/*
+	string $refCom = ("string $refFile = `textFieldButtonGrp -q -tx wizDefaultRenderEnv_textFieldButtonGrp`;"+"\n"
+	+"wizReferenceFile($refFile);"+"\n");
+	string $removeCom = ("string $refFile = `textFieldButtonGrp -q -tx wizDefaultRenderEnv_textFieldButtonGrp`;"+"\n"
+	+"file -f -rr $refFile;"+"\n")
+	*/
+	
+	button
+		-l "Reference Default Render Env"
+		-c ("wizReferenceDefaultRenderEnv();")
+		;
+		
+		
+	button
+		-l "Remove Default Render Env"
+		-c ("wizRemoveDefaultRenderEnv();")
+		;
+		
+}
+
+
+// ASSET ICON RENDER ENV OPTIONS
+global proc wizAssetIconOptions( string $parent )
+{
+	string $columnLayout = "wizAssetIconOptionsColumnLayout";
+	if (`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Asset Icon Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+
+	//string $dretfbg = wizNewFileTextFieldButtonGrp("Default Render Env", "defaultRenderEnv");
+
+	// get option var text value
+	string $ovName = "WIZ_assetIconRenderEnv";
+	string $tx = "";
+	if (`optionVar -ex $ovName`){
+		$tx = `optionVar -q $ovName`;
+	}
+	
+	string $bc = (
+	"string $newFile = wizGetMayaFile();"+"\n"
+	+"textFieldButtonGrp -e -tx $newFile wizAssetIconRenderEnv_textFieldButtonGrp;"+"\n"
+	+"optionVar -sv " + $ovName + " $newFile;"+"\n"	
+	);
+	
+	string $tfbg = `textFieldButtonGrp
+		-l "Asset Icon Render Env"
+		-tx $tx
+		-cal 1 "left"
+		-bl "Select"
+		-bc $bc
+		wizAssetIconRenderEnv_textFieldButtonGrp
+		`;
+
+	button
+		-l "Reference Asset Icon Render Env"
+		//-c ("wizReferenceDefaultRenderEnv();")
+		;
+		
+		
+	wizIntFieldGrp(
+		"-l Size "
+		+"-v 64 "
+		+"-n wizAssetIcon_iconSize_checkBox"
+		);
+		
+	wizCheckBox(
+		"-l Fit Visible Objects In View "
+		+"-ann This will move the persp camera so that it can view all the visible objects. "
+		+"-v 0 "		
+		+"-n wizAssetIconFitVisibleInView_checkBox"
+		);
+		
+	wizCheckBox(
+		"-l Use Default Preset "
+		+"-ann This will load the default RenderGlobals preset for the renderer. "
+		+"-v 1 "		
+		+"-n wizAssetIconUseDefaultPreset_checkBox"
+		);
+		
+	wizFloatSliderGrp(
+		"-l Camera Focal Length "
+		+"-v 55.0 "
+		+"-f 1 "
+		+"-min 2 "
+		+"-max 100 "
+		+"-fmn 2 "
+		+"-fmx 1000 "
+		+"-n wizAssetIconCameraFocalLength_floatSliderGrp")
+		;
+		
+	wizCheckBox(
+		"-l Load Icon Render Env "
+		+"-ann The default render environment will be loaded if there are no lights in the scene. "
+		+"-v 1 "		
+		+"-n wizAssetIconLoadIconRenderEnv_checkBox"
+		);
+
+		
+	button
+		-l "Create Asset Icon"
+		-c ("createWizAssetIcon(\"\");")
+		;
+		
+}
+
+global proc wizReferenceDefaultRenderEnv()
+{	
+	string $refFile = `textFieldButtonGrp -q -tx wizDefaultRenderEnv_textFieldButtonGrp`;
+	wizCreateReference($refFile);
+	
+}
+
+global proc toggleWizDefaultRenderEnv()
+{
+	string $refFile = `textFieldButtonGrp -q -tx wizDefaultRenderEnv_textFieldButtonGrp`;
+	if ((catchQuiet(`referenceQuery -rfn $refFile`)) == 0){
+		wizRemoveDefaultRenderEnv();
+	} else {
+		wizReferenceDefaultRenderEnv();
+	}
+}
+
+global proc wizRemoveDefaultRenderEnv()
+{
+	string $refFile = `textFieldButtonGrp -q -tx wizDefaultRenderEnv_textFieldButtonGrp`;
+	file -f -rr $refFile;	
+}
+
+
+
+//FILE WIZ OPTIONS
+//==========================================================================
+//REFERENCE FILE OPTIONS
+//--------------------------------------------
+global proc referenceFileOptions(string $parent)
+{
+	//print("referenceFileOptions\n");
+	string $columnLayout = "referenceFileOptionsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Reference File Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	
+	
+	string $dupCommand = ("int $ddupCount = `intFieldGrp -q -v1 referenceFileDuplicateCount`;"+"\n"
+	+"string $sel[] = `ls -sl`;"+"\n"
+	+"string $obj = $sel[0];"+"\n"
+	+"for($i=0;$i<$ddupCount;$i++){"+"\n"
+	+"	duplicateReferenceObject($obj);"+"\n"
+	+"}"+"\n"
+	);
+	
+	
+	wizIntFieldGrp(
+		"-l Duplicates: "
+		+"-nf 1 "
+		+"-v1 1 "
+		+"-n referenceFileDuplicateCount"
+		);
+	
+	button
+		-l "Duplicate Reference"
+		-c $dupCommand
+		;
+		
+	setParent..;	
+}
+
+//SELECT WIZ OPTIONS
+//=======================================================================
+
+//PROPOGATE FACE SELECTION MAX ANGLE OPTIONS
+//---------------------------------------------------
+global proc propogateFaceSelectionMaxAngleOptions(string $parent)
+{
+	string $columnLayout = "propogateFaceSelectionMaxAngleOptionsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Propogate Selection Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	
+	string $minAngle = `floatSliderGrp
+		-min 0
+		-max 360
+		-value 0
+		-step 1
+		-f true
+		-pre 2
+		propogateComponentSelectionMinAngleFloatSliderGrp
+		`;
+		
+	string $maxAngle = `floatSliderGrp
+		-min 0
+		-max 360
+		-value 60
+		-step 1
+		-f true
+		-pre 2
+		propogateComponentSelectionMaxAngleFloatSliderGrp
+		`;
+		
+	checkBox
+		-l "Inside"
+		-v 1
+		propogateComponentSelectionInsideOptionCheckBox
+		;
+	
+	button
+		-l "Select Adjacent Faces Max Angle"
+		-c ("float $maxAngle = `floatSliderGrp -q -v propogateComponentSelectionMaxAngleFloatSliderGrp`;" + "float $minAngle = `floatSliderGrp -q -v propogateComponentSelectionMinAngleFloatSliderGrp`;" + "selectAdjacentFacesAtMaxAngle(`ls -sl`,$minAngle, $maxAngle);")
+		;
+	
+	button
+		-l "Select Adjacent Edges Max Angle"
+		-c ("float $maxAngle = `floatSliderGrp -q -v propogateComponentSelectionMaxAngleFloatSliderGrp`;" + "float $minAngle = `floatSliderGrp -q -v propogateComponentSelectionMinAngleFloatSliderGrp`;" + "selectAdjacentEdgesAtMaxAngle(`ls -sl`,$minAngle, $maxAngle);")
+		;
+		
+	button
+		-l "Propogate Face Selection Max Angle"
+		-c ("float $maxAngle = `floatSliderGrp -q -v propogateComponentSelectionMaxAngleFloatSliderGrp`;" + "float $minAngle = `floatSliderGrp -q -v propogateComponentSelectionMinAngleFloatSliderGrp`;" + "propogateFaceSelectionMaxAngle(`ls -sl`,$minAngle, $maxAngle);")
+		;
+	
+	setParent..;		
+}
+
+//GET COMPONENTS MIN MAX AREA OPTIONS MENU
+//---------------------------------------------------
+global proc getComponentsOfTypeInMinMaxAreaOptionsMenu(string $parent)
+{
+	string $columnLayout = "getComponentsOfTypeInMinMaxAreaColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 0){
+		$columnLayout = `columnLayout
+			-adj true
+			-columnOffset "both" 10
+			-p $parent
+			$columnLayout
+			`;
+	
+	float $min = -100;
+	float $max = 100;
+	float $fmx = 999999999;
+	float $fmn = -999999999;
+	float $v = 0;
+	float $pre = 0;
+	
+	string $floatSliderGrp = `floatSliderGrp -l "Min X"
+	-min $min -max $max -fmx $fmx -fmn $fmn -v $v -step 1 -f true -pre $pre
+	getComponentsOfTypeInMinMaxAreaMinXFloatSliderGrp
+	`;
+	
+	string $floatSliderGrp = `floatSliderGrp -l "Min Y"
+	-min $min -max $max -fmx $fmx -fmn $fmn -v $v -step 1 -f true -pre $pre
+	getComponentsOfTypeInMinMaxAreaMinYFloatSliderGrp
+	`;
+	
+	string $floatSliderGrp = `floatSliderGrp -l "Min Z"
+	-min $min -max $max -fmx $fmx -fmn $fmn -v $v -step 1 -f true -pre $pre
+	getComponentsOfTypeInMinMaxAreaMinZFloatSliderGrp
+	`;
+	
+	string $floatSliderGrp = `floatSliderGrp -l "Max X"
+	-min $min -max $max -fmx $fmx -fmn $fmn -v $v -step 1 -f true -pre $pre
+	getComponentsOfTypeInMinMaxAreaMaxXFloatSliderGrp
+	`;	
+	
+	string $floatSliderGrp = `floatSliderGrp -l "Max Y"
+	-min $min -max $max -fmx $fmx -fmn $fmn -v $v -step 1 -f true -pre $pre
+	getComponentsOfTypeInMinMaxAreaMaxYFloatSliderGrp
+	`;	
+	
+	string $floatSliderGrp = `floatSliderGrp -l "Max Z"
+	-min $min -max $max -fmx $fmx -fmn $fmn -v $v -step 1 -f true -pre $pre
+	getComponentsOfTypeInMinMaxAreaMaxZFloatSliderGrp
+	`;
+	
+	string $polyCompOptionMenuGrp = polyComponentTypeOptionMenuGrp($columnLayout, "getComponentsInMinMaxAreaPolyComponentsTypeOptionMenuGrp");
+			
+	string $c = ("float $min[];"
+	+ "$min[0] = `floatSliderGrp -q -v getComponentsOfTypeInMinMaxAreaMinXFloatSliderGrp`;"
+	+ "$min[1] = `floatSliderGrp -q -v getComponentsOfTypeInMinMaxAreaMinYFloatSliderGrp`;"
+	+ "$min[2] = `floatSliderGrp -q -v getComponentsOfTypeInMinMaxAreaMinZFloatSliderGrp`;"
+	+ "float $max[];"
+	+ "$max[0] = `floatSliderGrp -q -v getComponentsOfTypeInMinMaxAreaMaxXFloatSliderGrp`;"
+	+ "$max[1] = `floatSliderGrp -q -v getComponentsOfTypeInMinMaxAreaMaxYFloatSliderGrp`;"
+	+ "$max[2] = `floatSliderGrp -q -v getComponentsOfTypeInMinMaxAreaMaxZFloatSliderGrp`;"
+	+ "string $type = `optionMenuGrp -q -v " + $polyCompOptionMenuGrp + "`;"
+	+ "getComponentsOfTypeInMinMaxArea(`ls -sl`,$type, $min, $max);");
+	
+	
+	button
+		-l "Get Components In Min Max Area"
+		-c $c
+		;
+			
+	floatSliderGrp -e -cc $c getComponentsOfTypeInMinMaxAreaMinXFloatSliderGrp;
+	floatSliderGrp -e -cc $c getComponentsOfTypeInMinMaxAreaMinYFloatSliderGrp;
+	floatSliderGrp -e -cc $c getComponentsOfTypeInMinMaxAreaMinZFloatSliderGrp;
+	floatSliderGrp -e -cc $c getComponentsOfTypeInMinMaxAreaMaxXFloatSliderGrp;
+	floatSliderGrp -e -cc $c getComponentsOfTypeInMinMaxAreaMaxYFloatSliderGrp;
+	floatSliderGrp -e -cc $c getComponentsOfTypeInMinMaxAreaMaxZFloatSliderGrp;
+	
+	}
+	if(`columnLayout -q -vis $columnLayout` == 0){
+		columnLayout -e -vis true $columnLayout;
+		setCurrentOptionsTabName("Components In Min Max Area Options");
+	}
+	setParent..;		
+	}
+	
+	global proc string minMaxFloatSliderGrp(string $name, float $min, float $max, float $fmn, float $fmx, float $val)
+	{
+	string $floatSliderGrp = `floatSliderGrp
+		-l "Max X"
+		-min $min
+		-max $max
+		-fmx $fmx
+		-fmn $fmn
+		-value $val
+		-step 1
+		-f true
+		-pre 0
+		$name
+		`;
+			
+	return $floatSliderGrp;
+}
+
+//GET COMPONENTS IN DIRECTION OPTIONS
+//---------------------------------------------------
+global proc getComponentsInDirectionOptions(string $parent)
+{
+	string $columnLayout = "getComponentsOfTypeInAxisDirectionColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Component In Axis Direction Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	
+	string $activeList = getActiveSelectionList();	
+	
+	string $c = ("float $dir[] = `floatFieldGrp -q -v getComponentsInDirectionDirectionFloatFieldGrp`;"
+	+"float $cidmin = `floatFieldGrp -q -v1 getComponentsInDirectionMinFloatFieldGrp`;"
+	+"float $cidmax = `floatFieldGrp -q -v1 getComponentsInDirectionMaxFloatFieldGrp`;"
+	+"string $cid[] = getComponentsInDirection(`ls -fl -sl`, $dir, $cidmin , $cidmax);"
+	+"replaceTextScrollListWithSelectedObjects($cid," + "\"" + $activeList + "\"" + ");");
+	
+	string $cidMin = `floatFieldGrp
+		-l "Min"
+		-cal 1 "left"
+		-nf 1
+		-v1 0 
+		getComponentsInDirectionMinFloatFieldGrp
+		`;
+	
+	string $cidMax = `floatFieldGrp
+		-l "Max"
+		-cal 1 "left"
+		-nf 1
+		-v1 30 
+		getComponentsInDirectionMaxFloatFieldGrp
+		`;
+		
+	string $cidDir = `floatFieldGrp
+		-l "Direction"
+		-cal 1 "left"
+		-nf 3
+		-v 0 0 1 0
+		//-cc $c
+		getComponentsInDirectionDirectionFloatFieldGrp
+		`;
+		
+	button
+		-l "Get Components In Direction"
+		-c $c
+		;
+		
+		
+}
+
+
+//GET NEXT COMPONENT IN DIRECTION OPTIONS
+//--------------------------------------------
+global proc getNextComponentInDirectionOptions(string $parent)
+{
+	string $columnLayout = "getNextComponentInDirectionOptionsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		//openCurrentOptionsLayout("getComponentsInDirectionOptions");
+		activateCurrentOptionsColumnLayout($columnLayout, "Get Next Component In Direction Options", $parent);
+		return;	
+	}	
+	string $columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	
+	string $activeList = getActiveSelectionList();	
+	
+	string $cidMin = `floatFieldGrp
+		-l "Min"
+		-cal 1 "left"
+		-nf 1
+		-v1 0 
+		getNextComponentInDirectionMinFloatFieldGrp
+		`;
+	
+	string $cidMax = `floatFieldGrp
+		-l "Max"
+		-cal 1 "left"
+		-nf 1
+		-v1 30 
+		getNextComponentInDirectionMaxFloatFieldGrp
+		`;
+		
+	floatFieldGrp
+		-l "Direction"
+		-nf 3
+		-pre 0
+		-v 0 0 1 0
+		getNextComponentInDirectionDirectionFloatFieldGrp
+		;		
+	
+	string $c = ("float $dir[] = `floatFieldGrp -q -v getNextComponentInDirectionDirectionFloatFieldGrp`;"
+	+"string $sel[] = `ls -fl -sl`;"
+	+"string $comp = $sel[0];"
+	+"string $next = getNextComponentInDirection($comp, $dir);"
+	+"addObjectToTextScrollList($next," + "\"" + $activeList + "\"" + ");");
+	
+	button
+		-l "Get Next Component In Direction"
+		-c $c
+		;
+			
+					
+}
+
+//GET COMPONENTS IN AXIS DIRECTION OPTIONS MENU
+//---------------------------------------------------
+global proc getComponentsOfTypeInAxisDirectionOptionsMenu(string $parent)
+{
+	string $columnLayout = "getComponentsOfTypeInAxisDirectionColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Component In Axis Direction Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	
+	string $c = (
+	"int $dir = `intFieldGrp -q -v1 getComponentsOfTypeInAxisDirectionDirectionIntFieldGrp`;"
+	+"string $type = `optionMenuGrp -q -v getComponentsInAxisDirectionPolyComponentsTypeOptionMenuGrp`;"
+	+"string $axis = `optionMenuGrp -q -v getComponentsInAixsDirectionXYZAxisOptionMenuGrp`;"
+	+"getComponentsOfTypeInAxisDirection(`ls -sl`, $type, $axis, $dir);");
+	
+	string $pscc = (
+	"int $dir = `intFieldGrp -q -v1 getComponentsOfTypeInAxisDirectionDirectionIntFieldGrp`;"
+	+"string $type = `optionMenuGrp -q -v getComponentsInAxisDirectionPolyComponentsTypeOptionMenuGrp`;"
+	+"string $axis = `optionMenuGrp -q -v getComponentsInAixsDirectionXYZAxisOptionMenuGrp`;"
+	+"polySelectConstraintAxisDirection(`ls -sl`, $type, $axis, $dir);");
+	
+	
+	string $intFieldGrp = `intFieldGrp
+		-l "Direction"
+		-cal 1 "left"
+		-nf 1
+		-v1 1 
+		-cc $c
+		getComponentsOfTypeInAxisDirectionDirectionIntFieldGrp
+		`;
+	
+	
+	string $xyzAxisOptionMenuGrp = xyzAxisOptionMenuGrp($columnLayout, "getComponentsInAixsDirectionXYZAxisOptionMenuGrp");			
+	
+	string $polyCompOptionMenuGrp = polyComponentTypeOptionMenuGrp($columnLayout, "getComponentsInAxisDirectionPolyComponentsTypeOptionMenuGrp");
+	
+	button
+		-l "Get Components In Axis Direction"
+		-c $c
+		;
+		
+	button
+		-l "Poly Select Constraint Components In Axis Direction"
+		-c $pscc
+		;
+		
+	button
+		-l "Get Edges On Face Selection Border"
+		-c ("getEdgesOnFaceSelectionBorder(`ls -sl`)")
+		; 	
+			
+	
+	
+		
+}
+
+
+//GET COMPONENTS ON BOUNDING BOX SIDE
+//---------------------------------------------------
+global proc getComponentsOnBoundingBoxSideOptions(string $parent)
+{
+	string $columnLayout = "getComponentsOnBoundingBoxSideOptionsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Components On Bounding Box Side", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;	
+	
+	string $dir = `floatFieldGrp
+		-l "Direction"
+		-cal 1 "left"
+		-nf 3
+		-v1 1.0 
+		-v2 0.0
+		-v3 0.0
+		getComponentsOnBoundingBoxSideDirectionFloatFieldGrp
+		`;
+		
+	string $polyCompOptionMenuGrp = polyComponentTypeOptionMenuGrp($columnLayout, "getComponentsOnBoundingBoxSideComponentTypeOptionMenuGrp");
+	
+	string $max = `floatSliderGrp
+		-l "Max"
+		-cal 1 "left"
+		-f true
+		-pre 4
+		-min 0.0001
+		-v 0.001
+		getComponentsOnBoundingBoxSideMaxFloatSliderGrp
+		`;
+		
+	string $c = ("float $bboxDir[] = {0.0,0.0,0.0};" + "\n"
+				+ "$bboxDir[0] = `floatFieldGrp -q -v1 getComponentsOnBoundingBoxSideDirectionFloatFieldGrp`;" + "\n"
+				+ "$bboxDir[1] = `floatFieldGrp -q -v2 getComponentsOnBoundingBoxSideDirectionFloatFieldGrp`;" + "\n"
+				+ "$bboxDir[2] = `floatFieldGrp -q -v3 getComponentsOnBoundingBoxSideDirectionFloatFieldGrp`;" + "\n"
+				+ "string $type = `optionMenuGrp -q -v getComponentsOnBoundingBoxSideComponentTypeOptionMenuGrp`;" + "\n"
+				+ "float $max = `floatSliderGrp -q -v getComponentsOnBoundingBoxSideMaxFloatSliderGrp`;" + "\n"
+				+ "getComponentsOnBoundingBoxSide(`ls -sl`,$type, $bboxDir, $max);");
+				
+	button
+		-l "Get Components On Bounding Box Side"
+		-c $c
+		;
+	
+		
+}
+
+
+//@ GET COMPONENTS IN BOUNDING BOX SIDE OPTIONS
+//====================================================================
+global proc getComponentsInBoundingBoxSideOptions( string $parent )
+{
+	string $columnLayout = "getComponentsInBoundingBoxSideOptionsColumnLayout";
+	if (`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Components In Bounding Box Side", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;	
+	
+	string $dir = `floatFieldGrp
+		-l "Direction"
+		-cal 1 "left"
+		-nf 3
+		-v1 1.0 
+		-v2 0.0
+		-v3 0.0
+		getComponentsInBoundingBoxSideDirectionFloatFieldGrp
+		`;
+		
+	string $polyCompOptionMenuGrp = polyComponentTypeOptionMenuGrp($columnLayout, "getComponentsInBoundingBoxSideComponentTypeOptionMenuGrp");
+		
+	string $c = ("float $bboxDir[] = {0.0,0.0,0.0};" + "\n"
+				+ "$bboxDir[0] = `floatFieldGrp -q -v1 getComponentsInBoundingBoxSideDirectionFloatFieldGrp`;" + "\n"
+				+ "$bboxDir[1] = `floatFieldGrp -q -v2 getComponentsInBoundingBoxSideDirectionFloatFieldGrp`;" + "\n"
+				+ "$bboxDir[2] = `floatFieldGrp -q -v3 getComponentsInBoundingBoxSideDirectionFloatFieldGrp`;" + "\n"
+				+ "string $type = `optionMenuGrp -q -v getComponentsInBoundingBoxSideComponentTypeOptionMenuGrp`;" + "\n"
+				+ "getComponentsOfTypeInBoundingBoxSide(`ls -sl`,$type, $bboxDir);");
+				
+	button
+		-l "Get Components In Bounding Box Side"
+		-c $c
+		;	
+		
+}
+
+//@ EXPAND POINT SELECT CONSTRAINT UNTIL TYPE IS SELECTED OPTIONS
+//====================================================================
+global proc expandPointSelectConstraintUntilTypeIsSelectedOptions( string $parent )
+{
+	string $columnLayout = "expandPointSelectConstraintUntilTypeIsSelectedOptionsColumnLayout";
+	if (`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Expand Point Until Selected", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;	
+	
+	string $incSize = `floatSliderGrp
+		-l "Increment Size"
+		-cal 1 "left"
+		-v 0.1 
+		-pre 4
+		-f true
+		expandPointSelectIncSizeFloatFieldGrp
+		`;
+		
+	string $tfbg = `textFieldButtonGrp
+		-l "Use As Point"
+		-bl "Select"
+		-bc ("assignObjectToTextFieldButtonGrp(\"expandPointSelectUseAsPointTextFieldButtonGrp\");")
+		expandPointSelectUseAsPointTextFieldButtonGrp
+		`;
+	
+	string $pcTypeMenuGrp = polyComponentTypeOptionMenuGrp($columnLayout, "expandPointSelectTypeOptionMenuGrp");
+	
+
+	string $c = ("string $sptr = `textFieldButtonGrp -q -tx expandPointSelectUseAsPointTextFieldButtonGrp`;"+"\n"
+	+"float $ePoint[] = `xform -q -ws -t $sptr`;"+"\n"
+	+"string $type = `optionMenuGrp -q -v expandPointSelectTypeOptionMenuGrp`;" + "\n"
+	+"float $incSize = `floatSliderGrp -q -v expandPointSelectIncSizeFloatFieldGrp`;"+"\n"
+	+"expandPointSelectConstraintUntilTypeIsSelected(`ls -sl`, $type, $ePoint, $incSize);"+"\n"
+	);
+	
+	button
+		-l "Expand Point Select"
+		-c $c
+		;	
+
+}
+
+//GET COMPONENTS OF TYPE ON BORDER
+//---------------------------------------------------
+global proc getComponentsOfTypeOnBorderOptionsMenu(string $parent)
+{
+	string $columnLayout = "getComponentsOfTypeOnBorderColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 0){
+		$columnLayout = `columnLayout
+			-adj true
+			-columnOffset "both" 10
+			-p $parent
+			$columnLayout
+			`;
+	
+	string $polyCompOptionMenuGrp = polyComponentTypeOptionMenuGrp($columnLayout, "getComponentsOfTypeOnBorderPolyComponentsTypeOptionMenuGrp");	
+	string $psc = (
+	"string $type = `optionMenuGrp -q -v " + $polyCompOptionMenuGrp + "`;"
+	+"getComponentsOfTypeOnBorder(`ls -sl`, $type);");
+	
+	string $c = $psc + "polySelectConstraint -dis;";
+	
+		button
+			-l "Select Components On Border"
+			-c $c
+			;
+			
+		button
+			-l "Poly Select Constraint To Components On Border"
+			-c $psc
+			;
+	
+	}
+	if(`columnLayout -q -vis $columnLayout` == 0){
+		columnLayout -e -vis true $columnLayout;
+		setCurrentOptionsTabName("Components On Border Options");
+	}
+	
+	setParent..;		
+}
+
+//GET COMPONENTS OF TYPE AT MIN MAX ANGLE
+//---------------------------------------------------
+global proc getComponentsOfTypeAtMinMaxAngleOptionsMenu(string $parent)
+{
+	string $columnLayout = "getComponentsOfTypeAtMinMaxAngleOptionsMenuColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Component At Angle Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	
+	string $omg = `optionMenuGrp 
+		-label "Type"
+		-cal 1 "left"
+		-cal 2 "left"
+		getComponentsOfTypeAtMinMaxAngleComponentTypeOptionMenuGrp
+		`;
+		//menuItem -l "faces" -p ($omg + "|OptionMenu");
+		menuItem -l "edges" -p ($omg + "|OptionMenu");
+		menuItem -l "vertices" -p ($omg + "|OptionMenu");
+		menuItem -l "uvs" -p ($omg + "|OptionMenu");
+		
+	string $psc = (
+	"string $type = `optionMenuGrp -q -v getComponentsOfTypeAtMinMaxAngleComponentTypeOptionMenuGrp`;\n"
+	+"float $min = `floatSliderGrp -q -v getComponentsOfTypeAtMinMaxAngleMinAngleFloatSliderGrp`;\n"
+	+"float $max = `floatSliderGrp -q -v getComponentsOfTypeAtMinMaxAngleMaxAngleFloatSliderGrp`;\n"
+	+"getComponentsOfTypeAtMinMaxAngle(`ls -sl`, $type, $min, $max);");
+	
+	//print($psc + "\n");
+	string $c = $psc + "polySelectConstraint -dis;\n";
+	//print($c + "\n");
+	
+	floatSliderGrp
+		-l "Min"
+		-f true
+		-cal 1 "left"
+		-v 60
+		-min 0
+		-max 360
+		-pre 0
+		-cc $c	
+		getComponentsOfTypeAtMinMaxAngleMinAngleFloatSliderGrp
+		;
+		
+	floatSliderGrp
+		-l "Max"
+		-f true
+		-cal 1 "left"
+		-v 360
+		-min 0
+		-max 360
+		-pre 0
+		-cc $c
+		getComponentsOfTypeAtMinMaxAngleMaxAngleFloatSliderGrp
+		;	
+	
+	button
+		-l "Select Components At Min Max Angle"
+		-c $c
+		;
+		
+	button
+		-l "Poly Select Constraint To Components At Min Max Angle"
+		-c $psc
+		;
+	
+}
+
+//TRANSFORM WIZ OPTIONS
+//==============================================================================
+
+//STRAIGHTEN ROTATIONS OPTIONS MENU
+//-------------------------------------------------
+global proc straightenRotationsOptionsMenu(string $parent)
+{	
+	string $columnLayout = "straightenRotationsOptionsMenuColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Straighten Rotations Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	
+	
+	floatSliderGrp
+		-l "Initial Rotation Amount"
+		-cal 1 "left"
+		-adj 3
+		-f true
+		-v 10.0
+		-min 0.001
+		-max 180.0
+		-fmn 0.001
+		-fmx 180.0
+		-pre 3
+		-s 0.1
+		fixTransformsStraightenInitRotationFloatSliderGrp
+		;	
+		
+	floatSliderGrp
+		-l "Straigten Precision"
+		-cal 1 "left"
+		-adj 3
+		-f true
+		-v 0.001
+		-min 0.0000001
+		-max 10
+		-fmn 0.0000001
+		-fmx 10
+		-pre 7
+		-s 0.1
+		fixTransformsStraightenPrecisionFloatSliderGrp
+		;
+			
+	checkBox
+		-l "Straighten X"
+		-v true
+		fixTransformsStraightenStraightenXCheckBox
+		;
+		
+	checkBox
+		-l "Straighten Y"
+		-v true
+		fixTransformsStraightenStraightenYCheckBox
+		;
+		
+	checkBox
+		-l "Straighten Z"
+		-v true
+		fixTransformsStraightenStraightenZCheckBox
+		;
+		
+	checkBox
+		-l "Single Straighten Rotation"
+		-v false
+		fixTransformsStraightenSingleStraightenRotationCheckBox
+		;
+		
+	button
+		-l "Straighten Object"
+		-c ("float $precision = `floatSliderGrp -q -v fixTransformsStraightenPrecisionFloatSliderGrp`;"
+		+ "straightenRotationsOnSelected(`ls -sl`,$precision);")
+		;
+			
+	
+	
+
+}
+
+
+//MIRROR OBJECTS OPTIONS
+//-------------------------------------------------
+global proc mirrorObjectsOptions(string $parent)
+{	
+	string $columnLayout = "mirrorObjectsOptionsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Mirror Objects Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+		
+	string $mirrorAxis[] = { "x", "-x", "y", "-y", "z", "-z" };
+	string $mirrorAxisOMG = wizOptionMenuGrpMenuItems("Axis", "mirrorObjectsAxisOptionMenuGrp", $mirrorAxis);
+	
+	string $mirrorCommand = ("mirrorSelectedObjects(`ls -sl`);");
+	
+		
+	checkBox
+		-l "Freeze Scale And Preserve Normals"
+		-v true
+		mirrorObjectsFreezeScaleCheckBox
+		;
+
+		
+	button
+		-l "Mirror"
+		-c $mirrorCommand		
+		;
+		
+	button
+		-l "Duplicate And Mirror"
+		-c ("wizMirrorDuplicate(`ls -sl`);")		
+		;
+	
+
+}
+
+//TRANSFER MIRROR TRANSFORMS
+//-------------------------------------------------
+global proc transferMirrorTransformsOptions(string $parent)
+{	
+	string $columnLayout = "transferMirrorTransformsOptionsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Transfer Mirror Transforms Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+		
+	string $mirrorAxis[] = { "x", "-x", "y", "-y", "z", "-z" };
+	string $mirrorAxisOMG = wizOptionMenuGrpMenuItems("Axis", "transferMirrorTransformsAxisOptionMenuGrp", $mirrorAxis);
+	
+	string $mirrorCommand = ("transferMirrorTransforms(`ls -sl`);");
+	
+		/*
+	checkBox
+		-l "Freeze Scale And Preserve Normals"
+		-v true
+		transferMirrorTransformsFreezeScaleCheckBox
+		;
+*/
+		
+	button
+		-l "Transfer Mirror Transforms"
+		-c $mirrorCommand		
+		;
+	
+
+}
+
+
+global proc addRandomizationAttributesOptions( string $parent )
+{
+	string $columnLayout = "addRandomizationAttributesOptionsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Randomization Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+		
+	wizCheckBox(
+		"-l Use Range "
+		+"-v 0 "
+		+"-n addRandomizationUseRange_checkBox"
+		);
+		
+	wizFloatFieldGrp(
+		"-l Min Max Range "
+		+"-nf 2 "
+		+"-v1 0.0 "
+		+"-v2 1.0 "
+		+"-n addRandomizationMinMaxRange_floatFieldGrp"
+		);
+		
+	wizCheckBox(
+		"-l Always Add Round To Attribute "
+		+"-v 0 "
+		+"-n addRandomizationAlwaysAddRoundTo_checkBox"
+		);
+		
+	wizCheckBox(
+		"-l Always Add Bias Attribute "
+		+"-v 0 "
+		+"-n addRandomizationAlwaysAddBias_checkBox"
+		);
+	
+	string $addRanAttrCommand = ("string $sel[] = forceGetSelectionList();"+"\n"
+		+"string $selAttr[] = `textScrollList -q -si connectMasterListA`;"+"\n"
+		+"for ($i=0;$i<`size $sel`;$i++){"+"\n"
+		+"	createRandomizationAttributesForSelected($sel[$i], $selAttr, \"\");"+"\n"	
+		+"}"+"\n"
+		);	
+		
+	string $addRanAttrOfTypeCommand = ("string $sel[] = forceGetSelectionList();"+"\n"
+		+"string $nodeType = `nodeType $sel[0]`;"+"\n"
+		+"string $allOfType[] = `lsType $nodeType`;"+"\n"
+		+"string $selAttr[] = `textScrollList -q -si connectMasterListA`;"+"\n"
+		+"for($i=0;$i<`size $allOfType`;$i++){"+"\n"
+		+"	createRandomizationAttributesForSelected($allOfType[$i], $selAttr, \"\");"+"\n"
+		+"}"+"\n"
+		);	
+		
+	button
+		-l "Add Randomization Attribute For Selected Attributes"
+		-c $addRanAttrCommand
+		;
+		
+	button
+		-l "Add Randomization Attribute For All Of Type Attributes"
+		-c $addRanAttrOfTypeCommand
+		;
+
+	button
+		-l "Randomize"
+		-c ("randomizeRandomizationAttributesOnSelectedObjects(`ls -sl`);")
+		;
+}
+
+//WIZ NODE CAST OPTIONS
+//--------------------------------------------
+global proc wizNodeCastOptions( string $parent )
+{
+	string $columnLayout = "wizNodeCastOptionsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Node Cast Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	
+	text 
+		-al "left"
+		-ww true
+		-l ("First Select the Object you want to replace.\nThen select the object you want to Use\n"
+		+"To swap one mesh for another : Select the mesh shape node you want to replace, then select the mesh shape node you want to use.\n"
+		+"Use Settings: Swap Values - false, Swap Names - true, Disconnect Unmatched Attributes - false, Copy Dynamic Attributes - true\n")
+		;
+	
+	checkBox 
+		-l "Swap Values" 
+		-ann "	 Indicates if the commands should exchange attributes on the common attributes between the two nodes.\n For example, if the nodes are the same base type as a transform node, then rotate, scale, translate values would be copied over.\n"
+		-v false 
+		wizNodeCastSwapValuesCheckBox
+		;
+		
+	checkBox 
+		-l "Swap Names" 
+		-ann "Swap the names of the nodes. By default names are not swapped.\n"
+		-v true 
+		wizNodeCastSwapNamesCheckBox
+		;
+	
+	checkBox 
+		-l "Disconnect Unmatched Attributes" 
+		-ann "If the node that is being swapped out has any connections that do not exist on the target node, then indicate if the connection should be disconnected.\n By default these connections are not removed because they cannot be restored if the target node is swapped back with the source node.\n"
+		-v false 
+		wizNodeCastDisconnectUnmatchedAttrCheckBox
+		;
+		
+	checkBox 
+		-l "Copy Dynamic Attributes" 
+		-ann "If the target node contains any dynamic attributes that are not defined on the source node, then create identical dynamic attricutes on the source node and copy the values and connections from the target node into them.\n"
+		-v true 
+		wizNodeCastCopyDynamicAttrCheckBox
+		;
+	
+	checkBox 
+		-l "Force" 
+		-ann "Forces the command to do the node cast operation even if the nodes do not share a common base object.\n When this flag is specified the command will try to do the best possible attribute matching when swapping the command.\n It is not recommended to use the '-swapValues/sv' flag with this flag.\n"
+		-v false 
+		wizNodeCastForceCheckBox
+		;
+	
+	button
+		-l "Node Cast"
+		-c ("wizNodeCastSelected(`ls -sl`);")	
+		;	
+	
+	
+		
+}
+
+//SORT WIZ OPTIONS
+//=========================================================================
+
+//SORT METHOD OPTIONS MENU
+//--------------------------------------------
+global proc sortMethodOptionsMenu(string $parent)
+{
+	string $columnLayout = "sortMethodOptionsMenuColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 0){
+		$columnLayout = `columnLayout
+			-adj true
+			-columnOffset "both" 10
+			-p $parent
+			$columnLayout
+			`;	
+		
+		checkBox
+			-l "Sort To Separated Array"
+			-v true
+			sortMethodsSortIntoSeparatedArrayCheckBox
+			;
+			
+		checkBox
+			-l "Sort To Sets"
+			-v false
+			sortMethodsSortIntoSetsCheckBox
+			;
+			
+		checkBox
+			-l "Sort To Groups"
+			-v false
+			sortMethodsSortIntoGroupsCheckBox
+			;
+			
+		checkBox
+			-l "Sort To Selection Commands"
+			-v false
+			sortMethodsSortIntoSelectionCommandsCheckBox
+			;
+						
+	}
+	if(`columnLayout -q -vis $columnLayout` == 0){
+		columnLayout -edit -vis true $columnLayout;
+		setCurrentOptionsTabName("Sort Methods Options");
+	}
+
+}
+
+//SORT BY MATCHING GEOMETRY OPTIONS MENU
+//--------------------------------------------
+global proc sortByMatchingGeometryOptionsMenu(string $parent)
+{
+	string $columnLayout = "sortByMatchingGeometryOptionsMenuColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Sort By Matching Geometry Options", $parent);
+		return;	
+	}	
+	string $columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	
+	string $geoMatchOptions[] = { "Match All", "Match Any" };
+	string $geoMatchOMG = wizOptionMenuGrpMenuItems("Match", "geometryMatchSortOptionMenuGrp", $geoMatchOptions);
+	optionMenuGrp -e -sl 2 $geoMatchOMG;
+	
+	checkBox
+		-l "Compare Faces"
+		-v true
+		sortByMatchingGeometryCompareFacesCheckBox
+		;
+		
+	checkBox
+		-l "Compare Vertices"
+		-v true
+		sortByMatchingGeometryCompareVerticesCheckBox
+		;
+		
+	checkBox
+		-l "Compare Edges"
+		-v false
+		sortByMatchingGeometryCompareEdgesCheckBox
+		;
+		
+	checkBox
+		-l "Compare UVs"
+		-v false
+		sortByMatchingGeometryCompareUVsCheckBox
+		;
+		
+	checkBox
+		-l "Compare UV Set Indices"
+		-v false
+		sortByMatchingGeometryCompareUVSetIndicesCheckBox
+		;	
+	
+	string $activeList = getActiveSelectionList();	
+	button
+		-l "Sort By Matching Poly Geometry"
+		-c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $activeList + "\"" + ",\"sortByMatchingPolyGeometry\");")
+		;
+			
+}
+
+//SORT BY MATCHING TRANSFORMS OPTIONS
+//--------------------------------------------
+global proc sortByMatchingTransformsOptionsMenu(string $parent)
+{
+	string $columnLayout = "sortByMatchingTransformsOptionsMenuColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Sort By Matching Transforms Options", $parent);
+		return;	
+	}	
+	string $columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	
+	string $activeList = getActiveSelectionList();	
+	
+	checkBox
+		-l "Compare Translate"
+		-v true
+		sortByMatchingTransformsCompareTranslateCheckBox
+		;
+		
+	checkBox
+		-l "Compare Rotatation"
+		-v true
+		sortByMatchingTransformsCompareRotationCheckBox
+		;
+		
+	checkBox
+		-l "Compare Scale"
+		-v true
+		sortByMatchingTransformsCompareScaleCheckBox
+		;
+		
+	
+	checkBox 
+		-l "Delete Duplicate Transforms"
+		-v false 
+		sortByMatchingTransformsDeleteDuplicatesCheckBox
+		;
+		
+	
+	button
+		-l "Sort By Matching Transforms"
+		-c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $activeList + "\"" + ",\"sortByMatchingTransforms\");")
+		;
+			
+}
+
+
+
+//SORT BY CLOSEST TO POINT OPTIONS
+//--------------------------------------------
+global proc sortByClosestToPointOptions(string $parent)
+{
+	string $columnLayout = "sortByClosestToPointOptionsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Sort By Closest To Point Options", $parent);
+		return;	
+	}
+	
+	string $columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	/*
+	string $pointOptions[] = { "Use Input", "Use Transform" };
+	string $pointOMG = wizOptionMenuGrpMenuItems("Use Point", "sortByPointUsePointOptionMenuGrp", $pointOptions);
+	optionMenuGrp -e -sl 1 $pointOMG;
+	*/
+	
+	floatFieldGrp
+		-l "Point"
+		-nf 3
+		//-pre 3
+		-v 0 0 0 0
+		sortByClosestToPointPointInputFloatFieldGrp
+		;
+	
+	string $activeList = getActiveSelectionList();	
+	
+	string $c = ("float $p[] = `floatFieldGrp -q -v sortByClosestToPointPointInputFloatFieldGrp`;"
+	+"string $sel[] = `ls -fl -sl`;"
+	+"string $sorted[] = sortByClosestToPoint($sel, $p);"
+	+"replaceTextScrollListWithSelectedObjects($sorted," + "\"" + $activeList + "\"" + ");");
+	
+	button
+		-l "Sort By Closest To Point"
+		-c $c
+		;
+					
+}
+
+//SORT BY DIRECTION OPTIONS
+//--------------------------------------------
+global proc sortByDirectionOptions( string $parent)
+{
+	string $columnLayout = "sortByDirectionOptionsColumnLayout";
+	if (`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Sort By Direction Options", $parent);
+		return;	
+	}	
+	string $columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	
+	string $activeList = getActiveSelectionList();	
+	
+	floatFieldGrp
+		-l "Direction"
+		-nf 3
+		-pre 0
+		-v1 0
+        -v2 0
+        -v3 1
+		sortByDirectionDirectionFloatFieldGrp
+		;		
+
+	string $c = ("float $xSortDir = `floatFieldGrp -q -v1 sortByDirectionDirectionFloatFieldGrp`;"
+    +"float $ySortDir = `floatFieldGrp -q -v2 sortByDirectionDirectionFloatFieldGrp`;"
+    +"float $zSortDir = `floatFieldGrp -q -v3 sortByDirectionDirectionFloatFieldGrp`;"
+	+"string $sel[] = `textScrollList -q -ai selectMasterListA`;"
+	+"string $sorted[] = sortByDirection($sel, { $xSortDir, $ySortDir, $zSortDir });"
+	+"replaceTextScrollListWithSelectedObjects($sorted,\"selectMasterListB\");");
+	
+	button
+		-l "Sort By Direction"
+		-c $c
+		;
+					
+}
+
+//SORT BY DISTANCE DIRECTION OPTIONS
+//--------------------------------------------
+global proc sortByDistanceDirectionOptions(string $parent)
+{
+	string $columnLayout = "sortByDistanceDirectionOptionsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Sort By Distance Direction Options", $parent);
+		return;	
+	}	
+	string $columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	
+	string $activeList = getActiveSelectionList();	
+	
+	floatFieldGrp
+		-l "Point"
+		-nf 3
+		//-pre 3
+		-v 0 0 0 0
+		sortByDistanceDirectionPointFloatFieldGrp
+		;
+		
+	floatFieldGrp
+		-l "Direction"
+		-nf 3
+		-pre 0
+		-v 0 0 0 0
+		sortByDistanceDirectionDirectionFloatFieldGrp
+		;		
+	
+	string $c = ("float $sortPoint[] = `floatFieldGrp -q -v sortByDistanceDirectionPointFloatFieldGrp`;"
+	+"float $sortDir[] = `floatFieldGrp -q -v sortByDistanceDirectionDirectionFloatFieldGrp`;"
+	+"string $sel[] = `textScrollList -q -ai " + $activeList + "`;"
+	+"string $sorted[] = sortByDistanceDirection($sel, $sortPoint, $sortDir);"
+	+"replaceTextScrollListWithSelectedObjects($sorted," + "\"" + $activeList + "\"" + ");");
+	
+	button
+		-l "Sort By Distance Direction"
+		-c $c
+		;
+					
+}
+
+
+//SHADING WIZ OPTIONS
+//====================================================================
+
+//ASSIGN NEW SHADER TO EACH SELECTED OBJECT OPTIONS MENU
+//=========================================
+global proc assignShaderToEachSelectedObjectOptionsMenu(string $parent)
+{
+	string $columnLayout = "assignShaderToEachSelectedObjectOptionsMenuColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Assign Shader Per Object Options", $parent);
+		return;	
+	}
+	
+	string $columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	
+	string $newMethod[] = { "new shader", "copy current shader" };
+	string $newMethodOMG = wizOptionMenuGrpMenuItems("New Method", "newShaderMethodPerSelectedObjectOptionMenuGrp", $newMethod);
+	optionMenuGrp -e -sl 2 $newMethodOMG;
+	
+	string $shaderType[] = { "lambert", "phong", "phongE", "blinn", "layeredShader" };
+	string $shaderTypeOMG = wizOptionMenuGrpMenuItems("Shader Type", "newShaderTypePerSelectedObjectOptionMenuGrp", $shaderType);
+	optionMenuGrp -e -sl 1 $shaderTypeOMG;
+	
+	checkBox
+		-l "Name Shader: ObjectShader"
+		-v true
+		newShaderTypePerSelectedObjectNameObjectShaderCheckBox
+		;
+		
+	button -l "Assign Shader Per Selected Object" -c ("assignShaderToEachSelectedObject(`ls -sl`)");
+	
+		
+}
+
+//GLOBAL TEXTURE ATTRIBUTES OPTIONS
+//=========================================
+global proc globalTextureAttributesOptions(string $parent)
+{
+	string $columnLayout = "globalTextureAttributesOptionsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Global Texture Attributes Options", $parent);
+		return;	
+	}
+	
+	string $columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	
+	string $filterTypeChangeCommand = ("setAllTexturesFilterType();");
+	
+	string $filterType[] = { "Off", "Mipmap", "Box", "Quadratic", "Quartic", "Gaussian" };
+	string $filterTypeOMG = wizOptionMenuGrpMenuItems("Filter Type", "globalTextureAttributesFilterTypeOptionMenuGrp", $filterType);
+	optionMenuGrp -e -sl 4 -cc $filterTypeChangeCommand $filterTypeOMG;
+	
+	string $bumpDepthChangeCommand = ("float $depth = `floatSliderGrp -q -v globalTextureAttributesBumpDepthFloatSliderGrp`;"
+	+"setAllBump2dDepth($depth);");
+	
+	string $defaultColorCommand = (
+	"float $defCol[] = `colorSliderGrp -q -rgb globalTextureDefaultColor_colorSliderGrp`;"+"\n"
+	+"string $tex[] = `ls -tex`;"+"\n"
+	+"for ($i=0;$i<`size $tex`;$i++){"+"\n"
+	+"	if (`attributeExists \"defaultColor\" $tex[$i]`){"+"\n"
+	+"		setAttr ($tex[$i] + \".defaultColor\") -type double3 $defCol[0] $defCol[1] $defCol[2];"+"\n"
+	+"	}"+"\n"
+	+"}"+"\n"
+	);
+	
+	string $alphaLumCommand = (
+	"int $ail = `checkBox -q -v globalTextureAttributesAlphaIsLuminance_checkBox`;"+"\n"
+	+"string $tex[] = `ls -tex`;"+"\n"
+	+"for ($i=0;$i<`size $tex`;$i++){"+"\n"
+	+"	if (`attributeExists \"alphaIsLuminance\" $tex[$i]`){"+"\n"
+	+"		setAttr ($tex[$i] + \".alphaIsLuminance\") $ail;"+"\n"
+	+"	}"+"\n"
+	+"}"+"\n"
+	);
+	
+	colorSliderGrp 
+		-cal 1 "left"
+		-cw 1 90
+		-l "Default Color" 
+		-rgb 0 0 0
+		-cc $defaultColorCommand
+		globalTextureDefaultColor_colorSliderGrp
+		;
+
+		//print ($defaultColorCommand + "\n");
+	checkBox
+		-l "Alpha Is Luminance"
+		-v false
+		-cc $alphaLumCommand
+		globalTextureAttributesAlphaIsLuminance_checkBox
+		;
+		
+	floatSliderGrp
+		-l "Bump Depth"
+		-f true
+		-v 1
+		-max 5	
+		-min -5	
+		-fmx 9999999
+		-fmn -9999999
+		-pre 2
+		-cal 1 "left"
+		-cc $bumpDepthChangeCommand
+		globalTextureAttributesBumpDepthFloatSliderGrp
+		;	
+	
+	checkBox
+		-l "Provide 3d Info"
+		-v false
+		-cc ("setAllBump2dProvide3dInfo();")
+		globalTextureAttributesBumpProvide3dInfoCheckBox
+		;
+		
+	//button -l "Assign Shader Per Selected Object" -c ("assignShaderToEachSelectedObject(`ls -sl`)");
+	
+		
+}
+
+
+//GLOBAL TEXTURE ATTRIBUTES OPTIONS
+//=========================================
+global proc globalShaderAttributesOptions(string $parent)
+{
+	string $columnLayout = "globalShaderAttributesOptionsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Global Shader Attributes Options", $parent);
+		return;	
+	}
+	
+	string $columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	
+	
+	
+	colorSliderGrp 
+		-l "Color"
+		-cal 1 "left"
+		-cw 1 100		
+		-rgb 0.5 0.5 0.5 
+		-cc ("float $col[] = `colorSliderGrp -q -rgb globalShaderAttributesColorColorSliderGrp`; setColorAttributeOnAllMaterials(\"color\", $col)")
+		globalShaderAttributesColorColorSliderGrp
+		;
+		
+	colorSliderGrp 
+		-l "Transparency"
+		-cal 1 "left"
+		-cw 1 100		
+		-rgb 0 0 0 
+		-cc ("float $col[] = `colorSliderGrp -q -rgb globalShaderAttributesTransparencyColorSliderGrp`; setColorAttributeOnAllMaterials(\"transparency\", $col)")
+		globalShaderAttributesTransparencyColorSliderGrp
+		;
+	
+	colorSliderGrp 
+		-l "Ambient Color"
+		-cal 1 "left"
+		-cw 1 100		
+		-rgb 0 0 0 
+		-cc ("float $col[] = `colorSliderGrp -q -rgb globalShaderAttributesAmbientColorColorSliderGrp`; setColorAttributeOnAllMaterials(\"ambientColor\", $col)")
+		globalShaderAttributesAmbientColorColorSliderGrp
+		;
+		
+	colorSliderGrp 
+		-l "Incandescence"
+		-cal 1 "left"
+		-cw 1 100		
+		-rgb 0 0 0 
+		-cc ("float $col[] = `colorSliderGrp -q -rgb globalShaderAttributesIncandescenceColorSliderGrp`; setColorAttributeOnAllMaterials(\"incandescence\", $col)")
+		globalShaderAttributesIncandescenceColorSliderGrp
+		;
+		
+	
+	floatSliderGrp 
+		-l "Diffuse"
+		-f true
+		-cal 1 "left"
+		-cw 1 50		
+		-v 0.8
+		-max 1	
+		-min 0	
+		-fmx 9999999
+		-fmn -9999999
+		-pre 3 
+		-cc ("float $val = `floatSliderGrp -q -v globalShaderAttributesDiffuseFloatSliderGrp`; setFloatAttributeOnAllMaterials(\"diffuse\", $val)")
+		globalShaderAttributesDiffuseFloatSliderGrp
+		;
+	
+	floatSliderGrp 
+		-l "Translucence"
+		-f true
+		-cal 1 "left"
+		-cw 1 150		
+		-v 0.8
+		-max 1	
+		-min 0	
+		-fmx 9999999
+		-fmn -9999999
+		-pre 3 
+		-cc ("float $val = `floatSliderGrp -q -v globalShaderAttributesTranslucenceFloatSliderGrp`; setFloatAttributeOnAllMaterials(\"translucence\", $val)")
+		globalShaderAttributesTranslucenceFloatSliderGrp
+		;
+		
+	floatSliderGrp 
+		-l "Translucence Depth"
+		-f true
+		-cal 1 "left"
+		-cw 1 150		
+		-v 0.8
+		-max 1	
+		-min 0	
+		-fmx 9999999
+		-fmn -9999999
+		-pre 3 
+		-cc ("float $val = `floatSliderGrp -q -v globalShaderAttributesTranslucenceDepthFloatSliderGrp`; setFloatAttributeOnAllMaterials(\"translucenceDepth\", $val)")
+		globalShaderAttributesTranslucenceDepthFloatSliderGrp
+		;
+		
+	floatSliderGrp 
+		-l "Translucence Focus"
+		-f true
+		-cal 1 "left"
+		-cw 1 150		
+		-v 0.8
+		-max 1	
+		-min 0	
+		-fmx 9999999
+		-fmn -9999999
+		-pre 3 
+		-cc ("float $val = `floatSliderGrp -q -v globalShaderAttributesTranslucenceFocusFloatSliderGrp`; setFloatAttributeOnAllMaterials(\"translucenceFocus\", $val)")
+		globalShaderAttributesTranslucenceFocusFloatSliderGrp
+		;
+		
+	floatSliderGrp 
+		-l "Cosine Power"
+		-f true
+		-cal 1 "left"
+		-cw 1 100		
+		-v 0.8
+		-max 1	
+		-min 0	
+		-fmx 9999999
+		-fmn -9999999
+		-pre 3 
+		-cc ("float $val = `floatSliderGrp -q -v globalShaderAttributesCosinePowerFloatSliderGrp`; setFloatAttributeOnAllMaterials(\"cosinePower\", $val)")
+		globalShaderAttributesCosinePowerFloatSliderGrp
+		;
+		
+		
+	colorSliderGrp 
+		-l "Specular Color"
+		-cal 1 "left"
+		-cw 1 100		
+		-rgb 0 0 0 
+		-cc ("float $col[] = `colorSliderGrp -q -rgb globalShaderAttributesSpecularColorColorSliderGrp`; setColorAttributeOnAllMaterials(\"specularColor\", $col)")
+		globalShaderAttributesSpecularColorColorSliderGrp
+		;
+		
+	floatSliderGrp 
+		-l "Reflectivity"
+		-f true
+		-cal 1 "left"
+		-cw 1 100		
+		-v 0.8
+		-max 1	
+		-min 0	
+		-fmx 9999999
+		-fmn -9999999
+		-pre 3 
+		-cc ("float $val = `floatSliderGrp -q -v globalShaderAttributesReflectivityFloatSliderGrp`; setFloatAttributeOnAllMaterials(\"reflectivity\", $val)")
+		globalShaderAttributesReflectivityFloatSliderGrp
+		;
+	
+	colorSliderGrp 
+		-l "Reflected Color"
+		-cal 1 "left"
+		-cw 1 150		
+		-rgb 0 0 0 
+		-cc ("float $col[] = `colorSliderGrp -q -rgb globalShaderAttributesReflectedColorColorSliderGrp`; setColorAttributeOnAllMaterials(\"reflectedColor\", $col)")
+		globalShaderAttributesReflectedColorColorSliderGrp
+		;
+		
+	wizText("WARNING: Attributes Of All Shaders In Scene Will Be Modified By Any Changes\n");
+	//button -l "Assign Shader Per Selected Object" -c ("assignShaderToEachSelectedObject(`ls -sl`)");
+	
+		
+}
+
+global proc changeFileExtensionOnTexturesOptions( string $parent )
+{
+	string $columnLayout = "changeFileExtensionOnTexturesOptionsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Change Texture File Extension Options", $parent);
+		return;	
+	}
+	
+	string $columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	
+	textFieldGrp
+		-l "Change File Extension"
+		-cal 1 "left"
+		-tx ""
+		changeFileExtensionTextFieldGrp
+		;
+	
+	textFieldButtonGrp
+		-l "New File Extension"
+		-cal 1 "left"
+		-tx ""
+		-bl "Change Extension"
+		-bc ("changeFileExtensionOnSelectedTextures(`ls -sl`);")
+		changeFileExtensionOnSelectedTexturesTextFieldButtonGrp
+		;
+		
+	
+}
+
+global proc textureOutputPathOptions( string $parent )
+{
+    //genericWizOptionsMenuLayout("textureOutputPathOptionsColumnLayout", "Texture Output Paths", $parent);
+    
+    string $columnLayout = "textureOutputPathOptionsColumnLayout";
+	if (`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Texture Output Paths", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+    
+    string $omg = `optionMenuGrp 
+		-label "Export Settings Source"
+		-cal 1 "left"
+		-cal 2 "left"
+		textureOutputPathExportSettingsSourceOptionMenuGrp
+		`;
+		
+		menuItem -l "Render Globals" -p ($omg + "|OptionMenu");
+        menuItem -l "Option Settings" -p ($omg + "|OptionMenu");
+		menuItem -l "Prompt" -p ($omg + "|OptionMenu");
+        
+		
+        intFieldGrp
+            -l "Width"
+            -nf 1
+            -v1 1024
+            textureOutputPathWidthIntFieldGrp
+            ;
+         
+        intFieldGrp
+            -l "Height"
+            -nf 1
+            -v1 1024
+            textureOutputPathHeightIntFieldGrp
+            ;   
+            
+}
+//MISC OPTIONS
+//==============================================================================
+//PRINT TEST ARRAY OPTIONS
+//-------------------------------------------
+global proc printTestArrayOptions(string $parent)
+{
+	string $columnLayout = "printTestArrayOptionsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Test Array Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+		
+	string $printTestArrayCommand = (
+	"int $min = `floatFieldGrp -q -v1 printTestArrayMinFloatFieldGrp`;\n"
+	+"int $max = `floatFieldGrp -q -v1 printTestArrayMaxFloatFieldGrp`;\n"
+	+"int $length = `intSliderGrp -q -v printTestArrayLengthIntSliderGrp`;\n"
+	+"string $type = `optionMenuGrp -q -v printTestArrayArrayTypeOptionMenuGrp`;\n"
+	+"printTestArray($min, $max, $length, $type);");
+	
+	string $arrayTypeOMG = `optionMenuGrp 
+		-label "Array Type"
+		-cal 1 "left"
+		-cal 2 "left"
+		printTestArrayArrayTypeOptionMenuGrp
+		`;
+		
+		menuItem -l "Scene Objects" -p ($arrayTypeOMG + "|OptionMenu");
+		menuItem -l "Random Strings" -p ($arrayTypeOMG + "|OptionMenu");
+		menuItem -l "Random Alphabetical Strings" -p ($arrayTypeOMG + "|OptionMenu");
+		menuItem -l "Float Strings" -p ($arrayTypeOMG + "|OptionMenu");
+		menuItem -l "Int Strings" -p ($arrayTypeOMG + "|OptionMenu");
+		menuItem -l "Float" -p ($arrayTypeOMG + "|OptionMenu");
+		menuItem -l "Int" -p ($arrayTypeOMG + "|OptionMenu");
+		
+	floatFieldGrp
+		-l "Min"
+		-nf 1
+		-v1 0
+		-cal 1 "left"
+		printTestArrayMinFloatFieldGrp
+		;
+		
+	floatFieldGrp
+		-l "Max"
+		-nf 1
+		-v1 100
+		-cal 1 "left"
+		printTestArrayMaxFloatFieldGrp
+		;
+	/*	
+	intSliderGrp
+		-l "Min"
+		-f true
+		-cal 1 "left"
+		-v 0
+		printTestArrayMinIntSliderGrp
+		;
+		
+	intSliderGrp
+		-l "Max"
+		-f true
+		-cal 1 "left"
+		-v 100
+		printTestArrayMaxIntSliderGrp
+		;
+	*/	
+	intSliderGrp
+		-l "Length"
+		-f true
+		-cal 1 "left"
+		-v 10
+		printTestArrayLengthIntSliderGrp
+		;	
+		
+	checkBox
+		-l "Print Variable Name"
+		-v 1
+		printTestArrayPrintVariableNameCheckBox
+		;
+		
+	button
+		-l "Print Test Array"
+		-c $printTestArrayCommand
+		;
+	
+}
+
+global proc nameTemplateOptions(string $parent)
+{
+	string $columnLayout = "nameTemplateOptionsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Name Template Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	
+	
+}
+
+//SELECT WIZ OPTIONS
+//==============================================================================
+global proc selectWizSelectCommandsOptions(string $parent)
+{
+	string $columnLayout = "selectWizSelectCommandsOptionsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Select Command Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	
+	checkBox
+		-l "Select Fit View"
+		-v false
+		selectWizSelectFitViewCheckBox
+		;
+		
+	checkBox
+		-l "Select Isolate"
+		-v false
+		selectWizSelectIsolateCheckBox
+		;
+		
+	checkBox
+		-l "Double Click Fit View"
+		-v true
+		selectWizDoubleClickFitViewCheckBox
+		;
+		
+	checkBox
+		-l "Double Click Isolate"
+		-v true
+		selectWizDoubleClickIsolateCheckBox
+		;
+	
+}
+
+//BEVEL CURVE PLUS PRESET OPTIONS
+//===============================================================================
+global proc bevelCurvePlusPresetOptions(string $parent)
+{
+	string $columnLayout = "bevelCurvePlusPresetOptionsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Bevel Plus Preset Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	
+	string $c = ("string $name = `textFieldGrp -q -tx bevelCurvePlusPresetNameTextFieldGrp`;"
+	+"bevelPlusCurvesAndApplyPreset(`ls -sl`,$name);");
+	
+	textFieldGrp
+		-l "Preset Name"
+		-cal 1 "left"
+		bevelCurvePlusPresetNameTextFieldGrp
+		;
+		
+	floatFieldGrp
+		-l "Blend"
+		-v1 1		
+		-cal 1 "left"
+		bevelCurvePlusPresetBlendFloatFieldGrp
+		;		
+		
+	button
+		-l "Bevel Plus Curve And Apply Preset"
+		-c $c
+		;	
+}
+
+//APPLY ATTRIBUTE PRESET TO SELECTED NODES OPTIONS
+//===============================================================================
+global proc applyAttributePresetToSelectedNodesOptions(string $parent)
+{
+	string $columnLayout = "applyAttributePresetToSelectedNodesOptionsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Apply Preset To Selected Nodes Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+
+	string $c = ("string $name = `textFieldGrp -q -tx applyAttributePresetToSelectedNodesPresetNameTextFieldGrp`;"
+	+"applyAttributePresetToSelectedNodes(`ls -sl`,$name);");
+	
+	textFieldGrp
+		-l "Preset Name"
+		-cal 1 "left"
+		applyAttributePresetToSelectedNodesPresetNameTextFieldGrp
+		;
+		
+	floatFieldGrp
+		-l "Blend"
+		-v1 1		
+		-cal 1 "left"
+		applyAttributePresetToSelectedNodesBlendFloatFieldGrp
+		;		
+		
+	button
+		-l "Apply Attribute Preset To Selected Nodes"
+		-c $c
+		;
+}
+
+//OPTIONS MENUS
+//==============================================================================
+//SORT UVS INTO GRID SPACES OUTPUT OPTIONS
+global proc sortUVShellsIntoGridAreasOutputOptionsMenu(string $parent)
+{
+	string $columnLayout;
+	string $layoutName = "sortUVShellsIntoGridAreasOutputOptionsMenuColumnLayout";
+	//Test to see if the elements exist then create the elements
+	if(`columnLayout -q -ex $layoutName` == 0){
+		$columnLayout = `columnLayout
+			-adj true
+			-columnOffset "both" 10
+			-p $parent
+			$layoutName
+			`;	
+			
+		checkBox
+			-l "Flatten UVs When Complete" 
+			-v 0 
+			layoutUVsIntoGridSpacesFlattenUVsCheckBox
+			;
+		
+		checkBox
+			-l "Create UV Shell Sets" 
+			-v 0 
+			layoutUVsIntoGridSpacesKeepUVShellSetsCheckBox
+			;
+			
+		checkBox
+			-l "Create UV Layout Sets" 
+			-v 0 
+			layoutUVsIntoGridSpacesKeepUVLayoutSetsCheckBox
+			;			
+	}
+	
+	if(`columnLayout -q -vis $layoutName` == 0){
+		columnLayout -e -vis true $layoutName;
+	}
+	
+	setParent..;
+
+}
+
+
+//==============================================================================
+//SORT UVS INTO GRID SPACES OUTPUT OPTIONS
+global proc wizSelectUVsInRangeOptions( string $parent )
+{
+	string $columnLayout = "wizSelectUVsInRangeOptionsColumnLayout";
+	if (`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "UVs In Range Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+
+	floatFieldGrp
+		-l "Low U"
+		-v1 0.0		
+		-cal 1 "left"
+		selectUVsInRange_lowU_floatFieldGrp
+		;
+
+	floatFieldGrp
+		-l "Low V"
+		-v1 0.0		
+		-cal 1 "left"
+		selectUVsInRange_lowV_floatFieldGrp
+		;
+		
+	floatFieldGrp
+		-l "High U"
+		-v1 0.5		
+		-cal 1 "left"
+		selectUVsInRange_highU_floatFieldGrp
+		;
+
+	floatFieldGrp
+		-l "High V"
+		-v1 0.5		
+		-cal 1 "left"
+		selectUVsInRange_highV_floatFieldGrp
+		;
+		
+	string $bc = ("float $lowUPos = `floatFieldGrp -q -v1 selectUVsInRange_lowU_floatFieldGrp`;"+"\n"
+	+"float $lowVPos = `floatFieldGrp -q -v1 selectUVsInRange_lowV_floatFieldGrp`;"+"\n"
+	+"float $highUPos = `floatFieldGrp -q -v1 selectUVsInRange_highU_floatFieldGrp`;"+"\n"
+	+"float $highVPos = `floatFieldGrp -q -v1 selectUVsInRange_highV_floatFieldGrp`;"+"\n"
+	+"wizSelectUVsInRange(\"-sl -lowU \" + $lowUPos + \" -lowV \" + $lowVPos + \" -hiU \" + $highUPos + \" -hiV \" + $highVPos);"+"\n"
+	);
+	
+	button
+		-l "Select UVs In Range"
+		-c $bc
+		;
+}
+
+//CONTROL OPTIONS
+//==============================================================================
+
+//FLOAT SLIDER GRP OPTIONS
+//=====================================================================
+//FLOAT SLIDER GRP OPTIONS
+//-----------------------------------------
+global proc floatSliderGrpOptions(string $parent)
+{
+	string $columnLayout = "floatSliderGrpOptionsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "FloatSliderGrp Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+
+}
+
+//ADD FLOAT SLIDER GRP OPTIONS
+//-----------------------------------------
+global proc addFloatSliderGrpOptions(string $floatSliderGrp)
+{
+	string $parent = "floatSliderGrpOptionsColumnLayout";
+	setParent $parent;
+	string $ssl = (`floatSliderGrp -q -l $floatSliderGrp`) + " SliderStep:";
+	string $minl = (`floatSliderGrp -q -l $floatSliderGrp`) + " Min:";
+	string $maxl = (`floatSliderGrp -q -l $floatSliderGrp`) + " Max:";
+	
+	string $ssfsg = `floatSliderGrp
+		-l $ssl
+		-f true
+		-cal 1 "left"
+		`;
+		
+	//rowLayout -nc 2;
+	
+	string $minfsg = `floatSliderGrp
+		-l $minl
+		-f true
+		-cal 1 "left"
+		-v 0
+		-min -100
+		-max 100
+		-fmn -9999999999
+		-fmx 9999999999
+		`;
+		
+	string $maxfsg = `floatSliderGrp
+		-l $maxl
+		-f true
+		-cal 1 "left"
+		-v 100
+		-min -100
+		-max 100
+		-fmn -9999999999
+		-fmx 9999999999
+		`;
+		
+	string $sscc = ("float $ss = `floatSliderGrp -q -v " + $ssfsg + "`;"
+	+"floatSliderGrp -e -ss $ss " + $floatSliderGrp + ";");
+	
+	string $mincc = ("float $min = `floatSliderGrp -q -v " + $minfsg + "`;"
+	+"floatSliderGrp -e -min $min " + $floatSliderGrp + ";");
+	
+	string $maxcc = ("float $max = `floatSliderGrp -q -v " + $maxfsg + "`;"
+	+"floatSliderGrp -e -max $max " + $floatSliderGrp + ";");
+	
+	floatSliderGrp -e -cc $sscc $ssfsg;
+	floatSliderGrp -e -cc $mincc $minfsg;
+	floatSliderGrp -e -cc $maxcc $maxfsg;	
+
+}
+
+
+//PREP FOR PAINTING OPTIONS
+//=============================================================================
+//CONVERT NURBS TO POLY
+//--------------------------------
+global proc convertNurbsToPolyPrepForPaintingOptions(string $parent)
+{
+	string $columnLayout = "convertNurbsToPolyPrepForPaintingOptionsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 0){		
+		$columnLayout = `columnLayout
+			-adj true
+			-columnOffset "both" 10
+			-p $parent
+			$columnLayout
+			`;	
+			
+	string $isg = wizStandardIntSliderGrp("Converted Nurbs Edge Softness", "prepForPaintingConvertedNurbsEdgeSoftness");
+	intSliderGrp -e -minValue 1 -maxValue 180 -value 30 -fmn 1 -fmx 180 $isg;	
+	saveWizState("intSliderGrp", "-v", $isg);
+	}
+	
+	wizCheckBox(
+	"-l Use Poly Count "
+	+"-v 1 "
+	+"-n prepForPainting_useNurbsToPolyCount_checkBox"
+	);
+	
+	wizIntSliderGrp(
+	"-l Poly Count "
+	+"-min 0 "
+	+"-max 9999999 "
+	+"-v 200 "
+	+"-n prepForPainting_nurbsToPolyCount_intSliderGrp"
+	);
+	
+	
+	if(`columnLayout -q -vis $columnLayout` == 0){
+		columnLayout -e -vis true $columnLayout;
+	}	
+	setParent..;	
+}
+
+//AUTO PROJECT UVS SETTINGS
+//--------------------------------
+global proc autoProjectUVsPrepForPaintingOptions(string $parent)
+{
+	string $columnLayout = "autoProjectUVsPrepForPaintingOptionsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 0){
+		$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	
+		optionMenuGrp 
+			-l "Use Settings:"
+			-cal 1 "left"
+			-cal 2 "left"
+			-ann ("")
+			autoPrepForPaintingAutoUVsUseSettings
+			;
+			menuItem -label "Recommended Settings" ;
+			menuItem -label "From Maya" -c ("performPolyAutoProj 1;") autoPrepForPaintingAutoUVsUseSettingsFromMayaOption;
+	
+		
+		string $fsg = `floatSliderGrp 
+			-l "Auto Project UV Percentage Space"
+			-minValue 0
+			-maxValue 1
+			-value 0.1
+			-f true
+			-fmn 0 
+			-fmx 5 
+			-pre 4
+			-cal 1 "left"
+			prepForPaintingUVPercentageSpace
+			`;
+		
+		//optimizePrepForPaintingOptions($parent);
+	}
+	
+	activateCurrentOptionsColumnLayout($columnLayout, "Auto Project UVs Options", $parent);
+
+}
+
+//OPTIMIZE
+//--------------
+global proc optimizePrepForPaintingOptions(string $parent)
+{
+	
+	string $columnLayout = "optimizePrepForPaintingOptionsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Optimize Options", $parent);
+		activateCurrentOptionsColumnLayout("polyLayoutUVOptionsMenuColumnLayout", "", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+
+	string $suvsChangeCommand = ("int $sl = `optionMenuGrp -q -sl prepForPaintingShareUVSpaceMethodOptionMenuGrp`;"
+	+"if($sl == 2){"
+	+"	intSliderGrp -e -l \"Max Share UV Count\" prepForPaintingMaxSameUVSpaceIntSliderGrp;"
+	+"} else if($sl == 3){"
+	+"	intSliderGrp -e -l \"Max Share UV Percent\" prepForPaintingMaxSameUVSpaceIntSliderGrp;"
+	+"}");
+	
+	string $menuItemLabels[] = { "All Matching", "Max Count" , "Max Percent" };
+	string $omg = wizOptionMenuGrpMenuItems("Share UV Space", "prepForPaintingShareUVSpaceMethodOptionMenuGrp", $menuItemLabels);		
+	optionMenuGrp -e -cc $suvsChangeCommand prepForPaintingShareUVSpaceMethodOptionMenuGrp;
+
+	string $maxSameUVSpace = `intSliderGrp 
+		-l "Max Share UV"
+		-ann "Max Number Of Matching Objects Occuping Unique UV Space"
+		-cal 1 "left"
+		-value 3
+		-min 1
+		-max 10		
+		-f true
+		-fmn 1 
+		-fmx 999999 		
+		prepForPaintingMaxSameUVSpaceIntSliderGrp
+		`;
+		
+	separator -height 10 -style "double" pfpOptionsSep1;
+	//--------------------------------------------------------------
+	
+	checkBox -l "Normalize" -v false autoPrepForPaintingNormalizeOption;
+	
+	//checkBox -l "Scale To Fit UV Grid" -v false autoPrepForPaintingScaleToFitUVGridCheckBox;
+	
+	string $fsg = `floatSliderGrp 
+		-l "Scale To Fit In UV Grid"
+		-ann "This scales the uvs uniformly from center of grid space.\n A value between 0.98 and 0.99 is suggested."
+		-minValue 0
+		-maxValue 1
+		-value 0.98
+		-f true
+		-fmn 0 
+		-fmx 5 
+		-pre 3
+		-cal 1 "left"
+		prepForPaintingScaleToFitInGridSpaceFloatSliderGrp
+		`;
+	
+	separator -height 10 -style "double" pfpOptionsSep2;
+	//--------------------------------------------------------------
+	
+	checkBox -l "Transfer UVs" -v true autoPrepForPaintingTransferUVsCheckBox;
+	
+	text -l "Transfer UV Options" -al "left" pfpOptionsText2;
+	
+	transferUVsOptions($columnLayout);
+	
+	setParent $columnLayout;
+	
+	separator -height 10 -style "double" pfpOptionsSep4;
+	//--------------------------------------------------------------
+		
+	text -l "Poly Layout UV Options" -al "left" pfpOptionsText1;
+	
+	checkBox -l "Layout UVs" -v true autoPrepForPaintingLayoutUVsCheckBox;
+	
+	polyLayoutUVOptionsMenu($columnLayout);
+	
+	setParent $columnLayout;
+	
+	//separator -height 10 -style "double" pfpOptionsSep3;
+	//--------------------------------------------------------------	
+
+}
+
+//STRING WIZ OPTIONS
+//=============================================================================
+//CSV FORMATTING OPTIONS
+//------------------------------------------
+global proc csvFormattingOptions(string $parent)
+{
+	string $columnLayout = "csvFormattingOptionsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "CSV Formatting Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;	
+	
+	//Data Source
+	string $csvFile = wizStandardFileTextFieldButtonGroup("CSV File", "csvFile");
+		
+	wizCheckBox("-l Ignore First Line -v 1 -n csvFormattingIgnoreFirstLineCheckBox");
+	
+	wizCheckBox("-l No Commas -v 0 -n csvFormattingNoCommasCheckBox");
+	
+	wizCheckBox("-l Zero Based -v 1 -n csvFormattingZeroBasedCheckBox");
+	
+	wizCheckBox("-l Remove Spaces -v 1 -n csvFormatting_removeSpaces_checkBox");
+	
+	textFieldGrp
+		-l "Get Columns"
+		-ann "List The Columns You Want To Get From The CSV File Like:\n 1, 2, 4, 8"
+		-cal 1 "left"
+		csvFormattingOptionsGetColumnsTextFieldGrp
+		;
+	
+	wizCheckBox("checkBox -l Use Column Count From CSV End Line -v 1 -n csvFormattingUseCSVColumnCountCheckBox");
+		
+	wizIntFieldGrp(
+		"-l Total Columns "
+		+"-nf 1 "
+		+"-v1 10 "
+		+"-n csvFormattingOptionsTotalColumnsTextFieldGrp"
+		);		
+	
+	string $printCommand = ("string $file = `textFieldButtonGrp -q -tx csvFile`;"
+	+"getAndPrintCSVFile($file);");
+	
+	string $printFloatArrayCommand = ("string $file = `textFieldButtonGrp -q -tx csvFile`;"
+	+"getAndPrintFloatArrayCSVFile($file);");
+	
+	button
+		-label "Print CSV Data"
+		-c $printCommand
+		;
+		
+	button 
+		-l "Print Float Array"
+		-c $printFloatArrayCommand
+		;
+	
+	string $newCSVFile = wizNewFileTextFieldButtonGrp("New CSV File", "newCSVFile");
+	
+	string $formatAndSaveCommand = ("string $source = `textFieldButtonGrp -q -tx csvFile`;"
+	+"string $dest = `textFieldButtonGrp -q -tx " + $newCSVFile + "`;"
+	+"formatAndSaveCSVFile($source, $dest);");
+	
+	button
+		-label "Format And Save CSV Data"
+		-c $formatAndSaveCommand
+		;
+}
+
+//REFRESH STEP OPTIONS
+//-----------------------------------------
+global proc refreshStepOptions(string $parent)
+{
+	string $columnLayout = "refreshStepOptionsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Refresh Step Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	
+	floatSliderGrp
+		-l "Pause"
+		-f true
+		-cal 1 "left"
+		-v 0
+		-min 0
+		-max 30
+		-fmn 0
+		-fmx 9999999
+		-pre 0
+		refreshStepPauseFloatSliderGrp
+		;
+
+}
+
+//RECOMMENDED SETTINGS
+//=============================================================================
+
+//RECOMMENDED SETTINGS LAYOUT
+//----------------------------------------
+
+//RECOMMENDED SETTINGS COLUMN LAYOUT
+//----------------------------------------
+global proc string recommendedSettingsOptionMenu(string $parent)
+{
+	string $columnLayout = "recommendedSettingsOptionMenu";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Recommended Settings", $parent);
+		return $columnLayout;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+			
+	recommendedSettingsMenuBarLayout();
+	
+	string $rowLayout = `rowLayout -nc 2 -adj 1 -p $columnLayout recommendedSettingsRowLayout`;
+	
+	//Column A - Put recommended settings in column A
+	string $colLayoutA = `columnLayout -adj true -p $rowLayout recommendedSettingsOptionMenuA`;
+	
+	//Column B - Put alternative commands in column B
+	string $colLayoutB = `columnLayout -adj true -p $rowLayout recommendedSettingsOptionMenuB`;
+		
+			
+	//Get rid of this below if possible
+	string $curP = `columnLayout -q -p $columnLayout`;
+	if($curP != $parent){
+		columnLayout -e -p $parent $columnLayout;
+	}
+	
+	return $columnLayout;
+}
+
+//RECOMMENDED SETTINGS MENU BAR LAYOUT
+//----------------------------------------
+global proc recommendedSettingsMenuBarLayout()
+{
+	string $menuBarLayout = `menuBarLayout recommendedSettingsMenuBarLayout`;
+	
+	menu -l "Options";	
+		menuItem -l "Clear All Recommended" -c ("clearAllRecommendedSettings()");
+}
+
+//CLEAR ALL RECOMMENDED SETTINGS
+//----------------------------------------
+global proc clearAllRecommendedSettings()
+{
+	destroyLayout("recommendedSettingsOptionMenu");	
+}
+
+//ADD RECOMMENDED SETTINGS
+//----------------------------------------
+global proc addRecommendedSetting(string $name, string $b1l, string $b1c, string $b2l, string $b2c)
+{
+	/* Usage
+	addRecommendedSetting("It Is Recommended To Do This...", "Some Proc", "someProc", "someProcRecommendedSettings", "An Alternative", "anAlternativeProc");
+	*/
+	string $parent = "currentOptionsLayout_frameLayout";
+	string $columnLayout = recommendedSettingsOptionMenu($parent);
+	string $i = "wiz/checkBoxIcon1.png";
+	string $style = "iconAndTextHorizontal";
+	
+	if($b1l != ""){
+		setParent "recommendedSettingsOptionMenuA";	
+		
+		if(`iconTextButton -q -ex ($name + "IconTextButton1")` == 0){
+			iconTextButton
+				-l $b1l 
+				-i "wiz/checkBoxIcon1.png"
+				-style $style
+				-c $b1c
+				($name + "IconTextButton1")
+				;
+		}
+	}
+	
+	if($b2l != ""){
+		setParent "recommendedSettingsOptionMenuB";	
+		if(`iconTextButton -q -ex ($name + "IconTextButton2")` == 0){
+			iconTextButton
+				-l $b2l 
+				-i "wiz/checkBoxIcon1.png"
+				-style $style
+				-c $b2c
+				($name + "IconTextButton2")
+				;
+			
+		}
+	}
+
+}
+
+//** Options for saving object icons. */
+global proc objectIconOptions( string $parent )
+{
+    string $columnLayout = "objectIconOptionsColumnLayout";
+	if (`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Object Icons Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+   //... content...
+    
+   	// get option var text value
+	string $ovName = "WIZ_objectIconRenderEnv";
+	string $tx = "";
+	if (`optionVar -ex $ovName`){
+		$tx = `optionVar -q $ovName`;
+	}
+	
+	string $bc = (
+	"string $newFile = wizGetMayaFile();"+"\n"
+	+"textFieldButtonGrp -e -tx $newFile wizObjectIconRenderEnv_textFieldButtonGrp;"+"\n"
+	+"optionVar -sv " + $ovName + " $newFile;"+"\n"	
+	);
+	
+	string $tfbg = `textFieldButtonGrp
+		-l "Object Icon Render Env"
+		-tx $tx
+		-cal 1 "left"
+		-bl "Select"
+		-bc $bc
+		wizObjectIconRenderEnv_textFieldButtonGrp
+		`;
+		
+	wizCheckBox("-l Load Render Env "
+		+"-ann The default render environment will be loaded if there are no lights in the scene. "
+		+"-v 1 "
+		+"-n objectIconLoadDefaultRenderEnv_checkBox");
+
+		
+   /*
+    int $tntype = `optionVar -q WIZ_objIconRenderType`;
+    $tntype = $tntype + 1;
+    */
+    string $menuItemLabels[] = { "Draft", "Render" };
+	string $omg = wizOptionMenuGrpMenuItems("Icon Type", "objectIconTypeOptionMenuGrp", $menuItemLabels);
+	
+	/*
+    string $cc = (
+    "int $objIconType = `optionMenuGrp -q -sl objectIconTypeOptionMenuGrp`;"+"\n"
+    +"$objIconType = $objIconType - 1;"+"\n"
+    +"optionVar -iv WIZ_objIconRenderType $objIconType;"+"\n"
+    );
+		
+    optionMenuGrp
+        -e
+        -sl ($tntype)
+        -cc $cc
+        $omg
+        ;
+		*/
+		
+		
+	wizCheckBox(
+		"-l Fit Object In View "
+		+"-ann This will move the persp camera so that it can view all the visible objects. "
+		+"-v 0 "		
+		+"-n objectIconFitObjectInView_checkBox"
+		);
+		
+	wizCheckBox(
+		"-l Use Default Preset "
+		+"-ann This will load the default RenderGlobals preset for the renderer. "
+		+"-v 1 "		
+		+"-n objectIconUseDefaultPreset_checkBox"
+		);
+	
+	//_________________________________________
+	// Camera Angle	
+	global string $WIZ_cameraAngles[];
+	string $caomg = wizOptionMenuGrpMenuItems("CameraAngle", "objectIconCameraAngleOptionMenuGrp", $WIZ_cameraAngles);
+	
+	
+	wizCheckBox(
+		"-l Use Focal Length "
+		+"-v 0 "
+		+"-n objectIconUseFocalLength_checkBox"
+		);
+		
+	wizFloatSliderGrp(
+		"-l Camera Focal Length "
+		+"-v 55.0 "
+		+"-min 2 "
+		+"-max 100 "
+		+"-fmn 2 "
+		+"-fmx 1000 "
+		+"-n objectIconCameraFocalLength_floatSliderGrp"
+		);
+	
+	wizIntFieldGrp(
+		"-l Icon Size "
+		+"-nf 1 "
+		+"-v 256 "
+		+"-n objectIcon_iconSize_intFieldGrp"
+		);
+		
+	wizCheckBox(
+		"-l Render Button Icon "
+		+"-v 1 "
+		+"-n objectIcon_renderButtonIcon_checkBox"
+		);
+		
+		
+	wizIntFieldGrp(
+		"-l Button Icon Size "
+		+"-nf 1 "
+		+"-v 56 "
+		+"-n objectIcon_buttonIconSize_intFieldGrp"
+		);	
+		
+	wizCheckBox(
+		"-l Create Image Plane "
+		+"-ann Creates an image plane to use as proxy. "
+		+"-v 0 "	
+		+"-n objectIconCreateImagePlane_checkBox"
+		);	
+		
+	wizCheckBox(
+		"-l Hide Objects "
+		+"-ann Hides the selected objects after rendering. "
+		+"-v 0 "	
+		+"-n objectIconHideObjects_checkBox"
+		);	
+
+    button
+        -l "Render Object Icon"
+        -c ("wizRenderObjectIcon(\"-sl\");")
+        ;
+        
+}
+
+//** Options for saving scene thumbnails. */
+global proc sceneThumbnailOptions( string $parent )
+{
+    //genericWizOptionsMenuLayout("sceneThumbnailOptionsColumnLayout", "Scene Thumbnail Options", $parent);
+    string $columnLayout = "sceneThumbnailOptionsColumnLayout";
+	if (`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Scene Thumbnail Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+   //... content...
+    
+   
+   	//_________________________________________
+	// Thumbnail Enabled
+    int $sten = `optionVar -q WIZ_sceneThumbnailEnabled`;
+    
+    string $encc = (
+    "int $thumbEnabled = `checkBox -q -v sceneThumbnailEnabled_checkBox`;"+"\n"
+    +"optionVar -iv WIZ_sceneThumbnailEnabled $thumbEnabled;"+"\n"
+    );
+    
+	wizCheckBox(
+		"-l Auto Thumbnail Rendering Enabled "
+		+"-ann If this option is checked, thumbnails will be automatically created when saving file. "
+		+"-v 1 "	
+		+" -n sceneAutoThumbnailEnabled_checkBox"
+		);
+	/*	
+    wizCheckBox(
+		"-l Thumbnail Rendering Enabled "
+		+"-ann If this option is checked, thumbnails will be automatically created when saving file. "
+		+"-v 1 "	
+		+" -n sceneThumbnailEnabled_checkBox"
+		);
+	*/
+	wizCheckBox(
+		"-l Auto Replace "
+		+"-ann If this option is checked, thumbnails will be automatically be replaced. "
+		+"-v 1 "	
+		+" -n sceneThumbnailAutoReplace_checkBox"
+		);
+		
+	wizSeparator(); 
+	
+	//_________________________________________
+	// Thumbnail Type	
+
+    string $menuItemLabels[] = { "Draft", "Render" };
+	string $omg = wizOptionMenuGrpMenuItems("Thumbnail Type", "sceneThumbnailTypeOptionMenuGrp", $menuItemLabels);
+
+	wizCheckBox("-l Use Default Preset "
+	+"-ann This will load the default RenderGlobals preset for the renderer. "
+	+"-v 1 "
+	+"-n sceneThumbnailUseDefaultPreset_checkBox");
+	
+	wizSeparator(); 
+		
+    wizCheckBox("-l Fit Visible Objects In View "
+    +"-ann This will move the persp camera so that it can view all the visible objects."
+    +" -n sceneThumbnailFitVisibleInView_checkBox");
+    
+	//_________________________________________
+	// Camera Angle	
+	global string $WIZ_cameraAngles[];
+	string $caomg = wizOptionMenuGrpMenuItems("CameraAngle", "sceneThumbnailCameraAngleOptionMenuGrp", $WIZ_cameraAngles);
+	
+    wizCheckBox("-l Use Focal Length "
+	+"-ann This will change the camera focal length when rendering. "
+	+"-v 0 "
+	+"-n sceneThumbnailUseFocalLength_checkBox");
+		
+	wizFloatSliderGrp(
+		"-l Camera Focal Length "
+		+"-v 35.0 "
+		+"-min 2 "
+		+"-max 100 "
+		+"-fmn 2 "
+		+"-fmx 1000 "
+		+"-n sceneThumbnailCameraFocalLength_floatSliderGrp"
+		);
+			
+	wizCheckBox("-l Color Manage "
+	+"-ann This save the rendered image with color management transform applied. "
+	+"-v 1 "
+	+"-n sceneThumbnail_colorManage_checkBox");
+	
+	wizSeparator(); 
+	
+	//_________________________________________
+	// Render Environment	
+	
+	wizCheckBox("-l Load Default Render Env "
+	+"-ann The default render environment will be loaded if there are no lights in the scene. "
+	+"-v 1 "
+	+"-n sceneThumbnailLoadDefaultRenderEnv_checkBox");
+
+    button
+        -l "Save Scene Thumbnail"
+        -c ("saveSceneThumbnailImage();")
+        ;
+        
+}
+
+
+//** Options for rendering poster images. */
+global proc posterImageOptions( string $parent )
+{
+    //genericWizOptionsMenuLayout("sceneThumbnailOptionsColumnLayout", "Scene Thumbnail Options", $parent);
+    string $columnLayout = "posterImageOptionsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Poster Image Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;	
+	//... content...
+	
+    string $menuItemLabels[] = { "Draft", "Render" };
+	string $omg = wizOptionMenuGrpMenuItems("Poster Type", "posterImageTypeOptionMenuGrp", $menuItemLabels);
+	
+	//_________________________________________
+	// Camera Angle	
+	global string $WIZ_cameraAngles[];
+	string $caomg = wizOptionMenuGrpMenuItems("CameraAngle", "posterImageCameraAngleOptionMenuGrp", $WIZ_cameraAngles);
+
+	wizIntFieldGrp(
+		"-l Poster Size "
+		+"-nf 2 "
+		+"-v 2048 2048 "
+		+"-n posterImageSize_intFieldGrp"
+		);
+		
+	wizCheckBox(
+		"-l Use Renderable Cameras "
+		+"-ann This will render any renderable camera as a poster. "
+		+"-v 0 "	
+		+"-n posterImageUseRenderableCameras_checkBox"
+		);
+				
+	wizCheckBox(
+		"-l Fit Visible Objects In View "
+		+"-ann This will move the persp camera so that it can view all the visible objects. "
+		+"-v 0 "	
+		+"-n posterImageFitVisibleInView_checkBox"
+		);
+		
+	wizCheckBox("-l Use Focal Length "
+		+"-ann This will change the camera focal length when rendering. "
+		+"-v 0 "
+		+"-n posterImageUseFocalLength_checkBox");
+				
+	wizFloatSliderGrp(
+		"-l Camera Focal Length "
+		+"-v 55.0 "
+		+"-min 2 "
+		+"-max 100 "
+		+"-fmn 2 "
+		+"-fmx 1000 "
+		+"-n posterImageCameraFocalLength_floatSliderGrp"
+		);
+	
+		
+	wizCheckBox(
+		"-l Load Default Render Env "
+		+"-ann The default render environment will be loaded if there are no lights in the scene. "
+		+"-v 1 "
+		+"-n posterImageLoadDefaultRenderEnv_checkBox"
+		);
+		
+	wizCheckBox("-l Color Manage "
+	+"-ann This save the rendered image with color management transform applied. "
+	+"-v 1 "
+	+"-n posterImage_colorManage_checkBox");
+
+    button
+        -l "Render Poster Image"
+        -c ("saveScenePosterImage();")
+        ;
+        
+	wizCheckBox(
+		"-l Copy Posters To Directory "
+		+"-ann This will copy all posters created to a directory specified. "
+		+"-v 0 "
+		+"-n posterImage_copyPostersToDir_checkBox"
+		);
+	
+	wizTextFieldButtonGrp(
+		"-l Directory "
+		+"-tx C: "
+		+"-bl Select "
+		+"-bc ad "
+		+"-n posterImage_copyDirectory_textFieldButtonGrp"
+		);
+		
+}
+
+
+
+//** Options for saving scene thumbnails. */
+global proc xgenArchiveThumbnailOptions( string $parent )
+{
+    string $columnLayout = "xgenArchiveThumbnailOptionsColumnLayout";
+	if (`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "xGen Archive Thumbnail Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	//... content...
+
+	//_________________________________________
+	// Thumbnail Type	
+
+    string $menuItemLabels[] = { "Draft", "Render" };
+	string $omg = wizOptionMenuGrpMenuItems("Thumbnail Type", "xgenArchiveThumbnailTypeOptionMenuGrp", $menuItemLabels);
+
+	wizCheckBox("-l Use Default Preset "
+	+"-ann This will load the default RenderGlobals preset for the renderer. "
+	+"-v 1 "
+	+"-n xgenArchiveThumbnailUseDefaultPreset_checkBox");
+	
+	wizSeparator(); 
+		
+    wizCheckBox("-l Fit Visible Objects In View "
+    +"-ann This will move the persp camera so that it can view all the visible objects."
+    +" -n xgenArchiveThumbnailFitVisibleInView_checkBox");
+    
+	//_________________________________________
+	// Camera Angle	
+	global string $WIZ_cameraAngles[];
+	string $caomg = wizOptionMenuGrpMenuItems("CameraAngle", "xgenArchiveThumbnailCameraAngleOptionMenuGrp", $WIZ_cameraAngles);
+	
+    wizCheckBox("-l Use Focal Length "
+	+"-ann This will change the camera focal length when rendering. "
+	+"-v 0 "
+	+"-n xgenArchiveThumbnailUseFocalLength_checkBox");
+		
+	wizFloatSliderGrp(
+		"-l Camera Focal Length "
+		+"-v 35.0 "
+		+"-min 2 "
+		+"-max 100 "
+		+"-fmn 2 "
+		+"-fmx 1000 "
+		+"-n xgenArchiveThumbnail_cameraFocalLength_floatSliderGrp"
+		);
+			
+	wizCheckBox("-l Color Manage "
+	+"-ann This save the rendered image with color management transform applied. "
+	+"-v 1 "
+	+"-n xgenArchiveThumbnail_colorManage_checkBox");
+	
+	wizSeparator(); 
+
+    button
+        -l "Save Scene Thumbnail"
+        -c ("saveSceneThumbnailImage();")
+        ;
+        
+}
+
+
+
+//** Options for saving scene thumbnails. */
+
+/*
+global proc wizAssetIconOptions( string $parent )
+{
+    //genericWizOptionsMenuLayout("sceneThumbnailOptionsColumnLayout", "Scene Thumbnail Options", $parent);
+    string $columnLayout = "wizAssetIconOptionsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Wiz Asset Icon Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+   //... content...
+    
+    int $tntype = `optionVar -q WIZ_sceneThumbnailType`;
+    $tntype = $tntype + 1;
+    string $menuItemLabels[] = { "Draft", "Render" };
+	string $omg = wizOptionMenuGrpMenuItems("Thumbnail Type", "sceneThumbnailTypeOptionMenuGrp", $menuItemLabels);
+	
+    string $cc = (
+    "int $sceneThumbnailType = `optionMenuGrp -q -sl sceneThumbnailTypeOptionMenuGrp`;"+"\n"
+    +"$sceneThumbnailType = $sceneThumbnailType - 1;"+"\n"
+    +"optionVar -iv WIZ_sceneThumbnailType $sceneThumbnailType;"+"\n"
+    );
+
+    optionMenuGrp
+        -e
+        -sl ($tntype)
+        -cc $cc
+        $omg
+        ;
+		
+		
+	checkBox
+		-l "Fit Visible Objects In View"
+		-ann "This will move the persp camera so that it can view all the visible objects."
+		-v false		
+		sceneThumbnailFitVisibleInView_checkBox
+		;
+		
+	checkBox
+		-l "Use Default Preset"
+		-ann "This will load the default RenderGlobals preset for the renderer."
+		-v true		
+		sceneThumbnailUseDefaultPreset_checkBox
+		;
+		
+	floatSliderGrp
+		-l "Camera Focal Length"
+		-v 35
+		-f true
+		-min 2
+		-max 100
+		-fmn 2
+		-fmx 1000
+		-cal 1 "left"
+		sceneThumbnailCameraFocalLength_floatSliderGrp
+		;
+		
+	checkBox
+		-l "Load Default Render Env"
+		-ann "The default render environment will be loaded if there are no lights in the scene."
+		-v true		
+		sceneThumbnailLoadDefaultRenderEnv_checkBox
+		;
+
+    button
+        -l "Save Scene Thumbnail"
+        -c ("saveSceneThumbnailImage();")
+        ;
+        
+}
+*/
+
+
+global proc tileCameraOptions( string $parent )
+{
+    //genericWizOptionsMenuLayout("sceneThumbnailOptionsColumnLayout", "Scene Thumbnail Options", $parent);
+    string $columnLayout = "tileCameraOptionsColumnLayout";
+	if(`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Tile Camera Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	//... content...
+   
+	wizIntFieldGrp(
+		"-l Divisions"
+		+"-v1 3 "
+		+"-n wizTileCamera_divisions_intFieldGrp");
+	
+	button
+		-l "Tile Camera"
+		-c ("int $divisions = `intFieldGrp -q -v1 wizTileCamera_divisions_intFieldGrp`; wizTileCamera(\"-div \" + $divisions + \"\");");
+
+
+}
+
+global proc texturePoolOptions( string $parent )
+{
+    string $columnLayout = "texturePoolOptionsColumnLayout";
+	if (`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Texture Pool Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	//... content...
+	
+	checkBox
+		-l "Sort By Name"
+		-v true
+		texturePool_sortByName_checkBox
+		;
+		
+	
+
+}
+
+global proc steppedRemapperOptions( string $parent )
+{
+    string $columnLayout = "steppedRemapperOptionsColumnLayout";
+	if (`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Stepped Remapper Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	//... content...
+	
+	wizIntFieldGrp(
+		"-l Number Of Steps "
+		+"-v 10 "
+		+"-n steppedRemapper_steps_intFieldGrp"
+		);
+		
+	button
+			-l "Create Stepped Remappers"
+			-c ("steppedRemapper(\"-sl\");")
+			;	
+	
+
+}
+
+
+global proc marchingTileSelectSetOptions( string $parent )
+{
+	string $columnLayout = "marchingTileSelectSetOptionsColumnLayout";
+	if (`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Marching Tile Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	//... content...
+
+	intFieldGrp
+		-l "U Tiles"
+		-v1 10
+		marchingTilesSelectSet_uTiles_intFieldGrp
+		;
+		
+	intFieldGrp
+		-l "V Tiles"
+		-v1 10
+		marchingTilesSelectSet_vTiles_intFieldGrp
+		;	
+		
+		string $mtssCom = ("int $uTiles = `intFieldGrp -q -v1 marchingTilesSelectSet_uTiles_intFieldGrp`;"+"\n"
+		+"int $vTiles = `intFieldGrp -q -v1 marchingTilesSelectSet_vTiles_intFieldGrp`;"+"\n"
+		+"wizCraftCreateMarchingTileSelectSets(\"-sl -u \" + $uTiles + \" -v \" + $vTiles);"
+		);
+		
+		button
+			-l "Create Marching Tile Select Sets"
+			-c $mtssCom
+			;
+			
+}
+
+global proc closestPointFollicleOptions( string $parent )
+{
+	string $columnLayout = "closestPointFollicleOptionsColumnLayout";
+	if (`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Closest Point Follicle Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	//... content...
+	
+	checkBox
+		-l "Keep Closest Point Node"
+		-v false
+		closestPointFollicle_keepClosestPointNode_checkBox
+		;
+		
+	string $bc = ("int $kcp = `checkBox -q -v closestPointFollicle_keepClosestPointNode_checkBox`;"+"\n"
+	+"string $kcpCom = \"-sl\";"+"\n"
+	+"if($kcp){"+"\n"
+	+"	$kcpCom = $kcpCom + \" -kcp\";"+"\n"
+	+"}"+"\n"
+	+"wizClosestPointFollicle($kcpCom);"+"\n"
+	);
+	
+	button
+		-l "Create Closest Point Follicle"
+		-c $bc
+		;
+			
+}
+
+global proc bendCurveCVsOptions( string $parent )
+{
+	//genericWizOptionsMenuLayout("sceneThumbnailOptionsColumnLayout", "Scene Thumbnail Options", $parent);
+    string $columnLayout = "bendCurveCVsOptionsColumnLayout";
+	if (`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Bend Curve CV Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	//... content...
+	button
+		-l "Convert To Linear Curve"
+		-c ("rebuildCurve -rpo 1 -rt 0 -end 0 -kr 1 -kcp 1 -kep 0 -kt 0 -d 1 -tol 0.0001;")
+		;
+		
+	button
+		-l "Convert To Cubic Curve"
+		-c ("rebuildCurve -rpo 1 -rt 0 -end 0 -kr 1 -kcp 1 -kep 0 -kt 0 -d 3 -tol 0.0001;")
+		;
+	
+	wizSeparator();
+	
+	// remove angles less than...	
+	floatSliderGrp
+		-l "Min Angle"
+		-v 60
+		-f true
+		-pre 3
+		-min 0.0
+		-max 360.0
+		-cal 1 "left"
+		removeAngleLessThanMinMinAngle_floatSliderGrp
+		;
+		
+	intSliderGrp
+		-l "Iterations"
+		-v 1
+		-f true
+		-min 1
+		-cal 1 "left"
+		removeAngleLessThanIterations_intSliderGrp
+		;
+
+	button
+        -l "Remove Angles Less Than Min Angle"
+        -c ("removeAngleOfCurveUnderMin(\"\");")
+        ;
+		
+	wizSeparator();
+	
+	floatSliderGrp
+		-l "Bend Length"
+		-v 0.1
+		-f true
+		-pre 3
+		-min 0.0
+		-max 0.5
+		-cal 1 "left"
+		bendCurveCVsBendLength_floatSliderGrp
+		;
+		
+	intSliderGrp
+		-l "Degree"
+		-v 3
+		-f true
+		-min 1
+		-max 7
+		-cal 1 "left"
+		bendCurveCVsDegree_intSliderGrp
+		;
+		
+	intSliderGrp
+		-l "Nuber Of Knots"
+		-v 1
+		-f true
+		-min 1
+		-max 7
+		-cal 1 "left"
+		bendCurveNumberOfKnots_intSliderGrp
+		;
+
+	checkBox
+		-l "Use Insert Between Option"
+		-v false
+		bendCurveCVsInsertBetween_checkBox
+		;
+		
+	button
+        -l "Smooth Corners"
+        -c ("smoothCurveCorners(\"\");")
+        ;
+
+}
+
+
+global proc wizDuplicateOnParticlesOptions( string $parent )
+{
+	string $columnLayout = "wizDuplicateOnParticlesOptionsColumnLayout";
+	if (`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Dup On Particles Options", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	//... content...
+
+	string $dupMethod = duplicationMethodOptionMenuGrp($parent, "wizDupOnParticles_duplicationMethod_optionMenuGrp");
+	
+	
+	button
+		-l "Duplicate"
+		-c ("wizDuplicateOnParticles(\"-sl\");")
+		;
+}
+
+/*
+global proc addRecommendedSetting(string $name, string $message, string $b1l, string $b1c, string $b2l, string $b2c)
+{
+	// Usage
+	//addRecommendedSetting("It Is Recommended To Do This...", "Some Proc", "someProc", "someProcRecommendedSettings", "An Alternative", "anAlternativeProc");
+	
+	string $parent = "currentOptionsLayout_frameLayout";
+	string $columnLayout = recommendedSettingsOptionMenu($parent);
+	string $i = "wiz/checkBoxIcon1.png";
+	string $style = "iconAndTextHorizontal";
+	
+	if(`rowLayout -q -ex ($name + "RowLayout")` == 0){
+		int $nc = 0;
+		if($message != "") $nc++;
+		if($b1l != "" && $b1c != "") $nc++;
+		if($b2l != "" && $b2c != "") $nc++;
+	
+		string $rowLayout = `rowLayout -nc $nc -p $columnLayout ($name + "RowLayout")`;
+			
+		
+		if($message != ""){
+			text -l $message -ww true -al "left" -p $rowLayout ($name + "Text");
+		}
+		
+		if($b1l != "" && $b1c != ""){
+			button -l $b1l -c $b1c -p $rowLayout ($name + "Button");	
+		}
+		
+		if($b2l != "" && $b2c != ""){
+			button -l $b2l -c $b2c -p $rowLayout ($name + "Button2");	
+		}
+		
+		
+		setParent..;
+	}
+
+}
+*/
+
+global proc wizCacheFileOptions( string $parent )
+{
+	string $columnLayout = "wizCacheFileOptionsColumnLayout";
+	if (`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Cache Files", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	//... content...
+
+	wizCheckBox(
+		"-l Export Selection "
+		+"-v 1 "	
+		+" -n wizCacheFile_exportSelection_checkBox"
+		);
+		
+	wizCheckBox(
+		"-l Only Export Visible Geometry "
+		+"-v 1 "	
+		+" -n wizCacheFile_exportVisGeo_checkBox"
+		);
+	
+	button
+		-l "Export"
+		-c ("wizExportCacheFile(\"\");")
+		;
+		
+}
+
+
+global proc wizExportSetOptions( string $parent )
+{
+	string $columnLayout = "wizExportSetOptionsColumnLayout";
+	if (`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Cache Files", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	//... content...
+
+	string $menuItemLabels[] = { "mb", "ma", "obj", "fbx", "all" };
+	string $omg = wizOptionMenuGrpMenuItems("Export File Type", "wizExportSets_exportType_optionMenuGrp", $menuItemLabels);
+
+	
+	wizCheckBox(
+		"-l Use Same Directory "
+		+"-v 1 "	
+		+" -n wizExportSets_useFileDir_checkBox"
+		);
+		
+	button
+		-l "Create Export Set"
+		-c ("wizExportSet(\"-ns -sl\");")
+		;	
+		
+	button
+		-l "Export All Sets"
+		-c ("wizExportSet(\"-ea\");")
+		;		
+		
+}
+
+
+global proc wizExportEachSelectionToFileOptions( string $parent )
+{
+	string $columnLayout = "wizExportEachSelectionAsFileOptionsColumnLayout";
+	if (`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Export Sel As Files", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	//... content...
+
+	string $menuItemLabels[] = { "mayaBinary", "mayaAscii", "obj", "fbx", "abc" };
+	string $omg = wizOptionMenuGrpMenuItems("Export File Type", "wizExportEachSelAsFile_exportType_optionMenuGrp", $menuItemLabels);
+
+	/*
+	wizCheckBox(
+		"-l Use Same Directory "
+		+"-v 1 "	
+		+" -n wizExportSets_useFileDir_checkBox"
+		);
+	*/	
+	string $exportEachSelCommand = ("string $type = `optionMenuGrp -q -v wizExportEachSelAsFile_exportType_optionMenuGrp`;"+"\n"
+	+"wizExportEachSelectionToFile(\"-sl -type \" + $type);");
+	
+	button
+		-l "Export"
+		-c $exportEachSelCommand
+		;		
+		
+}
+
+global proc wizCornerMaskTextureOptions( string $parent )
+{
+	string $columnLayout = "wizCornerMaskTextureOptionsColumnLayout";
+	if (`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Corner Mask Texture", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	//... content...
+
+	string $menuItemLabels[] = { "tif", "jpeg" };
+	string $omg = wizOptionMenuGrpMenuItems("Export File Type", "cornerMaskTexture_exportType_optionMenuGrp", $menuItemLabels);
+
+	wizFloatFieldGrp(
+		"-l Min Angle "
+		+"-nf 1 "
+		+"-v1 15 "
+		+"-n cornerMaskTexture_minAngle_floatFieldGrp"
+		);
+		
+	wizFloatFieldGrp(
+		"-l Max Angle "
+		+"-nf 1 "
+		+"-v1 360 "
+		+"-n cornerMaskTexture_maxAngle_floatFieldGrp"
+		);
+		
+	wizIntFieldGrp(
+		"-l Size X "
+		+"-nf 1 "
+		+"-v1 1024 "
+		+"-n cornerMaskTexture_sizeX_intFieldGrp"
+		);
+		
+	wizIntFieldGrp(
+		"-l Size Y "
+		+"-nf 1 "
+		+"-v1 1024 "
+		+"-n cornerMaskTexture_sizeY_intFieldGrp"
+		);
+		
+		/*
+	string $tfbg = wizTextFieldButtonGrp(
+		"-l File Name "
+		+"-bl Browse "
+		+"-ann File To Write Image Too "
+		+"-bc nf "
+		+"-n convertVertexColors_fileName_textFieldButtonGrp");
+	*/
+		
+	string $c = ("int $sizeX = `intFieldGrp -q -v1 cornerMaskTexture_sizeX_intFieldGrp`;"+"\n"
+		+"int $sizeY = `intFieldGrp -q -v1 cornerMaskTexture_sizeY_intFieldGrp`;"+"\n"
+		+"float $minAngle = `floatFieldGrp -q -v1 cornerMaskTexture_minAngle_floatFieldGrp`;"+"\n"
+		+"float $maxAngle = `floatFieldGrp -q -v1 cornerMaskTexture_maxAngle_floatFieldGrp`;"+"\n"
+		+"string $exportFileType = `optionMenuGrp -q -v cornerMaskTexture_exportType_optionMenuGrp`;"+"\n"
+		+"wizCreateCornerMaskTexture(\"-sl -x \" + $sizeX + \" -y \" + $sizeY + \" -eft \" + $exportFileType);"
+		);
+		
+
+		
+	button
+		-l "Create Corner Mask Texture"
+		-c $c
+		;	
+
+		
+}
+
+
+
+/*
+global proc wizParticleLineOptions( string $parent )
+{
+	string $columnLayout = "wizParticleLineOptionsColumnLayout";
+	if (`columnLayout -q -ex $columnLayout` == 1){
+		activateCurrentOptionsColumnLayout($columnLayout, "Particle Line", $parent);
+		return;	
+	}
+	$columnLayout = wizOptionsColumnLayout($columnLayout, $parent);
+	setParent $columnLayout;
+	//... content...
+
+	wizIntFieldGrp(
+		"-l Rate "
+		+"-nf 1 "
+		+"-v1 10000 "
+		+"-n wizParticleLine_rate_intFieldGrp"
+		);
+		
+
+		
+	string $c = ("int $emitRate = `intFieldGrp -q -v1 wizParticleLine_rate_intFieldGrp`;"+"\n"
+		+"wizParticleLine(\"-sl -wiz\");"
+		);
+		
+
+		
+	button
+		-l "Create Particle Lines"
+		-c $c
+		;	
+
+		
+}
+*/

@@ -1,0 +1,2072 @@
+global proc arrayWiz()
+{
+	
+}
+
+//@ PROC NAME
+//====================================================================
+/*****************************************************************//**
+	Returns the last index of a string array.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-fa string] [-fb linear] <br>
+	Just returns the last index as an int.
+	shorter way to write $arr[(`size $arr` - 1)] <br>
+	Also use lii : last int index  and lfi : last float index
+		
+	<b>Return value</b><br>
+	int the last index of array
+	
+	<b>Flags</b><br>
+	-fa, -fb
+	
+	<hr>
+	<b>Related</b><br>
+	lii(), lfi()
+	
+	<b>Examples</b><br>
+	<code>
+	
+	string $arr[] = { "beans", "rice", "cake", "pole" };
+	string $last = $arr[(lsi($arr))];
+		
+	</code>
+*********************************************************************/
+global proc int lsi( string $arr[] )
+{
+	int $lsi = (`size $arr` - 1);
+	return $lsi;
+}
+
+global proc int lii( int $arr[] )
+{
+	int $lii = (`size $arr` - 1);
+	return $lii;
+}
+
+global proc int lfi( float $arr[] )
+{
+	int $lfi = (`size $arr` - 1);
+	return $lfi;
+}
+
+//COPY ARRAY
+//==============================================================================
+//COPY STRING ARRAY
+//----------------------------
+global proc string[] wizCopyStringArray(string $arr[])
+{
+	string $arrCopy[];
+	appendStringArray($arrCopy, $arr, `size $arr`);
+	return $arrCopy;
+}
+
+//COPY INT ARRAY
+//----------------------------
+global proc int[] copyIntArray(int $arr[])
+{
+	int $newArr[];	
+	for($i=0;$i<`size $arr`;$i++){	
+		$newArr[$i] = $arr[$i];
+	}
+	return $newArr;
+}
+
+//COPY FLOAT ARRAY
+//----------------------------
+global proc float[] copyFloatArray(float $arr[])
+{
+	float $newArr[];	
+	for($i=0;$i<`size $arr`;$i++){	
+		$newArr[$i] = $arr[$i];
+	}
+	return $newArr;
+}
+
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         FLAGS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//@ WIZ FLAG ARRAY
+//====================================================================
+/*****************************************************************//**
+	Use this to pull an array from a flag string.
+	<hr>
+	<b>Synopsis</b><br>
+	wizFlagArray [string $arr[]] [int $start] <br>
+	When pulling flags from a string, use this function to get an 
+	string array that follows the flag. Pass the index of the 
+	current flag.
+	
+	<b>Return value</b><br>
+	string[] all strings between flags.
+	
+	<b>Flags</b><br>
+	
+	<hr>
+	<b>Related</b><br>
+	wizFlagString(), wizFlagObjTrail()
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	string $flags = "-fla aString -flb a flag with some text with spaces -flc someOtherFlag";
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-flb" : case "-flagB" :
+			string $arr[] = wizFlagArray($tok, $i);
+			print ("A String Array : \n" + stringArrayToString($arr, "\n") + "\n");
+			break;
+			
+		}
+	}
+	
+	</code>
+*********************************************************************/
+global proc string[] wizFlagArray( string $arr[], int $start )
+{
+	// just make sure that the start index isn't a flag
+	if (startsWith($arr[$start], "-")){
+		$start++;
+	}
+	string $return[] = getStringArrayFromCurrentIndexToNextTagIndex($arr, $start);
+	return $return;
+}
+
+//@ WIZ FLAG STRING
+//====================================================================
+/*****************************************************************//**
+	Use this to pull an string that may contain spaces from a flag string.
+	<hr>
+	<b>Synopsis</b><br>
+	wizFlagString [string $arr[]] [int $start] <br>
+	When pulling flags from a string, use this function to get an 
+	string that may contain spaces following the flag. Pass the index of the 
+	current flag.
+	
+	<b>Return value</b><br>
+	string[] all strings between flags.
+	
+	<b>Flags</b><br>
+	
+	<hr>
+	<b>Related</b><br>
+	wizFlagArray(), wizFlagObjTrail()
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	string $flags = "-fla aString -flb a flag with some text with spaces -flc someOtherFlag";
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-flb" : case "-flagB" :
+			string $aString = wizFlagString($tok, $i);
+			print ("A String : " + $aString + "\n");
+			break;
+			
+		}
+	}
+	
+	</code>
+*********************************************************************/
+global proc string wizFlagString( string $arr[], int $start )
+{
+	// just make sure that the start index isn't a flag
+	if (startsWith($arr[$start], "-")){
+		$start++;
+	}
+	string $return = getStringFromCurrentIndexToNextTagIndex($arr, $start);
+	return $return;
+}
+
+
+//@ WIZ FLAG OBJ TRAIL
+//====================================================================
+/*****************************************************************//**
+	Will take a flag string and return all the objects that are listed after the 
+	last tag.
+	<hr>
+	<b>Synopsis</b><br>
+	wizFlagObjTrail [string $flags]<br>
+	This also verifies that the objects actually exsist before returning them.
+	
+	<b>Return value</b><br>
+	string[] all objects that exist that follow the last tag of a flag array.
+	
+	<b>Flags</b><br>
+	
+	<hr>
+	<b>Related</b><br>
+	wizFlagArray(), wizFlagString()
+	
+	<b>Examples</b><br>
+	<code>
+	string $sel[] = wizFlagObjTrail("-fa aString -fb anotherString pSphere1 pSphere2");
+	
+	</code>
+*********************************************************************/
+global proc string[] wizFlagObjTrail( string $flags )
+{
+	string $dashTok[] = tokenizeString($flags, "-");
+	//wizlog ((niceArrayList("		[#] Dash Tok : ", $dashTok)));
+	
+	string $objTok[] = tokenizeString($dashTok[(`size $dashTok` - 1)], " ");		
+	stringArrayRemoveAtIndex(0, $objTok);
+	//wizlog ((niceArrayList("	[#] Obj Tok : ", $objTok)));
+	
+	string $return[];
+	for ($i=0;$i<`size $objTok`;$i++){
+		if (`objExists $objTok[$i]`){
+			$return[`size $return`] = $objTok[$i];
+		}		
+	}
+	
+	
+	return $return;
+	
+}
+
+//@ WIZ FLAG STRING TRAIL
+//====================================================================
+/*****************************************************************//**
+	Will take a flag string and return a string of the words that are listed after the 
+	last tag.
+	<hr>
+	<b>Synopsis</b><br>
+	wizFlagObjTrail [string $flags]<br>
+	
+	<b>Return value</b><br>
+	string all 
+	
+	<b>Flags</b><br>
+	
+	<hr>
+	<b>Related</b><br>
+	wizFlagArray(), wizFlagString()
+	
+	<b>Examples</b><br>
+	<code>
+	string $label = wizFlagStringTrail("-a -b -cd aNameOrSomething -flag anotherString -c This Is The Text We Want!");
+	
+	</code>
+*********************************************************************/
+global proc string wizFlagStringTrail( string $flags )
+{
+	string $dashTok[] = tokenizeString($flags, "-");
+	//wizlog ((niceArrayList("		[#] Dash Tok : ", $dashTok)));
+	
+	string $objTok[] = tokenizeString($dashTok[(`size $dashTok` - 1)], " ");		
+	stringArrayRemoveAtIndex(0, $objTok);
+	//wizlog ((niceArrayList("	[#] Obj Tok : ", $objTok)));
+	string $return = stringArrayToString($objTok, " ");
+	
+	return $return;
+	
+}
+
+
+//COPY STRING ARRAY FROM - TO
+//-----------------------------------
+global proc string[] copyStringArrayFromIndexToIndexToStringArray(string $arr[], int $start, int $end)
+{
+	string $newArr[];
+	for($i=$start;$i<$end;$i++){
+		$newArr[`size $newArr`] = $arr[$i];
+	}	
+	return $newArr;
+}
+
+//APPEND STRING ARRAY FROM - TO
+//-----------------------------------
+global proc string[] appendStringArrayFromIndexToIndexToStringArray(string $arr[], string $appendTo[], int $start, int $end)
+{
+	for($i=$start;$i<$end;$i++){
+		$appendTo[`size $appendTo`] = $arr[$i];
+	}	
+	return $appendTo;
+}
+
+
+global proc string[] getStringArrayFromCurrentIndexToNextTagIndex( string $arr[], int $start)
+{
+	string $return[];	
+	int $nextTagIndex = getNextTagIndex($arr, $start);
+	if ($nextTagIndex > ($start + 1)){			
+		$return = copyStringArrayFromIndexToIndexToStringArray($arr, ($start), $nextTagIndex);
+	} else {
+		$return[`size $return`] = $arr[$start];
+	}
+	return $return;
+}
+
+global proc string getStringFromCurrentIndexToNextTagIndex( string $arr[], int $start)
+{
+	string $return[];	
+	int $nextTagIndex = getNextTagIndex($arr, $start);
+	if ($nextTagIndex > ($start + 1)){			
+		$return = copyStringArrayFromIndexToIndexToStringArray($arr, ($start), $nextTagIndex);
+	} else {
+		$return[`size $return`] = $arr[$start];
+	}
+	string $returnString = stringArrayToString($return, " ");
+	return $returnString;
+}
+
+/*
+//COPY STRING ARRAY FROM - TO
+//-----------------------------------
+global proc string[] getStringArrayFromIndexToIndex( string $arr[], int $start, int $end)
+{
+	string $newArr[];
+	for($i=$start;$i<$end;$i++){
+		
+		$newArr[`size $newArr`] = $arr[$i];
+	}	
+	return $newArr;
+}
+*/
+
+//APPEND FROM - TO
+//==============================================
+global proc string[] appendStringArrayFromCurrentIndexToNextTagIndex(string $arr[], string $appendTo[], int $start)
+{
+	int $nextTagIndex = getNextTagIndex($arr, $start);
+	if($nextTagIndex > ($start + 1)){			
+		$appendTo = appendStringArrayFromIndexToIndexToStringArray($arr, $appendTo, $start, $nextTagIndex);
+	} else {
+		$appendTo[`size $appendTo`] = $arr[$start];
+	}
+	return $appendTo;
+}
+
+
+//@ PROC NAME
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = prefixStringArrayWithFloatArray({"Peach", "Pear", "Apple"}, {1.01, 20.56, 45.92});
+	
+	</code>
+*********************************************************************/
+global proc string[] prefixStringArrayWithFloatArray( string $arr[], float $float[] )
+{
+	string $combine[];
+	for ($i=0;$i<`size $arr`;$i++){
+		$combine[$i] = $float[$i] + " " + $arr[$i];
+		//wizlog ("[Float] " + $float[$i] + "	[String] " + $arr[$i]);
+	}
+	return $combine;
+
+}
+
+//PREFIX ARRAY
+//===========================
+global proc string[] prefixObjectWithFloatArray( string $obj[], float $float[])
+{
+	string $combine[];
+	for ($i=0;$i<`size $obj`;$i++){
+		$combine[$i] = $float[$i] + " " + $obj[$i];
+	}
+	return $combine;
+}
+
+//APPEND ARRAY
+//==============================================================================
+//APPEND FLOAT ARRAY
+//----------------------------
+global proc float[] appendFloatArray( float $arr[], float $append[], int $size)
+{
+	for ($i=0;$i<$size;$i++){	
+		$arr[`size $arr`] = $append[$i];
+	}
+	return $arr;
+}
+
+//APPEND INT ARRAY
+//----------------------------
+global proc int[] appendIntArray( int $arr[], int $append[], int $size)
+{
+	for ($i=0;$i<$size;$i++){	
+		$arr[`size $arr`] = $append[$i];
+	}
+	return $arr;
+}
+
+//REMOVE
+//==============================================================================
+global proc string[] stringArrayRemoveEmptyIndices(string $arr[])
+{
+	string $arrCopy[];
+	for($i=0;$i<`size $arr`;$i++){	
+		string $noSpaces = substituteAllString($arr[$i], " ", "");
+		if($arr[$i] == ""){ continue;}
+		$arrCopy[`size $arrCopy`] = $arr[$i];
+	}
+	return $arrCopy;
+}
+
+global proc string[] stringArrayRemoveAtIndices(int $index[], string $arr[])
+{
+	for($i=0;$i<`size $index`;$i++){	
+		stringArrayRemoveAtIndex($index[$i],$arr);
+		$index = addToAllIntArray($index, -1);
+	}
+	return $arr;
+}
+
+//COMBINE
+//=============================================================================
+//COMBINE STRING ARRAYS
+//------------------------------------
+global proc string[] combineStringArrays( string $arrA[],string $sep, string $arrB[])
+{
+	string $combined[];
+	for($a=0;$a<`size $arrA`;$a++){
+		for($b=0;$b<`size $arrB`;$b++){
+			$combined[`size $combined`] = $arrA[$a] + $sep + $arrB[$b];	
+		}		
+	}	
+	return $combined;
+}
+
+//CONVERT ARRAY TYPE
+//==============================================================================
+//STRING TO...
+//=========================================
+//STRING ARRAY TO FLOAT ARRAY
+//---------------------------------
+global proc float[] stringArrayToFloatArray( string $stringArr[])
+{
+	float $floatArr[];
+	for ($i=0;$i<`size $stringArr`;$i++){
+		$floatArr[$i] = float($stringArr[$i]);
+	}
+	return $floatArr;
+}
+
+//STRING ARRAY TO INT ARRAY
+//---------------------------------
+global proc int[] stringArrayToIntArray( string $stringArr[] )
+{
+	//print("stringArrayToIntArray: We need to tokenize and find numbers to actually use this function \n");
+	 
+	int $intArr[];
+	for ($i=0;$i<`size $stringArr`;$i++){
+		//string $num = `match "[0-9].*" $stringArr[$i]`;
+		catchQuiet($intArr[$i] = int($stringArr[$i]));	
+	}
+	return $intArr;
+
+}
+
+global proc int[] convertStringArrayToIntArray( string $array[] )
+{
+	int $int[] = stringArrayToIntArray($array);
+	return $int;
+}
+
+//...TO STRING
+//=========================================
+//INT ARRAY TO STRING ARRAY
+//---------------------------------
+global proc string[] intArrayToStringArray(int $intArr[])
+{
+	string $stringArr[];
+	for ($i=0;$i<`size $intArr`;$i++){
+		$stringArr[$i] = string($intArr[$i]);
+	}
+	return $stringArr;
+}
+
+//FLOAT ARRAY TO STRING ARRAY
+//---------------------------------
+global proc string[] floatArrayToStringArray(float $arr[])
+{
+	string $stringArr[];
+	for ($i=0;$i<`size $arr`;$i++){
+		$stringArr[$i] = string($arr[$i]);
+	}
+	return $stringArr;
+}
+
+//INT/FLOAT
+//=========================================
+//FLOAT ARRAY TO INT ARRAY
+//---------------------------------
+global proc int[] floatArrayToIntArray(float $floatArr[])
+{
+	int $intArr[];
+	for ($i=0;$i<`size $floatArr`;$i++){
+		$intArr[$i] = int($floatArr[$i]);
+	}
+	return $intArr;
+}
+
+//INT ARRAY TO FLOAT ARRAY
+//---------------------------------
+global proc float[] intArrayToFloatArray(int $intArr[])
+{
+	float $floatArr[];
+	for ($i=0;$i<`size $intArr`;$i++){
+		$floatArr[$i] = float($intArr[$i]);
+	}
+	return $floatArr;
+}
+
+//STRING TO INT ARRAY
+//---------------------------------
+global proc int[] stringToIntArray( string $string )
+{
+	string $tok[] = tokenizeString($string, " ");
+	int $return[];
+	for ($i=0;$i<`size $tok`;$i++){
+		$return[`size $return`] = int($tok[$i]);	
+	}
+	return $return;
+}
+
+//STRING TO FLOAT ARRAY
+//---------------------------------
+global proc float[] stringToFloatArray( string $string )
+{
+	string $tok[] = tokenizeString($string, " ");
+	float $return[];
+	for ($i=0;$i<`size $tok`;$i++){
+		$return[`size $return`] = float($tok[$i]);	
+	}
+	return $return;
+}
+
+//TOKENIZE ARRAY
+//==============================================================================
+//GET STRING ARRAY AFTER SPACE
+//---------------------------------
+global proc string[] getStringArrayAfterSpace(string $arr[])
+{
+	string $string[];
+	for ($i=0;$i<`size $arr`;$i++){
+		string $buffer[];
+		int $numTok = `tokenize $arr[$i] " " $buffer`;
+		stringArrayRemoveAtIndex(0, $buffer);
+		$string[$i] = stringArrayToString($buffer," ");//"
+	}
+	return $string;	
+}
+
+//GET FLOAT PREFIX FROM STRING ARRAY
+//---------------------------------
+global proc float[] getFloatPrefixFromStringArray(string $string[])
+{
+	float $float[];
+	for ($i=0;$i<`size $string`;$i++){
+		string $buffer[];
+		int $numTok = `tokenize $string[$i] " " $buffer`;
+		$float[$i] = float($buffer[0]);
+	}
+	return $float;	
+}
+
+//3D ARRAYS
+//==============================================================================
+//GET COLUMN OF ARRAY
+//------------------------------
+global proc string[] getColumnOfArray( string $arr[], int $col, int $totCol)
+{
+	string $colArr[] = getColumnOfStringArray($arr, $col, $totCol);
+	return $colArr;
+}
+
+//GET COLUMN OF STRING ARRAY
+//------------------------------
+global proc string[] getColumnOfStringArray( string $arr[], int $col, int $totCol )
+{
+	//1 index columns
+	string $colArr[];
+	int $colCount = 1;
+	for ($i=0;$i<`size $arr`;$i++){
+		if ($colCount == $col){
+			$colArr[`size $colArr`] = $arr[$i];
+		}
+		if ($colCount == $totCol){
+			$colCount = 1;
+		} else {
+			$colCount++;	
+		}
+	}
+	return $colArr;
+}
+
+//GET COLUMNS OF STRING ARRAY
+//------------------------------------
+//Try to get this working so you can enter in columns out of order like 0,8,2,3
+/*
+global proc string[] getColumnsOfStringArray(string $arr[], int $col[], int $totCol)
+{
+	string $dbl = "-dmi GetColumnsOfStringArrayDebugMenuItem -t Get Columns Of String Array"; string $dbm = "add"; int $dbc = 1;
+	debugListArray($dbl, " - Columns: ", intArrayToStringArray($col), $dbc, $dbm, "", 0);
+	debugListString($dbl, (" - Total Columns: " + $totCol), $dbc, $dbm);
+	debugListArray($dbl, " - Array: ", $arr, $dbc, $dbm, "", 100);
+	
+	int $rowCount = int(`size $arr` / $totCol);
+	$rowCount += 1;
+	debugListString($dbl, (" - Row Count: " + $rowCount), $dbc, $dbm);
+	
+	int $ci = 1;	
+	int $row = 1;
+	int $rowAdd = 1;
+	
+	string $return[];
+	debugList($dbl, {(tslDiv("[GETTING COLUMNS]"))}, $dbc, $dbm);
+	
+	int $totArr = (`size $arr`) - ((`size $col`) * $rowCount);
+	
+	for($i=1;$i<$totArr;$i++){		
+		debugList($dbl, {(tslDiv("[" + $ci + "][" + $row + "]"))}, $dbc, $dbm);	
+		
+		int $ri = $col[($i - $rowAdd)];
+		
+		$return[`size $return`] = $arr[$ri];
+		
+		debugListString($dbl, (" - Adding: " + $arr[($i - 1)]), $dbc, $dbm);
+		debugList($dbl, {(tslDiv("[NEXT]"))}, $dbc, $dbm);
+			
+		if($ci == $totCol){
+			$ci = 1;
+			$row++;
+			$rowAdd = $rowAdd + $totCol;
+		} else {
+			$ci++;	
+		}
+	}
+	
+	debugListArray($dbl, " - Columns Of String Array: ", $return, $dbc, $dbm, "[END]", 0);
+	return $return;
+}
+*/
+
+//This one doesn't quite work right
+/*
+global proc string[] getColumnsOfStringArray(string $arr[], int $col[], int $totCol)
+{
+	string $dbl = "-dmi GetColumnsOfStringArrayDebugMenuItem -t Get Columns Of String Array"; string $dbm = "add"; int $dbc = 1;
+	debugListArray($dbl, " - Columns: ", intArrayToStringArray($col), $dbc, $dbm, "", 0);
+	debugListString($dbl, (" - Total Columns: " + $totCol), $dbc, $dbm);
+	debugListArray($dbl, " - Array: ", $arr, $dbc, $dbm, "", 100);
+	
+	int $rowEnd = int(`size $arr` / $totCol);
+	$rowEnd += 1;
+	debugListString($dbl, (" - Row End: " + $rowEnd), $dbc, $dbm);
+	
+	int $ci = 1;	
+	int $row = 1;
+	int $rowAdd = 1;
+	
+	string $return[];
+	debugList($dbl, {(tslDiv("[GETTING COLUMNS]"))}, $dbc, $dbm);
+	
+	for($i=1;$i<`size $arr`;$i++){		
+		debugList($dbl, {(tslDiv("[" + $ci + "][" + $row + "]"))}, $dbc, $dbm);	
+		
+		int $curColIndex = ($rowAdd + $ci) - 1;
+		
+		debugListString($dbl, (" - Column Index: " + $curColIndex + " - Index: " + $i), $dbc, $dbm);
+		
+		if(intArrayContains(($ci - 1), $col) == 1 && $curColIndex == $i){			
+			debugListString($dbl, (" - Adding: " + $arr[($i - 1)]), $dbc, $dbm);
+			debugList($dbl, {(tslDiv("[NEXT]"))}, $dbc, $dbm);
+			$return[`size $return`] = $arr[($i - 1)];
+		}
+		
+				
+		if($ci == $totCol){
+			$ci = 1;
+			$row++;
+			$rowAdd = $rowAdd + $totCol;
+		} else {
+			$ci++;	
+		}	
+	}
+	
+	debugListArray($dbl, " - Columns Of String Array: ", $return, $dbc, $dbm, "[END]", 0);
+	return $return;
+}
+*/
+
+//This one works!
+global proc string[] getColumnsOfStringArray(string $arr[], int $col[], int $totCol)
+{
+	string $dbl = "-dmi GetColumnsOfStringArrayDebugMenuItem -t Get Columns Of String Array"; string $dbm = "add"; int $dbc = 1;
+	//debugListArray($dbl, " - Columns: ", intArrayToStringArray($col), $dbc, $dbm, "", 0);
+	//debugListString($dbl, (" - Total Columns: " + $totCol), $dbc, $dbm);
+	//debugListArray($dbl, " - Array: ", $arr, $dbc, $dbm, "", 100);
+	//wizlog (" [#] Get Columns : " + (intArrayToStringArray($col)) + " Total Columns : " + $totCol);
+	
+	int $totalReturnItems = int(ceil((`size $arr` / $totCol) * `size $col`));
+	int $rowEnd = int(ceil(`size $arr` / $totCol));
+	//$rowEnd += 1;
+	debugListString($dbl, (" - Row End: " + $rowEnd), $dbc, $dbm);
+	
+	int $ci = 1;	
+	int $row = 1;
+	int $rowAdd = 1;
+	
+	string $return[];
+	//debugList($dbl, {(tslDiv("[GETTING COLUMNS]"))}, $dbc, $dbm);
+	
+	int $getCol[];
+	int $xcol = 0;
+	int $c = 0;
+	for ($i=0;$i<$totalReturnItems;$i++){
+		if ($c == `size $col`){
+			$c = 0;	
+			$xcol = $xcol + $totCol;
+		}
+		$getCol[`size $getCol`] = $col[$c] + $xcol;		
+		
+		$c++;
+	}
+	string $getColString[] = intArrayToStringArray($getCol);
+	debugListArray($dbl, " - Get Array Indices: ", $getColString, $dbc, $dbm, "", 100);
+	
+	for($i=0;$i<`size $getCol`;$i++){	
+		$return[`size $return`] = $arr[$getCol[$i]];
+	}
+	
+	debugListArray($dbl, " - Columns Of String Array: ", $return, $dbc, $dbm, "[END]", 0);
+	return $return;
+}
+
+//GET COLUMN OF FLOAT ARRAY
+//------------------------------
+global proc float[] getColumnOfFloatArray( float $arr[], int $col, int $totCol )
+{
+	//1 index columns
+	float $colArr[];
+	int $colCount = 1;
+	for ($i=0;$i<`size $arr`;$i++){
+		if ($colCount == $col){
+			$colArr[`size $colArr`] = $arr[$i];
+		}
+		if ($colCount == $totCol){
+			$colCount = 1;
+		} else {
+			$colCount++;	
+		}
+	}
+	return $colArr;
+}
+
+//ADD COLUMN
+//------------------------------
+global proc string[] addColumnToArray(string $arr[], string $add[], int $col, int $totCol)
+{
+	//1 index columns
+	string $colArr[];
+	int $colCount = 1;
+	int $ai;
+	for($i=0;$i<(`size $arr` + 1);$i++){
+		if($colCount == $col){
+			stringArrayInsertAtIndex($i, $arr, $add[$ai]);
+			$ai++;
+		}
+		if($colCount == $totCol){
+			$colCount = 1;
+		} else {
+			$colCount++;	
+		}	
+	}
+	return $arr;
+}
+
+//CREATE INDEX SELECTION STRING ARRAY
+//----------------------------------------
+global proc string[] createIndexSelectionStringArray(string $prefix, string $index[])
+{
+	string $arr[];
+	string $brOpen = "[";
+	string $brClose = "]";
+	/*
+	if(endsWith($prefix,"[") == 1){
+		$brOpen = "";	
+	}
+	*/
+	for($i=0;$i<(`size $index` - 1);$i++){
+		if($index[$i] == ""){ break;}	
+		$arr[$i] = $prefix + $brOpen + $index[$i] + $brClose;
+	}	
+	return $arr;
+}
+
+//GET LAST ARRAY INDEX
+//------------------------------
+global proc int getLastArrayIndex(string $arr[])
+{
+	int $last = (`size $arr` - 1);
+	return $last;
+}
+
+//INSERT STRING INTO STRING ARRAY CATAGORY
+//-----------------------------------------------
+global proc string[] insertStringIntoStringArrayCatagory(string $arr[], string $string, string $catagory)
+{
+	int $catIndex = stringArrayFind($catagory, 0, $arr);
+	stringArrayInsertAtIndex(($catIndex + 1), $arr, $string);
+	return $arr;	
+}
+
+//COMPARE ARRAY
+//------------------------------
+global proc int stringArrayContainsSame(string $arr1[], string $arr2[])
+{
+	string $intersect = `stringArrayIntersector`;
+	stringArrayIntersector -e -i $arr1 $intersect;
+	stringArrayIntersector -e -i $arr2 $intersect;
+	string $same[] = `stringArrayIntersector -q $intersect`;
+	if(`size $same` == `size $arr1`){
+		return 1;	
+	} else {
+		return 0;
+	}
+}
+
+//SHUFFLE ARRAY
+//===============================================================================
+//SHUFFLE PART STRING ARRAY
+//----------------------------------------------
+global proc string[] shufflePartStringArray(string $arr[], int $start, int $end)
+{
+	string $dbl = "-dmi ShufflePartStringArrayDebugMenuItem -t Shuffle Part String Array"; string $dbm = "add"; int $dbc = 1;
+	debugListArray($dbl, " - Array: ", $arr, $dbc, $dbm, "", 0);
+	debugListString($dbl, (" - Start Shuffle: " + $start), $dbc, $dbm);
+	debugListString($dbl, (" - End Shuffle: " + $end), $dbc, $dbm);
+	
+	string $shuffledArr[] = $arr;
+	int $ranIndice[] = randomIndices($start, $end);
+	debugListArray($dbl, " - Random Indices: ", intArrayToStringArray($ranIndice), $dbc, $dbm, "", 0);
+	//debugList($dbl, {(tslDiv("[SHUFFLE]"))}, $dbc, $dbm);
+	
+	int $ri;
+	for($i=$start;$i<$end;$i++){
+		$shuffledArr[$i] = $arr[($ranIndice[$ri])];
+		debugListString($dbl, ("[" + $i + "] " + $shuffledArr[$i] + " : OLD INDEX [" + ($ranIndice[$ri]) + "]"), $dbc, $dbm);
+		$ri++;
+	}
+	//debugList($dbl, {(tslDiv("[END SHUFFLE]"))}, $dbc, $dbm);
+	return $shuffledArr;
+}
+
+//SHUFFLE STRING ARRAY
+//----------------------------------------------
+global proc string[] shuffleStringArray(string $arr[])
+{
+	string $shuffledArr[] = $arr;
+	int $ri[] = randomIndices(0, `size $arr`);
+	for($i=0;$i<`size $shuffledArr`;$i++){
+		$shuffledArr[$i] = $shuffledArr[($ri[$i])];
+	}
+	return $shuffledArr;
+}
+
+//RANDOM INDICES
+//----------------------------------------------
+global proc int[] randomIndices(int $start, int $end)
+{
+	int $indices[];
+	float $ran[];
+	string $sort[];
+	for($i=0;$i<($end - $start);$i++){
+		$ran[$i] = rand($start, $end);
+		$sort[$i] = $ran[$i] + " " + ($i + $start);
+		
+	}
+	$sort = sort($sort);
+	string $ranIndicesString[] = getStringArrayAfterSpace($sort);
+	int $randomIndices[] = stringArrayToIntArray($ranIndicesString);
+	return $randomIndices;	
+}
+
+//@ WIZ INDICE SEQUENCE
+//====================================================================
+/*****************************************************************//**
+	Creates a sequence of indices with different parameters.
+	<hr>
+	<b>Synopsis</b><br>
+	wizIndiceSequence [-count int] [-fb linear] <br>
+	Use the indiceArray flag to specify an array of indices.
+	If no indiceArray is provided the indices will be (0 : -arraySize) <br>
+	
+	Valid Types Of Sequences: <br>
+	sequence <br>
+	random <br>
+	sequenceTail <br>
+	headSequenceTail <br>
+	headRandom <br>
+	randomTail <br>
+	headRandomTail <br>
+	
+	<b>Return value</b><br>
+	int[] an array of indices
+	
+	<b>Flags</b><br>
+	-count(-c) <br>
+	-arraySize(-as) <br>
+	-indiceArray(-ia) <br>
+	-sequenceType(-st) <br>
+	
+	<hr>
+	<b>Related</b><br>
+	randomIndices()
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = wizIndiceSequence("-c 20 -as 5 -st sequence");
+	string $arr[] = wizIndiceSequence("-c 20 -as 5 -st random");
+	string $arr[] = wizIndiceSequence("-c 20 -as 5 -st headSequence");
+	string $arr[] = wizIndiceSequence("-c 20 -as 5 -st headSequenceTail");
+	string $arr[] = wizIndiceSequence("-c 20 -as 5 -st headRandom");
+	string $arr[] = wizIndiceSequence("-c 20 -as 5 -st randomTail");
+	string $arr[] = wizIndiceSequence("-c 20 -as 5 -st headRandomTail");
+	
+	</code>
+*********************************************************************/
+global proc int[] wizIndiceSequence( string $flags )
+{
+	wizlog ("[@] wizIndiceSequence");
+	int $return[];
+	string $seqType;
+	int $indArr[];
+	int $count;
+	int $arrSize;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-c" : case "-count" :
+			$count = int($tok[($i + 1)]);
+			break ;
+			
+			case "-as" : case "-arraySize" :
+			$arrSize = int($tok[($i + 1)]);
+			break ;
+				
+			case "-ia" : case "-indiceArray" :
+			string $iaString[] = wizFlagArray($tok, $i);
+			$indArr = stringArrayToIntArray($iaString);
+			$arrSize = `size $indArr`;
+			break ;
+			
+			case "-st" : case "-sequenceType" :
+			$seqType = $tok[($i + 1)];
+			break;			
+			
+		}
+	}
+	wizlog ("	[#] Array Size : " + $arrSize + " Count : " + $count + " Sequence Type : " + $seqType);
+	
+	
+	if (`size $indArr` == 0){
+		for ($i=0;$i<$arrSize;$i++){
+			$indArr[$i] = $i;	
+		}		
+	}
+	
+	if ($seqType == "sequence"){
+		int $a = 0;
+		for ($i=0;$i<$count;$i++){	
+			$return[`size $return`] = $indArr[$a];	
+			if ($a == ($arrSize - 1)){
+				$a = 0;
+			} else {
+				$a++;
+			}
+		}	
+	}
+	
+	if ($seqType == "random"){
+		for ($i=0;$i<$count;$i++){	
+			$return[`size $return`] = randInt($indArr[0], $indArr[(`size $indArr` - 1)]);
+		}
+	}
+	
+	if ($seqType == "headSequence"){
+		$return[0] = $indArr[0];
+		int $a = 1;
+		for ($i=1;$i<$count;$i++){	
+			$return[`size $return`] = $indArr[$a];	
+			if ($a == ($arrSize - 1)){
+				$a = 1;
+			} else {
+				$a++;
+			}
+		}
+	}
+	
+	if ($seqType == "sequenceTail"){
+		int $a = 0;
+		for ($i=0;$i<($count - 1);$i++){	
+			$return[`size $return`] = $indArr[$a];	
+			if ($a == ($arrSize - 2)){
+				$a = 0;
+			} else {
+				$a++;
+			}
+		}
+		$return[`size $return`] = $indArr[(`size $indArr` - 1)];
+	}
+	
+	if ($seqType == "headSequenceTail"){
+		$return[0] = $indArr[0];
+		int $a = 1;
+		for ($i=1;$i<($count - 1);$i++){	
+			$return[`size $return`] = $indArr[$a];	
+			if ($a == ($arrSize - 2)){
+				$a = 1;
+			} else {
+				$a++;
+			}
+		}
+		$return[`size $return`] = $indArr[(`size $indArr` - 1)];
+	}
+	
+	if ($seqType == "headRandom"){
+		$return[0] = $indArr[0];
+		int $a = 1;
+		for ($i=1;$i<$count;$i++){	
+			$return[`size $return`] = randInt($indArr[1], $indArr[($arrSize - 1)]);			
+		}
+	}
+	
+	if ($seqType == "randomTail"){
+		int $a = 1;
+		for ($i=0;$i<($count - 1);$i++){	
+			$return[`size $return`] = rand($indArr[0], $indArr[($arrSize - 2)]);			
+		}
+		$return[`size $return`] = $indArr[(`size $indArr` - 1)];
+	}
+	
+	if ($seqType == "headRandomTail"){
+		$return[0] = $indArr[0];
+		for ($i=1;$i<($count - 2);$i++){	
+			$return[`size $return`] = randInt($indArr[1], $indArr[($arrSize - 2)]);			
+		}
+		$return[`size $return`] = $indArr[(`size $indArr` - 1)];
+	}
+	printNiceIntArrayList("	[+] Indice Seq : ", $return);
+	
+	return $return;
+
+}
+
+//SEPARATED ARRAYS
+//==============================================================================
+//DIVIDE SEPARATED ARRAY BY
+//------------------------------
+global proc string[] divideSeparatedStringArrayBy(string $arr[], int $by, string $sep, string $method)
+{
+	//Valid methods: "divide", "dividePercent"	
+	int $debug = `menuItem -q -cb DivideSeparatedStringArrayByDebugMenuItem`;
+	string $dbl = "Divide Separated String By";
+	string $dbm = "add";
+	int $dbc = 1;
+	
+	int $nextIndex = getNextSeparatorIndex($arr, 1);
+	int $divIndex[];
+	int $div;
+	if($method == "divide"){
+		$div = $nextIndex / $by;
+	} else if($method == "dividePercent"){
+		$div = $nextIndex * ($by * 0.01);
+	}
+	int $groupCount = 1;
+	int $sizeGroup = $nextIndex;
+	
+	//<DEBUG>
+	if($debug){
+		debugList($dbl,{ (" - Group: " + $groupCount) }, $dbc, $dbm);
+		debugList($dbl,{ (" - Size Group: " + $sizeGroup) }, $dbc, $dbm);
+		debugList($dbl,{ (" - Next Division Index: " + $div) }, $dbc, $dbm);
+		debugList($dbl,{ ("------------------------------") }, $dbc, $dbm);
+	}
+	//<DEBUG>
+	
+	for($i=0;$i<`size $arr`;$i++){	
+		if($arr[$i] == "|"){
+			$groupCount++;
+			$nextIndex = getNextSeparatorIndex($arr, ($i + 1));
+			$sizeGroup = $nextIndex - ($i + 1);	
+			if($method == "divide"){
+				$div = ($sizeGroup / $by) + ($i + 1);
+			} else if($method == "dividePercent"){
+				$div = ($nextIndex * ($by * 0.01)) + ($i + 1);
+			}
+			//<DEBUG>
+			if($debug){
+				debugList($dbl,{ (" - Group: " + $groupCount) }, $dbc, $dbm);
+				debugList($dbl,{ (" - Size Group: " + $sizeGroup) }, $dbc, $dbm);
+				debugList($dbl,{ (" - Next Division Index: " + $div) }, $dbc, $dbm);
+				debugList($dbl,{ ("------------------------------") }, $dbc, $dbm);
+			}
+			//<DEBUG>
+		} else {
+			if($i == $div){
+				$divIndex[`size $divIndex`] = $i;
+				$div = $div + $div;
+			}
+		}
+	}
+	
+	for($i=0;$i<`size $divIndex`;$i++){
+		stringArrayInsertAtIndex($divIndex[$i],$arr, $sep);
+		$divIndex = addToAllIntArray($divIndex, 1);
+	}
+	return $arr;
+}
+
+/*
+string $testArr[] = { "a", "b", "c", "d", "|", "e","f","g", "h","i","j","k","l","m","|","n","o","p","q","|"};
+divideSeparatedStringArrayBy($testArr, 2, "*");
+*/
+
+//GET NUMBER OF ROWS FROM COLUMN NAME
+//---------------------------------------
+global proc string[] getNumberOfRowsFromColumnName(string $arr[], string $col[], int $rows)
+{
+	string $return[];	
+	int $c = 0;	
+	for($i=0;$i<`size $arr`;$i++){
+		if($arr[$i] == $col[$c]){
+			for($r=$i;$r<$rows;$r++){
+				$return[`size $return`] = $arr[$r];	
+			}
+			$c++;
+		}
+	}
+	return $return;
+}
+
+
+//GET NEXT SEPARATOR INDEX
+//-----------------------------
+global proc int getNextSeparatorIndex(string $arr[], int $start)
+{
+	for($i=$start;$i<`size $arr`;$i++){	
+		if($arr[$i] == "|"){
+			return $i;	
+		}
+	}	
+	return `size $arr`;
+}
+
+//REMOVING SEPARATORS
+//===========================================
+global proc string[] removeSeparators(string $sel[])
+{
+	string $return[];
+	for($i=0;$i<`size $sel`;$i++){
+		if($sel[$i] == "|"){
+			continue;	
+		} else {
+			$return[`size $return`] = $sel[$i];	
+		}
+	}
+	return $return;
+}
+
+global proc string[] removeSeparatorsFromStringArray(string $arr[])
+{
+	string $sep[] = {"|"};
+	$arr = stringArrayRemove($sep,$arr);
+	return $arr;
+}
+
+
+//INIT ARRAYS
+//====================================================
+//CATAGORY ARRAY
+//------------------------------
+global proc string[] initCatagorySortedArray(string $catagory[])
+{
+	string $arr[];
+	for($i=0;$i<`size $catagory`;$i++){
+		$arr[`size $arr`] = $catagory[$i];
+	
+	}	
+	return $arr;
+}
+//2D
+//------------------------------
+global proc string[] init2DSortedArray(string $groupString, int $xi)
+{
+	string $arr[];
+	for($x=0;$x<$xi;$x++){
+		$arr[`size $arr`] = $groupString + "[" + $x + "]";
+	}	
+	return $arr;
+}
+
+//3D SORTED
+//------------------------------
+global proc string[] init3DSortedArray(string $xString, string $yString, int $xi, int $yi)
+{
+	string $arr[];
+	for($y=0;$y<$yi;$y++){
+		for($x=0;$x<$xi;$x++){
+			$arr[`size $arr`] = $xString + $yString + $x + $y;
+		}
+	}	
+	return $arr;
+}
+
+//TABLE
+//------------------------------
+global proc string[] initTableArray(string $xString, int $incX, string $yString, int $incY, int $incAll, int $xi, int $yi)
+{
+	string $arr[];
+	string $xLabel = $xString;
+	string $yLabel = $yString;
+	int $count = 0;
+	string $inc = "";
+	for($y=0;$y<$yi;$y++){
+		for($x=0;$x<$xi;$x++){
+			if($incX){
+				$xString = $xLabel + $x;
+			}
+			if($incY){
+				$yString = $yLabel + $y;
+			}
+			if($incAll){
+				$inc = $count;
+			}
+			$arr[`size $arr`] = $xString + $yString + $inc + "[" + $x + ":" + $y + "]";
+			$count++;
+		}
+	}	
+	return $arr;
+}
+
+//MERGE ARRAY
+//====================================
+global proc string[] mergeFloatArrayToString(float $arr1[], float $arr2[])
+{
+	string $merged[];
+	for($i=0;$i<`size $arr1`;$i++){
+		$merged[$i] = (string($arr1[$i]) + string($arr2[$i]));
+	}	
+	return $merged;
+}
+
+//ARRAY MATH
+//==============================================================================
+//ADD A TO B
+//---------------------------------
+global proc float[] addFloatColumnAToColumnB(float $float[])
+{
+	float $add[];
+	string $debug[];
+	for($i=0;$i<`size $float`;$i = $i + 2){
+		$add[`size $add`] = $float[$i] + $float[($i + 1)];
+		$debug[`size $debug`] = ("Add: " + $float[$i] + " + " + $float[($i + 1)] + " = " + $add[(`size $add` - 1)]);
+	
+	}
+	string $debugList[] = sortStringArrayByFloatArray($debug, $add);
+	debugList("Add A To B", $debugList,1,"replace");
+	return $add;
+}
+
+//ADD TO INT ARRAY
+//---------------------------
+global proc int[] addToAllIntArray(int $arr[], int $add)
+{
+	for($i=0;$i<`size $arr`;$i++){
+		$arr[$i] = $arr[$i] + $add;
+	}
+	return $arr;
+}
+
+//ADD ALL IN ARRAY
+//---------------------------------
+global proc float addAllInArray(float $arr[])
+{
+	float $add;
+	for($i=0;$i<`size $arr`;$i++){
+		$add = $add + $arr[$i];
+	}
+	return $add;
+}
+
+//ADD TO ALL FLOAT ARRAY
+//---------------------------------
+global proc float[] addToAllFloatArray(float $arr[], float $add)
+{
+	float $added[];
+	for($i=0;$i<`size $arr`;$i++){
+		$added[$i] = $arr[$i] + $add;
+	}
+	return $added;
+}
+
+//ADD ARRAYS
+//---------------------------------
+global proc float[] addArrays(float $a[], float $b[])
+{
+	float $return[];
+	for($i=0;$i<`size $a`;$i++){
+		$return[$i] = $a[$i] + $b[$i];
+	}
+	return $return;
+}
+
+//ABSOLUTE VALUE
+//---------------------------------
+//GET ABS ARRAY
+//----------------------
+global proc float[] getAbsArray(float $array[])
+{
+	for($i=0;$i<`size $array`;$i++){
+		$array[$i] = abs ($array[$i]);
+	}
+	return $array;
+}
+
+//ABS ARRAY
+//----------------------
+global proc float[] absArray(float $arr[])
+{
+	float $abs[];
+	
+	for($i=0;$i<`size $arr`;$i++){
+		$abs[$i] = abs($arr[$i]);
+	}
+	return $abs;
+}
+
+//CEIL
+//---------------------------------
+global proc ceilArray(float $array[])
+{
+	for($i=0;$i<`size $array`;$i++){
+		$array[$i] = ceil ($array[$i]);
+	}	
+}
+
+//FLOOR
+//---------------------------------
+global proc floorArray(float $array[])
+{
+	for($i=0;$i<`size $array`;$i++){
+		$array[$i] = floor ($array[$i]);
+	}	
+}
+
+//MULTIPLY
+//======================================
+//MULTIPLY ARRAY BY
+//-------------------------
+global proc multiplyArrayBy(float $array[], float $by)
+{
+	for($i=0;$i<`size $array`;$i++){	
+		$array[$i] = $array[$i] * $by;
+	}
+}
+
+//MULTIPLY ARRAY
+//-------------------------
+global proc float[] multiplyArray(float $array[], float $by)
+{
+	float $float[];
+	for($i=0;$i<`size $array`;$i++){	
+		$float[$i] = $array[$i] * $by;
+	}
+	return $float;
+}
+
+//MULTIPLY ARRAYS
+//-------------------------
+global proc float[] multiplyArrays(float $a[], float $b[])
+{
+	float $float[];
+	for($i=0;$i<`size $a`;$i++){	
+		$float[$i] = $a[$i] * $b[$i];
+	}
+	return $float;
+}
+
+//DIVIDE ARRAYS
+//------------------------
+global proc float[] divideArrays(float $a[], float $b[])
+{
+	float $return[];
+	for($i=0;$i<`size $a`;$i++){	
+		if($a[$i] == 0 || $b[$i] == 0){
+			continue;	
+		}
+		$return[$i] = $a[$i] / $b[$i];
+	}
+	return $return;
+	
+}
+
+//INVERT FLOAT ARRAY
+//------------------------
+global proc float[] invertFloatArray(float $arr[])
+{
+	float $inverted[];
+	for($i=0;$i<`size $arr`;$i++){	
+		$inverted[$i] = invertFloat($arr[$i]);
+	}
+	return $inverted;
+}
+
+//SUBTRACT PERCENTAGE
+//---------------------------------
+global proc subtractPercentageSpaceToArray(float $array[], float $perc)
+{
+	for($i=0;$i<`size $array`;$i++){
+		float $add = $array[$i] / 100;
+		$array[$i] = $array[$i] - $add;
+	}
+}
+
+global proc float[] subtractPercentageSpaceArray(float $array[], float $perc)
+{
+	float $ps[];	
+	for($i=0;$i<`size $array`;$i++){
+		float $add = $array[$i] / 100;
+		$ps[$i] = $array[$i] - $add;
+	}
+	return $ps;
+}
+
+//ADD PERCENT
+//---------------------------------
+global proc addPercentageSpaceToArray(float $array[], float $perc)
+{
+	for($i=0;$i<`size $array`;$i++){
+		float $add = $array[$i] / 100;
+		$array[$i] = $array[$i] + $add;
+	}
+}
+
+global proc float[] addPercentageSpaceArray(float $array[], float $perc)
+{
+	float $ps[];	
+	for($i=0;$i<`size $array`;$i++){
+		float $add = $array[$i] / 100;
+		$ps[$i] = $array[$i] + $add;
+	}
+	return $ps;
+}
+
+
+//INCREMENTAL FLOAT ARRAY
+//===============================
+global proc float[] incrementFloatArray(float $start, float $by, int $count)
+{
+	float $return[] = { $start };
+	//$ruturn[0] = $start;
+	float $floatCopy = $start;
+	for($i=1;$i<$count;$i++){
+		$floatCopy = $floatCopy + $by;
+		$return[`size $return`] = $floatCopy;	
+	}
+	return $return;
+}
+
+
+//MIN MAX ARRAY
+//============================
+global proc float[] minMaxRangeArray(float $startMin, float $startMax, float $xInc, float $yInc, int $xSize, int $ySize)
+{
+	// x,y : x,y | minX, minY : maxX, maxY	
+	float $xVal = $startMin;
+	float $yVal = $startMax;
+	float $minMax[] = { $xVal, $yVal };
+	for($y=1;$y<$ySize;$y++){
+		for($x=1;$x<$xSize;$x++){
+			$xVal = $xVal + $xInc;
+			$minMax[`size $minMax`] = $xVal;
+			$minMax[`size $minMax`] = $yVal;
+		}
+		$xVal = $startMin;
+		$yVal = $yVal + $yInc;
+	}	
+	return $minMax;
+}
+
+global proc float[] minMaxSearchRangeArray(float $startMin, float $startMax, float $xInc, float $yInc, int $xSize, int $ySize)
+{
+	// x,y : x,y | minX, minY : maxX, maxY
+	float $xMin = $startMin;
+	float $xMax = $startMax;
+	float $yMin = $startMin;
+	float $yMax = $startMax;
+	float $minMax[];
+	for($y=0;$y<$ySize;$y++){
+		for($x=0;$x<$xSize;$x++){			
+			if($x == 0){
+				//Reset X min and max
+				$xMin = $startMin;
+				$xMax = $startMax;			
+			} else {
+				//Increment X min and max
+				$xMin = $xMin + $xInc;
+				$xMax = $xMax + $xInc;
+			}
+			//Min
+			$minMax[`size $minMax`] = $xMin;
+			$minMax[`size $minMax`] = $yMin;
+			//Max
+			$minMax[`size $minMax`] = $xMax;
+			$minMax[`size $minMax`] = $yMax;
+		}
+		//Increment Y min and max
+		$yMin = $yMin + $yInc;
+		$yMax = $yMax + $yInc;
+	}	
+	//print("Size MinMax: " + `size $minMax` + "\n");
+	return $minMax;
+}
+
+//REVERSE
+//=====================================================================
+//REVERSE STRING ARRAY
+//-------------------------------------
+global proc string[] reverseStringArray(string $arr[])
+{
+	string $rev[];
+	int $ri = (`size $arr` - 1);
+	for($i=0;$i<`size $arr`;$i++){	
+		$rev[`size $rev`] = $arr[$ri];
+		$ri = $ri - 1;
+	}
+	return $rev;
+}
+
+//REVERSE FLOAT ARRAY
+//-------------------------------------
+global proc float[] reverseFloatArray(float $arr[])
+{
+	float $rev[];
+	int $ri = (`size $arr` - 1);
+	for($i=0;$i<`size $arr`;$i++){	
+		$rev[`size $rev`] = $arr[$ri];
+		$ri = $ri - 1;
+	}
+	return $rev;
+}
+
+//REVERSE INT ARRAY
+//-------------------------------------
+global proc int[] reverseIntArray(int $arr[])
+{
+	int $rev[];
+	int $ri = (`size $arr` - 1);
+	for($i=0;$i<`size $arr`;$i++){	
+		$rev[`size $rev`] = $arr[$ri];
+		$ri = $ri - 1;
+	}
+	return $rev;
+}
+
+//LAST INDEX
+//=====================
+global proc int lastIndex(string $arr[])
+{
+	int $last = `size $arr` - 1;
+	return $last;	
+}
+
+global proc int lastIndexString(string $arr[])
+{
+	int $last = `size $arr` - 1;
+	return $last;
+}
+
+global proc int lastIndexFloat(float $arr[])
+{
+	int $last = `size $arr` - 1;
+	return $last;
+}
+
+global proc int lastIndexInt(int $arr[])
+{
+	int $last = `size $arr` - 1;
+	return $last;
+}
+
+//FIND
+//===================================================================
+//STRING ARRAY FIND ALL
+//--------------------------------
+global proc string[] stringArrayFindAll(string $item, int $index, string $list[])
+{
+	string $return[];
+	int $start = 0;
+	for($i=0;$i<`size $list`;$i++){
+		int $foundIndex = stringArrayFind($item, $start, $list);
+		if($foundIndex != -1){
+			$start = $foundIndex + 1;	
+			$return[`size $return`] = $foundIndex;
+		} else {
+			return $return;
+		}
+		
+	}
+	return $return;
+}
+
+//INT ARRAY FIND ALL
+//--------------------------------
+global proc int[] intArrayFindAll(int $item, int $index, int $list[])
+{
+	int $return[];
+	int $start = 0;
+	for($i=0;$i<`size $list`;$i++){
+		int $foundIndex = intArrayFind($item, $start, $list);
+		if($foundIndex != -1){
+			$start = $foundIndex + 1;	
+			$return[`size $return`] = $foundIndex;
+		} else {
+			return $return;
+		}
+		
+	}
+	return $return;
+}
+
+//FLOAT ARRAY FIND ALL
+//--------------------------------
+global proc float[] floatArrayFindAll(float $item, int $index, float $list[])
+{
+	float $return[];
+	int $start = 0;
+	for($i=0;$i<`size $list`;$i++){
+		int $foundIndex = floatArrayFind($item, $start, $list);
+		if($foundIndex != -1){
+			$start = $foundIndex + 1;	
+			$return[`size $return`] = $foundIndex;
+		} else {
+			return $return;
+		}
+		
+	}
+	return $return;
+}
+
+//CLOSEST FLOAT
+//====================================================
+global proc float closestFloat(float $arr[], float $closestTo)
+{
+	string $dbl = "-dmi ClosestFloatDebugMenuItem -t Closest Float"; string $dbm = "add"; int $dbc = 1;
+	float $closest;
+	float $cDiff = 9999999999999;
+	int $lastClosestIndex;
+	float $sorted[] = sort($arr);
+	debugListArray($dbl, " - Sorted: ", (floatArrayToStringArray($sorted)), $dbc, $dbm, "", 0);
+	for($i=0;$i<`size $sorted`;$i++){
+		
+		float $diff = abs($closestTo - $sorted[$i]);
+		debugListString($dbl, (" - " + $i + ": " + $sorted[$i] + " - Diff: " + $diff), $dbc, $dbm);
+		
+		if($diff < $cDiff){
+			$closest = $sorted[$i];	
+			$cDiff = $diff;
+			
+			if(($i - $lastClosestIndex) > 1){
+				debugListString($dbl, (" - Closest: " + $closest), $dbc, $dbm);
+				//debugList($dbl, {(tslDiv("[END]"))}, $dbc, $dbm);
+				return $closest;	
+				
+			}
+			$lastClosestIndex = $i;
+			
+		}
+	}
+	debugListString($dbl, (" - Closest: " + $closest), $dbc, $dbm);
+	//debugList($dbl, {(tslDiv("[END]"))}, $dbc, $dbm);
+	return $closest;
+}
+
+//FARTHEST FLOAT
+//====================================================
+global proc float farthestFloat(float $arr[], float $farthestFrom)
+{
+	string $dbl = "-dmi FarthestFloatDebugMenuItem -t Farthest Float"; string $dbm = "add"; int $dbc = 1;
+	float $farthest;
+	float $fDiff = 0;
+	int $lastFarthestIndex;
+	float $sorted[] = sort($arr);
+	debugListArray($dbl, " - Sorted: ", (floatArrayToStringArray($sorted)), $dbc, $dbm, "", 0);
+	
+	$sorted = reverseFloatArray($sorted);
+	debugListArray($dbl, " - Reversed Sorted: ", (floatArrayToStringArray($sorted)), $dbc, $dbm, "", 0);
+	
+	for($i=0;$i<`size $sorted`;$i++){
+		float $diff = abs($farthestFrom - $sorted[$i]);
+		debugListString($dbl, (" - " + $i + ": " + $sorted[$i] + " - Diff: " + $diff), $dbc, $dbm);
+		
+		if($diff > $fDiff){
+			$farthest = $sorted[$i];	
+			$fDiff = $diff;
+			
+			if(($i - $lastFarthestIndex) > 1){
+				debugListString($dbl, (" - Farthest: " + $farthest), $dbc, $dbm);
+				//debugList($dbl, {(tslDiv("[END]"))}, $dbc, $dbm);
+				return $farthest;	
+			}
+			$lastFarthestIndex = $i;
+			
+		}
+	}
+	debugListString($dbl, (" - Farthest: " + $farthest), $dbc, $dbm);
+	//debugList($dbl, {(tslDiv("[END]"))}, $dbc, $dbm);
+	return $farthest;
+}
+
+//INTERSECT
+//==============================================================================
+global proc string[] intersectStringArrays( string $arrA[], string $arrB[])
+{
+	string $intersector = `stringArrayIntersector`;
+	stringArrayIntersector -e -i $arrA $intersector;
+	stringArrayIntersector -e -i $arrB $intersector;
+	string $return[] = `stringArrayIntersector -q $intersector`;
+	return $return;
+}
+
+//INVERSE INTERSECT
+//==============================================================================
+global proc string[] inverseIntersectStringArrays(string $arrA[], string $arrB[])
+{
+	string $all[] = appendStringArray($arrA, $arrB, `size $arrB`);
+	string $intersector = `stringArrayIntersector`;
+	stringArrayIntersector -e -i $arrA $intersector;
+	stringArrayIntersector -e -i $arrB $intersector;
+	string $intersect[] = `stringArrayIntersector -q $intersector`;
+
+	//string $return[] = stringArrayRemove($intersect, $all);
+	string $return[] = stringArrayRemove($all, $intersect);
+	return $return;
+}
+
+
+//TEST ARRAYS
+//==============================================================================
+global proc string printTestArray(int $min, int $max, int $length, string $type)
+{
+	string $arr[];
+	string $formattedArray;
+	string $varName;
+	string $print;
+	switch($type){
+		case "Scene Objects" :
+		$arr = getTestArray($min, $max, $length, $type);
+		$formattedArray = stringArrayToStringArrayString($arr);
+		$varName = "string $soArr[] = ";		
+		break;
+		
+		case "Random Strings" :
+		$arr = getRandomTestStringArray($length, "randomNonsense");
+		$formattedArray = stringArrayToStringArrayString($arr);
+		$varName = "string $rsArr[] = ";
+		break;
+		
+		case "Random Alphabetical Strings" :
+		$arr = getRandomTestStringArray($length, "alphabetical");
+		$formattedArray = stringArrayToStringArrayString($arr);
+		$varName = "string $rsArr[] = ";
+		break;
+		
+		case "Float Strings" : 
+		$arr = getTestArray($min, $max, $length, $type);
+		$formattedArray = stringArrayToStringArrayString($arr);
+		$varName = "string $fsArr[] = ";
+		break;
+		
+		case "Int Strings" : 
+		$arr = getTestArray($min, $max, $length, $type);
+		$formattedArray = stringArrayToStringArrayString($arr);
+		$varName = "int $isArr[] = ";
+		break;
+		
+		case "Float" : 
+		$arr = getTestArray($min, $max, $length, $type);
+		$formattedArray = arrayFormattedStringArrayNoQuotes($arr);
+		$varName = "float $fArr[] = ";
+		break;
+		
+		case "Int" : 
+		$arr = getTestArray($min, $max, $length, $type);
+		$formattedArray = arrayFormattedStringArrayNoQuotes($arr);
+		$varName = "int $iArr[] = ";
+		break;
+		
+	}
+	if(`checkBox -q -v printTestArrayPrintVariableNameCheckBox`){
+		$print = $varName + $formattedArray + ";\n";
+		
+	} else {
+		$print = $formattedArray + "\n";
+	}
+	print($print);
+	return $print;
+}
+
+global proc string[] getTestArray(int $min, int $max, int $length, string $type)
+{
+	string $arr[];
+	if($type == "Scene Objects"){
+		string $ls[] = `ls`;
+		appendStringArray($arr, $ls, $length);
+		return $arr;
+	}
+	for($i=0;$i<$length;$i++){
+		if($type == "Random Strings"){
+			
+		} else if($type == "Int" || $type == "Int Strings"){
+			int $ran = int(rand($min, $max));
+			$arr[`size $arr`] = $ran;
+		} else if($type == "Float" || $type == "Float Strings"){
+			float $ran = rand($min, $max);
+			$arr[`size $arr`] = $ran;
+		}
+		
+	}
+	
+	return $arr;
+}
+
+//PRINT TEST INT ARRAY
+//-------------------------------------------------
+global proc int[] printTestIntArray(int $min, int $max, int $length)
+{
+	int $arr[];	
+	for($i=0;$i<$length;$i++){
+		int $ran = int(rand($min, $max));
+		$arr[`size $arr`] = $ran;	
+	}
+	string $testArrString = arrayFormattedIntArray($arr);
+	print($testArrString + "\n");
+	return $arr;
+}
+
+//PRINT TEST STRING ARRAY
+//-------------------------------------------------
+global proc string[] printTestStringArray(int $min, int $max, int $length, string $type)
+{
+	string $arr[];	
+	if($type == "objects"){
+		
+	} 
+	for($i=0;$i<$length;$i++){
+		if($type == "objects"){
+		
+		} else if($type == "int"){
+			int $ran = int(rand($min, $max));
+			$arr[`size $arr`] = $ran;
+		} else if($type == "float"){
+			float $ran = rand($min, $max);
+			$arr[`size $arr`] = $ran;
+		}
+		
+	}
+	
+	print(stringArrayToStringArrayString($arr) + "\n");
+	return $arr;
+}
+
+//PRINT TEST STRING ARRAY
+//-------------------------------------------------
+global proc float[] printTestFloatArray(int $min, int $max, int $length)
+{
+	float $arr[];	
+	for($i=0;$i<$length;$i++){
+		float $ran = rand($min, $max);
+		$arr[`size $arr`] = $ran;	
+	}
+	string $testArrString = arrayFormattedFloatArray($arr);
+	print($testArrString + "\n");
+	return $arr;
+}
+
+/*
+int $testIntArray[] = { 68, 99, 8, 64, 99, 9, 60, 74, 94, 74, 15, 64, 31, 53, 22, 5, 30, 82, 22, 6};
+int $foundInt[] = intArrayFindAll(64, 0, $testIntArray);
+print $foundInt;
+*/
+
+global proc string[] getRandomTestStringArray(int $length, string $type)
+{
+	string $arr[] = { "Samba", "outstatured", "pedantic", "pasting", 
+	"condescendence", "excommunicable", "baker", "outstretcher", "idioglottic", 
+	"prefinish", "achaemenid", "interrelatedly", "dividable", "preissuance", "Unexhibitable", 
+	"unlusty", "absent", "marquisette", "nappiest", "boozier", "unconventionally", "handshaker", 
+	"lamentations", "histrionism", "numdah", "apocope", "brandon", "antefixa", "Unfence", "barbican", 
+	"semiproductive", "ariette", "subpectoral", "core", "hyperpituitarism", "tardenoisian",
+	"meanwhile", "saltless", "sligo", "dryfarmer", "soliman", "Letus", "misprovoked", "ostende", 
+	"congresswoman", "semitheatrical", "hindu", "dentalman", "nonseparative", "tekel", "nonextraditable", 
+	"obeliskoid", "menoetius", "flocci", "indemnitee", "Sorely", "pointsman", "tavern", "dispassion",
+	"sardius", "spermophytic", "pseudoaffectionate", "precongested", "dithyramb", "sharpie", "unfaithful",
+	"purgation", "dithyrambic", "immobilize", "Methylnaphthalene", "semipictorial", "pitiableness",
+	"stratifying", "syphilize", "vicinal", "playtime", "precapture", "ebonizing", "elasticate", "airdrie",
+	"undergovernor", "everything", "interreges", "Galinthias", "overharassment", "corncrib", "teflon", 
+	"yew", "molinist", "sulfanilamide", "adabel", "nick","outvociferating", "brandless",
+	"starring", "crossjack", "Crusading", "guyana", "everglade", "eremitism", "coulomb", "lacertilian",
+	"nonsubtility", "kraurosis", "satellite", "myrobalan", "still", "requalify", "vasoligature",
+	"extractive", "Restimulate", "cannetille", "berating", "frescoing", "odets", "sperry", "individualize",
+	"enterokinase", "lymphangioma", "semipagan", "precanning", "packable", "tear", "pregeological",
+	"Tubercularise", "euryphage", "untranscendent", "hater", "vibratingly", "areolar", "precomprehend",
+	"erzurum", "barbierite", "soulfully", "moonachie", "expresser", "unvariant", "asafoetida",
+	"Backstabbed", "herborize", "roisterous", "underdish", "actinobacillosis", "electricalness",
+	"cusec", "warship", "leuctra", "semicolloidal", "octahedral", "preinvasive", "lameness",
+	"joistless", "Theodoric", "identified", "pondweed", "costumed", "lichenology", "smudgily",
+	"interstaminal", "amaryllidaceous", "logia", "thrippence", "overthriftiness", "triplicating",
+	"sisinnius", "gotham", "Voyageur", "tsiranana", "preassuming", "unagreed", "histie",
+	"roentgenology", "volsung", "unadvisable", "gelett", "recoverable", "arcticology", "tentative",
+	"koner", "hor", "Tubulation", "unconvictive", "carageen", "customer", "mispractised",
+	"posthexaplar", "knickerbockers", "ignorantly", "knowingly", "requital", "rubeola", "receptive",
+	"unshotted", "unfinished", "Kazakstan", "exuviae", "chin", "languish", "unpinched", "gastroscopic", 
+	"termly", "relumine", "monistically", "chainman", "superciliousness", "devaluating", "hustler",
+	"braker", "Retallying", "bloomy", "obliterable", "smelliness", "desalination", "autohypnotically",
+	"unembayed", "med", "timaeus", "sparkplugging", "replacing", "subintestinal", "mediant", "downwardness",
+	"Wastrel", "populist", "flashover", "lumbar", "salicaceous", "christless", "pelvises", "maleate",
+	"bucktoothed", "pterylosis", "unsavoriness", "distinctionless", "antifederalist", "corsetry", "Systole",
+	"bobsledding", "knowingness", "reassortment", "pectolite", "preimagining", "nonspinal", "laud",
+	"fouqu", "streakedness", "predine", "registerer", "preutilizing", "superillustration", "Conirostral",
+	"commove", "nonwar", "astigmatically", "subdirectorship", "criminating", "unenergetic", "plonk",
+	"superobject", "salaminian", "hypersensitization", "hasted", "demobilizing", "inferoanterior",
+	"Drinkability", "undividable", "postsuppurative", "whisperer", "pretexta", "shaaban", "steffan",
+	"kolomna", "machinely", "corkage", "subdentate", "stefanie", "octopuses", "overclose" } ;
+
+	string $return[];
+	if($type == "randomNonsense"){
+		appendStringArray($return, $arr, $length);
+	} else if($type == "alphabetical"){
+		$arr = sort($arr);
+		appendStringArray($return, $arr, $length);
+	}
+	return $return;
+}
+
+//SUBSTITUTE ALL STRING ARRAY
+//====================================================
+global proc string[] substituteAllStringArray(string $arr[], string $searchStr, string $replaceStr)
+{
+	for($i=0;$i<`size $arr`;$i++){
+		$arr[$i] = substituteAllString($arr[$i], $searchStr, $replaceStr);
+	}
+	return $arr;	
+}
+
+
+
+//PRINTING
+//==================================================================================
+//PRINT 2D STRING ARRAY
+//----------------------------------------------------
+global proc print2dStringArray(string $arr[], int $col, string $sep)
+{
+	string $dbl = "-dmi Print2dStringArrayDebugMenuItem -t Print 2D String Array"; string $dbm = "add"; int $dbc = 1;
+	debugListArray($dbl, " - Array: ", $arr, $dbc, $dbm, "", 100);
+	
+	int $colStart = 0;
+	int $colEnd = $col;
+	if(`checkBox -q -v csvFormattingZeroBasedCheckBox` == 0){
+		$colStart = 1;
+		$colEnd = $col + 1;
+	}
+	int $colCount = $colStart;
+	string $print[];
+	for($i=0;$i<`size $arr`;$i++){
+		if($colCount == $col){
+			debugListString($dbl, (" - Column Count: " + $colCount + " Total Columns: " + $col), $dbc, $dbm);
+			debugListArray($dbl, " - Print: ", $print, $dbc, $dbm, "NEXT", 100);
+			print(stringArrayToString($print, $sep) + "\n");
+			clear $print;
+			$colCount = $colStart;	
+			
+		} else {
+			$colCount++;
+		}
+		
+		$print[`size $print`] = $arr[$i];			
+		
+	}
+}
+
+
+//@ GET ROW COLUMN COUNT FROM INTERSECTING ARRAYS
+//====================================================================
+/*****************************************************************//**
+	Given two arrays of the same objects in horizontal and vertical arrangements like uvs
+	this will return how many rows and columns there are in the selection array.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arrA[] = { "apple", "grape", "pear", "dog", "cat", "bird", "knife", "spoon", "fork" };
+	string $arrB[] = { "apple", "dog", "knife", "grape", "cat", "spoon", "pear", "bird", "fork" };
+	int $rowColCount[] = getRowColumnCountFromIntersectingArrays($arrA, $arrB);
+	
+	</code>
+*********************************************************************/
+global proc int[] getRowColumnCountFromIntersectingArrays( string $arrA[], string $arrB[])
+{
+	int $rowCount, $colCount;
+	
+	int $findB = stringArrayFind($arrB[1], 0, $arrA);
+	$rowCount = $findB;
+	if ($rowCount == 0){
+		wizlog ("-w		[!] Division By Zero Warning : Rows : " + $rowCount + " Columns : " + $colCount);
+		return { 2,2 };
+	}
+	$colCount = `size $arrA` / $rowCount;
+	return {$rowCount, $colCount };
+	
+	
+
+}

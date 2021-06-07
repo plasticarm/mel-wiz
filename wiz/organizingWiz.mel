@@ -1,0 +1,451 @@
+global proc organizingWiz( string $parent )
+{
+	renameWiz();
+	organizationModule($parent);
+}
+
+
+global proc organizationModule(string $parent)
+{
+//____________ORGANIZE FUNCTIONS____________
+string $organizeLayout = wizStandardFrameLayout($parent, "Orginization", "");
+	
+	string $organizeMenuBarLayout = `menuBarLayout
+		-parent $organizeLayout`;
+		
+	wizOrginazationMenu();
+	
+wizStandardFrameLayout("", "Orginization", "");	
+	
+	createCommonGroupsMenu($organizeLayout);
+	
+}
+
+
+global proc organizationMainMenu()
+{
+	wizOrginazationMenu();
+}
+
+global proc wizOrginazationMenu()
+{
+	menu -label "Organizing";
+		menuItem -l "RenameWiz" -c ("renameWiz();");		
+		menuItem -l "Isolate and Focus On Selected"	-ann ""	-c "isolateAndFocusOnSelected";
+		menuItem -l "Construction And Export Layers" -c ("createDisplayLayer -name \"constructionLayer\" -number 1 -empty; createDisplayLayer -name \"exportLayer\" -number 1 -empty;");
+		
+	menuItem -sm true -l "Grouping";		
+		menuItem -l "Create Common Groups" -c "createCommonGroups";		
+		menuItem -l"Group to Layer"	-echoCommand true -c "groupToLayer";			
+		menuItem -l "Group to Render Layer"	-echoCommand true -c "groupToRenderLayer";			
+		menuItem -l "Duplicate Group Heirarchy (Parents Only)" -c ("duplicateGroupHeirarchyParentsOnly(`ls -sl`)");			
+	setParent -menu ..;
+			
+	menuItem -sm true -l "Sets";
+		menuItem -l "Consolidate Wiz Sets" -c ("consolidateWizSets();");
+	setParent -menu ..;
+	
+	menuItem -sm true -l "Naming";		
+		menuItem -l "RenameWiz" -c ("renameWiz();");		
+		menuItem -sm true -l "Rename Heirarchy Under Selected Object By Template";		
+		menuItem -l "nameType" -c ("renameHeirarchyUnderSelectedObjectsByTemplate(\"nameType\")");				
+		menuItem -l "rootType" -c ("renameHeirarchyUnderSelectedObjectsByTemplate(\"rootType\")");			
+	setParent -menu..;			
+		menuItem -l "Rename Selected Objects By Template" -c ("renameSelectedObjectsByTemplate(`ls -sl`)");			
+		menuItem -l "Rename Objects Without Unique Names" -c "renameObjectsWithoutUniqueNames";
+			
+	setParent -menu..;		
+		
+		assetWizMenuItems();
+		
+	setParent -menu ..;
+	
+}
+
+
+global proc groupToLayer (){
+string $selectedGroup[] = `ls -selection`;
+int $i;
+for($i==0;$i < `size $selectedGroup`; $i++){
+	createDisplayLayer -name ($selectedGroup[$i] + "Layer") -number 1 -nr;
+}
+
+}
+
+global proc groupToRenderLayer (){
+string $selectedGroup[] = `ls -selection`;
+int $i;
+for($i==0;$i < `size $selectedGroup`; $i++){
+	createRenderLayer -name ($selectedGroup[$i] + "RL") -number 1 -noRecurse $selectedGroup[$i];	
+}
+
+}
+
+global proc createCommonGroupsMenu(string $parent)
+{
+	string $layout = wizStandardFrameLayout($parent, "Create Common Groups", "");
+			
+	checkBoxGrp
+			-numberOfCheckBoxes 4
+			-label "Common Groups"
+			-vr
+			-l1 "LIGHTS"
+			-l2 "CAMERAS"
+			-l3 "SOLVERS"
+			-l4 "NOTES"
+			-v1 true
+			-v2 true
+			-v3 false
+			-v4 false
+			commonGroups
+			;
+			
+	button
+		-l "Create The Groups"
+		-c "doCreateCommonGroups"
+		createCommonGroups
+		;
+		
+}
+
+global proc createCommonGroups()
+{
+	doCreateCommonGroups();
+}
+
+global proc doCreateCommonGroups()
+{
+	string $group1 = `checkBoxGrp -q -l1 commonGroups`;
+	string $group2 = `checkBoxGrp -q -l2 commonGroups`;
+	string $group3 = `checkBoxGrp -q -l3 commonGroups`;
+	string $group4 = `checkBoxGrp -q -l4 commonGroups`;
+	$cg1 = `checkBoxGrp -q -v1 commonGroups`;
+	$cg2 = `checkBoxGrp -q -v2 commonGroups`;
+	$cg3 = `checkBoxGrp -q -v3 commonGroups`;
+	$cg4 = `checkBoxGrp -q -v4 commonGroups`;
+	if($cg1){
+		group -em -name $group1;
+	}
+	if($cg2){
+		group -em -name $group2;
+	}
+	if($cg3){
+		group -em -name $group3;
+	}
+	if($cg4){
+		group -em -name $group4;
+	}
+	/*
+	CreateEmptyGroup;
+	select -r null1 ;
+	rename "null1" "CAMERAS";
+	CreateEmptyGroup;
+	select -r null1 ;
+	rename "null1" "LIGHTS";
+	*/
+}
+
+global proc selectAllDuplicateReferencesObjectsOfSameName()
+{
+	string $sel[] = `ls -sl`;
+	int $i;
+	for ($i=0;$i<`size $sel`;$i++){
+		string $buffer[] ;  
+		tokenize $sel[$i] ":" $buffer;
+		string $match = `match "[0-9]+" $buffer[0]`;	
+		string $prefix = substituteAllString($buffer[0], $match, "");
+		string $newSelect = "select -add (\"" + $prefix + "*" + "\"" + " + " + "\"" + ":" + $buffer[1] + "\");";
+		//print("NewSelection: " + $newSelect + "\n");
+		eval ($newSelect);
+	}
+
+}
+
+//GROUPING
+//================
+global proc string groupSelectedObjects(string $sel[])
+{
+
+	if(`size $sel` > 1){
+		string $groupObjs = stringArrayToString($sel, " ");
+		string $groupCommand = "group -n " + $sel[0] + "Group " + $groupObjs;
+		eval($groupCommand);
+		string $newGroupName = $sel[0] + "Group";
+		
+		return $newGroupName;
+	} else {
+		return $sel[0];	
+	}
+}
+
+global proc string[] putSelectedIntoGroup(string $sel[], string $group)
+{
+	if(`objExists $group` == 0){
+		group -w -em -n $group;
+	
+	}	
+	string $root[];
+	for($i=0;$i<`size $sel`;$i++){
+		$root[`size $root`] = rootOf($sel[$i]);
+		
+	}
+	$root = stringArrayRemoveDuplicates($root);
+	for($i=0;$i<`size $root`;$i++){
+		parent $root[$i] $group;
+	}
+	$sel[`size $sel`] = $group;
+	return $sel;
+}
+
+global proc string[] getFirstParentOfSelectedObjects(string $sel[])
+{
+	string $parent[];
+	for($i=0;$i<`size $sel`;$i++){
+		$parent[$i] = firstParentOf($sel[$i]);
+		
+	}
+	$parent = `stringArrayRemoveDuplicates($parent)`;
+	return $parent;
+}
+
+//PARENTING
+//======================
+global proc parentAllSelectedTo(string $sel[], string $parent)
+{
+	for($i=0;$i<`size $sel`;$i++){
+		if(`objExists $sel[$i]` == false){ continue;}
+		if(`objExists $parent` == false){ break;}
+		if($sel[$i] == $parent){ continue;}
+		parent $sel[$i] $parent;
+	}	
+}
+
+global proc tryToParentNewObjectToSourceParent(string $newObj, string $source[])
+{
+	string $parent = getFirstParentOfSelectedIfShareSameParent($source);
+
+	if($parent != "" && `checkBoxGrp -q -v1 prepForPaintingPreserveHierarchyOption` == 1){
+		parent $newObj $parent;
+	}
+}
+
+
+global proc parentObject(string $obj, string $parent)
+{
+	parent $obj $parent;
+}
+
+global proc string[] unparentSelectedObjects(string $sel[])
+{
+	printProc("unparentSelectedObjects");
+	for($i=0;$i<`size $sel`;$i++){
+		if(`objExists $sel[$i]` == false){ continue;}	
+		//Unparent
+		string $parent = firstParentOf($sel[$i]);	
+		if($parent != ""){
+			parent -w $sel[$i];		
+		}
+	}	
+	return $sel;
+}
+
+//HIDING
+//======================
+global proc hideObject(string $obj)
+{
+	hide $obj;
+}
+
+global proc hideAllSelected(string $hide[])
+{
+	int $i;
+	for($i=0;$i<`size $hide`;$i++){
+		hide $hide[$i];
+	}	
+}
+
+//DELETING
+//========================
+global proc string[] deleteAllExceptTransformsAndTypesInHierarchy(string $sel[], string $type[])
+	{
+	printProc("deleteAllExceptTransformsAndTypesInHierarchy");	
+	//select -r $sel;
+	string $keep[];
+	string $delete[];
+	string $keepType[];
+
+	//Get the transforms that are in the selection list
+	string $sel[] = getTransformsFrom(`ls -dag $sel`);
+	debugML1("DagTransforms: " + "\n" + stringArrayToStringNiceList($sel) + "\n");
+
+	//Get the groups in the heirarchy
+	string $groups[] = lsGroupsFromSelection($sel);
+	debugML1("Groups: " + stringArrayToStringNiceList($groups) + "\n");
+
+	//Get the invisible objects in heirarchy
+	string $invisible[] = getInvisibleFromSelected($sel);
+	//$sel = stringArrayRemove($invisible,$sel);
+	debugML1("Invisible: " + stringArrayToStringNiceList($invisible) + "\n");
+
+	//Add all the objects with node types that we want to keep to the keep list
+	for($i=0;$i<`size $type`;$i++){
+		string $keepTypeTransforms[] = `eval("listTransforms (\"-dag -typ " + $type[$i] + " " + stringArrayToString($sel, " ") + "\")")`;
+		debugML1("KeepTypeTransforms: " + $type[$i] + stringArrayToStringNiceList($keepTypeTransforms));
+
+		appendStringArray($keepType,$keepTypeTransforms,`size $keepTypeTransforms`);
+	}
+
+	//Add up the stuff to keep
+	appendStringArray($keep,$groups,`size $groups`);
+	appendStringArray($keep,$keepType,`size $keepType`);
+	stringArrayRemoveDuplicates($keep);
+	$keep = stringArrayRemove($invisible,$keep);
+
+	//Add up the stuff to delete
+	$delete = stringArrayRemove($keep,$sel);
+	appendStringArray($delete,$invisible,`size $invisible`);
+
+	//Delete the stuff to delete
+	deleteSelectedObjects($delete);
+	$keep = removeObjectsThatDontExist($keep);
+
+	debugML1("Keep: " + stringArrayToStringNiceList($keep) + "Delete: " + stringArrayToStringNiceList($delete));
+	printProc("deleteAllExceptTransformsAndTypesInHierarchy - End");	
+	return $keep;
+}
+
+//RENAMING
+//==========================
+
+//RENUMBER
+global proc string[] renumberAllObjects(string $all[])
+{
+	printProc("renumberAllObjectsInScene");
+	if(`size $all` == 0){
+		$all = `ls`;
+	}
+	$all = sortObjectsByName($all);
+	string $noNum[] = getObjectsNamesWithNoNumbers($all);
+
+	string $nameGroup[];
+	string $noNumNameGroup[];
+	openDebugWiz();
+	debugList("All", $all, 1,"replace");
+	debugList("All No Numbers", $noNum, 2, "replace");
+
+	string $renameError[];
+	for($i=0;$i<`size $all`;$i++){	
+		if($all[$i] == "|"){
+			//Only rename if there is more than one object of the same name
+			if(`size $nameGroup` > 1){
+				/*
+				string $newName = ($noNumNameGroup[0] + 1);
+				select -r $nameGroup;
+				if(catchQuiet(`renameSelectionList($newName)`) == 1){
+					for($n=0;$n<`size $nameGroup`;$n++){	
+						$renameError[`size $renameError`] = ("Error Renamming: " + $nameGroup[$n] + " | To: " + $newName);
+					}
+				}
+				debugList("New Name", {$newName}, 4, "add");
+				*/
+				
+				for($n=0;$n<`size $nameGroup`;$n++){						
+						
+					string $newName;
+					$newName = $noNumNameGroup[$n] + ($n + 1);
+					debugList("New Name", {$newName}, 4, "add");				
+						
+					//We should catch errors because they may happen
+					if(catchQuiet($newName = `rename -is $nameGroup[$n] $newName`) == 1){
+						$renameError[`size $renameError`] = ("Error Renamming: " + $nameGroup[$n] + " | To: " + $newName);
+					}
+					$nameGroup[$n] = $newName;				
+				
+				}
+				debugList("New Name", {"|"}, 4, "add");
+				
+			} else {
+				debugList("New Name", {$nameGroup[0],"|"}, 4, "add");	
+			}
+			
+			//clear the name groups
+			clear $nameGroup;
+			clear $noNumNameGroup;
+		} else {			
+			//Put the objects into groups until we hit a separator
+			$nameGroup[`size $nameGroup`] = $all[$i];
+			$noNumNameGroup[`size $noNumNameGroup`] = $noNum[$i];		
+		}	
+	}
+	debugList("Rename Error", $renameError, 5, "replace");
+	return $all;
+}
+
+//RENAME ALL WITHOUT UNIQUE NAMES
+global proc renameObjectsWithoutUniqueNames()
+{
+string $all[] = `ls`;
+string $rename[];
+for($i=0;$i<`size $all`;$i++){
+	if(`objExists $all[$i]` ==  false){
+		continue;
+	}
+	string $buffer[];
+	int $tok = `tokenize $all[$i] "|" $buffer`;
+	if($tok > 1){		
+		$rename[`size $rename`] = $all[$i];
+		string $newName;
+		int $x = 0;
+		$ok = false;
+		while(!$ok){
+			$newName = $buffer[`size $buffer` - 1] + $x;
+			if(`objExists $newName`){
+				$x++;
+			} else {
+				$ok = true;
+			}
+		}
+		debugML1("Renaming: " + $all[$i] + " To: " + $newName + "\n");
+		rename $all[$i] $newName;
+	}
+}
+/*
+"[a-zA-Z][a-zA-Z0-9_ ]*"
+endsWith("ass919", "[0-9]*");
+string $buffer[];
+int $tok = `tokenize "ass|hole1" "|" $buffer`;
+print("NumTok: " + $tok + "\n");
+print $buffer;
+*/
+}
+
+/*
+global proc createTemplateGroups()
+{
+
+}
+
+global proc createEmptyGroupsWithNames( string $name[] )
+{
+	for ($i=0;$i<`size $name`;$i++){
+		group -em -name $name[$i];
+	
+	}
+}
+*/
+
+//@ LAYERS
+//========================================================
+global proc deleteAllDisplayLayersInFile()
+{
+	string $disLay[] = `ls -type displayLayer`;
+	delete $disLay;
+	
+}
+
+/*
+global proc wizCreateSetFromSelection( string $sel[] )
+{
+	string $setName = 
+}
+*/

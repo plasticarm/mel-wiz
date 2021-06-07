@@ -1,0 +1,185 @@
+global proc clothWiz()
+{
+
+}
+
+//LAYOUT
+//==============================================================================
+//CLOTH WIZ MAIN LAYOUT
+//----------------------------
+global proc clothWizLayout(string $parent)
+{	
+	clothWizFrameLayout($parent);
+
+}
+
+//CLOTH WIZ FRAME LAYOUT
+//-----------------------------
+global proc clothWizFrameLayout(string $parent)
+{
+	string $layout = `frameLayout
+		-l "Cloth"
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true		
+		-parent $parent
+		`;
+		
+		
+	clothWizMenuBarLayout($layout);
+	
+}
+
+//MENU BAR LAYOUT
+//==============================================================================
+//CLOTH WIZ MENU BAR LAYOUT
+//-----------------------------
+global proc clothWizMenuBarLayout( string $parent )
+{
+	string $menuBarLayout = `menuBarLayout clothWizMenuBarLayout`;	
+	clothWizMenuItems();
+}
+
+//CLOTH WIZ MENU ITEMS
+//-----------------------------
+global proc clothWizMenuItems()
+{
+	menu -l "Create" -to true;		
+		menuItem -l "Create nCloth" -c ("wizMakeNClothObjects(`ls -sl`)");
+		menuItem -l "Create Passive Collider" -c ("wizMakePassiveColliders(`ls -sl`)");
+
+	menu -l "Attributes" -to true;
+		menuItem -l "Turn On nCloth In Hierarchy" -c ("setEnabledDynamicsInHierarchy(`ls -sl`, 1)");	
+		menuItem -l "Turn Off nCloth In Hierarchy" -c ("setEnabledDynamicsInHierarchy(`ls -sl`, 0)");	
+	setParent -menu ..;
+	
+}
+
+
+//@ WIZ MAKE PASSIVE COLLIDERS
+//===============================================
+/*
+	string $sel[] = `ls -sl`;
+	wizMakePassiveColliders(`ls -sl`);
+*/
+global proc string[] wizMakePassiveColliders( string $sel[] )
+{
+	string $pc[];
+	for ($i=0;$i<`size $sel`;$i++){
+		select -r $sel[$i];
+		string $newCloth[] = `makeCollideNCloth`;	
+		string $t[] = `listTransforms $newCloth[0]`;
+	
+		string $selName = removeNodeTypeFromObjectName($sel[$i]);
+		string $nn = renameWizRenameObject($t[0], $selName);
+		string $parent[] = `listRelatives -p $sel[$i]`;
+		parent $nn $parent[0];
+		
+		$pc[`size $pc`] = $nn;
+			
+		print (" - New Passive Collider : " + $nn + "\n");
+	}
+	return $pc;
+}
+
+//@ WIZ MAKE NCLOTH OBJECTS
+//===============================================
+global proc string[] wizMakeNClothObjects( string $sel[] )
+{
+	string $nCloth[];
+	for ($i=0;$i<`size $sel`;$i++){
+		select -r $sel[$i];
+		string $newCloth[] = `createNCloth 0`;	
+		string $t[] = `listTransforms $newCloth[0]`;
+		
+		
+		string $selName = removeNodeTypeFromObjectName($sel[$i]);
+		string $nn = renameWizRenameObject($t[0], $selName);
+		string $parent[] = `listRelatives -p $sel[$i]`;
+		parent $nn $parent[0];
+		$nCloth[`size $nCloth`] = $nn;
+		print (" - New nCloth Object : " + $nn + "\n");
+	}	
+	return $nCloth;
+}
+
+//@ WIZ MAKE NCLOTH CONSTRAINTS
+//===============================================
+global proc string[] wizMakeNClothConstraints( string $sel[] )
+{
+	string $nCloth[];
+	for ($i=0;$i<`size $sel`;$i++){
+		select -r $sel[$i];
+		string $newCloth[] = `createNCloth 0`;	
+		string $t[] = `listTransforms $newCloth[0]`;
+		
+		
+		string $selName = removeNodeTypeFromObjectName($sel[$i]);
+		string $nn = renameWizRenameObject($t[0], $selName);
+		string $parent[] = `listRelatives -p $sel[$i]`;
+		parent $nn $parent[0];
+		$nCloth[`size $nCloth`] = $nn;
+		print (" - New nCloth Object : " + $nn + "\n");
+	}	
+	return $nCloth;
+}
+
+//@ SET ENABLED DYNAMICS IN HIERARCHY
+//===============================================
+global proc setEnabledDynamicsInHierarchy( string $sel[], int $state )
+{
+	//string $sel[] = `ls -sl`;
+	//string $rel[] = `listRelatives -typ nCloth -typ dynamicConstraint -typ nRigid -ad $sel`;
+	//print ("WIZ| setEnabledDynamicsInHierarchy : " + $state + "\n");
+	if ($state == 0){
+		hide $sel;
+	} else {
+		showHidden $sel;	
+	}
+	string $rel[] = `listRelatives -typ nCloth -typ dynamicConstraint -typ nRigid -typ nParticle -typ hairSystem -ad $sel`;
+	
+	print ("WIZ| setEnabledDynamicsInHierarchy : \n - " + stringArrayToString($rel, "\n - ") + "\n");
+	
+	for ($i=0;$i<`size $rel`;$i++){
+		
+		if (`attributeExists "isDynamic" $rel[$i]`){
+			setAttr ($rel[$i] + ".isDynamic") $state;
+			print ("setAttr " + $rel[$i] + ".isDynamic " + $state + ";\n");
+		}
+		if (`attributeExists "enable" $rel[$i]`){
+			setAttr ($rel[$i] + ".enable") $state;
+			print ("setAttr " + $rel[$i] + ".enable " + $state + ";\n");
+		}
+		if (`attributeExists "active" $rel[$i]`){
+			setAttr ($rel[$i] + ".active") $state;
+			print ("setAttr " + $rel[$i] + ".active " + $state + ";\n");
+		}
+		
+	}
+	
+}
+
+global proc disableAllNucleusSolvers()
+{
+	string $nuc[] = `ls -type nucleus`;
+	for ($i=0;$i<`size $nuc`;$i++){
+		setAttr ($nuc[$i] + ".enable") 0;
+		
+	}
+}
+
+global proc enableAllNucleusSolvers()
+{
+	string $nuc[] = `ls -type nucleus`;
+	for ($i=0;$i<`size $nuc`;$i++){
+		setAttr ($nuc[$i] + ".enable") 1;
+		
+	}
+}

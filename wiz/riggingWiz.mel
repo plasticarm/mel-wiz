@@ -1,0 +1,831 @@
+global proc riggingWiz()
+{
+
+}
+
+global proc riggingWizLayout(string $parent)
+{
+	/*
+	string $layout = `frameLayout
+		-l "Rigging"	
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $parent		
+		`;
+	*/
+	string $layout = `columnLayout
+		-adjustableColumn true
+		-p $parent
+		`;
+		
+	
+	riggingWizMainMenuBarLayout($layout);
+	
+	serializeRepeatLayout($layout);
+	
+	//sunRiggingLayout($riggingLayout);
+	
+	//starfieldWizLayout($riggingLayout);
+	
+	//conformScaleLayout($layout);
+	
+	attributeWizLayout($layout);
+	
+	deformerWizLayout($layout);
+	
+	transformWizLayout($layout);
+	
+	organizationModule($layout);		
+		
+	skeletonMeshLayout($layout);
+	
+	autoRigSetCommandsLayout($layout);
+	
+	//wizOutlineColorLayout($layout);
+	
+}
+
+global proc riggingWizMainMenuBarLayout( string $parent )
+{
+	string $organizeMenuBarLayout = `menuBarLayout
+		-parent $parent`;
+		
+	riggingWizMainMenu();
+	
+	setParent ..;
+}
+
+global proc riggingWizMainMenu()
+{
+	menu -l "Constraints" -to true;
+	
+	wizConstraintsMenu();
+	
+	menu -l "Operations" -to true;
+	
+	wizRiggingOperationsMenuItem();
+	
+}
+
+global proc wizConstraintsMenu()
+{
+	menuItem -sm true -l "Constraints" -to true;
+		menuItem -l "Parent Constraint (No Offset)" -c ("wizConstraint(\"-pcno\");");
+		menuItem -l "Parent Constraint (Maintain Offset)" -c ("wizConstraint(\"-pcmo\");");
+		menuItem -l "Parent Constraint To Follicle" -c ("wizConstraint(\"-sl -pcf\");");
+		menuItem -l "Stick Object To Surface" -c ("stickObjectToSurface(`ls -sl`);");
+		menuItem -l "Closest Point Follicle" -c ("wizClosestPointFollicle(\"-sl -dhs -kcp\");");
+			menuItem -ob true -c ("openCurrentOptionsLayout(\"closestPointFollicleOptions\");");
+		menuItem -l "Make Mesh Skeleton" -c ("makeMeshSkeleton();");
+		menuItem -l "Auto Constrain Character Constraint Groups" -c ("autoConstrainCharacterConstraintGroups(`ls -sl`);");
+		
+		
+	setParent -menu ..;
+
+}
+
+global proc wizRiggingOperationsMenuItem()
+{
+	string $bswcAnn = ("Creates a duplicate of mesh that is blended to original then duplicates the duplicate and wraps the 3rd duplicate onto the 2nd duplicate.");
+	
+		menuItem -l "BlendShape Cloth Wrap Duplicates" -ann $bswcAnn -c ("wizRigOperation(\"-bswc -sl\");");
+
+	setParent -menu ..;
+}
+
+global proc wizConstraint( string $flags )
+{
+	string $type;
+	string $sel[];
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){				
+			case "-pcno" : case "-parentConstraintNoOffset" :
+			$type = "parentConstraintNoOffset";
+			break ;
+			
+			case "-pcmo" : case "-parentConstraintMaintainOffset" :
+			$type = "parentConstraintMaintainOffset";
+			break ;
+			
+			case "-scmo" : case "-scaleConstraintMaintainOffset" :
+			$type = "scaleConstraintMaintainOffset";
+			break ;
+			
+			case "-scno" : case "-scaleConstraintNoOffset" :
+			$type = "scaleConstraintNoOffset";
+			break ;
+			
+			case "-pcf" : case "-parentConstraintToFollicle" :
+			$type = "parentConstraintToFollicle";
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	
+	switch($type){
+		case "parentConstraintNoOffset" :
+		doCreateParentConstraintArgList 1 { "0","0","0","0","0","0","0","1","","1" };
+		parentConstraint -mo -weight 1;
+		break;
+		
+		case "parentConstraintMaintainOffset" :
+		doCreateParentConstraintArgList 1 { "1","0","0","0","0","0","0","1","","1" };
+		parentConstraint -mo -weight 1;
+		break;
+		
+		case "scaleConstraintMaintainOffset" :
+		doCreateScaleConstraintArgList 1 { "1","1","1","1","0","0","0","1","","1" };
+		scaleConstraint -mo -weight 1;
+		break;
+		
+		case "scaleConstraintMaintainOffset" :
+		doCreateScaleConstraintArgList 1 { "0","1","1","1","0","0","0","1","","1" };
+		scaleConstraint -offset 1 1 1 -weight 1;
+		break;
+		
+		case "parentConstraintToFollicle" :
+		doCreateParentConstraintArgList 1 { "0","0","0","0","0","0","0","1","","1" };
+		string $pc[] = `parentConstraint -mo -weight 1`;
+		setAttr ($pc[0] + ".target[0].targetOffsetRotateX")	90;
+		break;
+		
+		
+	}
+		
+}
+
+//PREP FOR RIGGING COLUMN LAYOUT
+//==============================================
+global proc prepForRiggingColumnLayout( string $parent )
+{
+	string $layout = `columnLayout
+		-adjustableColumn true
+		-p $parent
+		prepForRiggingColumnLayout
+		`;	
+		
+		prepForClothSimulationLayout($layout);
+}
+
+//AUTO RIG SET COMMANDS LAYOUT
+//==============================================
+global proc autoRigSetCommandsLayout( string $parent )
+{
+	string $frameLayout = `frameLayout
+		-l "Auto Rig Sets"	
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-p $parent
+		`;
+		
+	autoRigSetsMenuBarLayout($frameLayout);	
+	
+	text
+		-l "\nUse This Process To Auto Rig A Character By Sets.\nCreate A Set And Start The Name Of The Set With These Names.\n"
+		-al "left"
+		;
+		
+	text
+		-l "Valid Names:\n - Skin\n - Wrap\n - PassiveCollider\n - nCloth\n"
+		-al "left"
+		;
+		
+	button
+		-l "Auto Rig Sets"
+		-c ("autoRigSets();")
+		;
+		
+		
+}
+
+//AUTO RIG SETS MENU BAR LAYOUT
+//==============================================
+global proc autoRigSetsMenuBarLayout( string $parent )
+{
+	string $menuBarLayout = `menuBarLayout
+		-parent $parent`;
+		
+	autoRigSetsMenu();
+}
+
+//AUTO RIG SETS MENU
+//==============================================
+global proc autoRigSetsMenu()
+{
+	menu -l "Create Set" -to true;
+		menuItem -l "Skin" -c ("createAutoRigSet(`ls -sl`,\"Skin_Set\");");
+		menuItem -l "Passive Collider" -c ("createAutoRigSet(`ls -sl`,\"PassiveCollider_Set\");");
+		menuItem -l "nCloth" -c ("createAutoRigSet(`ls -sl`,\"nCloth_Set\");");
+		menuItem -l "Wrap" -c ("createAutoRigSet(`ls -sl`,\"Wrap_Set\");");
+		
+	setParent -menu..;
+	
+}
+
+//PREP FOR CLOTH SIMULATION LAYOUT
+//==============================================
+global proc prepForClothSimulationLayout( string $parent )
+{
+	//Main Frame Layout	
+	string $layout = wizStandardFrameLayoutNoMargins($parent, "Prep For Cloth Simulation", "prepForClothSimulationFrameLayout");
+	
+	button
+		-l "Delete Extra Mesh Nodes"
+		-c ("deleteExtraMeshNodesOnSelectedObjects(`ls -sl`);")
+		;
+	
+	button
+		-l "Flatten UV Sets To Default Set"
+		-c  ("wizFlattenUVSetsOnSelectedObjects(`ls -sl`);")
+		;
+		
+	
+		
+	button
+		-l "Auto Prep For Cloth Simulation"
+		-c ("autoPrepForClothSimulation(`ls -sl`);")
+		;
+			
+		
+}
+
+//CONNECT ALL ATTRIBUTES LAYOUT
+//----------------------------------------------
+global proc deformerWizLayout(string $parent)
+{
+	string $deformerWizLayout = `frameLayout
+		-l "Deformer Wiz"	
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-p $parent
+		`;
+        
+    string $dwcc = (
+    "string $selObj = `textFieldButtonGrp -q -tx deformerWizSelectedObjTextFieldButtonGrp`;"+"\n"
+    +"string $defSel = `textFieldButtonGrp -q -tx deformerWizSelectedDeformerTextFieldButtonGrp`;"+"\n"
+    +"float $percent = `floatSliderGrp -q -v deformerWizSetDeformerWeightsFloatSliderGrp`;"+"\n"
+    +"if ($selObj != \"\"){"+"\n"
+    +"  select -r $selObj;"+"\n"
+    +"}"+"\n"
+    +"percent -v $percent $defSel;"+"\n"
+    );
+    
+    floatSliderGrp
+        -l "Set Deformer Weights"
+        -f true
+        -max 1
+        -fmx 99999
+        -pre 4
+        -v 1.0
+        -cal 1 "left"
+        -cc $dwcc
+        deformerWizSetDeformerWeightsFloatSliderGrp
+        ;
+       
+    textFieldButtonGrp
+        -l "Selection"
+        -bl "Select"
+        -bc ("assignObjectToTextFieldButtonGrp(\"deformerWizSelectedObjTextFieldButtonGrp\");")
+        deformerWizSelectedObjTextFieldButtonGrp
+        ;
+    
+    textFieldButtonGrp
+        -l "Deformer"
+        -bl "Select"
+        -bc ("assignObjectToTextFieldButtonGrp(\"deformerWizSelectedDeformerTextFieldButtonGrp\");")
+        deformerWizSelectedDeformerTextFieldButtonGrp
+        ;
+	//multiSelectionTextFieldButtonGrps(("-n deformerWizSelectedObjTextFieldButtonGrp -l Selection -n deformerWizSelectedDeformerTextFieldButtonGrp -l Select Deformer -p " + $deformerWizLayout));
+	
+	button
+		-l "Create Wire Deformer For Eah Selected Curve"
+		-ann "First Select the mesh and then select as many curves as you like"
+		-c ("createWireDeformersForEachSelectedCurve(`ls -sl`);")
+		createWireDeformerForAllCurvesButton
+		;
+	/*
+	button
+		-l "Create Wrap Deformer For Each Selected Mesh"
+		-ann "First Select the mesh to Wrap then select as many wrap influences as you like"
+		-c ("wizCreateWrapDeformerForSelectedObjects(`ls -sl`);")
+		createWrapDeformerForAllMeshesButton
+		;
+		*/
+		
+		
+	textFieldButtonGrp
+		-ed true
+		-label "Wrap Deformer"
+		-text  ""
+		-ann ""
+		-cal 1 "center"
+		-buttonLabel "Select"
+		-bc ("string $sel[] = `ls -sl`; textFieldButtonGrp -edit -text $sel[0] deformerWizWrapDeformerSelectionTextFieldButtonGrp;")
+		deformerWizWrapDeformerSelectionTextFieldButtonGrp
+		;
+		
+	
+	button
+		-l "Add All Selected Meshes To Wrap Defomer"
+		-ann "First Select the mesh to Wrap then select as many wrap influences as you like"
+		-c ("wizAddAllMeshesToWrapDeformer(`ls -sl`);")
+		;
+
+	button
+		-l "Remove All Selected Meshes From Wrap Defomer"
+		-ann "First Select the mesh to Wrap then select as many wrap influences as you like"
+		-c ("wizRemoveAllMeshesFromWrapDeformer(`ls -sl`);")
+		;
+		
+	setParent..;
+	
+}
+
+
+
+global proc skeletonMeshLayout( string $parent )
+{
+	string $layout = `frameLayout
+		-l "Skeleton Mesh"
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true		
+		-parent $parent
+		`;
+		
+		text
+			-al "left"
+			-l "Align Bone Mesh To World Center Ground. Make 2 units tall."
+			;
+			
+		textFieldButtonGrp
+			-l "Skeleton Root Joint"
+			-tx ""
+			-bl "Select"
+			-bc ("string $sel[] = `ls -sl`;textFieldButtonGrp -e -tx $sel[0] skeletonMeshRootTextFieldButtonGrp;")
+			skeletonMeshRootTextFieldButtonGrp
+			;
+		
+		textFieldButtonGrp
+			-l "Bone Mesh"
+			-tx ""
+			-bl "Select"
+			-bc ("string $sel[] = `ls -sl`;textFieldButtonGrp -e -tx $sel[0] skeletonMeshBoneMeshTextFieldButtonGrp;")
+			skeletonMeshBoneMeshTextFieldButtonGrp
+			;
+		
+		textFieldButtonGrp
+			-l "Bone Mesh Cap"
+			-tx ""
+			-bl "Select"
+			-bc ("string $sel[] = `ls -sl`;textFieldButtonGrp -e -tx $sel[0] skeletonMeshBoneMeshCapTextFieldButtonGrp;")
+			skeletonMeshBoneMeshCapTextFieldButtonGrp
+			;
+			
+			/*
+		floatSliderGrp
+			-l "Spine Size:"
+			-min 0
+			-max 1000
+			-value 1
+			-step 1
+			-f true
+			-pre 2
+			skeletonMeshSpineSizeFloatSliderGrp
+			;
+		
+		floatSliderGrp
+			-l "Neck Size:"
+			-min 0
+			-max 1000
+			-value 1
+			-step 1
+			-f true
+			-pre 2
+			skeletonMeshNeckSizeFloatSliderGrp
+			;
+		
+		floatSliderGrp
+			-l "Arm Size:"
+			-min 0
+			-max 1000
+			-value 1
+			-step 1
+			-f true
+			-pre 2
+			skeletonMeshArmSizeFloatSliderGrp
+			;
+			*/
+		button
+			-l "Build Skeleton Mesh"
+			-c ("buildSkeletonMesh();")
+			;
+			
+}
+
+global proc stickObjectToSurface( string $sel[] )
+{
+	select -r $sel;
+	geometryConstraint -weight 1;
+	normalConstraint -weight 1 -aimVector 0 1 0 -upVector 0 1 0 -worldUpType "vector" -worldUpVector 0 1 0;
+}
+
+global proc createWireDeformersForEachSelectedCurve( string $sel[] )
+{
+	string $mesh = $sel[0];
+	for ($i=1;$i<`size $sel`;$i++){
+		wire -gw false -en 1.000000 -ce 0.000000 -li 0.000000 -before -w $sel[$i] $mesh;
+		
+	}
+}
+
+/*
+global proc addMeshObjectsToSkeleton( string $sel[] )
+{
+	string $skel = $sel[0];
+	while(true){
+		string $el[] = `listRelatives $
+	}
+	
+}
+*/
+
+//BUILD SKELETON MESH
+//==============================================
+global proc buildSkeletonMesh()
+{
+	string $root = `textFieldButtonGrp -q -tx skeletonMeshRootTextFieldButtonGrp`;
+	string $sel[] = `ls -sl`;
+	string $skel = $sel[0];
+	string $shape = $sel[1];
+	string $selection[], $currentNode;
+	global string $SS_node;
+	global string $skelMeshGroup;
+	//$selection = `ls -sl`;
+	
+	$skelMeshGroup = `group -empty -name "SkeletonMesh"`;
+	/*
+	for ($SS_node in $selection){
+		if (`nodeType $SS_node` == "joint"){
+			createJointMesh($SS_node);
+		}
+	}
+	*/
+	createJointMesh($root);
+}
+
+//CREATE JOINT MESH
+//==============================================
+global proc createJointMesh( string $currentJoint)
+{
+	global string $skelMeshGroup;
+	string $jointShape = `textFieldButtonGrp -q -tx skeletonMeshBoneMeshTextFieldButtonGrp`;
+	string $jointCapShape = `textFieldButtonGrp -q -tx skeletonMeshBoneMeshCapTextFieldButtonGrp`;
+	if ($jointCapShape == ""){
+		$jointCapShape = $jointShape;
+	}
+	string $selection[], $children[], $solidJoint[], $parent[], $parentJoint;
+	global string $SS_node;
+	$children = `listRelatives -c $currentJoint`;
+	for ($node in $children){		
+		if (`nodeType $node` == "joint"){
+			createJointMesh($node);
+		}
+	}
+
+	string $name = $currentJoint + "_SJ";
+	$parent = `listRelatives -p $currentJoint`;
+	if (($parent[0] != "")&&($currentJoint != $SS_node)){
+		$parentJoint = $parent[0];
+		//$solidJoint = `cone -pivot 0 0 0 -axis 1 0 0 -r 1 -ssw 0 -esw 360 -d 1 -s 4 -nsp 1 -hr 2 -po 1 -n $name`;
+		//$solidJoint = `cylinder -pivot 1 0 0 -axis 1 0 0 -r 1 -ssw 0 -esw 360 -d 1 -s 4 -nsp 1 -hr 2 -po 1 -n $name`;
+		string $children[] = `listRelatives -c $currentJoint`;
+		string $shape;
+		if (`size $children` == 0){
+			$shape = $jointCapShape;
+		} else {
+			$shape = $jointShape;
+		}
+		
+		string $dup[] = `duplicate -n $name $shape`;
+		string $solidJoint = $dup[0];
+		catch(`parent $solidJoint $skelMeshGroup`);
+		float $xform1[], $xform2[];
+		vector $distanceVector;
+		float $dispScale = `jointDisplayScale -q`;
+		$xform1 = `xform -q -ws -t $currentJoint`;
+		$xform2 = `xform -q -ws -t $parentJoint`;
+		vector $vector1, $vector2;
+		$vector1 = << ($xform1[0]),($xform1[1]),($xform1[2])>>;
+		$vector2 = << ($xform2[0]),($xform2[1]),($xform2[2])>>;
+		float $dist = mag($vector2 - $vector1);
+		float $dist = $dist/2;
+		scale -r $dispScale $dist $dispScale $solidJoint;
+		pointConstraint -weight 1 $parentJoint $solidJoint;
+		aimConstraint -aim 0 1 0 -u 0 1 0 -wu 0 1 0 -weight 1 $currentJoint $solidJoint;
+		string $lock = ($solidJoint + ".sy");
+		setAttr -lock true $lock;
+	}
+	
+}
+
+//WIZ CREATE WRAP DEFORMER FOR SELECTED OBJECTS
+//===================================================================
+global proc wizCreateWrapDeformerForSelectedObjects( string $sel[] )
+{
+	select -r $sel[0];
+	select -add $sel[1];
+	string $wrap[] = `CreateWrap`;
+	//string $wrap[] = `deformer -type wrap $sel[0]`;
+
+	for ($i=2;$i<`size $sel`;$i++){
+		select -r $wrap[0];
+		select -add $sel[$i];
+		AddWrapInfluence;
+	
+	}
+}
+
+//WIZ ADD ALL MESHES TO WRAP DEFORMER
+//===================================================================
+global proc wizAddAllMeshesToWrapDeformer( string $sel[] )
+{
+	//string $w[] = `ls -type wrap $sel`;
+	string $wrap = `textFieldButtonGrp -q -tx deformerWizWrapDeformerSelectionTextFieldButtonGrp`;
+	/*
+	if (`size $w` == 0){
+		string $wrap = `textFieldButtonGrp -q -tx deformerWizWrapDeformerSelectionTextFieldButtonGrp`;
+	}
+	*/
+	for ($i=0;$i<`size $sel`;$i++){
+		select -r $wrap;
+		select -add $sel[$i];
+		AddWrapInfluence;
+	
+	}
+}
+
+//WIZ ADD ALL MESHES TO WRAP DEFORMER
+//===================================================================
+global proc wizRemoveAllMeshesFromWrapDeformer( string $sel[] )
+{
+/*
+	string $w[] = `ls -type wrap $sel`;
+	if (`size $w` == 0){
+		string $wrap = `textFieldButtonGrp -q -tx deformerWizWrapDeformerSelectionTextFieldButtonGrp`;
+	}
+	*/
+	string $wrap = `textFieldButtonGrp -q -tx deformerWizWrapDeformerSelectionTextFieldButtonGrp`;
+	for ($i=0;$i<`size $sel`;$i++){
+		select -r $wrap;
+		select -add $sel[$i];
+		RemoveWrapInfluence;
+	
+	}
+}
+
+//@ AUTO CONSTRAIN CHARACTER CONSTRAINT GROUPS
+//===================================================================
+global proc autoConstrainCharacterConstraintGroups( string $sel[] )
+{
+	print ("WIZ| autoConstrainCharacterConstraintGroups : Usage :\n"
+	+" - Select the skeleton you want to constrain objects too and run the autoConstrainCharacterConstraintGroups command.\n"
+	+" - Auto Constraint Character Constraint Groups will find any objects that share the skeleton joint's name\n"
+	+" - If the object also containts the word \"Constraint\" that object will be constrained to the joint\n"
+	+" - So if your object is named \"Head_ConstraintGroup\" that object will be constrained to the Head joint\n");
+	
+	//Select the hierarchy of the skeleton
+	select -r -hi $sel;
+	string $hi[] = `ls -tr -sl`;
+	//Get the names of the joints without any namespaces
+	string $skel[] = getObjectNamesNoNamespaces($hi);
+	print ("WIZ| Joints In Hierarchy : \n 	- " + stringArrayToString($skel, "\n	- ") + "\n");
+	
+	
+	for($i=0;$i<`size $skel`;$i++){
+		//Find any objects that contain the name of the joint
+		string $m[] = `ls -r true ($skel[$i] + "*")`;
+		//print ("WIZ| Matching Names : \n 	- " + stringArrayToString($m, "\n	- ") + "\n");
+		
+		for($p=0;$p<`size $m`;$p++){
+			//If the object name also contains the word Constraint then constrain the object to the joint
+			string $match = `match "Constraint*" $m[$p]`;
+			if(`size $match` > 0){
+				select -r $hi[$i];
+				select -add $m[$p];
+				wizConstraint("parentConstraintMaintainOffset");
+				print (" - Parented : " + $m[$p] + " To : " + $hi[$i] + "\n");
+				
+			}
+		}
+		
+	}
+	
+	
+}
+
+//@ AUTO PREP FOR CLOTH SIMULATION
+//===================================================================
+global proc string[] autoPrepForClothSimulation( string $sel[] )
+{
+	deleteExtraMeshNodesOnSelectedObjects($sel);
+
+	select -r $sel;
+
+	wizFlattenUVSetsOnSelectedObjects($sel);
+	
+	select -r $sel;
+	
+	return $sel;
+}
+
+//@ AUTO RIG SETS
+//===================================================================
+global proc autoRigSets()
+{
+	print (wizDiv("s") + "\n" + "WIZ| AUTO RIG SETS STARTING : \n" + wizDiv("s") + "\n");
+	string $sets[] = `ls -set`;
+	string $setNames[] = getObjectNamesNoNamespaces($sets);
+	print ("Sets : \n" + stringArrayToString($sets, "\n - ") + "\n");
+	print ("Set Names : \n" + stringArrayToString($setNames, "\n - ") + "\n");
+	
+	string $skin[];
+	string $nCloth[];
+	string $passiveCollider[];
+	
+	for ($i=0;$i<`size $sets`;$i++){
+		if (startsWith($setNames[$i], "Skin")){
+			string $sq[] = `sets -q $sets[$i]`;
+			appendStringArray($skin, $sq, `size $sq`);
+			
+		}
+		
+		if (startsWith($setNames[$i], "Wrap")){
+			print ("Auto Wrapping : " + $setNames[$i] + "\n" + wizDiv("s") + "\n");
+			
+			string $sq[] = `sets -q $sets[$i]`;
+			select -r $sq[0];
+			select -add $sq[1];
+			string $n = $sq[0] + "_OnTo_" + $sq[1] + "Wrap";
+			deformer -n $n -type wrap $sq[0];	
+			print (wizDiv("s") + "\n" + "Wrapped : " + $sq[0] + " Onto : " + $sq[1] + "\n");
+		}
+		
+		if (startsWith($setNames[$i], "PassiveCollider")){
+			print ("Auto Create Passive Colliders : Set : " + $setNames[$i] + "\n" + wizDiv("s") + "\n");
+			string $sq[] = `sets -q $sets[$i]`;
+			wizMakePassiveColliders($sq);
+			print (wizDiv("end") + "\n");
+		}
+		
+		if (startsWith($setNames[$i], "nCloth")){
+			print ("Auto Create nCloth Objects : Set : " + $setNames[$i] + "\n" + wizDiv("s") + "\n");
+			string $sq[] = `sets -q $sets[$i]`;
+			//select -r $sq;
+			//createNCloth 0;	
+			wizMakeNClothObjects($sq);
+			print (wizDiv("end") + "\n");
+		}
+		
+	}
+	
+	if (`size $skin` > 0){			
+		print ("Auto Skinning : \n" + wizDiv("s") + "\n");
+		print (" - " + stringArrayToString($skin, "\n - ") + "\n");
+		select -r $skin;
+		SmoothBindSkin;
+		print (wizDiv("end"));
+	}
+	
+}
+
+//@ CREATE AUTO RIG SET
+//===================================================
+global proc string createAutoRigSet( string $sel[], string $setName )
+{
+	string $newSet = `sets -n $setName $sel`;
+	return $newSet;
+	
+}
+
+
+//@ WIZ RIG OPERATION
+//====================================================================
+/*****************************************************************//**
+	This does various common rigging operations
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName("-obj someObject -q -sl");
+	
+	</code>
+*********************************************************************/
+global proc wizRigOperation( string $flags )
+{
+	string $obj, $type;
+	string $sel[];
+	int $bswc;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-bswc" : case "-blendShapeWrapCloth" :
+			$bswc = 1;
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+				
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	if ($bswc){
+		string $bsDup[] = `duplicate -rr -renameChildren $sel[0]`;
+		
+		select -r $sel[0];
+		
+		select -add $bsDup[0];
+		string $bs[] = `blendShape -n ($sel[0] + "BlendShape")`;
+		setAttr ($bs[0] + "." + $sel[0]) 1;
+		select -r $sel[0];
+		
+		string $wrapDup[] = `duplicate -rr -renameChildren $sel[0]`;
+		refresh -f;
+		refreshAE ;
+		
+		select -r $wrapDup[0];
+		select -add $bsDup[0];
+		deformer -type wrap $wrapDup[0];
+	
+	}
+	
+	
+
+
+}

@@ -1,0 +1,4517 @@
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//|||||||||||||||||||||||||:::WIZ:::||||||||||||||||||||||||||||||||||
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//                         NAME WIZ
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+/*====================================================================
+Author: Glen Johnson
+Email: plasticarm@gmail.com
+Website: plasticarm.com / hrpictures.com
+----------------------------------------------------------
+Summary:
+
+
+
+====================================================================*/
+
+//====================================================================
+//			GLOBAL VARS
+
+
+
+//====================================================================
+
+global proc textureWiz()
+{
+
+/*
+global string $textureWizWindow;
+$textureWizWindow = "textureWiz";
+if(`window -exists $textureWizWindow`){
+	deleteUI $textureWizWindow;
+}
+
+window
+	-title "Texture Wiz"
+	-widthHeight 400 200
+	-menuBar on
+	-menuBarVisible on
+	-minimizeButton on
+	-maximizeButton on
+	-sizeable on		
+	-resizeToFitChildren off
+	-titleBar on
+	$textureWizWindow;
+	
+	string $masterLayout = `columnLayout
+		-adjustableColumn true
+		masterLayout
+		`;
+		
+	textureExpressionsLayout($masterLayout);
+	outputTextureSequenceLayout($masterLayout);
+	
+	showWindow $textureWizWindow;
+*/
+}
+//========================================================================================================
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//                     LAYOUTS
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//========================================================================================================
+// @
+//=======================================================
+global proc textureWizLayout(string $parent)
+{
+	string $layout = `frameLayout
+		-l "Textures"
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 0
+		-mh 0		
+		
+		-cll true
+		-cl true		
+		-parent $parent
+		textureModuleLayout_frameLayout
+		`;
+	
+		
+	textureMenuLayout();
+		
+	textureExpressionsLayout($layout);
+	
+	textureOutputSequenceLayout($layout);
+	
+	layeredTextureLayout($layout);	
+	
+	textureMixerLayout($layout);
+	
+	bumpLayout($layout);
+	
+	textureSelectionLayout($layout);
+	
+	wizConvertVertexColorsToTextureLayout($layout);
+	
+	wizCollectAllTextureLayout();
+	
+	
+	
+	//setParent..;
+}
+
+//# TEXTURE MENU LAYOUT
+//====================================================================
+global proc textureMenuLayout()
+{
+    string $menuBarLayout = `menuBarLayout textureMenu`;
+
+    textureWizMenu();
+}
+
+global proc textureMixerLayout( string $parent )
+{
+	string $layout = `frameLayout
+		-l "Texture Mixer"
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 0
+		-mh 0		
+		
+		-cll true
+		-cl true	
+		-p $parent		
+		textureMixerLayout_frameLayout
+		`;
+		
+	wizTextFieldButtonGrp(
+		"-l Directory "
+		+"-bl Browse "
+		+"-ann A Source Directory Of Images To Process "
+		+"-bc ad "
+		+"-n textureMixer_textureDirectory_textFieldButtonGrp");
+		
+	wizCheckBox(
+		"-l Include Sub-Directories "
+		+"-ann This does something "
+		+"-v 1 "
+		+"-n textureMixer_includeSubDirectories_checkBox");
+		
+	wizTextFieldButtonGrp(
+		"-l In Texture "
+		+"-bl Select "
+		+"-ann Assign A Texture File To This. This is the texture source. "
+		+"-bc AssignObject "
+		+"-n textureMixer_inTexture_textFieldButtonGrp");
+					
+	wizTextFieldButtonGrp(
+		"-l Out Texture "
+		+"-bl Select "
+		+"-ann Assign A Texture File To This. This is the texture that is rendered. "
+		+"-bc AssignObject "
+		+"-n textureMixer_outTexture_textFieldButtonGrp");
+		
+	wizCheckBox(
+		"-l Run Randomization "
+		+"-ann This does something "
+		+"-v 1 "
+		+"-n textureMixer_runRandomization_checkBox");
+	
+	wizCheckBox(
+		"-l Replace Original "
+		+"-ann This does something "
+		+"-v 1 "
+		+"-n textureMixer_replaceOriginal_checkBox");
+	
+	wizCheckBox(
+		"-l Append Suffix "
+		+"-ann This does something "
+		+"-v 1 "
+		+"-n textureMixer_appendSuffix_checkBox");
+	
+	wizTextFieldGrp(
+		"-l Suffix "
+		+"-tx Mixed "
+		+"-ann Some Helpful Annotation "
+		+"-n textureMixer_suffix_textFieldGrp");
+		
+	button
+		-l "Mix"
+		-c ("wizTextureMix(\"-wiz\");")
+		;
+		
+}
+
+global proc textureSelectionLayout( string $parent )
+{
+	string $layout = `frameLayout
+		-l "Texture Selection"
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 0
+		-mh 0		
+		
+		-cll true
+		-cl true		
+		-parent $parent
+		textureSelectionLayout_frameLayout
+		`;
+
+
+	menuBarLayout ;
+		menu -l "Selection";
+			textureWizSelectionMenuItems();
+			textureFileOutputPathMenuItems();
+
+	
+	scrollField
+		-w 200
+		-h 200
+		-tx "white, black, grey, red, blue, green"
+		textureWizTextureSelectionList_scrollField
+		;
+
+		
+	string $tsCom = ("string $selNameString = `scrollField -q -tx textureWizTextureSelectionList_scrollField`;"+"\n"
+	+"string $selName[] = tokenizeString($selNameString, \", \");"+"\n"
+	+"string $selNames = stringArrayToString($selName, \" \");"+"\n"
+	+"string $selectorName = `textFieldButtonGrp -q -tx textureWizTextureSelectionName_TextFieldButtonGrp`;"+"\n"
+	+"addFileSelectionsToSelectedFileNode(`ls -sl`, (\" -tsn \" + $selectorName + \" -sn \" + $selNames));"+"\n"
+	);
+	
+	textFieldButtonGrp
+		-l "Add Texture Selection Name: "
+		-tx "textureSelection"
+		-cal 1 "left"
+		-bl "Add Texture Selector"
+		-bc $tsCom
+		textureWizTextureSelectionName_TextFieldButtonGrp
+		;
+		
+}
+
+//# TEXTURE WIZ MENU
+//====================================================================
+global proc textureWizMenu()
+{
+    menu -label "Textures";
+	
+	textureWizLayeredTexturesMenuItems();
+		
+	textureWizBumpMenuItems();
+	
+	textureWizProjectionsMenuItems();
+	
+	textureWizConversionMenuItems();
+	
+	textureWizAttributesMenuItems();	
+		
+    textureWizSelectionMenuItems();
+	
+	texturePoolMenuItems();
+
+	textureFileOutputPathMenuItems();
+	
+	textureUtilitiesMenuItems();
+	
+	menuItem -l "File Texture Manager" -c ("FileTextureManager();");
+	
+}
+
+global proc textureWizProjectionsMenuItems()
+{
+	menuItem -sm true -l "Projections" -to true;
+		menuItem -l "Create Projection To Fit Image File" -c ("wizCreateProjectionToFitImageFile(\"\")");			
+		menuItem -l "Create Ramp Projector" -c ("wizRampProjector(\"\");");
+		menuItem -l "Create Spherical Ramp" -c ("wizSphericalRampProjector(\"\");");
+		menuItem -l "Create Terrain Elevation Shader On Selected Object" -c ("wizTerrainElevationShader(\"-sl\");");
+	setParent -menu ..;
+
+}
+
+global proc textureWizLayeredTexturesMenuItems()
+{
+	menuItem -sm true -l "Layered Textures" -to true;
+		menuItem -l "Layer Texture Onto Selected Object" -c ("layerTextureOntoSelectedObject(\"-sl -ut\");");
+		menuItem -l "Add Selected Texturs To Layered Texture" -c ("addSelectedTexturesToLayeredTexture(`ls -sl`)");			
+		menuItem -l "Add Selected Texture To All Layered Textures" -c ("addSelectedTextureToAllLayeredTextures(`ls -sl`)");		
+		menuItem -l "Insert Layered Texture Between Selected Shaders and Textures" -c ("insertLayeredTextureBetweenAllSelectedShadersAndTextures(`ls -sl`)");			
+		menuItem -l "Insert Layered Texture After Bump Node On Selected Shaders" -ann "This inserts a layered texture after the bump nodes connected to each shader."
+			-c ("insertLayeredTextureAfterBumpNodeOnSelectedShaders(`ls -sl`)");
+
+	setParent -menu ..;
+	
+}
+
+
+global proc textureWizBumpMenuItems()
+{
+	menuItem -sm true -l "Bump Textures" -to true;
+		menuItem -l "Connect Texture To All Selected Bumps"	-c ("connectTextureToAllSelectedBumps(`ls -sl`)");			
+		menuItem -l "Connect Texture To All Selected Shaders Bump" -c ("connectTextureToAllSelectedShadersBump(`ls -sl`)");			
+		menuItem -l "Insert Bump Between All Selected Shaders and Bump"	-c ("insertBumpBetweenAllSelectedShadersAndBump(`ls -sl`)");			
+	setParent -menu ..;
+	
+}
+
+global proc textureWizConversionMenuItems()
+{
+	menuItem -sm true -l "Convert" -to true;
+		menuItem -l "Change File Extension" -c ("changeFileExtensionOnSelectedTextures(`ls -sl`);");
+			menuItem -ob true -c ("openCurrentOptionsLayout(\"changeFileExtensionOnTexturesOptions\");");
+		menuItem -l "List All Tif File Textures" -c ("listAllTifFileTextures();");		
+	setParent -menu ..;
+
+}
+
+global proc textureWizAttributesMenuItems()
+{
+	menuItem -sm true -l "Texture Attributes" -to true;
+		menuItem -l "Global Texture Attributes Options" -c ("openCurrentOptionsLayout(\"globalTextureAttributesOptions\");");
+		menuItem -l "Set All Textures Filter Type" -c ("setAllTexturesFilterType()");
+			menuItem -ob true -c ("openCurrentOptionsLayout(\"globalTextureAttributesOptions\");");			
+		menuItem -l "Refresh Selected File Textures" -c ("wizRefreshSelectedFileTextures(`ls -sl`)");
+		
+		menuItem -l "Create Image Plane To Fit Image" -c ("wizCreateImagePlaneToFitImageFiles(`ls -sl`)");	
+		menuItem -l "Create Image Plane To Fit Image" -c ("wizCreateImagePlaneToFitImageFiles(`ls -sl`)");	
+		menuItem -l "Disable File Textures That Can't Be Found" -c ("disableLoadingOfTextureFilesThatDoNotExist();");	
+		menuItem -l "Restore File Paths Of Texture Files That Can't Be Found" -c ("restoreFilePathsOfTextureFilesThatDoNotExist();");
+		menuItem -l "Reload All Octane Textures" -c ("wizReloadAllOctaneTextures();");	
+	setParent -menu ..;
+
+}
+
+//# TEXTURE SELECTION MENU ITEMS
+//====================================================================
+global proc textureWizSelectionMenuItems()
+{    
+	menuItem -sm true -l "Texture Selection" -to true;
+		
+		string $ann = "Adds A Number Of Empty File Selection Attributes To The Selected Texture File Node";
+		menuItem -l "Add File Selections To File Texture Selection" -ann $ann -c ("addFileSelectionsToSelectedFileNode(`ls -sl`, \"-prompt\");");
+		
+		$ann = "Adds The Current File Path To The Selected Texture File Node's Texture Selection";		
+		menuItem -l "Add Current File Path To File Texture Selection" -ann $ann -c ("addFileSelectionsToSelectedFileNode(`ls -sl`, \"-ac\");");
+		
+		$ann = "Prompts User To Select Multiply Files From Browser And Adds Them To An Existing File Texture Selection";
+		menuItem -l "Add Multiple File Selections To Selected File Texture" -ann $ann -c ("editFileTextureSelectorForSelectedFiles();");
+		
+		$ann = "Prompts User To Select Multiply Files From Browser And Adds Them To A New File Texture";
+		menuItem -l "Create File Texture Selector For Multiple Files" -c ("createFileTextureSelectorForSelectedFiles();");
+			
+        menuItem -l "Connect Selected Textures OutAlpha To Choice" -c ("connectSelectedTexturesOutAlphaToChoice(`ls -sl`);");
+	
+	setParent -menu ..;
+}
+
+global proc texturePoolMenuItems()
+{
+	menuItem -sm true -l "Texture Pools" -to true;
+		menuItem -l "Build Texture Pool For Selected Files" -c ("buildTexturePools(\"-sel\");");
+			menuItem -ob true -c ("openCurrentOptionsLayout(\"texturePoolOptions\");");
+		menuItem -l "Build Texture Pool For Directory" -c ("buildTexturePools(\"-dir\");");
+			menuItem -ob true -c ("openCurrentOptionsLayout(\"texturePoolOptions\");");
+		menuItem -l "Build Texture Pool For Directory And Sub-Directories" -c ("buildTexturePools(\"-sd\");");
+			menuItem -ob true -c ("openCurrentOptionsLayout(\"texturePoolOptions\");");
+	setParent -menu ..;
+	
+}
+
+//# TEXTURE FILE OUTPUT PATH MENU ITEMS
+//====================================================================
+global proc textureFileOutputPathMenuItems()
+{
+    menuItem -sm true -l "Output" -to true;
+		menuItem -l "Add Texture Output File Path" -c ("addTextureOutputFilePathToSelected(`ls -sl`);");
+		menuItem -l "Output Texture And Create New File Texture From Texture Output Path" -c ("wizOutputTextureAndCreateFileTexture(`ls -sl`);");
+        menuItem -l "Increment Output Texture And Create New File Texture From Texture Output Path" -c ("wizIncrementOutputTextureAndCreateFileTexture(`ls -sl`);");
+        menuItem -l "Increment Output Texture And Create New File Selection From Texture Output Path" -c ("wizIncrementOutputTextureAndAddToFileTextureSelection(`ls -sl`);");
+     
+        menuItem -l "Update Texture From Texture Output Path" -c ("wizUpdateTextureFromTestTextureOutputPathRefresh(`ls -sl`);");
+        menuItem -l "Update Solid Texture From Texture Output Path" -c ("wizUpdateSolidTextureFromTextureOutputPath(`ls -sl`,\"\");");
+       
+		
+		menuItem -l "Texture Output Path Options" -c ("openCurrentOptionsLayout(\"textureOutputPathOptions\");");
+			
+	setParent -menu ..;
+}
+
+//# UTILITIES
+//====================================================================
+global proc textureUtilitiesMenuItems()
+{
+    menuItem -sm true -l "Utilities" -to true;
+		menuItem -l "New Stepped Remapper" -c ("steppedRemapper(\"-sl\");");
+			menuItem -ob true -c ("openCurrentOptionsLayout(\"steppedRemapperOptions\");");
+		menuItem -l "Mental Ray Vertex Colors From Selected Object" -c ("wizMentalRayVertexColor(\"-sl\");");
+	setParent -menu ..;
+}
+
+global proc textureOutputSequenceLayout(string $parent)
+{
+	string $layout = `frameLayout
+		-l "Texture Output Sequence"	
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $parent
+		`;
+		
+		outputTextureSequenceLayout($layout);
+		
+}
+
+global proc bumpLayout(string $parent)
+{
+	string $layout = `frameLayout
+		-l "Bump"	
+		-ann ""
+		-bv true
+		//-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $parent
+		`;
+	
+	button
+		-l "Connect Texture To All Selected Bumps"
+		-c ("connectTextureToAllSelectedBumps(`ls -sl`)")
+		;
+		
+	button
+		-l "Connect Texture To All Selected Shaders Bump"
+		-c ("connectTextureToAllSelectedShadersBump(`ls -sl`)")
+		;
+		
+	string $bumpType = `radioCollection insertBumpType`;
+		radioButton -l "2d";	
+		radioButton -l "3d";
+		
+	button
+		-l "Insert Bump Between All Selected Shaders and Bump"
+		-c ("insertBumpBetweenAllSelectedShadersAndBump(`ls -sl`)")
+		;
+	
+	setParent..;
+}
+
+global proc layeredTextureLayout(string $parent)
+{
+    string $layout = `frameLayout
+        -l "Layered Textures"	
+        -ann ""
+        -bv true
+        //-la "center"
+        -li 10
+        -lv true
+        -mw 10
+        -mh 10		
+        
+        -cll true
+        -cl true
+        -parent $parent
+        `;
+	
+	processAllSelectedLayeredTextureLayout($layout);
+
+	insertLayeredTextureLayout($layout);	
+		
+	button
+		-label "Add Selected Textures To Layered Texture"
+		-ann ("1: Select the Textures" + "\n" + "2: Select the Layered Texture")
+		-c ("addSelectedTexturesToLayeredTexture(`ls -sl`)")
+		;
+	
+	setParent..;
+}
+
+global proc insertLayeredTextureLayout(string $parent)
+{
+	string $layout = `frameLayout
+		-l "Insert Layered Textures"	
+		-ann ""
+		-bv true
+		//-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $parent
+		`;
+	
+	checkBox
+		-l "Connect Color"
+		-v true		
+		insertLayeredTextureConnectColorOption
+		;
+		
+	checkBox
+		-l "Connect Alpha"
+		-v true		
+		insertLayeredTextureConnectAlphaOption
+		;
+	
+	button
+		-label "Insert Layered Texture Between Selected Shaders and Textures"
+		-ann "This inserts layered textures between all selected shaders and the textures connected to each shader."
+		-c ("insertLayeredTextureBetweenAllSelectedShadersAndTextures(`ls -sl`)")
+		;	
+		
+	button
+		-l "Insert Layered Texture After Bump Node On Selected Shaders"
+		-ann "This inserts a layered texture after the bump nodes connected to each shader."
+		-c ("insertLayeredTextureAfterBumpNodeOnSelectedShaders(`ls -sl`)")
+		;
+		
+	setParent..;
+}
+
+global proc processAllSelectedLayeredTextureLayout(string $parent)
+{
+	string $layout = wizStandardFrameLayoutNoMargins($parent, "Multi Layered Textures Workspace", "multiLayeredTextureWorkspaceLayout");
+	frameLayout
+		-e 
+		-ann "If layered textures are selected before this frame is opened the arrangement of textures will be automatically populated."
+		-ec ("getInputIndicesFromAllSelectedLayeredTextures(`ls -sl`,\"rearrangeAllSelectedLayeredTextures\")")
+		$layout
+		;
+	
+	string $sectionAndHelp[] = createSectionAndHelpTabLayout($layout, "multiLayeredTexturesWorkspace");
+	setParent $sectionAndHelp[0];
+	checkBox
+		-l "Alpha is Luminance"
+		-v false
+		-cc ("int $ail = `checkBox -q -v allLayeredTexturesAlphaIsLuminance`; setAlphaIsLuminanceOnAllSelectedLayeredTextures(`ls -sl`, $ail);")
+		allLayeredTexturesAlphaIsLuminance
+		;
+
+	blendModeOptionMenuGrp();
+		
+	textFieldButtonGrp
+		-l "New Order:"
+		-bl "Rearrange"
+		-text "example: 4,2,3,1,0"
+		-bc ("rearrangeAllSelectedLayeredTextures(`ls -sl`)")
+		rearrangeAllSelectedLayeredTextures
+		;
+		
+	textFieldButtonGrp
+		-l "Remove Texture(s):"
+		-bl "Remove"
+		-text "example: 8,3,1"
+		-bc ("removeTexturesFromAllSelectedLayeredTextures(`ls -sl`)")
+		removeTexturesFromAllSelectedLayeredTextures
+		;
+		
+   
+	button 
+		-l "Add Selected Texture To All Layered Textures"
+		-ann ("1: Select the Texture" + "\n" + "2: Select the Layered Textures")        
+		-c ("addSelectedTextureToAllLayeredTextures(`ls -sl`)")
+		;
+		
+	//setParent..;
+	
+	setParent $sectionAndHelp[1];
+	
+		text
+			-al "left"
+			-ww true
+			-l "Help with multi layered texture workspace"
+			;
+	
+}
+
+
+global proc wizConvertVertexColorsToTextureLayout(string $parent)
+{
+	string $layout = wizStandardFrameLayoutNoMargins($parent, "Convert Vertex Colors To Texture", "wizConvertVertexColorsToTextureLayout");
+
+	wizCheckBox(
+		"-l Render Sequence "
+		+"-v false "
+		+"-n allLayeredTexturesAlphaIsLuminance"
+		);
+
+	wizFloatFieldGrp(
+		"-l Frame Range "
+		+"-nf 2 "
+		+"-v 0 100 "
+		+"-n wizConvertVertexColorsToTexture_frameRange_floatFieldGrp"
+		);
+		
+	wizIntFieldGrp(
+		"-l Size "
+		+"-nf 2 "
+		+"-v 512 512 "
+		+"-n wizConvertVertexColorsToTexture_size_intFieldGrp"
+		);
+		
+	wizTextFieldButtonGrp(
+		"-l Directory "
+		+"-bl Select "
+		+"-bc ad "
+		+"-n wizConvertVertexColorsToTexture_dir_textFieldButtonGrp"
+		);
+		
+	wizTextFieldGrp(
+		"-l Prefix "
+		+"-tx VertexColors "
+		+"-ann Prefix Name "
+		+"-n wizConvertVertexColorsToTexture_name_textFieldGrp");	
+   
+	wizTextFieldGrp(
+		"-l Export File Type "
+		+"-tx iff "
+		+"-n wizConvertVertexColorsToTexture_eft_textFieldButtonGrp");	
+   
+		
+	button 
+		-l "Convert Vertex Colors To Texture"
+		-ann ("1: Select the Object" + "\n")        
+		-c ("wizConvertVertexColorsToTexture(\"-wiz\");")
+		;
+		
+	
+}
+
+
+
+
+global proc blendModeOptionMenuGrp()
+{
+    string $bm[] = getEnumAttributeLabels("layeredTexture","blendMode");
+
+    string $allBlendModes = `optionMenuGrp 
+        -label "Global Blend Mode:"		
+        -cal 1 "right" 
+        -cw2 140 170 
+        -ann "This sets the blend mode for all textures on the selected layered texture"
+        -cc ("changeAllTextureBlendModesOnSelectedLayeredTextures(`ls -sl`)")
+        layeredTextureGlobalBlendMode
+        `;
+        
+        for($i=0;$i<`size $bm`;$i++){
+            menuItem -label $bm[$i] -p ($allBlendModes + "|OptionMenu");
+        }
+        
+    string $bottomLayerBlendMode = `optionMenuGrp 
+        -label "Bottom Layer Blend Mode:"		
+        -cal 1 "right" 
+        -cw2 140 170 
+        -ann "This sets the blend mode for bottom layer texture on all the selected layered textures"
+        -cc ("changeAllBottomTextureBlendModesOnSelectedLayeredTextures(`ls -sl`)")
+        layeredTextureBottomLayerBlendMode
+        `;	
+        
+        for($i=0;$i<`size $bm`;$i++){
+            menuItem -label $bm[$i] -p ($bottomLayerBlendMode + "|OptionMenu");
+        }	
+}
+
+global proc textureExpressionsLayout(string $parent)
+{
+    string $textureExpressionsLayout = `frameLayout
+        -l "Texture Expressions"	
+        -ann ""
+        -bv true
+        //-la "center"
+        -li 10
+        -lv true
+        -mw 10
+        -mh 10		
+        
+        -cll true
+        -cl true
+        -parent $parent
+        `;
+	
+	optionMenuGrp 
+		-label "Texture Attribute:"		
+		-cal 1 "right" 
+		-cw2 140 170 
+		//-cc  ("updateTabParameter\""+ $parent+"\"")  knifeShape;
+		//-cc "updateFileType"
+		textureAttribute;
+		menuItem -label "TextureTime";
+		menuItem -label "Time";
+		menuItem -label "Frequency";
+	
+	button
+		-l "Create Linear Expression"
+		-c "createLinearTextureExpression"
+		createLinearTextureExpression
+		;
+		
+	string $attrOptionGrp = `optionMenu 
+			-label "Placement Attribute to Animate:"			
+			attributeToAddCurveTexturePlacementExpressionTo
+			`;
+			menuItem 
+				-label "coverageU"
+				-parent $attrOptionGrp
+				;
+			menuItem 
+				-label "coverageV"
+				-parent $attrOptionGrp
+				;
+			menuItem 
+				-label "translateFrameU"
+				-parent $attrOptionGrp
+				;
+			menuItem 
+				-label "translateFrameV"
+				-parent $attrOptionGrp
+				;
+			menuItem 
+				-label "rotateFrame"
+				-parent $attrOptionGrp
+				;
+			menuItem 
+				-label "repeatU"
+				-parent $attrOptionGrp
+				;
+			menuItem 
+				-label "repeatV"
+				-parent $attrOptionGrp
+				;
+			menuItem 
+				-label "offsetU"
+				-parent $attrOptionGrp
+				;
+			menuItem 
+				-label "offsetV"
+				-parent $attrOptionGrp
+				;
+			menuItem 
+				-label "rotateUV"
+				-parent $attrOptionGrp
+				;
+	button
+		-l "Set Texture Placement Attribute to Curve Length"
+		-ann "Select a Texture Placement Node and then select a Curve."
+		-c "createSetTexturePlacementAttributeToCurveLengthExpression"		
+		createSetTexturePlacementAttributeToCurveLengthExpression
+		;
+		
+}
+
+//========================================================================================================
+//########################################################################################################
+//********************************************************************************************************
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//                     FUNCTIONS
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//********************************************************************************************************
+//########################################################################################################
+//========================================================================================================
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         LAYERED TEXTURES
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//LAYERED TEXTURES
+//=========================
+global proc changeAllTextureBlendModesOnSelectedLayeredTextures(string $sel[])
+{
+	for ($i=0;$i<`size $sel`;$i++){
+		setAllBlendModesOnLayeredTexture($sel[$i]);	
+	}
+}
+
+global proc changeAllBottomTextureBlendModesOnSelectedLayeredTextures(string $sel[])
+{
+	for ($i=0;$i<`size $sel`;$i++){
+		setBottomTextureBlendModeOnLayeredTexture($sel[$i]);	
+	}
+}
+
+
+global proc setAllBlendModesOnLayeredTexture( string $lt)
+{
+	int $bm = `optionMenuGrp -q -sl layeredTextureGlobalBlendMode`;
+	$bm = $bm - 1;
+	int $indices[] = `getAttr -mi ($lt + ".inputs")`;
+	for($i=0;$i<`size $indices`;$i++){
+		setAttr ($lt + ".inputs[" + $indices[$i] + "].blendMode") $bm;	
+	}
+}
+
+global proc setAllBlendModesOnSelectedLayeredTexture( string $lt , int $bm )
+{
+	int $indices[] = `getAttr -mi ($lt + ".inputs")`;
+	for($i=0;$i<`size $indices`;$i++){
+		setAttr ($lt + ".inputs[" + $indices[$i] + "].blendMode") $bm;	
+	}
+}
+
+
+global proc setBottomTextureBlendModeOnLayeredTexture(string $lt)
+{
+	int $bm = `optionMenuGrp -q -sl layeredTextureBottomLayerBlendMode`;
+	$bm = $bm - 1;
+	int $indices[] = `getAttr -mi ($lt + ".inputs")`;
+	setAttr ($lt + ".inputs[" + $indices[(`size $indices` - 1)] + "].blendMode") $bm;	
+
+}
+
+//@ ADD SELECTED TEXTURES TO LAYERED TEXTURE
+//====================================================================
+/*****************************************************************//**
+	This adds all textures to the layered texture at end of array.
+	<hr>
+	<b>Synopsis</b><br>
+	addSelectedTexturesToLayeredTexture [string $texArr[]]<br>
+	The layered texture must be included in the array. 
+	The textures will be placed in the layered texture in the 
+	order that they were passed to the function.
+	<b>Return value</b><br>
+	none.
+	
+	<b>Flags</b><br>
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	string $sel[] = `ls -sl`;
+	addSelectedTexturesToLayeredTexture(`ls -sl`);
+	
+	</code>
+*********************************************************************/
+global proc addSelectedTexturesToLayeredTexture( string $sel[] )
+{
+	wizlog("[@] addSelectedTexturesToLayeredTexture");
+	wizlog ((niceArrayList("	[#] Selected Textures : ", $sel)));
+	
+	//string $sel[] = `ls -sl`;
+	int $last = (`size $sel` - 1);
+	string $nodeType = `nodeType $sel[$last]`;
+	string $laytex[];
+	if ($nodeType == "layeredTexture"){
+		$laytex[0] = $sel[(`size $sel` - 1)];
+	} else {
+		$laytex[0] = `ls -typ layeredTexture $sel`;
+	}
+	
+	string $tex[] = stringArrayRemove($laytex, $sel);
+	wizlog((niceArrayList("		[#] Layered Texture : ", $laytex)));
+	wizlog((niceArrayList("		[#] Add Textures : ", $tex)));
+	
+	for ($i=0;$i<`size $tex`;$i++){
+		connectAttr -f ($tex[$i] + ".outColor") ($laytex[0] + ".inputs[" + $i + "].color");
+		connectAttr -f ($tex[$i] + ".outAlpha") ($laytex[0] + ".inputs[" + $i + "].alpha");
+	}
+	wizlog("[END] addSelectedTexturesToLayeredTexture [END]");
+}
+
+global proc addSelectedTextureToAllLayeredTextures(string $sel[])
+{
+	string $texture = $sel[0];
+	for ($i=1;$i<`size $sel`;$i++){
+		int $indices[] = `getAttr -mi ($sel[$i] + ".inputs")`;
+		int $nextI = ($indices[(`size $indices` - 1)] + 1);
+		connectAttr -f ($texture + ".outColor") ($sel[$i] + ".inputs[" + $nextI + "].color");
+		connectAttr -f ($texture + ".outAlpha") ($sel[$i] + ".inputs[" + $nextI + "].alpha");
+	}
+
+}
+
+global proc string[] insertLayeredTextureBetweenAllSelectedShadersAndTextures( string $sel[] )
+{
+	string $laytex[];
+	for ($i=0;$i<`size $sel`;$i++){
+		string $lt = insertLayeredTextureBetweenShaderAndTextures($sel[$i]);		
+		$laytex[`size $laytex`] = $lt;
+	}
+	return $laytex;
+}
+
+global proc string insertLayeredTextureBetweenShaderAndTextures( string $obj)
+{
+	$connectColor = `checkBox -q -v insertLayeredTextureConnectColorOption`;
+	$connectAlpha = `checkBox -q -v insertLayeredTextureConnectAlphaOption`;
+
+	if (!$connectColor && !$connectAlpha){
+		print("WARNING - You must connect either alpha or color to the layered texture. Process Aborted." + "\n");
+		return $obj;	
+	}
+
+	string $shader = $obj;
+	//List the connected texture files
+	string $textures[] = `listConnections -type texture2d $shader`;
+	//Create a layered texture node
+	string $lt = createLayeredTexture($textures[0]);
+	
+	for ($i=0;$i<`size $textures`;$i++){		
+		
+		//Copy the connection from the texture to the layered texture
+		copyAttr -oc -at outColor $textures[$i] $lt;
+		
+		//Connect the texture to the first input of the layered texture
+		if ($connectColor){
+			connectAttr -f ($textures[$i] + ".outColor") ($lt + ".inputs[0].color");
+		}
+		if ($connectAlpha){
+			connectAttr -f ($textures[$i] + ".outAlpha") ($lt + ".inputs[0].alpha");
+		}	
+	}
+	return $lt;
+}
+
+global proc insertLayeredTextureAfterBumpNodeOnSelectedShaders(string $sel[])
+{
+	for ($i=0;$i<`size $sel`;$i++){
+		insertLayeredTextureAfterBumpNodeOnShader($sel[$i]);		
+	}
+}
+
+//@ INSERT LAYERED TEXTURE AFTER BUMP NODE ON SHADER
+//====================================================================
+global proc insertLayeredTextureAfterBumpNodeOnShader(string $shader)
+{
+	$connectColor = `checkBox -q -v insertLayeredTextureConnectColorOption`;
+	$connectAlpha = `checkBox -q -v insertLayeredTextureConnectAlphaOption`;
+
+	if (!$connectColor && !$connectAlpha){
+		print("WARNING - You must connect either alpha or color to the layered texture. Process Aborted." + "\n");
+		return;	
+	}
+	debugML1("INSERTING LAYERED TEXTURES BETWEEN SHADERS AND BUMP NODES... " + "\n");
+	//List the bump connected to the shader
+	string $bump = getBumpNodeConnectedToShader($shader);
+	debugML1("	* Bump: " + $bump + "\n");
+
+	//List the texture connected to the bump
+	string $bumpTexture = getTextureNodeConnectedToBump($bump);
+	debugML1("	* BumpTexture: " + $bumpTexture + "\n");
+
+	//Create a layered texture node
+	string $ltName = "LayeredBumpTexture" + $bump;
+	string $lt = createLayeredTexture($ltName);
+	debugML1("	* LayeredTexture: " + $lt + "\n");
+
+	//Connect the bump nodes texture to the layered texture input 0
+	if ($connectColor){
+		connectAttr -f ($bumpTexture + ".outColor") ($lt + ".inputs[0].color");
+	}
+	if ($connectAlpha){
+		connectAttr -f ($bumpTexture + ".outAlpha") ($lt + ".inputs[0].alpha");
+	}
+	//If we want to create a new bump node use this
+	/*
+	//Create a bump node
+	string $newBump = `shadingNode -asUtility bump3d`;
+	debugML1("	* NewBump: " + $newBump + "\n");
+
+	//Connect the bump to the shader
+	connectAttr -force ($bump + ".outNormal") ($shader + ".normalCamera");
+	debugML1("	* Connected: " + ($bump + ".outNormal") + " To: " + ($shader + ".normalCamera") + "\n");
+	*/
+
+	//Connect the layered texture outAlpha to the bump
+	connectAttr -f ($lt + ".outAlpha") ($bump + ".bumpValue");
+	debugML1("	* Connected: " + ($lt + ".outAlpha") + " To: " + ($bump + ".bumpValue") + "\n");
+
+	setAttr ($lt + ".alphaIsLuminance") 1;
+
+}
+
+global proc getInputIndicesFromAllSelectedLayeredTextures(string $sel[], string $targetTextField)
+{
+	if (`size $sel` == 0){
+		return;	
+	}
+	int $allIndices[] = `getAttr -mi ($sel[0] + ".inputs")`;
+	int $sizeMismatch = 0;
+	for ($i=0;$i<`size $sel`;$i++){	
+		int $indices[] = `getAttr -mi ($sel[$i] + ".inputs")`;
+		if (`size $indices` != `size $allIndices`){
+			$sizeMismatch = 1; 	
+		}
+		
+	}
+	if ($sizeMismatch == 1){
+		print("WARNING - Layered Textures do not all contain the same amount of textures. Rearranging textures will produce unpredictable results." + "\n");
+	}
+	int $index[];
+	for ($i=0;$i<`size $allIndices`;$i++){
+		$index[$i] = $i;
+	}
+	string $indicesString = intArrayToString($index, ",");
+
+	textFieldButtonGrp -edit -text $indicesString $targetTextField;
+	//return $indicesString;
+}
+
+//@ LAYER TEXTURE ONTO SELECTED OBJECT
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-fa string] [-fb linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-fa, -fb
+	
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	layerTextureOntoSelectedObject("-sl -ut");
+	
+	</code>
+*********************************************************************/
+global proc layerTextureOntoSelectedObject( string $flags )
+{
+	wizlog ("[@] layerTextureOntoSelectedObject");
+	string $obj, $tex;
+	string $ch = "color";
+	string $alpha;
+	int $useAlpha = 1;
+	int $useTransp = 0;
+	string $sel[];
+	int $edit, $first, $last, $pos;
+	int $componentSel = 0;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];			
+			break ;
+			
+			case "-tex" : case "-texture" :
+			$tex = $tok[($i + 1)];
+			break ;
+			
+			case "-ch" : case "-channel" :
+			$ch = $tok[($i + 1)];
+			break ;
+			
+			case "-a" : case "-alpha" :
+			$alpha = $tok[($i + 1)];
+			//$useAlpha = 1;
+			break ;
+						
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			$tex = $sel[0];
+			$obj = $sel[1];
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+			case "-f" : case "-first" :
+			$pos = 0;
+			break ;
+			
+			case "-l" : case "-last" :
+			$pos = -1;
+			break ;
+			
+			case "-pos" : case "-position" :
+			$pos = int($tok[($i + 1)]);
+			break ;
+			
+			case "-ut" : case "-useTransparency" :
+			$useTransp = 1;
+			break ;
+			
+		}
+	}
+	
+	if (`size $sel` == 0 && `size $obj` == 0){
+		$sel = wizFlagObjTrail($flags);
+		$obj = $sel[0];
+	}
+	
+	string $tokObj[] = tokenizeString($obj, "[");
+	if (`size $tokObj` > 1){
+		wizlog ("	[#] Component Selectiong [#]");
+		$componentSel = 1;
+	}
+			
+	wizlog ("	[#] Object : " + $obj + " Texture : " + $tex);
+	wizlog ("	[#] Channel : " + $ch);
+	
+	// Get the material
+	string $materials[];
+	if ($componentSel == 1){
+		$materials[0] = getMaterialFromComponent({$obj});
+	} else {
+		string $ms[] = smartSelectObjectsOfType({$obj}, "mesh");
+		string $sg[] = listConnections("-type","shadingEngine", $ms[0]);
+		$materials = ls("-mat", listConnections($sg));
+	}	
+	$materials = `stringArrayRemoveDuplicates($materials)`;
+	
+	// Connect the material to a new layered texture
+	
+	if (`attributeExists $ch $materials[0]` == 0){
+		wizlog ("-w		[!] Material : " + $materials[0] + " Does Not Have Attribute : " + $ch + " [!] ");
+		return ;
+	}
+	
+	string $con[] = `listConnections ($materials[0] + "." + $ch)`;
+	string $his[];
+	string $laytex[];
+	if (`size $con` > 0 ){
+		$laytex = `ls -typ layeredTexture $con`;		
+		$his = `listHistory -ac $con[0]`;
+		if (`size $his` > 0 && `size $laytex` == 0){
+			$laytex = `ls -typ layeredTexture $his`;
+		}		
+	} 	
+	
+	
+	if (`size $laytex` == 0){
+		string $conTex[] = `listConnections ($materials[0] + "." + $ch)`;
+		string $conTexP[] = `listConnections -p on ($materials[0] + "." + $ch)`;
+		wizlog ("	[#] Current " + $ch + " Connection : " + $conTexP[0]);
+		$laytex[0] = createLayeredTexture($conTex[0]);
+		wizlog ("	[+] New Layered Texture : " + $laytex[0]);
+		if (`size $conTexP` > 0){
+			connectAttr -f ($conTexP[0]) ($laytex[0] + ".inputs[0].color");
+			wizlog ("	[*] connectAttr -f " + $conTexP[0] + " " + $laytex[0] + ".inputs[0].color ;");
+		} 
+		//$laytex = insertLayeredTextureBetweenAllSelectedShadersAndTextures($materials);
+				
+		connectAttr -f ($laytex[0] + ".outColor") ($materials[0] + "." + $ch);
+		if ($useAlpha == 1 || $useTransp == 1){
+			connectAttr ($laytex[0] + ".outTransparency") ($materials[0] + ".transparency");
+			wizlog ("	[*] connectAttr -f " + $laytex[0] + ".outTransparency " + $materials[0] + ".transparency ;");
+		}
+	} 
+	
+	// Connect the texture to the layered texture
+	int $indices[] = `getAttr -mi ($laytex[0] + ".inputs")`;
+	int $newI = ($indices[(`size $indices` - 1)]) + 1;
+	
+	connectAttr -f ($tex + ".outColor") ($laytex[0] + ".inputs[" + $newI + "].color");
+	wizlog ("	[*] connectAttr -f " + $tex + ".outColor " + $laytex[0] + ".inputs[" + $newI + "].color ;");
+	
+	if (`size $alpha` > 0){
+		if (`attributeExists "outAlpha" $alpha` == 1){
+			connectAttr -f ($alpha + ".outAlpha") ($laytex[0] + ".inputs[" + $newI + "].alpha");
+			wizlog ("	[*] connectAttr -f " + $alpha + ".outAlpha " + $laytex[0] + ".inputs[" + $newI + "].alpha ;");
+		} else if (`attributeExists "outValue" $alpha` == 1){
+			connectAttr -f ($alpha + ".outValue") ($laytex[0] + ".inputs[" + $newI + "].alpha");
+			wizlog ("	[*] connectAttr -f " + $alpha + ".outValue " + $laytex[0] + ".inputs[" + $newI + "].alpha ;");
+		} else {
+			wizlog ("-w	[!] Object : " + $alpha + " Does Not have an outAlpha or outValue Attribute [!]");
+		}
+		
+	}
+	
+	/*	
+	if ($useAlpha){
+		connectAttr -f ($tex + ".outAlpha") ($laytex[0] + ".inputs[" + $newI + "].alpha");
+		wizlog ("	[*] connectAttr -f " + $tex + ".outAlpha " + $laytex[0] + ".inputs[" + $newI + "].alpha ;");
+	}	
+	*/
+	
+	
+	
+	// if using transparency make a luminance node and then connect things
+	if ($useTransp){
+		string $lum = `shadingNode -asUtility luminance`;
+		connectAttr -f ($tex + ".outTransparency") ($lum + ".value");
+		//connectAttr -f ($lum + ".outValue") ($laytex[0] + ".inputs[" + $newI + "].alpha");
+		
+		string $rmv = `shadingNode -asUtility remapValue`;
+		connectAttr -f ($lum + ".outValue") ($rmv + ".inputValue");
+		// Result: remapValue1 // 
+		setAttr ($rmv + ".value[1].value_Position") 1;
+		setAttr ($rmv + ".value[1].value_FloatValue") 0;
+		setAttr ($rmv + ".value[0].value_Position") 0;
+		setAttr ($rmv + ".value[0].value_FloatValue") 1;
+		connectAttr -f ($rmv + ".outValue") ($laytex[0] + ".inputs[" + $newI + "].alpha");
+	}
+	
+	rearrangeSelectedLayeredTexture("-lt " + $laytex[0] + " -ltf");
+	
+}
+
+//@ GET MATERIAL FROM COMPONENT
+//====================================================================
+/*****************************************************************//**
+	Gets the material assigned to the component passed.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-fa string] [-fb linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-fa, -fb
+	
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $mat = getMaterialFromComponent(`ls -sl`);
+	
+	</code>
+*********************************************************************/
+global proc string getMaterialFromComponent( string $c[] )
+{
+	wizlog ("[@] getMaterialFromComponent");
+	string $sel[] = getObjectsFromComponents($c);	
+	select -r $c;
+	
+	ConvertSelectionToFaces;
+	string $f[] = `ls -fl -sl`;
+	wizlog ((niceArrayList("	[#] Faces [#] ", $f)));
+	
+	string $obj[] = smartSelectObjectsOfType($sel, "mesh");
+	wizlog ("	[#] Object [#] " + $obj[0]);
+	
+	string $faceSG;
+	string $sg[] = listConnections("-type","shadingEngine", $obj[0]);
+	wizlog ((niceArrayList("	[#] Shading Group [#] ", $sg)));
+	
+	for ($i=0;$i<`size $sg`;$i++){
+		if (`sets -isMember $sg[$i] $f[0]`){
+			wizlog ("	[+] Face : " + $f[0] + " Is Member Of : " + $sg[$i] + " [+] ");
+			$faceSG = $sg[$i];
+			break ;
+		}
+		
+	}
+	// if a component selection was given but the material is actually assigned to the whole object...
+	if (`size $faceSG` == 0){
+		string $mesh[] = smartSelectObjectsOfType($sel, "mesh");
+		for ($i=0;$i<`size $mesh`;$i++){
+			if (`sets -isMember $sg[0] $mesh[$i]`){
+				$faceSG = $sg[0];
+			} 
+			
+		}
+		
+		if (`size $faceSG` == 0){
+			wizlog ("	[!] Could Not Find Material Connected To : " + $sel[0]);
+		}	
+		
+		
+	}
+	string $mat[] = ls("-mat", listConnections($faceSG));
+	$mat = stringArrayRemoveDuplicates($mat);
+	select -r $mat;
+	
+	return $mat[0];
+}
+
+
+//@ RMB LAYER TEXTURE ONTO SELECTED OBJECT
+//====================================================================
+global proc rmbLayerTextureOntoSelectedObject( string $object )
+{
+	wizlog ("[@] rmbLayerTextureOntoSelectedObject");
+	string $sel[] = `ls -sl`;
+	string $dc[] = `ls -type dagContainer -sl`;
+	string $objs[] = stringArrayRemove($dc, $sel); 
+	wizlog ("	[#] Object : " + $objs[0]);
+	layerTextureOntoSelectedObject("-obj " + $objs[0]);
+
+}
+
+global proc int queryMenuItemCheckBox(string $menuItem)
+{
+	int $val = `menuItem -q -cb $menuItem`;
+	return $val;
+}
+
+global proc setAlphaIsLuminanceOnAllSelectedLayeredTextures(string $sel[],int $ail)
+{
+	debugML1("LayeredTexture: " + stringArrayToString($sel, " ") + "\n" + " Alpha Is Luminance: " + $ail + "\n");
+	for ($i=0;$i<`size $sel`;$i++){
+		setAttr ($sel[$i] + ".alphaIsLuminance") $ail;
+	}	
+}
+
+global proc string getBumpNodeConnectedToShader(string $shader)
+{
+	//List the bump connected to the shader
+	string $bump[];
+	$bump = `listConnections -type bump2d $shader`;
+	if (`size $bump` == 0){
+		$bump = `listConnections -type bump3d $shader`;	
+	}
+	return $bump[0];	
+}
+
+global proc string getTextureNodeConnectedToBump(string $bump)
+{
+	//List the texture connected to the bump
+	string $texture[];
+	$texture = `listConnections -type texture2d $bump`;
+	if (`size $texture` == 0){
+		$texture = `listConnections -type texture3d $bump`;	
+	}
+	return $texture[0];	
+}
+
+//@ PROC NAME
+//====================================================================
+/*****************************************************************//**
+	This creates a layeredTexture node and returns it's name.
+	<hr>
+	<b>Synopsis</b><br>
+	createLayeredTexture [string $name]<br>
+	Just a quick shortcut to create a layered texture.
+	
+	<b>Return value</b><br>
+	string the name of the new layered texture.
+	
+	<b>Flags</b><br>
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	string $laytex = createLayeredTexture("layeredTextureName");
+	
+	</code>
+*********************************************************************/
+global proc string createLayeredTexture( string $name )
+{
+	string $ltName = $name + "LayeredTexture";
+	string $lt = `shadingNode -asTexture layeredTexture -n $ltName`;
+	setAttr ($lt + ".inputs[0].color") -type "double3" 0.0 0.0 0.0;
+	setAttr ($lt + ".inputs[0].alpha") 1;
+	setAttr ($lt + ".inputs[0].blendMode") 1;
+
+	return $lt;
+}
+
+global proc rearrangeAllSelectedLayeredTextures(string $sel[])
+{
+	debugML1("		* Rearranging Selected Layered Textures..." + stringArrayToString($sel, " ") + "\n");
+	for($i=0;$i<`size $sel`;$i++){
+		rearrangeSelectedLayeredTexture($sel[$i]);
+	}
+}
+
+//@ PROC NAME
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-fa string] [-fb linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-firstToLast(-ftl) <br>
+	-lastToFirst(-ltf) <br>
+	
+	
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	rearrangeSelectedLayeredTexture("-sl -ltf");
+	
+	</code>
+*********************************************************************/
+global proc rearrangeSelectedLayeredTexture( string $flags )
+{/*
+global proc rearrangeSelectedLayeredTexture( string $lt )
+{*/
+	string $lt;
+	string $newOrderString;
+	int $newOrder[];
+	string $tok[] = tokenizeString($flags, " ");
+	int $ltf, $ftl;
+	if (`size $tok` == 1){
+		$lt = $flags;
+	}
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-sl" : case "-selected" :
+			string $sel[] = `ls -sl`;
+			$lt = $sel[0];
+			break ;
+			
+			case "-lt" : case "-layeredTexture" :
+			$lt = $tok[($i + 1)];
+			break ;
+			
+			case "-ltf" : case "-lastToFirst" :
+			$ltf = 1;			
+			break ;
+			
+			case "-ftl" : case "-firstToLast" :
+			$ftl = 1;			
+			break ;
+			
+			case "-or" : case "-order" :
+			$newOrderString = wizFlagString($tok, $i);
+			break ;
+			
+		}
+	}
+	
+	//To Do: Retrieve other settings like blend mode and layer is visible and set them back to where they were.
+	print("rearrangeSelectedLayeredTexture: To Do: Retrieve other settings like blend mode and layer is visible and set them back to where they were" + "\n");
+	int $indices[] = `getAttr -mi ($lt + ".inputs")`;
+	wizlog ("	[#] Layered Texture : " + $lt);
+	wizlog ("	[#] Current Indice Order : " + (intArrayToString($indices, ", ")));
+	
+	if ($ltf){
+		int $rri[] = $indices;
+		int $lastIndice = (`size $rri` - 1);
+		for ($i=0;$i<`size $rri`;$i++){
+			$rri[$i] = $i;	
+		}
+		
+		intArrayRemoveAtIndex((`size $rri` - 1), $rri);
+		intArrayInsertAtIndex(0, $rri, $lastIndice);
+		$newOrder = $rri;
+	} else if ($ftl){
+		int $rri[] = $indices;
+		int $fi = 0;
+		for ($i=0;$i<`size $rri`;$i++){
+			$rri[$i] = $i;	
+		}
+		
+		intArrayRemoveAtIndex(0, $rri);
+		intArrayInsertAtIndex((`size $rri` - 1), $rri, 0);
+		$newOrder = $rri;
+	
+	} else {
+		if (`size $newOrderString` == 0){
+			$newOrderString = `textFieldButtonGrp -q -text rearrangeAllSelectedLayeredTextures`;
+		}
+		string $newOrderStringArray[];
+		tokenizeList($newOrderString, $newOrderStringArray);
+		//We must convert this to an int array
+		$newOrder = convertStringArrayToIntArray($newOrderStringArray);
+	}
+	
+	string $conCol[], $conAlp[];
+	for ($i=0;$i<`size $indices`;$i++){
+		int $curI = $indices[$i];
+		string $col[] =	`listConnections -p on ($lt + ".inputs[" + $curI + "].color")`;
+		string $alp[] =	`listConnections -p on ($lt + ".inputs[" + $curI + "].alpha")`;
+		$conCol[`size $conCol`] = $col[0];	
+		$conAlp[`size $conAlp`] = $alp[0];	
+	}
+
+	wizlog ((niceArrayList("	[-] Connected Colors [-] ", $conCol)));
+	wizlog ((niceArrayList("	[-] Connected Alpha [-] ", $conAlp)));
+	
+	wizlog ("	[#] New Indices Order : " + (intArrayToString($newOrder, ", ")));
+
+	//Break all the connections
+	for ($i=0;$i<`size $indices`;$i++){
+		removeMultiInstance -break true ($lt + ".inputs[" + $indices[$i] + "]");
+	}
+
+	//Reconnect all Textures in the new order
+	for ($i=0;$i<`size $conCol`;$i++){
+		int $curI = $newOrder[$i];
+		wizlog ("	[#] $i : " + $i + " $newOrder[$i] : " + $curI);
+		wizlog ("	[#] Connect Texture : " + $conCol[$curI]);
+		wizlog ("	[#] Connect Alpha : " + $conAlp[$curI]);
+		
+		wizlog ("	[*] connectAttr -f " + $conCol[$curI] + ".outColor " + $lt + ".inputs[" + $i + "].color ;");
+		if (`size $conCol[$curI]` > 0){
+			connectAttr -f ($conCol[$curI]) ($lt + ".inputs[" + $i + "].color");
+		}
+		if (`size $conAlp[$curI]` > 0){
+		
+			connectAttr -f ($conAlp[$curI]) ($lt + ".inputs[" + $i + "].alpha");
+		}
+		
+	}
+
+}
+
+global proc removeTexturesFromAllSelectedLayeredTextures(string $sel[])
+{
+	debugML1("		* Removing Textures From All Selected Layered Textures..." + stringArrayToString($sel, " ") + "\n");
+	for ($i=0;$i<`size $sel`;$i++){
+		removeTexturesFromLayeredTexture($sel[$i]);
+	}
+}
+
+global proc removeTexturesFromLayeredTexture(string $lt)
+{
+
+	string $removeString = `textFieldButtonGrp -q -text removeTexturesFromAllSelectedLayeredTextures`;
+	string $removeStringArray[];
+	tokenizeList($removeString, $removeStringArray);
+	//We must convert this to an int array
+	int $remove[] = convertStringArrayToIntArray($removeStringArray);
+
+	string $connected[] = getTexturesConnectedToLayeredTexture($lt);
+	debugML1("			* Removing Textures From Layered Texture: " + $lt + "\n" + "			- Textures: " + "\n" + "				" + stringArrayToString($connected, "\n				") + "\n");
+	debugML1("			- Removing Texture Numbers: " + intArrayToString($remove, " ") + "\n");
+
+	//Since the index of the input could be anything... get the size of the inputs and use the size to target the index
+	int $indices[] = `getAttr -mi ($lt + ".inputs")`;
+	debugML1("			- Indices: " + intArrayToString($indices, " ") + "\n");
+
+	for($i=0;$i<`size $remove`;$i++){
+		debugML1("			- Removing - Texture: " + $connected[($remove[$i])] + " | At Input: " + $lt + ".inputs[" + $indices[($remove[$i])] + "]" + "\n");
+		removeMultiInstance -break true ($lt + ".inputs[" + $indices[($remove[$i])] + "]");
+
+	}
+}
+
+global proc string[] getTexturesConnectedToLayeredTexture(string $lt)
+{
+	debugML2("			* Geting Textures Connected To Layered Texture... " + "\n");
+	string $multiAttr[] = `listAttr -multi ( $lt + ".inputs" )`;
+	debugML2("				* MultiAttr: " + stringArrayToString($multiAttr, " ") + "\n");
+	string $connected[];
+	for($i=0;$i<`size $multiAttr`;$i++){
+		// Only concered with those ending with ".color".
+		if(`gmatch $multiAttr[$i] "*.color"` ){
+			// Found an active Color connection.
+			// The following retrieves the Material that feeds the
+			// Color for this layer.
+			string $con[] = `listConnections ( $lt + "." + $multiAttr[$i])`;
+			debugML2("				* Connected: " + stringArrayToString($connected, " ") + "\n");
+			// Extract the index for the connection.
+			string $tokens[];
+			tokenize $multiAttr[$i] "[]" $tokens;
+			appendStringArray($connected,$con,`size $con`);
+		}
+	}
+	$connected = stringArrayRemoveDuplicates($connected);
+
+	return $connected;	
+}
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                            BUMPS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//BUMPS
+//==========================
+global proc connectTextureToAllSelectedShadersBump(string $sel[])
+{
+	string $texture = $sel[0];
+	for($i=1;$i<`size $sel`;$i++){	
+		connectTextureToShaderBump($texture,$sel[$i]);
+	}
+}
+
+global proc connectTextureToShaderBump(string $texture, string $shader)
+{
+	
+	string $nodeType[] = `nodeType -i $texture`;	
+	string $bumpName;
+	string $newBump;
+	int $is3dTexture = stringArrayContains("texture3d", $nodeType);
+	if($is3dTexture == 1){
+		//Create a 3d bump node
+		$bumpName = $texture + "Bump3d";
+		$newBump = `shadingNode -asUtility bump3d -name $bumpName`;
+	} else {
+		//Create a 2d bump node
+		$bumpName = $texture + "Bump2d";
+		$newBump = `shadingNode -asUtility bump2d -name $bumpName`;
+	}
+	string $bump = $newBump;
+	debugML1("	* NewBump: " + $bump + "\n");
+	
+	//Connect the bump to the shader
+	connectAttr -force ($bump + ".outNormal") ($shader + ".normalCamera");
+	debugML1("	* Connected: " + ($bump + ".outNormal") + " To: " + ($shader + ".normalCamera") + "\n");
+	
+	connectAttr -f ($texture + ".outAlpha") ($bump + ".bumpValue");
+	debugML1("	* Connected: " + ($texture + ".outAlpha") + " To: " + ($bump + ".bumpValue") + "\n");
+
+}
+
+//CONNECT TEXTURE TO ALL SELECTED BUMPS
+//===================================================================
+global proc connectTextureToAllSelectedBumps(string $sel[])
+{
+	string $texture = $sel[0];
+	for($i=1;$i<`size $sel`;$i++){	
+		wizConnectTextureToBump($texture, $sel[$i]);
+	}
+}
+
+//WIZ CONNECT TEXTURE TO BUMP
+//===================================================================
+global proc wizConnectTextureToBump(string $texture, string $bump)
+{	
+	catchQuiet(`connectAttr -f ($texture + ".outAlpha") ($bump + ".bumpValue")`);
+	//print("WIZ| wizConnectTextureToBump : Connected
+}
+
+global proc insertBumpBetweenAllSelectedShadersAndBump(string $sel[])
+{
+	for($i=0;$i<`size $sel`;$i++){
+		insertBumpBetweenShaderAndBump($sel[$i]);		
+	}
+}
+
+global proc insertBumpBetweenShaderAndBump(string $shader)
+{
+	string $bumpType = `radioCollection -q -sl insertBumpType`;
+	//Get the bump currently connected
+	string $bump = getBumpConnectedToShader($shader);
+	if($bump == ""){
+		print("WARNING - There is no bump connected to: " + $shader + " Cannot insert Bump" + "\n");
+		return;	
+	}
+	
+	string $newBump;
+	if($bumpType == "2d"){
+		//Create a 2d bump node
+		$newBump = `shadingNode -asUtility bump2d`;
+	} else {
+		//Create a 3d bump node
+		$newBump = `shadingNode -asUtility bump3d`;
+	}
+	debugML1("	* NewBump: " + $newBump + "\n");
+	
+	//Connect the bump to the shader
+	connectAttr -force ($newBump + ".outNormal") ($shader + ".normalCamera");
+	debugML1("	* Connected: " + ($newBump + ".outNormal") + " To: " + ($shader + ".normalCamera") + "\n");
+	
+	connectAttr -force ($bump + ".outNormal") ($newBump + ".normalCamera");
+	debugML1("	* Connected: " + ($bump + ".outNormal") + " To: " + ($newBump + ".normalCamera") + "\n");
+
+}
+
+global proc string getBumpConnectedToShader(string $shader)
+{
+	//Get the bump currently connected
+	string $bump[] = `listConnections -type bump2d $shader`;
+	if(`size $bump` == 0){
+		$bump = `listConnections -type bump3d $shader`;	
+	}
+	return $bump[0];
+}
+
+//HELPERS
+//=========================
+global proc string[] getEnumAttributeLabels(string $node, string $attr)
+{
+	string $enum[] = `attributeQuery -type $node -le $attr`;	
+	string $buffer[];
+	int $numTokens = `tokenize $enum[0] ":" $buffer`;
+	return $buffer;
+}
+
+//TEXTURE EXPRESSIONS
+//=============================
+global proc createLinearTextureExpression()
+{
+	string $sel[] = `ls -sl`;	
+	string $attrType = `optionMenuGrp -q -v textureAttribute`;
+	string $attr;
+	string $sn;
+	if($attrType == "TextureTime") $attr = "textureTime"; $sn = "TTSpeed";
+	if($attrType == "Time") $attr = "time"; $sn = "Time";
+	if($attrType == "Frequency") $attr = "frequency"; $sn = "FrequencySpeed";
+	
+	string $attrName = $attr + "AnimationSpeed";
+	string $attrInit = $attr + "Init";
+	
+	
+	if (attributeExists ($attrName, $sel[0])==0){
+		addAttr -ln $attrName -sn $sn -at double -k 1 -min -0 -max 10000 -smn 0 -smx 2 -dv 1 $sel[0];
+	}
+	
+	if (attributeExists ($attrInit, $sel[0])==0){
+		addAttr -ln $attrInit -at double -h 0 -k 1 -min -0 -max 10000 -smn 0 -smx 2 -dv 1 $sel[0];
+	}
+	
+	string $quotes="\"";
+	string $objVar = "string $obj = " + $quotes + $sel[0] + $quotes;
+	string $attrVar = "string $attr = " + $quotes + $attr + $quotes;
+	string $endLine = "\"\n\"";
+	
+	//_______________________________________________
+	
+	// The actual expression
+	expression -s (
+	"animate" + $attrType + $sel[0] + "TextureAttribute();\n"
+	+"global proc animate" + $attrType + $sel[0] + "TextureAttribute()\n"
+	+"{\n"
+	+ $objVar + " ;\n"
+	+ $attrVar + " ;\n"
+	+"float $speed = " + $attrName + " ;\n"
+	+"\n"
+	+"if(frame == 1){\n"
+	+"	float $resetVal = `getAttr ($obj + \"." + $attrInit + "\")`;\n"
+	+"	float $val = `getAttr ($obj + \"." + $attr + "\")`;\n"
+	+"	//print(\"ResetVal: \" + $resetVal + \" Val: \" + $val + \"\\n\");\n"
+	+"	if($val != $resetVal){\n"
+	
+	+"		setAttr ($obj + \"." + $attr + "\") $resetVal;\n"
+	+"		//setAttr ($obj + \"." + $attrInit + "\") $val;\n"
+	+"	}\n"
+	+"	return;\n"
+	+"}\n"
+	
+	+"float $newVal = `getAttr ($obj + \"." + $attr + "\")`;\n"
+	+"$newVal = $newVal + $speed;\n"
+	+"setAttr ($obj + \"." + $attr + "\") $newVal;\n"
+	+"}\n"
+	) -o $sel[0] -n ($sel[0] + $attrName); // end of the expression
+
+}
+
+/*
+global proc createSetTexturePlacementAttributeToCurveLengthExpression()
+{
+
+	string $placeTex[] = `ls -sl -typ "place2dTexture"`;
+	string $curve[] = `ls -sl -type "transform"`;
+	string $attr = `optionMenu -q -v attributeToAddCurveTexturePlacementExpressionTo`;
+	string $attrBiasName = $attr + "LengthBias";
+
+	int $spans = `getAttr ($curve[0] + ".spans")`;
+		
+	string $arclengthnode = `arcLengthDimension ($curve[0] + ".u[" + $spans + "]")`;
+	string $nodeparent[] = `listRelatives -p $arclengthnode`;
+
+	if (attributeExists ($attrBiasName, $placeTex[0])==0){
+		addAttr -ln $attrBiasName -at double -k 1 -min -10000 -max 10000 -smn 0 -smx 1 -dv 0.1 $placeTex[0];
+	}
+	*/
+	/*
+	if (attributeExists ("attributeCurvePlacementAttribute", $placeTex[0])==0){
+		addAttr -ln attributeCurvePlacementAttribute -at enum -en "coverageU=0:coverageV=1:translateFrameU=2:translateFrameV=3:rotateFrame=4:repeatU=5:repeatV=6:offsetU=7:offsetV=8:rotateUV=9" $placeTex[0];
+	}
+	*/
+/*
+	string $quotes="\"";
+	//string $rampVar = "string $ramp = " + $quotes + $ramp[0] + $quotes;
+	string $placeTexVar = "string $pt = " + $quotes + $placeTex[0] + $quotes;
+	string $curveVar = "string $curve = " + $quotes + $curve[0] + $quotes;
+	string $archLengthVar = "string $archLength = " + $quotes + $arclengthnode + $quotes;
+	string $endLine = "\"\n\"";
+
+	// The actual expression
+	expression -s (
+	$placeTex[0] + "Set" + $attr + "TexturePlacementAttributeToCurveLength();\n"
+	+"global proc " + $placeTex[0] + "Set" + $attr + "TexturePlacementAttributeToCurveLength()\n"
+	+"{\n"
+	+ $placeTexVar + " ;\n"
+	+ $curveVar + " ;\n"
+	+ $archLengthVar + " ;\n"
+	+"float $attrLengthBias = " + $attrBiasName + " ;\n"
+	+"float $curveLength = `getAttr ($archLength + \".al\")`;\n"
+	+"float $newAttrVal = $curveLength * $attrLengthBias;\n"
+	+"setAttr ($pt + \"." + $attr + "\") $newAttrVal;\n"
+	+"\n"
+
+	+"}\n"
+	) -o $placeTex[0] -n ($placeTex[0] + "Set" + $attr + "TexturePlacementAttributeToCurveLength"); // end of the expression
+
+	}
+
+	//"
+	/*
+	+"int $attrNum = attributeCurvePlacementAttribute;\n"
+	+"string $attr;\n"
+	+"if($attrNum == 0){$attr = \"coverageU\";}else if($attrNum == 1){$attr = \"coverageV\";}else if($attrNum == 2){$attr = \"translateFrameU\";}\n"
+	+"else if($attrNum == 3){$attr = \"translateFrameV\";}else if($attrNum == 4){$attr = \"rotateFrame\";}else if($attrNum == 5){$attr = \"repeatU\";}\n"
+	+"else if($attrNum == 6){$attr = \"repeatV\";}else if($attrNum == 7){$attr = \"offsetU\";}else if($attrNum == 8){$attr = \"offsetV\";}else if($attrNum == 9){$attr = \"rotateUV\";}\n"
+	+"\n"
+	*/
+
+
+	//select -r SunSphere ; //Select the object to be mapped
+	//select -r SunSurfaceFluidMapShader ; //Select the shader to be baked
+
+
+
+global proc string findObjOfType(string $objs[], string $nodeType)
+{
+	int $i = 0;
+	for ($i = 0; $i < `size $objs`; $i++){
+		string $objNodeType = `nodeType $objs[$i]`;
+		if($objNodeType == $nodeType){
+			return $objs[$i];
+		} else {
+			return "null";
+		}
+	}
+
+}
+
+//SET ALL TEXTURES FILTER TYPE
+//========================================================
+global proc setAllTexturesFilterType()
+{
+	int $filterType = `optionMenuGrp -q -sl globalTextureAttributesFilterTypeOptionMenuGrp`;
+	$filterType = $filterType -1;
+	string $texFiles[] = `ls -type file`;
+	for($i=0;$i< `size $texFiles`;$i++){
+		setAttr ($texFiles[$i] + ".filterType") $filterType;
+	}
+}
+
+//SET ALL BUMP 2D DEPTH
+//========================================================
+global proc setAllBump2dDepth(float $depth)
+{
+	string $bump[] = `ls -type bump2d`;
+	string $bump3d[] = `ls -type bump3d`;
+	appendStringArray($bump3d, $bump, `size $bump3d`);
+	
+	for($i=0;$i< `size $bump`;$i++){
+		setAttr ($bump[$i] + ".bumpDepth") $depth;
+	}	
+}
+
+global proc setAllBump2dProvide3dInfo()
+{
+	int $cb = `checkBox -q -v globalTextureAttributesBumpProvide3dInfoCheckBox`;
+	string $bump[] = `ls -type bump2d`;
+	//string $bump3d[] = `ls -type bump3d`;
+	//appendStringArray($bump3d, $bump, `size $bump3d`);
+	
+	for ($i=0;$i< `size $bump`;$i++){
+		
+		setAttr ($bump[$i] + ".provide3dInfo") $cb;
+	}	
+}
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			REFRESH TEXTURES
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+
+//WIZ REFRESH SELECTED FILE TEXTURES
+//========================================================
+global proc wizRefreshSelectedFileTextures( string $sel[] )
+{
+	for($i=0;$i<`size $sel`;$i++){
+		wizRefreshFileTexture($sel[$i]);
+	}
+}
+
+//WIZ REFRESH FILE TEXTURE
+//========================================================
+global proc wizRefreshFileTexture( string $ftName )
+{
+	//This phython command is far more reliable than the stupid AEfileTextureReloadCmd
+	string $filePath = `getAttr ($ftName + ".fileTextureName")`;
+	
+	string $pyCommand = (
+	"import maya.cmds as cmd" + "\n"
+	+"cmd.setAttr( \"" + $ftName + ".fileTextureName\", \"" + $filePath + "\", type=\"string\")" + "\n"
+	);
+	
+	catchQuiet (python ($pyCommand));
+	
+}
+
+//@ CHANGE FILE EXTENSION ON SELECTED TEXTURES
+//====================================================================
+global proc changeFileExtensionOnSelectedTextures( string $sel[] )
+{
+
+	if (`textFieldGrp -q -tx changeFileExtensionTextFieldGrp` != ""){
+		$sel = `ls -type file`;
+		
+	}
+	
+	for ($i=0;$i<`size $sel`;$i++){
+		 changeFileExtensionOnTexture($sel[$i]);
+	}
+}
+
+//@ CHANGE FILE EXTENSION ON TEXTURE
+//====================================================================
+global proc changeFileExtensionOnTexture(string $sel)
+{
+
+	string $changeExt = `textFieldGrp -q -tx changeFileExtensionTextFieldGrp`;
+	
+	if (`attributeQuery -ex -node $sel fileTextureName` == 0){ return;}
+	
+	string $newExt = `textFieldButtonGrp -q -tx changeFileExtensionOnSelectedTexturesTextFieldButtonGrp`;
+	string $fileTextureName = `getAttr ($sel + ".fileTextureName")`;
+	string $ext = `fileExtension $fileTextureName`;
+	if ($changeExt != ""){
+		if ($ext != $changeExt){
+			return;
+		}
+	}
+	string $fileName = `substitute $ext $fileTextureName $newExt`;
+	setAttr ($sel + ".fileTextureName") -type "string" $fileName;
+	
+	print("WIZ| changeFileExtensionOnTexture : Changed FileTextureName: " + $fileTextureName + " From Ext: " + $ext + " To Ext: " + $newExt + "\n");
+	
+	
+}
+
+/*
+global proc changeAllTifFileExtension()
+{
+	string $changeExt = `textFieldGrp -q -tx changeFileExtensionTextFieldGrp`;
+	string $file[] = `ls -type file`;
+	for ($i=0;$i<`size $file`;$i++){
+		string $fileTextureName = `getAttr ($file + ".fileTextureName")`;
+		if (`endsWith($fileTextureName, "tif")` == 1){
+			
+		}
+		 
+	}
+}
+*/
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                      FILE TEXTURE SELECTOR
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+
+//@ LIST ALL TIF FILE TEXTURES
+//====================================================================
+/*****************************************************************//**
+	Returns all file nodes with a textureSelection attribute.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-fa string] [-fb linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-fa, -fb
+	
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName("-fa aString -fb anotherString");
+	
+	</code>
+*********************************************************************/
+global proc listAllTifFileTextures()
+{
+	select -cl;
+	string $file[] = `ls -type file`;
+	print("WIZ| listAllTifFileTextures : \n");
+	for ($i=0;$i<`size $file`;$i++){
+		string $fileTextureName = `getAttr ($file[$i] + ".fileTextureName")`;
+		int $ew = endsWith($fileTextureName, "tif");
+		if ($ew == 1){
+			select -add $file[$i];
+			print($file[$i] + "\n");
+		}
+		 
+	}
+	
+}
+/*############ PROBLEM ###############################################
+DONT USE ADD FILE PATH TO FILE TEXTURE SELECTOR
+#####################################################################*/
+
+//@ ADD FILE PATH TO FILE TEXTURE SELECTOR
+//====================================================================
+global proc addFilePathToFileTextureSelector( string $sel[] )
+{
+	string $texFile = $sel[0];
+	string $fileTextureName;
+	//print ("WIZ| addFilePathToFileTextureSelector : Selected : " + $texFile + "\n");
+	//Get the path of the texture file
+	if (`nodeType $texFile` == "mentalrayIblShape"){
+		$fileTextureName = `getAttr ($texFile + ".texture")`;
+		//print ("WIZ| node type is mentalrayIblShape\n");
+	} else {
+		$fileTextureName = `getAttr ($texFile + ".fileTextureName")`;
+	}
+	
+	//Get the choice node we are using to connect texture file names
+	string $choice;
+	string $choices[] = `listConnections -t choice $texFile`;
+	if (`size $choices` == 0){
+		$choice = `shadingNode -asUtility choice`;
+		//connectAttr -f ($choice + ".output") ($texFile + ".fileTextureName");
+	} else {
+		$choice = $choices[0];
+	}
+	
+	//Add a new attribute called textureSelection# to hold the file path
+	int $i = 0;
+	string $newTextureFileString;
+	while (true){
+		/*
+		if (`attributeExists ("defaultTexture") $texFile` == 0){
+			$newTextureFileString = ("defaultTexture");
+			break;    
+		}
+		*/
+		if (`attributeExists ("textureSelection" + $i) $texFile` == 0){
+			$newTextureFileString = ("textureSelection" + $i);
+			break;    
+		}
+		$i++;		
+	}	
+	
+	//Add the attribute and set the attr to the file texture path
+	addAttr -dt "string" -ln $newTextureFileString -uaf $texFile;	
+	setAttr -type "string" ($texFile + "." + $newTextureFileString) $fileTextureName;	
+	
+	//Get the name of the file texture without path or extension for enum
+	string $texName = getFileNameNoPathNoExt($fileTextureName);
+	$texName = makeNiceUIName($texName);
+	
+	string $namePrompt =`promptDialog 
+		-t "Texture Name"
+		-m "Texture Selection Name:"
+		-tx $texName
+		-ma "center"	
+		-b "OK" 
+		-db "OK"
+		`;
+
+	$texName = `promptDialog -q -tx $namePrompt`;
+	
+	select -r $texFile;
+	int $newI = 0;
+	if (`attributeExists "textureSelection" $texFile`){		
+		//Get the names of all the enum attributes because the enum needs to be rebuilt
+		string $selectEnum[] = getEnumAttributeNames(($texFile + ".textureSelection"));
+		//Need to add =i because maya is weird
+		for ($i=0;$i<`size $selectEnum`;$i++){
+			$selectEnum[$i] = $selectEnum[$i] + "=" + $i + ":";			
+		}
+		$newI = `size $selectEnum`;
+		$selectEnum[`size $selectEnum`] = $texName + "=" + $newI;
+
+		addAttr -e -enumName (stringArrayToString($selectEnum,"")) ".textureSelection";
+		//print ("addAttr -e -enumName " + stringArrayToString($selectEnum,"") + " \".textureSelection\";\n");
+	} else {		
+		addAttr -ln "textureSelection" -at "enum" -en ($texName + "=0:") $texFile;
+		//print ("addAttr -ln \"textureSelection\" -at \"enum\" -en " + $texName + "=0: " + $texFile + ";\n");
+	}
+	
+	//Set the texture selection to keyable so you can select the texture from the channel box
+	setAttr -k on ($texFile + ".textureSelection");
+	
+	//Add the new file texture path to the choice inputs
+	int $inputSize = `getAttr -s ($choice + ".input")`;
+	connectAttr -f ($texFile + "." + $newTextureFileString) ($choice + ".input[" + $inputSize + "]");
+	//print ("connectAttr -f " + $texFile + "." + $newTextureFileString + " " + $choice + ".input[" + $inputSize + "];\n");
+	
+	//Make sure the textureSelection is connected to the choice selector
+	if (`isConnected ($texFile + ".textureSelection") ($choice + ".selector")`== 0){
+		//Connect the textureSelection enum to the choice selector
+		connectAttr -f ($texFile + ".textureSelection") ($choice + ".selector");
+		//print("connectAttr -f " + $texFile + ".textureSelection " + $choice + ".selector;\n");
+		
+	}
+	
+	//Make sure that the choice output is connected to the texture
+	if (`nodeType $texFile` == "mentalrayIblShape"){
+		if (`isConnected ($choice + ".output") ($texFile + ".texture")`== 0){
+			connectAttr -f ($choice + ".output") ($texFile + ".texture");	
+		}
+	} else {	
+		if (`isConnected ($choice + ".output") ($texFile + ".fileTextureName")`== 0){
+			connectAttr -f ($choice + ".output") ($texFile + ".fileTextureName");	
+		}
+	}
+	//print ("connectAttr -f " + $texFile + ".textureSelection " + $choice + ".selector;\n");
+	
+	//Set the texture selection to the new texture
+	setAttr ($texFile + ".textureSelection") $newI;
+	print ("WIZ| addFilePathToFileTextureSelector : Added : " + $texFile + " To Texture Selection\n");
+	
+}
+
+//@ ADD FILE SELECTIONS TO SELECTED FILE NODE
+//====================================================================
+/*****************************************************************//**
+	This creates or adds to existing texture selection attributes.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-fa string] [-fb linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-fa, -fb
+	
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	addFileSelectionsToSelectedFileNode(`ls -sl, "-prompt -count 1 -name textureSelection");
+	
+	</code>
+*********************************************************************/
+global proc addFileSelectionsToSelectedFileNode( string $sel[], string $tags )
+{
+    int $inputPromt;
+    int $count;
+	string $texFile;
+	string $texSelName = "textureSelection";
+    string $texName = "textureFile";
+	string $selName[];
+    string $newFilePath;
+	string $files[];
+	int $ss;
+	int $edit;
+	string $ssName = "textureSelSel";
+    // Get the tags passed
+    string $tok[] = tokenizeString($tags, " ");
+    for ($i=0;$i<`size $tok`;$i++){
+        switch ($tok[$i]){
+            case "-prompt" : case "-prmt" :
+            $inputPromt = 1;
+            break ;
+            
+            case "-count" : case "-c" :
+            $count = int($tok[($i + 1)]);
+            break ;
+            
+			case "-tsn" : case "-textureSelectionName" :
+            $texSelName = $tok[($i + 1)];
+            break ;
+			
+            case "-n" : case "-name" :
+            $texName = $tok[($i + 1)];
+            break ;
+			
+			case "-sn" : case "-selectionName" :
+            $selName = wizFlagArray($tok, $i);
+			$count = `size $selName`;
+            break ;
+            
+            case "-fp" : case "-filePath" :
+            $newFilePath = $tok[($i + 1)];
+            break ;
+            
+            case "-ac" : case "-addCurrent" :
+            $newFilePath = `getAttr ($sel[0] + ".fileTextureName")`;
+            break ;
+			
+			case "-ss" : case "-selectorSelection" :
+			$ss = 1;
+			$ssName = $tok[($i + 1)];
+			break ;
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			
+			break ;
+			
+			case "-f" : case "-files" :
+			$files = wizFlagArray($tok, $i); 
+			break ;
+        }
+    }
+	
+	
+	/*
+	if (`size $selName` == 0){
+		for ($i=0;$i<$count;$i++){
+			$selName[`size $selName`] = "textureSelection" + $i;	
+		}
+		
+	}
+	*/
+	
+    // Prompt for a texture count
+    if ($inputPromt == 1){
+        string $prompt = `promptDialog
+            -t "Number Of Textures"
+            -m "Number Of Texture Path Fields To Add:"
+            -tx "1"
+            -ma center
+            `;
+	
+        string $promptString = `promptDialog -query -tx $prompt`;
+        $count = int($promptString);
+        if ($count == 0){
+            print ("You must enter an integer in the prompt\n");
+        }
+		
+		
+    }
+	$texFile = $sel[0];
+	string $fileTextureName;
+	
+	if (`size $selName` == 0){
+		string $prompt = `promptDialog
+		-t "Texture Selection Name"
+		-m "Name of the textureSelection Attribute :"
+		-tx "textureSelection"
+		-ma center
+		`;
+
+		string $promptString = `promptDialog -query -tx $prompt`;
+		
+		if (`size $promptString` == 0){
+			print ("You must enter an name for the texture selction attribute in the prompt\n");
+			return ;
+		}
+		$texSelName = $promptString;
+		$selName[0] = $texSelName;
+	}
+	
+		
+	//Get the choice node we are using to connect texture file names
+	string $choice;
+	string $choices[] = `listConnections -t choice $texFile`;
+	if (`size $choices` == 0){
+		
+	
+	
+		$choice = `shadingNode -n ($texFile + "TextureChoice") -asUtility choice`;
+		//connectAttr -f ($choice + ".output") ($texFile + ".fileTextureName");
+	} else {
+		$choice = $choices[0];
+	}
+	
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//	Add Selector Selection Here
+	//	
+	//	
+	//	
+	//	
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	/*
+	if ($ss){
+		string $sel[] = `ls -sl`;
+		string $selectors[];
+		for ($i=0;$i<`size $sel`;$i++){
+			string $ud[] = `listAttr -ud $obj`;
+			for ($udi=0;$udi<`size $ud`;$udi++){
+				if ((endsWith($ud[$udi], "Selection")) == 1){
+					$selectors[`size $selectors`] = $ui[$i];
+				}
+			}
+			
+			
+		}
+		string $ssChoice;
+		if (`objExists $ssName` == 0){
+			$ssChoice = `shadingNode -n $ssName -asUtility choice`;
+			
+		}
+		connectAttr -f ($texFile + "." + $texSelName) ($choice + ".selector");	
+		
+	}
+	
+	*/
+	
+	
+	/*
+	//Add a new attribute called textureSelection# to hold the file path
+	int $i = 0;
+	string $newTextureFileString;
+	while (true){		
+		if (`attributeExists ("textureSelection" + $i) $texFile` == 0){
+			$newTextureFileString = ("textureSelection" + $i);
+			break;    
+		}
+		$i++;
+        if ($i == 20){
+            print ("While loop out of control!\n");
+            break;
+            
+        }
+	}	
+      */
+	  
+	select -r $texFile;
+	int $newI = 0;
+	string $selectEnum[];
+	if (`attributeExists $texSelName $texFile`){		
+		//Get the names of all the enum attributes because the enum needs to be rebuilt
+		$selectEnum = getEnumAttributeNames(($texFile + "." + $texSelName));
+		//Need to add =i because maya is weird
+		for ($i=0;$i<`size $selectEnum`;$i++){
+			$selectEnum[$i] = $selectEnum[$i] + "=" + $i + ":";			
+		}
+		$newI = (`size $selectEnum`);
+		int $nameI = 0;
+		for ($i=$newI;$i<($newI + $count);$i++){
+			// Skip if the attribute already exists
+			string $newTexSelName = $selName[0] + $newI;
+			if (`attributeExists $newTexSelName $texFile`){continue;}
+		
+			$selectEnum[`size $selectEnum`] = $newTexSelName + "=" + $i + ":";	
+			
+			//print ("addAttr -ln \"textureSelection\" -at \"enum\" -en " + $texName + "=0: " + $texFile + ";\n");
+			//Add the attribute and set the attr to the file texture path
+			$nameI++;
+		}
+		wizlog ("addAttr -e -enumName " + stringArrayToString($selectEnum,"") + " \"." + $texSelName + "\";\n");
+		addAttr -e -enumName (stringArrayToString($selectEnum,"")) ("." + $texSelName) $texFile; 
+		
+		wizlog ("[!] Warning - Texture Selection Enum Selector Might No Be Updated. Use Channel Box To Select Texture");
+
+	} else {	
+		
+		for ($i=0;$i<$count;$i++){	
+			// Skip if the attribute already exists
+			string $newTexSelName = $selName[0] + $newI;
+			if (`attributeExists $newTexSelName $texFile`){continue;}
+			
+			$selectEnum[$i] = $newTexSelName + "=" + $i + ":";	
+		}
+		addAttr -ln $texSelName -at "enum" -en (stringArrayToString($selectEnum,"")) $texFile;
+		
+	} 
+	
+	
+	//Set the texture selection to keyable so you can select the texture from the channel box
+	setAttr -k on ($texFile + "." + $texSelName);
+	
+	//Add the new file texture paths to the choice inputs
+	int $inputSize = `getAttr -s ($choice + ".input")`;
+	int $nameI = $newI;
+
+	
+	if (`size $files` == 0){
+		$files[0] = $newFilePath;
+	}
+	
+	int $o = 0;
+	for ($i=$newI;$i<($newI + $count);$i++){
+		//string $newTextureFileString;
+		//$newTextureFileString = $selName[$nameI];
+		string $newTexSelName = ($selName[0] + $nameI);
+		if (`attributeExists $newTexSelName $texFile`){
+			wizlog ("	[!] Texture Selection Name : " + $newTexSelName + " Already Exists... Skipping [!]");
+			continue;
+		}
+		wizlog ("addAttr -dt \"string\" -ln " + $newTexSelName + " -uaf " + $texFile + ";\n");
+		addAttr -dt "string" -ln $newTexSelName -uaf $texFile;
+		//setAttr -type "string" ($texFile + "." + $newTexSelName) $newFilePath;
+		setAttr -type "string" ($texFile + "." + $newTexSelName) $files[$o];
+		connectAttr -f ($texFile + "." + $newTexSelName) ($choice + ".input[" + $i + "]");
+		
+		$nameI++;
+		$o++;
+		//print ("connectAttr -f " + $texFile + "." + $newTextureFileString + " " + $choice + ".input[" + $inputSize + "];\n");
+	}
+	
+	//Make sure the textureSelection is connected to the choice selector
+	if (`isConnected ($texFile + "." + $texSelName) ($choice + ".selector")`== 0){
+		//Connect the textureSelection enum to the choice selector
+		connectAttr -f ($texFile + "." + $texSelName) ($choice + ".selector");		
+		//print("connectAttr -f " + $texFile + ".textureSelection " + $choice + ".selector;\n");
+		
+	}
+	
+	//Make sure that the choice output is connected to the texture
+	if (`nodeType $texFile` == "mentalrayIblShape"){
+		if (`isConnected ($choice + ".output") ($texFile + ".texture")`== 0){
+			connectAttr -f ($choice + ".output") ($texFile + ".texture");	
+		}
+	} else {	
+		if (`isConnected ($choice + ".output") ($texFile + ".fileTextureName")`== 0){
+			connectAttr -f ($choice + ".output") ($texFile + ".fileTextureName");	
+		}
+	}
+	//print ("connectAttr -f " + $texFile + ".textureSelection " + $choice + ".selector;\n");
+	
+	//Set the texture selection to the new texture
+	setAttr ($texFile + "." + $texSelName) $newI;
+	//print ("WIZ| addFilePathToFileTextureSelector : Added : " + $texFile + " To Texture Selection\n");
+	
+	
+}
+
+//@ CREATE FILE TEXTURE SELECTOR FOR SELECTED FILES
+//====================================================================
+global proc string createFileTextureSelectorForSelectedFiles()
+{
+	string $files[] = wizGetMultipleFiles();
+	string $tex = createFileTextureSelectorForFiles($files, "");
+	return $tex;
+}
+
+
+//@ EDIT FILE TEXTURE SELECTOR FOR SELECTED FILES
+//====================================================================
+global proc string editFileTextureSelectorForSelectedFiles()
+{
+	string $files[] = wizGetMultipleFiles();
+	string $sel[] = `ls -type file -sl`;
+	if (`size $sel` == 0){
+		wizlog ("[!] No Texture File Selected [!]");
+	}
+	string $fileTex = $sel[0];
+	//string $tex = createFileTextureSelectorForFiles($files, "-e");
+	addFileSelectionsToSelectedFileNode({$fileTex}, "-count " + `size $files` + " -name textureSelection -f " + (stringArrayToString($files, " ")));
+	setTextureSelectionNamesToFileNames($fileTex);
+	
+	return $fileTex;
+}
+
+
+//@ CREATE FILE TEXTURE SELECTOR FOR FILES 
+//-------------------------------------------------------
+//@ PROC NAME
+//====================================================================
+/*****************************************************************//**
+	Creats a new file node and adds all files passed to it to the file node along with a textureSelection attribute.
+	<hr>
+	<b>Synopsis</b><br>
+	createFileTextureSelectorForFiles [string $files[]]<br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string a file node
+	
+	<b>Flags</b><br>
+	
+	<hr>
+	<b>Related</b><br>
+	
+	<b>Examples</b><br>
+	<code>
+	string $tex = createFileTextureSelectorForFiles({"c:/someImage.png", "c:/anotherImage.png"});
+	
+	</code>
+*********************************************************************/
+global proc string createFileTextureSelectorForFiles( string $files[], string $name )
+{
+	string $nn;
+	if ($name == ""){
+		$nn = getFileNameNoPathNoExtNoNumber($files[0]);
+	} else {
+		$nn = $name;
+	}
+	$nn = makeNiceName($nn);
+	
+	string $fileTex = wizNewFileTexture($nn + "Textures");
+	
+	addFileSelectionsToSelectedFileNode({$fileTex}, "-count " + `size $files` + " -name textureSelection");
+	
+	for ($i=0;$i<`size $files`;$i++){
+		setAttr ($fileTex + ".textureSelection" + $i) -typ "string" $files[$i];
+		
+	}
+	setTextureSelectionNamesToFileNames($fileTex);
+	
+	return $fileTex;
+	
+}
+
+
+//@ SET TEXTURE SELECTION NAMES TO FILE NAMES
+//====================================================================
+global proc setTextureSelectionNamesToFileNames( string $texFile )
+{
+	string $enum[] = getEnumAttributeNames(($texFile + ".textureSelection"));
+	string $enumName[];
+	for ($i=0;$i<`size $enum`;$i++){
+		string $selName = `getAttr ($texFile + ".textureSelection" + $i)`;
+		string $fname[] = wizSpliceFilePath($selName, "-fn");
+		$enumName[`size $enumName`] = $fname[0] + "=" + $i + ":";	
+
+	
+	}
+
+	addAttr -e -enumName (stringArrayToString($enumName,"")) ".textureSelection" $texFile;
+}
+
+
+//@ SET FILE TEXTURE SELECTIONS TO RANDOMIZE
+//====================================================================
+global proc setFileTextureSelectionsToRandomize( string $object )
+{
+	string $fileTex[] = `ls -typ file -sl`;
+	for ($i=0;$i<`size $fileTex`;$i++){	
+		
+		if (`attributeExists "textureSelection" $fileTex[$i]`){
+			if (`attributeExists "randomizeTextureSelection" $fileTex[$i]` == 0){
+					addAttr -ln "randomizeTextureSelection" -nn "randomSelection" -at bool $fileTex[$i];
+					setAttr -e -keyable true ($fileTex[$i] + ".randomizeTextureSelection");
+					setAttr ($fileTex[$i] + ".randomizeTextureSelection") true;
+			}
+		}
+	}
+}
+
+//@ RANDOMIZE TEXTURE SELECTION
+//====================================================================
+/*****************************************************************//**
+	Just selects a random texture from the textureSelection attribute.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-fa string] [-fb linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-fa, -fb
+	
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	randomizeTextureSelection("aTextureFile");
+	
+	</code>
+*********************************************************************/
+global proc randomizeTextureSelection( string $fileTex )
+{
+	string $sel[] = getEnumAttributeNames(($fileTex + ".textureSelection"));
+	int $ranSel = randInt(0, (`size $sel` - 1));
+	setAttr ($fileTex + ".textureSelection") $ranSel;
+	
+}
+
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                  IMAGE PLACE SIZED TO IMAGE FILE
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+
+//WIZ CREATE IMAGE PLANE TO FIT IMAGE FILES
+//=============================================================================
+global proc string[] wizCreateImagePlaneToFitImageFiles( string $sel[] )
+{
+	string $imagePlane[];
+	for ($i=0;$i<`size $sel`;$i++){
+		$imagePlane[$i] = wizCreateImagePlaneToFitImageFile($sel[$i]);
+	}
+	return $imagePlane;
+}
+
+//WIZ CREATE IMAGE PLANE TO FIT IMAGE FILE
+//=============================================================================
+global proc string wizCreateImagePlaneToFitImageFile( string $sel )
+{
+	int $w = `getAttr ($sel + ".outSizeX")`;
+	int $h = `getAttr ($sel + ".outSizeY")`;
+	string $fileName = `getAttr ($sel + ".fileTextureName")`;
+	print ("WIZ| wizCreateImagePlaneToFitImageFile : File Name : " + $fileName + "\n");
+	string $n = getFileNameNoPathNoExt($fileName);
+	print ("WIZ| wizCreateImagePlaneToFitImageFile : Plane Name : " + $n + "\n");
+	string $polyPlane[] = `polyPlane -w $w -h $h -sx 1 -sh 1 -cuv 1 -n $n`;
+	return $polyPlane[0];
+	
+}
+
+global proc scaleObjectToImageProportions( string $sel[] )
+{
+	
+	
+}
+
+//@ WIZ CREATE PROJECTION TO FIT IMAGE FILE
+//====================================================================
+/*****************************************************************//**
+	Makes a projection node and sizes it to fit texture.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-fa string] [-fb linear] <br>
+	Also connects the texture to the projection and sets wrap to 0
+	and default alpha to black so the texture can be projected.
+	
+	<b>Return value</b><br>
+	string[] projection node[0] and place3dTexture node[1]
+	
+	<b>Flags</b><br>
+	-wrap(-wr)
+	
+	<hr>
+	<b>Related</b><br>
+	wizCreateImagePlaneToFitImageFile(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $proj[] = wizCreateProjectionToFitImageFile("-wr file1");
+	
+	</code>
+*********************************************************************/
+global proc string[] wizCreateProjectionToFitImageFile( string $flags )
+{	
+	wizlog("[@] wizCreateProjectionToFitImageFile");
+	int $wrap;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-wr" : case "-wrap" :
+			$wrap = 1;
+			break;		
+			
+		}
+	}
+	
+	string $sel[] = wizFlagObjTrail($flags);
+	if (`size $sel` == 0){
+		$sel = `ls -sl`;
+	}
+	string $files[] = `ls -typ file $sel`;
+	if (`size $files` == 0){
+		wizlog("-w  [!] No File Node Selected [!]");
+		return {""};
+	}
+	string $file = $files[0];
+	
+	int $w = `getAttr ($file + ".outSizeX")`;
+	int $h = `getAttr ($file + ".outSizeY")`;
+	string $fileName = `getAttr ($file + ".fileTextureName")`;	
+	wizLog ("	[#] File Name : " + $fileName);
+	
+	string $n = getFileNameNoPathNoExt($fileName);
+	string $proj[] = create3dProjectionNode();
+	setAttr ($proj[1] + ".scaleX") $w;
+	setAttr ($proj[1] + ".scaleY") $h;
+	setAttr ($proj[1] + ".scaleZ") (($w + $h) / 2);
+	connectAttr ($file + ".outColor") ($proj[0] + ".image");
+	if (`getAttr ($file + ".fileHasAlpha")`){
+		connectAttr ($file + ".outTransparency") ($proj[0] + ".transparency");
+	}
+	setAttr ($proj[0] + ".defaultColor") -type double3 0 0 0 ;
+	setAttr ($proj[0] + ".defaultTransparency") -type double3 1 1 1 ;
+	setAttr ($proj[0] + ".wrap") 0;
+	
+	string $nameSplice[] = wizNameSplice(("-fl -n -num " + $file));
+	select -r $proj;
+	string $return[] = renameWizDoRename($nameSplice[0]);
+	
+	return $return;
+}
+
+global proc fitProjectionToImageRatio( string $flags )
+{
+	string $proj, $file;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-prj" : case "-projection" :
+			$proj = $tok[($i + 1)];
+			break ;
+				
+			case "-f" : case "-file" :
+			$file = $tok[($i + 1)];
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			string $p[] = `ls -typ projection $sel`;
+			$proj = $p[0];
+			string $ft[] = `ls -typ file $sel`;
+			$file = $ft[0];
+			break ;			
+			
+		}
+	}
+	if (`size $proj` == 0){
+		string $p[] = smartSelectObjectsOfType(`ls -sl`, "projection");
+		$proj = $p[0];
+	}
+	if (`size $file` == 0){
+		string $f[] = smartSelectObjectsOfType(`ls -sl`, "file");
+		$file = $f[0];
+	}
+	
+	
+	int $w = `getAttr ($file + ".outSizeX")`;
+	int $h = `getAttr ($file + ".outSizeY")`;
+	
+	float $scale[] = `getAttr ($proj + ".scale")`;
+	
+
+
+}
+
+//@ WIZ RAMP PROJECTOR
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName("-obj someObject -q -sl");
+	
+	</code>
+*********************************************************************/
+global proc string[] wizRampProjector( string $flags )
+{
+	wizlog("[@] wizCreateProjectionToFitImageFile");
+	int $wrap;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-wr" : case "-wrap" :
+			$wrap = 1;
+			break;		
+			
+		}
+	}
+
+	string $ramp = wizCreateNewRampTexture("RampColorProjector");
+	string $ra = wizCreateNewRampTexture("RampAlphaProjector");
+	wizLog ("	[#] New Ramp : " + $ramp);
+	
+
+	string $proj[] = create3dProjectionNode();
+
+	connectAttr ($ramp + ".outColor") ($proj[0] + ".image");
+	connectAttr ($ra + ".outColor") ($proj[0] + ".transparency");
+
+	setAttr ($proj[0] + ".defaultColor") -type double3 0 0 0 ;
+	setAttr ($proj[0] + ".defaultTransparency") -type double3 1 1 1 ;
+	setAttr ($proj[0] + ".wrap") 0;
+	
+	string $nameSplice[] = wizNameSplice(("-fl -n -num " + $ramp));
+	select -r $proj;
+	string $return[] = renameWizDoRename($nameSplice[0]);
+	
+	return $return;
+}
+
+
+global proc string[] wizSphericalRampProjector( string $flags )
+{
+	wizlog("[@] wizCreateProjectionToFitImageFile");
+	int $wrap;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-wr" : case "-wrap" :
+			$wrap = 1;
+			break;		
+			
+		}
+	}
+
+	string $ramp = wizCreateNewRampTexture("RampColorProjector");
+	//string $ra = wizCreateNewRampTexture("RampAlphaProjector");
+	wizLog ("	[#] New Ramp : " + $ramp);
+	
+
+	string $proj[] = create3dProjectionNode();
+
+	connectAttr -f ($proj[0] + ".outAlpha") ($ramp + ".vCoord");
+	
+	setAttr ($proj[0] + ".projType") 2;
+	setAttr ($proj[0] + ".uAngle") 360;
+	setAttr ($proj[0] + ".vAngle") 180;
+
+	setAttr ($proj[0] + ".image") -type double3 1 1 1 ;
+	setAttr ($proj[0] + ".transparency") -type double3 1 1 1 ;	
+	setAttr ($proj[0] + ".defaultColor") -type double3 0 0 0 ;
+	setAttr ($proj[0] + ".defaultTransparency") -type double3 0 0 0 ;
+	
+	setAttr ($proj[0] + ".wrap") 0;
+	setAttr ($proj[0] + ".blend") 1;
+	
+	string $nameSplice[] = wizNameSplice(("-fl -n -num " + $ramp));
+	select -r $proj;
+	string $return[] = renameWizDoRename($nameSplice[0]);
+	
+	return $return;
+}
+
+
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         UPDATE FILE TEXTURES
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+
+//@ GET FILE NODES WITH TEXTURE FILE PATH
+//=============================================================================
+global proc string[] getFileNodesWithTextureFilePath( string $filePath )
+{
+	string $return[];
+	string $file[] = `ls -type file`;
+	for ($i=0;$i<`size $file`;$i++){
+		string $fp = `getAttr ($file[$i] + ".fileTextureName")`;
+		if ($fp == $filePath){
+			$return[`size $return`] = $file[$i];
+		}
+	}
+	return $return;
+}	
+
+//@ ADD TEST TEXTURE OUTPUT FILE PATH TO SELECTED
+//=============================================================================
+/*======================| SUMMARY |===================================
+	This adds a new attribute to the selected texture node that can
+	contain a file path.
+	You can then use : wizUpdateTextureFromTestTextureOutputPath : to 
+	update the file specified in the textureOutputPath attribute.
+	The file does not have to exist yet to use this.
+====================================================================*/
+global proc addTextureOutputFilePathToSelected( string $sel[] )
+{
+	wizLog("@addTextureOutputFilePathToSelected\n");
+	string $obj = $sel[0];
+	string $file = wizGetAnyFile();
+	print ("New Texture Output Path : " + $file + "\n");
+
+	addTextureOutputFilePathAttr($obj, $file);
+}
+
+/*****************************************************************//**
+*	This adds two new attributes to the selected object - textureOutputPath, and absoluteTextureOutputPath.
+
+*	textureOutputPath is a string that is used as a file.
+*	absoluteTextureOutputPath is a string that is just used to store the absolute path
+*
+*********************************************************************/
+global proc addTextureOutputFilePathAttr( string $obj, string $file )
+{	
+	addAttr -dt "string" -ln "textureOutputPath" -uaf $obj;	
+	setAttr -type "string" ($obj + ".textureOutputPath") $file;	
+	
+	addAttr -dt "string" -ln "absoluteTextureOutputPath" $obj;	
+	setAttr -type "string" ($obj + ".absoluteTextureOutputPath") $file;	
+
+}
+
+//@ WIZ UPDATE TEXTURE FROM TEST TEXTURE OUTPUT PATH
+//=============================================================================
+/*======================| SUMMARY |===================================
+	This function will do a testTexture command and save the file generated
+	to an attribute called textureOutputPath containing a path to the file to be saved
+	It then refreshes any file nodes that contain that file path.
+	
+====================================================================*/
+global proc wizUpdateTextureFromTestTextureOutputPathRefresh( string $sel[] )
+{
+	wizUpdateTextureFromTestTextureOutputPath($sel);	
+	//Refresh all the file nodes that contain the filepath
+    string $exfile = `getAttr ($sel[0] + ".absoluteTextureOutputPath")`;
+	print ("File : " + $exfile + "\n");
+	
+	string $fileNodes[] = getFileNodesWithTextureFilePath($exfile);
+    
+	wizRefreshSelectedFileTextures($fileNodes);
+	
+
+}
+
+//@ WIZ OUTPUT TEXTURE AND CREATE FILE TEXTURE
+//=============================================================================
+/*======================| SUMMARY |===================================
+	This function will do a testTexture command and save the file generated
+	to an attribute called textureOutputPath containing a path to the file to be saved
+	It then creates a new file texture and attaches the new texture to the new file texture node.
+	
+====================================================================*/
+global proc wizOutputTextureAndCreateFileTexture( string $sel[] )
+{
+	wizUpdateTextureFromTestTextureOutputPath($sel);
+    for ($i=0;$i<`size $sel`;$i++){
+        string $texfile = `getAttr ($sel[$i] + ".absoluteTextureOutputPath")`;        
+        string $bn = getFileNameNoPathNoExt($texfile);
+        string $ft = wizNewFileTexture(($bn + "File1"));
+        setAttr -type "string" ($ft + ".fileTextureName") $texfile;
+    }
+	
+
+}
+
+//@ WIZ OUTPUT TEXTURE AND CREATE FILE TEXTURE
+//=============================================================================
+/*======================| SUMMARY |===================================
+	This function will do a testTexture command and save the file generated
+	to an attribute called textureOutputPath containing a path to the file to be saved
+    It increments the last digits on the file name.
+	It then creates a new file texture and attaches the new texture to the new file texture node.
+	
+====================================================================*/
+global proc wizIncrementOutputTextureAndCreateFileTexture( string $sel[] )
+{
+    
+    for ($i=0;$i<`size $sel`;$i++){
+        string $texfile = `getAttr ($sel[$i] + ".absoluteTextureOutputPath")`;
+        string $incName = wizIncrementFileName($texfile);
+        setAttr -type "string" ($sel[$i] + ".textureOutputPath") $incName;
+        setAttr -type "string" ($sel[$i] + ".absoluteTextureOutputPath") $incName;
+        wizUpdateTextureFromTestTextureOutputPath({$sel[$i]});
+        
+        string $bn = getFileNameNoPathNoExt($incName);
+       
+        string $ft = wizNewFileTexture(($bn + "File1"));
+        setAttr -type "string" ($ft + ".fileTextureName") $incName;
+    }
+	
+
+}
+
+
+global string $WIZ_textureOutputPathObjs[];
+
+//@ WIZ INCREMENT ALL OUTPUT TEXTURES AND RENDER
+//====================================================================
+global proc wizIncrementAllOutputTexturesAndRender()
+{
+    string $tex[] = getAllTexturesWithTextureOutputPath();
+    for ($i=0;$i<`size $tex`;$i++){
+        string $texfile = `getAttr ($tex[$i] + ".absoluteTextureOutputPath")`;
+        string $incName = wizIncrementFileName($texfile);
+        setAttr -type "string" ($tex[$i] + ".textureOutputPath") $incName;
+        setAttr -type "string" ($tex[$i] + ".absoluteTextureOutputPath") $incName;
+        wizUpdateTextureFromTestTextureOutputPath({$tex[$i]});
+
+    }
+
+}
+
+//@ GET ALL TEXTURES WITH TEXTURE OUTPUT PATH
+//====================================================================
+global proc string[] getAllTexturesWithTextureOutputPath()
+{
+    global string $WIZ_textureOutputPathObjs[];
+    if (`size $WIZ_textureOutputPathObjs` == 0){
+        print ("No Saved Textures With textureOutputPaths\n");
+        string $tex[] = `ls -tex`;
+        //printNiceArrayList("All Textures : ", $tex);
+        for ($i=0;$i<`size $tex`;$i++){
+            if (`attributeExists "textureOutputPath" $tex[$i]`){
+            
+                $WIZ_textureOutputPathObjs[`size $WIZ_textureOutputPathObjs`] = $tex[$i];
+            }
+        }
+    }
+    //printNiceArrayList("Found Textures with textureOutputPaths : ", $WIZ_textureOutputPathObjs);
+    
+    for ($i=0;$i<`size $WIZ_textureOutputPathObjs`;$i++){
+        if (`objExists $WIZ_textureOutputPathObjs[$i]` == 0){
+            stringArrayRemoveAtIndex($i, $WIZ_textureOutputPathObjs);
+            $i = $i - 1;
+            
+        }
+        
+    }
+    return $WIZ_textureOutputPathObjs;
+}
+
+//@ WIZ INCREMENT OUTPUT TEXTURE AND ADD TO FILE TEXTURE SELECTION
+//====================================================================
+global proc  wizIncrementOutputTextureAndAddToFileTextureSelection( string $sel[] )
+{
+/*############ PROBLEM ###############################################
+    This first method would be better but then we have to go through
+    all file texture nodes and look for one with the path
+    in the texture selection attribute
+#####################################################################*/
+
+    /*
+    for ($i=0;$i<`size $sel`;$i++){
+        string $texfile = `getAttr ($sel[$i] + ".absoluteTextureOutputPath")`;
+        string $incName = wizIncrementFileName($texfile);
+        setAttr -type "string" ($sel[$i] + ".textureOutputPath") $incName;
+        setAttr -type "string" ($sel[$i] + ".absoluteTextureOutputPath") $incName;
+        wizUpdateTextureFromTestTextureOutputPath({$sel[$i]});
+        
+        string $bn = getFileNameNoPathNoExt($incName);
+       
+        //string $ft = wizNewFileTexture(($bn + "File1"));
+        //setAttr -type "string" ($ft + ".fileTextureName") $incName;
+        //string $texSelFiles[] = getFileNodesWithTextureFilePath($texfile);
+        /*
+        string $fileNodes[] = `ls -typ file`;
+        for ($p=0;$p<`size $fileNodes`;$p++){
+            if (`attributeExists "textureSelection" $fileNodes[$p]`){
+            
+            }
+        }
+        
+        for ($p=0;$p<`size $texSelFiles`;$i++){
+            addFileSelectionsToSelectedFileNode({$texSelFiles[$p]}, ("-c 1 -n textureSelection -fp " + $incName));
+        }
+        
+        
+    }
+	*/
+
+    string $texfile = `getAttr ($sel[0] + ".absoluteTextureOutputPath")`;
+    string $incName = wizIncrementFileName($texfile);
+    setAttr -type "string" ($sel[0] + ".textureOutputPath") $incName;
+    setAttr -type "string" ($sel[0] + ".absoluteTextureOutputPath") $incName;
+    wizUpdateTextureFromTestTextureOutputPath({$sel[0]});
+    
+    string $bn = getFileNameNoPathNoExt($incName);
+
+    addFileSelectionsToSelectedFileNode({$sel[1]}, ("-c 1 -n textureSelection -fp " + $incName));
+
+}
+
+
+//@ WIZ UPDATE TEXTURE FROM TEST TEXTURE OUTPUT PATH
+//====================================================================
+global proc wizUpdateTextureFromTestTextureOutputPath( string $sel[] )
+{
+	//Get the textureOutputPath
+	
+	string $exfile = `getAttr ($sel[0] + ".absoluteTextureOutputPath")`;
+	print ("File : " + $exfile + "\n");
+	
+	string $fileNodes[] = getFileNodesWithTextureFilePath($exfile);
+	
+    int $setSource = `optionMenuGrp -q -sl textureOutputPathExportSettingsSourceOptionMenuGrp`;
+    
+    int $w = `getAttr "defaultResolution.width"`;
+    int $h = `getAttr "defaultResolution.height"`;
+    
+    if ($setSource == 0){
+        $w = `getAttr "defaultResolution.width"`;
+        $h = `getAttr "defaultResolution.height"`;
+    
+    } else if ($setSource == 1){
+        $w = `intFieldGrp -q -v1 textureOutputPathWidthIntFieldGrp`;
+        $h = `intFieldGrp -q -v1 textureOutputPathHeightIntFieldGrp`;
+    }  else if ($setSource == 2){
+        //Choose the size of the texture
+        $w = "1024";
+        $h = $w;
+        if (`size $fileNodes` > 0){
+            $w = `getAttr ($fileNodes[0] + ".outSizeX")`;
+            $h = `getAttr ($fileNodes[0] + ".outSizeY")`;
+        } else {
+                int $choice;
+                string $pt = "Texture Size";
+                string $mes = "Texture Output Size:";
+                string $but[] = {"128", "256", "512", "1024", "2048", "3072", "4096", "Cancel"};
+                int $prompt = wizPromptDialog($pt, $mes, $but, "1024", "Cancel");
+                if ($prompt == 0){
+                    return;
+                } else {
+                    $choice = $prompt;
+                    print ("Choice : " + $choice + "\n");
+                }
+                $w = int($choice);
+                
+                print ("Chosen Texture Size : " + $w + " X " + $w + "\n");
+        }
+        $h = $w;
+    }
+	
+	//Get the project images directory. That's where we'll render a temp image to.
+	string $workspace = `workspace -q -rd -act`;
+	print ("Workspace : " + $workspace + "\n");
+	
+	string $images = `workspace -q -fre images $workspace`;
+	print ("Workspace Images : " + $images + "\n");
+	
+    select -r $sel[0];
+    
+	//Do the texture Test
+	TestTextureOptions;
+	performCompositeTest 1;
+
+	compositeTest $w $h;
+	
+	//Load the image that was just rendered to /textComp.0001.iff
+	string $loadImage = $workspace + $images + "/testComp.0001.iff";
+	print ("Load Temp Image : " + $loadImage + "\n");
+	
+	renderWindowEditor -edit -loadImage $loadImage renderView;
+	
+	//Save the image to out textureOutputPath
+	renderWindowEditor -edit -writeImage $exfile renderView;
+	print ("Saved File : " + $exfile + "\n");
+	
+	//Refresh all the file nodes that contain the filepath
+	wizRefreshSelectedFileTextures($fileNodes);
+	
+
+}
+
+//@ WIZ TEST TEXTURE AND SAVE TO FILE
+//====================================================================
+/*======================| SUMMARY |===================================
+
+/*=======================| USAGE |====================================	
+    string $file = wizTestTextureAndSaveToFile(`ls -sl`, "-w 1024 -h 1024 -f C:/MyComputer/SomeFile.png");
+====================================================================*/
+
+global proc string wizTestTextureAndSaveToFile( string $sel[], string $tags)
+{
+    int $w = 1024;
+    int $h = 1024;
+    string $filePath;
+    string $tok[] = tokenizeString($tags, " ");
+    for ($i=0;$i<`size $tok`;$i++){
+        switch ($tok[$i]){
+            case "-w" : case "-width" :
+            $w = int($tok[($i + 1)]);
+            break;
+            case "-h" : case "-height" :
+            $h = int($tok[($i + 1)]);
+            break;
+    
+            case "-f" : case "-fp" : case "-file" :
+            $filePath = $tok[($i + 1)];
+            break;
+        }
+    }
+		
+	//Get the project images directory. That's where we'll render a temp image to.
+	string $workspace = `workspace -q -rd -act`;
+	//print ("Workspace : " + $workspace + "\n");
+	
+	string $images = `workspace -q -fre images $workspace`;
+	//print ("Workspace Images : " + $images + "\n");
+	
+	//Do the texture Test
+	TestTextureOptions;
+	performCompositeTest 1;
+
+	compositeTest $w $h;
+	
+	//Load the image that was just rendered to /textComp.0001.iff
+	string $loadImage = $workspace + $images + "/testComp.0001.iff";
+	//print ("Load Temp Image : " + $loadImage + "\n");
+	
+	renderWindowEditor -edit -loadImage $loadImage renderView;
+	
+	//Save the image to out textureOutputPath
+	renderWindowEditor -edit -writeImage $filePath renderView;
+	print ("Saved File : " + $filePath + "\n");
+	
+    return $filePath;
+}
+
+//--------------------------------------------------------------------
+//////////////////////////////////////////////////////////////////////
+//			NEW FILE TEXTURE
+//////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------
+global proc string wizNewFileTexture( string $name )
+{
+        
+    string $ft = `shadingNode -asTexture file -n ($name + "File1")`;
+    string $pt = `shadingNode -asUtility place2dTexture -n ($name + "Place2dTexture1")`;
+    connectAttr -f ($pt + ".coverage") ($ft + ".coverage");
+
+    connectAttr -f ($pt + ".translateFrame") ($ft + ".translateFrame");
+
+    connectAttr -f ($pt + ".rotateFrame") ($ft + ".rotateFrame");
+
+    connectAttr -f ($pt + ".mirrorU") ($ft + ".mirrorU");
+
+    connectAttr -f ($pt + ".mirrorV") ($ft + ".mirrorV");
+
+    connectAttr -f ($pt + ".stagger") ($ft + ".stagger");
+
+    connectAttr -f ($pt + ".wrapU") ($ft + ".wrapU");
+
+    connectAttr -f ($pt + ".wrapV") ($ft + ".wrapV");
+
+    connectAttr -f ($pt + ".repeatUV") ($ft + ".repeatUV");
+
+    connectAttr -f ($pt + ".offset") ($ft + ".offset");
+
+    connectAttr -f ($pt + ".rotateUV") ($ft + ".rotateUV");
+
+    connectAttr -f ($pt + ".noiseUV") ($ft + ".noiseUV");
+
+    connectAttr -f ($pt + ".vertexUvOne") ($ft + ".vertexUvOne");
+
+    connectAttr -f ($pt + ".vertexUvTwo") ($ft + ".vertexUvTwo");
+
+    connectAttr -f ($pt + ".vertexUvThree") ($ft + ".vertexUvThree");
+
+    connectAttr -f ($pt + ".vertexCameraOne") ($ft + ".vertexCameraOne");
+
+    connectAttr ($pt + ".outUV") ($ft + ".uv");
+
+    connectAttr ($pt + ".outUvFilterSize") ($ft + ".uvFilterSize");
+ 
+    return $ft;
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                        CONVERT SOLID TEXTURE
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+/*****************************************************************//**
+*	If the selected texture node has attributes name (textureOutputPath) this will update the specified image.
+*	<b>Return Value</b><br>
+*	string array : file nodes with the fileTexturePath <br>
+*	string $converted[] = wizUpdateSolidTextureFromTextureOutputPath(`ls -sl`, "snow1");
+*
+*********************************************************************/
+global proc string[] wizUpdateSolidTextureFromTextureOutputPath( string $sel[], string $tex )
+{
+	wizLog ("[@] wizUpdateSolidTextureFromTextureOutputPath\n");
+	// set framebuffer to output 16 bit image
+	setAttr "miDefaultFramebuffer.datatype" 16;
+	if ($tex == ""){
+		$tex = $sel[1];
+	}
+	if (`attributeExists "absoluteTextureOutputPath" $tex` == 0){
+		warning ("Cannot Update Texture : " + $tex + "\n");
+		return {""};
+	}
+	
+	// get the file path
+	string $fin = `getAttr ($tex + ".absoluteTextureOutputPath")`;
+	
+	// get any file nodes with the file path
+	string $fileNodes[] = getFileNodesWithTextureFilePath($fin);
+
+	string $converted[] = `convertSolidTx -antiAlias 1-bm 3
+		-fts 0
+		-sp 0
+		-sh 0
+		-alpha 0
+		-doubleSided 0
+		-componentRange 0
+		-resolutionX 1024
+		-resolutionY 1024
+		-fileFormat "tif" 
+		-fin $fin
+		$tex
+		$sel[0]
+		`;
+
+	//wizlog ("	[*] convertSolidTx -antiAlias 1-bm 3 -fts 0	-sp 0 -sh 0 -alpha 0 -doubleSided 0	-componentRange 0 -resolutionX 1024	-resolutionY 1024 -fin " + $$fin + " " + $tex + " " + $sel[0] + ";");
+
+	//string $converted[] = `convertSolidTx -f on -al false -ds false -pf 16 -rx 1024 -ry 1024 -fts true -fil "tif" -uvr -1.0 2.0 -1.0 2.0 -bm 3 -fin $fin $tex $sel[0]`;
+	wizlog (" [*] convertSolidTx -f on -al false -ds false -pf 16 -rx 1024 -ry 1024 -fil \"tif\" -fts true -bm 3 -uvr -1.0 2.0 -1.0 2.0 -fin " + $fin + " " + $tex + " " + $sel[0] + ";");
+	
+	
+	string $fp = `getAttr ($converted[0] + ".fileTextureName")`;	
+	wizlog ("	[#] Converted File Path : " + $fp);
+	
+	
+	//If there are no fileTextures with the file texture name then return the new fileTexture
+	if (`size $fileNodes` == 0){
+		string $cr = renameWizRenameObject($converted[0], ($tex + "OutputFile"));
+		setAttr ($cr + ".alphaIsLuminance") 1;
+		return {$cr};
+	}
+	// If there are already file nodes with the file path delete the new one cuz it's not needed.
+	wizRefreshSelectedFileTextures($fileNodes); 
+	delete $converted;
+	
+	return $fileNodes;
+}
+
+
+global proc rmbWizUpdateOutputTextures( string $object )
+{
+	string $sel[] = `ls -sl`;
+	
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         FILE NOT FOUND
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+/*======================| SUMMARY |===================================
+    disableLoadingOfTextureFilesThatDoNotExist will remove the file path
+    from any texture that cannot be found by maya and save the path
+    under an attribute called :
+    fileNotFound
+    
+    This helps so you don't have to get freaked out when maya keeps throwing
+    out tons of errors if a stupid file texture isn't found.
+    
+    The file path can be restored using :
+    restoreFilePathsOfTextureFilesThatDoNotExist
+/*=======================| USAGE |====================================	
+
+====================================================================*/
+
+
+//@ DISABLE LOADING OF TEXTURE FILES THAT DO NOT EXIST
+//====================================================================
+global proc disableLoadingOfTextureFilesThatDoNotExist()
+{
+    string $fileTex[] = `ls -type file`;
+    for ($i=0;$i<`size $fileTex`;$i++){
+        string $filePath = `getAttr ($fileTex[$i] + ".fileTextureName")`;
+        int $exists = `filetest -e $filePath`;
+        if ($exists == 0){
+            if (`attributeExists "fileNotFound" $fileTex[$i]` == 0){
+                addAttr -dt "string" -ln "fileNotFound" -uaf $fileTex[$i];	                	
+            }   
+            setAttr -type "string" ($fileTex[$i] + ".fileNotFound") $filePath;
+            setAttr -type "string" ($fileTex[$i] + ".fileTextureName") "";
+            print ("File Texture : " + $fileTex[$i] + " : File : " + $filePath + " : Was Not Found\n"
+            +"  - Saving File Path Under Attribute : fileNotFound : under Extra Attributes\n");
+        }
+        
+        
+    }
+}
+
+//@ RESTORE FILE PATHS OF TEXTURE FILES THAT DO NOT EXIST
+//====================================================================
+global proc restoreFilePathsOfTextureFilesThatDoNotExist()
+{
+    string $fileTex[] = `ls -type file`;
+    for ($i=0;$i<`size $fileTex`;$i++){
+        if (`attributeExists "fileNotFound" $fileTex[$i]`){       
+            string $filePath = `getAttr ($fileTex[$i] + ".fileNotFound")`;
+            setAttr -type "string" ($fileTex[$i] + ".fileTextureName") $filePath;        
+        }        
+    }
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         TEXTURE POOLS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//@ BUILD TEXTURE POOLS
+//====================================================================
+//@ PROC NAME
+//====================================================================
+/*****************************************************************//**
+	This will open a dialog to select directories or files to build texture pool assets.
+	<hr>
+	<b>Synopsis</b><br>
+	buildTexturePools [-dir bool] [-sb bool] <br>
+	If the -dir flag is passed then a dialog to choose a directory 
+	will be used to find and sort images into pools from.
+	The -sd flag will also include any subDirectories in pools
+	If no flag is passed it will default to a selection of texture files.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-directory(-dir) <br>
+	-subDirectory(-sd) <br>
+	
+	<hr>
+	<b>Related</b><br>
+	sortAllImagesIntoTexturePools(), createTexturePoolAsset()
+	
+	<b>Examples</b><br>
+	<code>
+	buildTexturePools("-dir");
+	
+	</code>
+*********************************************************************/
+global proc buildTexturePools( string $tags )
+{
+	wizlog("[@] buildTexturePools");
+    int $selDir;
+    int $selSubDir;
+    int $selFiles;
+    string $dir;
+    string $allDir[];
+    string $tok[] = tokenizeString($tags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+            case "-dir" : 
+			$selDir = 1;
+			break;
+            
+			case "-sd" : case "-subDirectories" :
+            $selSubDir = 1;
+			break;
+		
+		}
+	}
+	
+	string $newTexPools[];
+	
+    if ($selDir == 1 || $selSubDir == 1){
+        $dir = wizGetDirectory();
+        if ($selSubDir == 1){
+            $allDir = wizGetAllSubFoldersOfDirectory($dir);
+			if (`size $allDir` == 0){
+				return ;
+			}
+        }
+        stringArrayInsertAtIndex(0, $allDir, $dir);
+        wizlog((niceArrayList("		[-] All Directories : ", $allDir )));
+	
+        for ($s=0;$s<`size $allDir`;$s++){
+            // Get the list of files in this directory
+            string $files[] = `getFileList -fld $allDir[$s]`;
+            $files = stringArrayAddPrefix($files, $allDir[$s]);
+            wizlog(niceArrayList("		[-] Files : ", $files ));
+            string $pools[] = sortAllImagesIntoTexturePools($files);
+			appendStringArray($newTexPools, $pools, `size $pools`);
+        }
+        
+    } else {
+        string $selFiles[] = wizGetMultipleFiles();
+        $newTexPools = sortAllImagesIntoTexturePools($selFiles);
+    }
+	
+	string $newTexPoolAsset = createTexturePoolAsset($newTexPools);
+	wizlog("	[*] New Texture Pool Asset : " + $newTexPoolAsset);
+	
+}
+
+//@ SORT ALL IMAGES INTO TEXTURE POOLS
+//====================================================================
+/*****************************************************************//**
+	Sorts a list of image files into texture pools.
+	<hr>
+	<b>Synopsis</b><br>
+	sortAllImagesIntoTexturePools [string $filePath[]] <br>
+	Problem : All files must be in the same directory because we have to cut
+    off the dir part to sort the files.
+	
+	<b>Return value</b><br>
+	string[] new texture file nodes
+	
+	<b>Flags</b><br>
+
+	<hr>
+	<b>Related</b><br>
+	buildTexturePools(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $texFiles[] = sortAllImagesIntoTexturePools({"C:/afile.png"});
+	
+	</code>
+*********************************************************************/
+global proc string[] sortAllImagesIntoTexturePools( string $filePath[] )
+{    
+	wizlog("[@] sortAllImagesIntoTexturePools");
+    string $files[];
+    string $dir[] = wizSpliceFilePath($filePath[0], "-dir");
+    for ($i=0;$i<`size $filePath`;$i++){
+        $files[$i] = basename($filePath[$i], "");
+    }
+    //Sort the images and then match images with same starting name like : sky, or leather
+    sort($files);
+    
+    // Choose only the files that have the extensions we want
+    string $images[] = getAllValidImages($files);
+    wizlog((niceArrayList("		[-] Images : ", $images )));
+    // Names are like this : someImageName01.png
+    
+    string $name = getFileNameNoPathNoExtNoNumber($images[0]);
+    string $matchName = $name;
+    string $poolGroupFiles[];
+    int $texPoolCount;
+    string $texPoolNames[];
+    string $misc[];
+	string $return[];
+	
+	    
+	int $sortByName = `checkBox -q -v texturePool_sortByName_checkBox`;
+	if ($sortByName == 0){	
+		for ($i=1;$i<`size $images`;$i++){		
+			$poolGroupFiles[`size $poolGroupFiles`] = ($dir[0] + $files[$i]);
+		}
+		$return[`size $return`] = createFileTextureSelectorForFiles($poolGroupFiles, $name);
+		return $return;
+                
+	}
+	
+    for ($i=1;$i<`size $images`;$i++){			
+        // Remove the extension and numbers so we can match by just the name
+        $name = getFileNameNoPathNoExtNoNumber($images[$i]);
+        wizLog("	[-] Match : " + $matchName + " : To : " + $name);
+        if ($name == $matchName ){
+            // If it's a match then we'll add it to the pool
+            $poolGroupFiles[`size $poolGroupFiles`] = ($dir[0] + $files[$i]);				
+            
+        } else {
+            // If the name doesn't match then dump all the files in poolGroup files into a texture pool file
+                            
+            wizLog((niceArrayList("		[+] New Texture Pool [+]", $poolGroupFiles )));
+            if (`size $poolGroupFiles` > 1){
+                $return[`size $return`] = createFileTextureSelectorForFiles($poolGroupFiles, $matchName);
+                $texPoolCount++;
+            } else {
+                //If there is only one with this name... put it in the misc pile.
+                $misc[`size $misc`] = $poolGroupFiles[0];
+            }
+
+            clear($poolGroupFiles);
+            // Set the new match name to the name that wasn't matched
+            $matchName = $name;	
+            
+        }
+        
+    }
+    clear($poolGroupFiles);
+    
+    $name = getFileNameNoPathNoExtNoNumber($misc[$i]);
+    // If there was only a single file with the file name then sort those files into a misc pool
+    for ($i=1;$i<`size $misc`;$i++){			
+        // Remove the extension and numbers so we can match by just the name
+        $name = getFileNameNoPathNoExtNoNumber($misc[$i]);
+        wizLog("	[-] Match : " + $matchName + " : To : " + $name);
+        if ($name == $matchName ){
+            // If it's a match then we'll add it to the pool
+            $poolGroupFiles[`size $poolGroupFiles`] = ($dir[0] + $files[$i]);				
+            
+        } else {
+            // If the name doesn't match then dump all the files in poolGroup files into a texture pool file                            
+            wizLog((niceArrayList("		[+] New Texture Pool [+]", $poolGroupFiles )));
+            if (`size $poolGroupFiles` > 0){
+                $return[`size $return`] = createFileTextureSelectorForFiles($poolGroupFiles, $matchName);
+                $texPoolCount++;
+            }             
+            clear($poolGroupFiles);
+            // Set the new match name to the name that wasn't matched
+            $matchName = $name;	
+            
+        }
+        
+    }
+    return $return;
+}
+
+//@ CREATE TEXTURE POOL ASSET
+//====================================================================
+/*****************************************************************//**
+	Makes a texture pool asset
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-fa string] [-fb linear] <br>
+	Publishes and binds texture messages and textureSelection attr.
+	Also sets default wizAsset attributes.
+	
+	<b>Return value</b><br>
+	string[] the new asset
+	
+	<b>Flags</b><br>
+	-fa, -fb
+	
+	<hr>
+	<b>Related</b><br>
+	sortAllImagesIntoTexturePools(), buildTexturePools(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $tPool = createTexturePoolAsset(`ls -sl`);
+	
+	</code>
+*********************************************************************/
+global proc string createTexturePoolAsset( string $sel[] )
+{
+	// get the textures, place textures and choice nodes
+	string $assetName = "wizTexturePool";
+	string $tex[] = `ls -tex $sel`;
+	string $ptex[] = `ls -typ place2dTexture -typ place3dTexture $sel`;
+	string $choice[] = `ls -typ choice $sel`;
+	
+	//Create an asset
+    string $tpool = `container -n $assetName -type dagContainer -ind "inputs" -includeHierarchyBelow -includeShapes -includeTransform -force -addNode $sel`;
+	
+	// publish and bind the message attr and the textureSelection attr.
+	for ($i=0;$i<`size $tex`;$i++){
+		
+		string $numbers = `match "[0-9]+" $tex[$i]`;
+		string $nodeType = `nodeType $tex[$i]`;
+		//substituteAllString($tex[$i], $numbers, "");
+		substituteAllString($tex[$i], $nodeType, "");
+		string $messName = $tex[$i];
+		
+		string $tsName = $tex[$i] + "TextureSelection";
+		
+        container -e -publishAndBind ($tex[$i] + ".message") $messName $tpool;
+		container -e -publishAndBind ($tex[$i] + ".textureSelection") $messName $tpool;
+    } 
+	
+	// set the wizAsset attributes.
+	addWizAssetTypeAttributeToSelectedAsset($tpool, "texturePoolAsset");
+	setAttr -type "string" ($tpool + ".rmbCommand") "assetWiz";
+
+	return $tpool;
+}
+
+//@ RMB RANDOMIZE TEXTURE POOLS
+//====================================================================
+global proc rmbRandomizeTexturePools( string $object )
+{
+    string $asset[] = `ls -type dagContainer -sl`;
+    for ($i=0;$i<`size $asset`;$i++){
+        string $nl[] = `container -q -nl $asset[$i]`;
+        string $tex[] = `ls -type file $nl`;
+        for ($t=0;$t<`size $tex`;$t++){
+            randomizeTextureSelection($tex[$t]);
+        }
+    
+    }
+}
+
+//@ RANDOMIZE TEXTURE POOL
+//====================================================================
+global proc randomizeTexturePool( string $tp )
+{
+    string $nl[] = `container -q -nl $tp`;
+    string $tex[] = `ls -type file $nl`;
+    for ($t=0;$t<`size $tex`;$t++){
+        randomizeTextureSelection($tex[$t]);
+    }
+}
+
+//@ RANDOMIZE ALL TEXTURE POOLS
+//====================================================================
+global proc randomizeAllTexturePools()
+{
+    string $tp[] = getAllWizAssetsOfType("texturePoolAsset");
+    for ($i=0;$i<`size $tp`;$i++){
+        randomizeTexturePool($tp[$i]);
+    }
+}
+
+//@ GET ALL VALID IMAGES
+//====================================================================
+/*****************************************************************//**
+	Returns a list of valid images from a list of image files that match file exensions to use in texture pools.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-fa string] [-fb linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-fa, -fb
+	
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName("-fa aString -fb anotherString");
+	
+	</code>
+*********************************************************************/
+global proc string[] getAllValidImages( string $images[] )
+{
+	string $validExt[] = { "png", "jpg", "iff", "tif", "tiff", "exr", "psd", "bmp", "tga", "hdr", "eps", "rla" };
+	string $valid[];
+	for ($i=0;$i<`size $images`;$i++){
+		string $ext = fileExtension($images[$i]);
+        //print ("Ext : " + $ext + "\n");
+		for ($v=0;$v<`size $validExt`;$v++){
+			if ($ext == $validExt[$v]){
+                //print ("Valid Ext : " + $ext + "\n");
+				$valid[`size $valid`] = $images[$i];
+			}
+		}
+
+	}
+	return $valid;
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         FIT PLACE3DTEXTURE
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+
+//@ FIT PLACE3D TEXTURE TO OBJ BBOX
+//====================================================================
+/*****************************************************************//**
+	Takes a place3dTexture and fits it onto an objects bounding box.
+	<hr>
+	<b>Synopsis</b><br>
+	fitPlace3dTextureToObjBBox [string $obj] [string $p3d] <br>
+	Needs some work.
+	
+	<b>Return value</b><br>
+	none.
+	
+	<b>Flags</b><br>
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	string $sel[] = `ls -sl`;
+	fitPlace3dTextureToObjBBox($sel[0], $sel[1]);
+	
+	</code>
+*********************************************************************/
+global proc fitPlace3dTextureToObjBBox( string $obj, string $p3d )
+{
+	string $geomBBox = wizGeomToBBox($obj);
+	float $objBBS[] = `getAttr ($geomBBox + ".boundingBoxSize")`;
+	float $center[] = `getAttr ($geomBBox + ".center")`;
+	float $rot[] = `getAttr ($geomBBox + ".rotate")`;
+	
+	xform -ws -t $center[0] $center[1] $center[2] $p3d;
+	float $p3dBBS[] = `getAttr ($p3d + ".boundingBoxSize")`;
+	float $scale[] = { ($objBBS[0] / $p3dBBS[0]), ($objBBS[1] / $p3dBBS[1]), ($objBBS[2] / $p3dBBS[2]) };
+	//xform -s $scale[0] $scale[1] $scale[2] $p3d;
+	float $in = 1.133;
+	setAttr ($p3d + ".scale") ($scale[0] * $in) ($scale[1] * $in) ($scale[1] * $in);
+	setAttr ($p3d + ".rotate") $rot[0] $rot[1] $rot[2];
+	
+	hide $geomBBox;
+	
+}
+
+//@ create3D PROJECTION NODE
+//====================================================================
+/*****************************************************************//**
+	This just create a projection node and connects a place3dTexture to it.
+	<hr>
+	<b>Synopsis</b><br>
+	create3dProjectionNode [] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] array with the project and the place3d texture
+	
+	<b>Flags</b><br>
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	string $proj[] = create3dProjectionNode();
+	
+	</code>
+*********************************************************************/
+global proc string[] create3dProjectionNode()
+{
+	string $proj = `shadingNode -asUtility projection`;
+	string $p3d = `shadingNode -asUtility place3dTexture`;
+	connectAttr ($p3d + ".worldInverseMatrix[0]") ($proj + ".placementMatrix");
+	return { $proj, $p3d };
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         TRANSFER MAPS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+global proc wizTransferNormalMaps( string $sel[] )
+{
+
+/*
+    string $mapName = wizSpliceFilePath(`file -q -sc`, );
+    
+        surfaceSampler 
+    -target BaseStructureMeshShape1Deformed2
+    -uvSet map1 
+    -searchOffset 1.215799956 
+    -maxSearchDistance 0 
+    -searchCage "" 
+    -source BaseStructureMeshShape1Deformed1 
+    -mapOutput normal 
+    -mapWidth 1024 
+    -mapHeight 1024 
+    -max 1 
+    -mapSpace tangent
+    -mapMaterials 1 
+    -shadows 1 
+    -filename "C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/SciFi/Bases/Structures/RevolvedStructuresE/BaseRevolveStrutureE1" 
+    -fileFormat "png" 
+    -superSampling 2 
+    -filterType 0 
+    -filterSize 1 
+    -overscan 1 
+    -searchMethod 0 
+    -useGeometryNormals 1 
+    -ignoreMirroredFaces 0 
+    -flipU 0 
+    -flipV 0 
+*/
+}
+
+
+
+
+
+global proc wizTextureStamp( string $flags )
+{
+
+
+
+}
+
+//@ WIZ MAKE SUBSTANCES
+//====================================================================
+/*****************************************************************//**
+	Makes substance files for either a direcotory or file selection.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	wizMakeSubstances("-f");
+	
+	</code>
+*********************************************************************/
+global proc wizMakeSubstances( string $flags )
+{
+	string $obj, $type;
+	string $sel[];
+	string $sbsar[];
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-dir" : case "-directory" :
+			string $dir = wizGetDirectory();
+			$sbsar = getAllFilesOfTypeInDirectory($dir, "sbsar");
+			break ;
+				
+			case "-f" : case "-files" :
+			$sbsar = wizGetMultipleFiles();
+			break ;
+			
+		}
+	}
+	
+	for ($i=0;$i<`size $sbsar`;$i++){
+		string $n[] = wizSpliceFilePath($sbsar[$i], "-fn");
+		string $sn = `shadingNode -asTexture substance -n $n[0]`;
+
+		string $p2d = `shadingNode -asUtility place2dTexture`;
+
+		connectAttr ($p2d + ".outUV") ($sn + ".uv");
+
+		connectAttr ($p2d + ".outUvFilterSize") ($sn + ".uvFilterSize");	
+		
+		setAttr -type "string" ($sn + ".package") $sbsar[$i];
+		
+	}
+
+
+}
+
+global proc insertShadingNodeBetweenNodes( string $flags )
+{
+	string $obj, $type;
+	string $sel[];
+	int $edit;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-typ" : case "-type" :
+			$type = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	select -r $sel[0];
+	select -add $sel[1];
+	string $conAttr[] = wizConnectionQuery("-sl -ca");
+	
+	string $sn = `shadingNode -asUtility $type`;
+	
+	
+
+}
+
+
+global proc valuesToMaskedLayeredTexture( string $flags )
+{
+	string $tex, $type;
+	string $sel[];
+	int $lc;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-tex" : case "-texture" :
+			$tex = $tok[($i + 1)];
+			break ;
+				
+			case "-lc" : case "-layerCount" :
+			$lc = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	float $pos = 0;
+	float $stepSize = 1 / $lc;
+	string $ctrlRemap = `shadingNode -asUtility remapValue -n ($tex + "RemapValueCtrl")`;	
+	
+	string $remapValue[];
+	for ($i=0;$i<`size $lc`;$i++){
+		string $remap = `shadingNode -asUtility remapValue -n ($tex + "RemapValue" + $i)`;	
+		setAttr ($ctrlRemap + ".color[" + ($i + 1) + "].color_Position") ($pos);
+		
+		setAttr ($remap + ".color[0].color_Interp") 0;
+		setAttr ($remap + ".color[1].color_Interp") 0;
+		setAttr ($remap + ".color[2].color_Interp") 0;
+		
+		setAttr ($remap + ".color[1].color_Position") ($pos);
+		setAttr ($remap + ".color[2].color_Position") ($pos + $stepSize);
+		
+		setAttr ($remap + ".color[2].color_Color") -type double3 0.0 0.0 0.0;
+		
+		$remapValue[`size $remapValue`] = $remap;
+
+	}
+	
+	string $laytex = createLayeredTexture(($tex + "ValueLayeredTexture"));
+	int $p = $lc;
+	for ($i=0;$i<$lc;$i++){
+		connectAttr -f ($remapValue[$p] + ".outAlpha") ($laytex + ".inputs[" + $i + "].alpha");
+
+	}
+	
+	
+	
+
+}
+
+
+//All right reserved KunihikoSuzuki
+//2008.12.11 created
+
+//Main UI
+global proc wizCollectAllTextureLayout()
+{
+	scrollLayout -w 500;
+
+		columnLayout -w 400 -adjustableColumn true;
+			
+			separator -style "none";
+			separator -style "out";
+			separator -style "none";
+	
+			text -font "boldLabelFont" -label  "List All Textures in current scene";
+
+			separator -style "none";
+			separator -style "none";
+
+			button -h 35 -bgc 1.0 1.0 1.0 -label "List All Files" -command "wizListAllTextures()";
+	
+			separator -style "none";
+			separator -style "none";
+			separator -style "out";
+			separator -style "none";
+			separator -style "none";
+
+
+		textScrollList  -numberOfRows 12
+				-width 150
+				-allowMultiSelection true
+				-selectCommand "wizTextListSelectionFunc()"
+				-showIndexedItem 1
+				textureWiz_collectTextures_textScrollList;
+
+
+			separator -style "none";
+			separator -style "out";
+			separator -style "none";
+
+	//setParent..;
+		columnLayout -w 400 -adjustableColumn true;
+
+
+			separator -style "out";
+			text -label "";
+			text -font "boldLabelFont" -label ":Enter your dest Dir";
+			text -label "";
+
+		textField -w 400 -h 30 -text " :enter your destination path here"  textureWiz_collectTextureDestination_textField;
+
+			separator -w 500 -h 15;
+	setParent..;
+
+		rowColumnLayout -nc 2;
+			//-columnWidth1 150
+			//-columnWidth2 150 150;
+
+		button  -h 30 -label "Submit to Copy" -bgc 1.0 0.62 0 -command "wizCollectAndCopyAllTextures()";
+		//button  -h 30 -label "Cancel" -bgc 1.0 1.0 1.0 -command "deleteUI kscollectalltextureUI";
+
+	setParent..;
+
+}
+
+
+//Load All Files in current Maya scene
+global proc wizListAllTextures()
+{
+	textScrollList -edit -removeAll textureWiz_collectTextures_textScrollList;
+	string $existtexs[] = `ls -type file`;
+	string $texCom = "textScrollList -e";
+	int $texCount;
+
+	for ($i=0;$i<size($existtexs);$i++){
+		$texCom = $texCom + " -append " + $existtexs[$i];
+	}
+
+	$texCom = $texCom + " textureWiz_collectTextures_textScrollList";
+
+	evalEcho $texCom;
+}
+
+//To link select Files in the List
+global proc wizTextListSelectionFunc()
+{
+	global string $textureCurrentSelection[];
+	$textureCurrentSelection = `textScrollList -q -selectItem textureWiz_collectTextures_textScrollList`;
+	
+	if (size($textureCurrentSelection)){
+		select -r $textureCurrentSelection;
+	}
+	
+}
+
+
+//store dest and src dir
+global proc wizCollectAndCopyAllTextures()
+{
+	string $textureFiles[] = `ls -type file`;
+	int $textureFileSize = size ($textureFiles);
+	string $texFilePaths[];
+	string $texFilePathShort[];
+	string $relitiveTexFilePaths[];
+	string $projectPath = `workspace -q -fullName`;
+
+
+	for ($i = 0; $i < $textureFileSize ; $i++) 
+	{
+		string $fileTextureName = $textureFiles[$i] + ".fileTextureName";
+		$texFilePaths[$i] = `getAttr $fileTextureName`;
+		string $texturenameB = `substitute "/.*/" $texFilePaths[$i] ""`;
+		string $texFilePathShort[];
+		//string $relitiveTexFilePaths[];
+		//string $projectPath = `workspace -q -fullName`;
+
+		string $bufftexname[];
+		$numTokens = `tokenize $texturenameB ":" $bufftexname`;
+
+		print $bufftexname[1];
+
+		string $destdir = `textField -q -text textureWiz_collectTextureDestination_textField`;
+		string $destdirresult = substituteAllString ( $destdir, "\\" , "/");
+
+		print ( $destdirresult + "\n");
+
+		sysFile -copy ( $destdirresult + "/" + $bufftexname[1] ) $texFilePaths[$i];
+
+		print ( $bufftexname[1] + "copied to your destDir!\n");
+
+	}
+
+}
+
+//@ WIZ TEXTURE MIX
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName("-obj someObject -q -sl");
+	
+	</code>
+*********************************************************************/
+global proc wizTextureMix( string $flags )
+{
+	int $wiz;
+	string $dir;
+	int $subDir;
+	string $inTexture;
+	string $outTexture;
+	int $randomize;
+	int $replaceOriginal;
+	int $appendSuffix;
+	string $suffix;
+	
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){					
+			case "-wiz" :
+			$wiz = 1;
+			$dir = `textFieldButtonGrp -q -tx textureMixer_textureDirectory_textFieldButtonGrp`;
+			$subDir = `checkBox -q -v textureMixer_includeSubDirectories_checkBox`;
+			$inTexture = `textFieldButtonGrp -q -tx textureMixer_inTexture_textFieldButtonGrp`;
+			$outTexture = `textFieldButtonGrp -q -tx textureMixer_outTexture_textFieldButtonGrp`;
+			$randomize = `checkBox -q -v textureMixer_runRandomization_checkBox`;
+			$replaceOriginal = `checkBox -q -v textureMixer_replaceOriginal_checkBox`;
+			$appendSuffix = `checkBox -q -v textureMixer_appendSuffix_checkBox`;
+			$suffix = `textFieldGrp -q -tx textureMixer_suffix_textFieldGrp`;
+			
+			break ;
+			
+		}
+	}
+	string $workspace = `workspace -q -rd -act`;
+	wizlog ("Workspace : " + $workspace + "\n");
+	string $imagesFolder = `workspace -q -fre images $workspace`;
+	wizlog ("Workspace Images : " + $imagesFolder + "\n");
+	string $loadImage = $workspace + $imagesFolder + "/testComp.0001.iff";
+	
+	string $files[];
+	
+	//_________________________________________
+	// Get All The Files To Process
+	if ($subDir){
+		string $allDir[] = wizGetAllSubFoldersOfDirectory($dir);
+		for ($s=0;$s<`size $allDir`;$s++){
+            // Get the list of files in this directory
+            string $subDirFiles[] = `getFileList -fld $allDir[$s]`;
+            $subDirFiles = stringArrayAddPrefix($subDirFiles, $allDir[$s]);
+            wizlog(niceArrayList("		[-] Sub Dir Files : ", $subDirFiles ));
+			appendStringArray($files, $subDirFiles, `size $subDirFiles`);
+        }
+	} else {
+		string $ff[] = `getFileList -fld $dir`;
+		$files = stringArrayAddPrefix($ff, $dir);
+	}
+	
+	string $images[] = getAllValidImages($files);
+	wizlog (niceArrayList("[#] Images To Mix [#] ",$images));
+	
+	//_________________________________________
+	// Load Images And Process
+	
+	for ($i=0;$i<`size $images`;$i++){
+	
+		//_________________________________________
+		// Load Image
+		setAttr -type "string" ($inTexture + ".fileTextureName") $images[$i];	
+		
+		int $w = `getAttr ($inTexture + ".outSizeX")`;
+        int $h = `getAttr ($inTexture + ".outSizeY")`;
+	
+		//_________________________________________
+		// Randomization
+		if ($randomize){
+		
+			wizCraftMaterialPool("-rand -all");
+			randomizeAllRamputations();
+			randomizeAllObjectsWithRandomizationAttributes();
+			randomizeAllTexturePools();
+		}
+		
+		select -r $outTexture;
+		TestTextureOptions;
+		performCompositeTest 1;
+
+		compositeTest $w $h;
+		
+		
+		wizlog ("Load Temp Image : " + $loadImage + "\n");
+		string $outFilePath;
+		if ($appendSuffix){
+			string $fSplice[] = wizSpliceFilePath($images[$i], "-dir -fn -ex");
+			$outFilePath = $fSplice[0] + $fSplice[1] + $suffix + "." + $fSplice[2];
+		} else {
+			$outFilePath = $images[$i];
+		}
+		renderWindowEditor -edit -loadImage $loadImage renderView;
+		renderWindowEditor -edit -writeImage $outFilePath renderView;
+		
+		
+	
+	}
+	
+
+}
+
+
+//@ WIZ CONVERT VERTEX COLORS TO TEXTURE
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	wizConvertVertexColorsToTexture("-sl -x 512 -y 512 -sf 0 -ef 20 -dir /Shared3/projects/MagneticForces/sourceimages/VertexColorTextureTest/ -n VertexColorTest -eft png");
+	
+	</code>
+*********************************************************************/
+global proc wizConvertVertexColorsToTexture( string $flags )
+{
+	string $startFrame = 0;
+	string $endFrame = 0;
+	string $eft = "png";
+	string $sel[];
+	int $x = 512;
+	int $y = 512;
+	string $dir;
+	string $name = "VertexColor";
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-sf" : case "-startFrame" :
+			$startFrame = float($tok[($i + 1)]);
+			break ;
+			
+			case "-ef" : case "-endFrame" :
+			$endFrame = float($tok[($i + 1)]);
+			break ;
+
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-dir" : case "-directory" :
+			$dir = $tok[($i + 1)];
+			break ;
+			
+			case "-n" : case "-name" :
+			$name = $tok[($i + 1)];
+			break ;
+			
+			case "-x" : case "-xResolution" :
+			$x = int ($tok[($i + 1)]);
+			break ;
+			
+			case "-y" : case "-yResolution" :
+			$y = int ($tok[($i + 1)]);
+			break ;
+			
+			case "-eft" : case "-exportFileType" : 
+			$eft = $tok[($i + 1)];
+			break ;
+			
+			case "-wiz" :
+			$startFrame = `floatFieldGrp -q -v1 wizConvertVertexColorsToTexture_frameRange_floatFieldGrp`;
+			$endFrame = `floatFieldGrp -q -v2 wizConvertVertexColorsToTexture_frameRange_floatFieldGrp`;
+			$sel = `ls -sl`;
+			$dir = `textFieldButtonGrp -q -tx wizConvertVertexColorsToTexture_dir_textFieldButtonGrp`;
+			$name = `textFieldGrp -q -tx wizConvertVertexColorsToTexture_name_textFieldGrp`;
+			$x = `intFieldGrp -q -v1 wizConvertVertexColorsToTexture_size_intFieldGrp`;
+			$y = `intFieldGrp -q -v2 wizConvertVertexColorsToTexture_size_intFieldGrp`;
+			$eft = `textFieldGrp -q -tx wizConvertVertexColorsToTexture_eft_textFieldButtonGrp`;
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	currentTime -e $startFrame;
+	
+	for ($i=(int($startFrame));$i<(int($endFrame));$i++){
+		currentTime -e $i;
+		string $esf = $dir + $name + "." + $i + "." + $eft;
+		//createMeshVertexColorSelectionMap("-fn " + $curFile + " -inv -fsx " + $x + " -fsy " + $y + " -obj " + $sel[0] + " -eft " + $ext);
+	
+		string $artPaintVertex = "artAttrColorPerVertexContext";
+		if (`artAttrPaintVertexCtx -q -ex $artPaintVertex` == 0){
+			PaintVertexColorToolOptions;
+			artPaintVertexInitPaintableAttr;
+		}
+		setToolTo $artPaintVertex;
+		artAttrPaintVertexCtx -e -efm "luminance/rgb" -fsx $x -fsy $y -eef false -eft $eft -esf $esf $artPaintVertex;
+		
+		
+	}
+	
+	//string $cmTex = wizNewFileTexture($cornerMaskTexFile[0]);
+	
+}
+
+
+global proc wizTerrainElevationShader( string $flags )
+{
+
+	string $sel[];
+
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+
+			
+		}
+	}
+
+	for ($i=0;$i<`size $sel`;$i++){
+		
+		// Crate a ramp
+		string $name = $sel[$i] + "ElevationRamp";
+		string $ramp = wizCreateNewRampTexture($name);
+
+		// Create a projection and connect ramp to it.
+		string $proj[] = create3dProjectionNode();
+		connectAttr -force ($ramp + ".outColor") ($proj[0] + ".image");
+		//connectAttr -force ($ramp + ".outColor") ($proj[0] + ".transparency");
+		
+		fitPlace3dTextureToObjBBox($sel[$i], $proj[1]);
+		
+		string $lambert = `shadingNode -n ($sel[$i] + "ElevationLambert") -asShader lambert`;
+
+		string $sg = `sets -renderable true -noSurfaceShader true -empty -name ($lambert + "SG")`;
+ 
+		connectAttr -f ($lambert + ".outColor") ($sg + ".surfaceShader");
+
+		setAttr ($lambert + ".color") -type double3 0 0 0 ;
+		setAttr ($lambert + ".diffuse") 0;
+
+		connectAttr -force ($proj[0] + ".outColor") ($lambert + ".incandescence");
+
+	}
+
+
+}
+
+global proc wizMentalRayVertexColor( string $flags )
+{
+	string $sel[];
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	for ($i=0;$i<`size $sel`;$i++){
+		string $s[] = `listRelatives -s $sel[$i]`;
+		if (`size $s` == 0){
+			wizlog ("[!] A Mesh Transform Must Be Selected [!]");
+		}
+		string $vc = `mrCreateCustomNode -asTexture "" mentalrayVertexColors`;
+		string $mrvc = renameWizRenameObject($vc, ($sel[$i]));
+		connectAttr -f ($s[0] + ".colorSet[0].colorName") ($mrvc + ".cpvSets[0]");
+	
+	}
+
+}
+
+global proc wizReloadAllOctaneTextures()
+{
+	string $allOctTex[] = `ls -type "octaneImageTexture" -type "octaneAlphaImageTexture"`;
+	if (`size $allOctTex` == 0){
+		print("[!] No Octane File Textures Found!" + "\n");
+	}
+	for ($i=0;$i<`size $allOctTex`;$i++){
+		AEoctaneFileTextureReloadCmd ($allOctTex[$i] + ".File");
+	}
+}
+
+

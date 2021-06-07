@@ -1,0 +1,46 @@
+global string $dataFile[];
+//$dataFile = wizGetFiles("-dir /Volumes/Shared3/projects/MagneticForces/data/mel/Batsrus/ -type mel");
+string $dataDir = "F:/maya/projects/MagneticForces/data/mel/Batsrus/";
+$dataFile = wizGetFiles("-dir " + $dataDir + " -type mel");
+
+wizProgressWindowStart("Adding Mag Field Lines", "Starting", 1);
+    wizProgressWindowMinMax(0,(`size $dataFile`));
+	
+for ($i=0;$i<`size $dataFile`;$i++){
+	wizProgressWindowStatus(("Data File : " + $i + " -Of- " + (`size $dataFile`)));	
+	wizProgressWindowStep(1);
+	
+	string $rnn[] = `file -rnn -f -i $dataFile[$i]`;
+	select -r $rnn;
+	string $ng = `group -n ("Frame" + $i)`;
+	select -r $ng;
+	setKeyframe -t ($i - 1) -at "visibility" -v 0;
+	setKeyframe -t ($i) -at "visibility" -v 1;
+	setKeyframe -t ($i + 1) -at "visibility" -v 0;
+	
+	if ($i==150){
+		break;
+	}
+	
+	
+	if (wizProgressCancelled() == 1) break;
+	
+}
+	
+wizlog ("[*] Finished Building Mag Field Lines [*]");
+	
+wizProgressWindowEnd();
+
+	/*	select -r $rnn;
+	string $ncurve[] = `ls -type nurbsCurve -sl`;
+	select -r $ncurve;
+	global string $newCurves[] ;
+	$newCurves = `listTransforms -sl`;
+	
+	string $thinLine = "ThinLineShader1:ThinLineShader";
+	select -add $thinLine;
+	
+	global string $thinLines;
+	$thinLines = wizBuildThinLines("-sl");
+	refresh -f;
+	*/

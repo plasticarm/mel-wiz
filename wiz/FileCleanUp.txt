@@ -1,0 +1,150 @@
+________________________________________________________________________________________________________________________________________________________________________
+[References]
+[0] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Clothing/Hats/Feather1.ma
+[1] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Lighting/Sun/SunLight2.ma
+[2] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Glass/GlassColoredShader.mb
+[3] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Clothing/Jewelery/construction/Jewelery1.ma
+[4] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Plastic/FormicaShader.mb
+[5] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Glass/FrostedGlassShader.mb
+[6] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Metal/MetallicPaintShader.mb
+[7] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Metal/IrredescentMetaShader.mb
+[8] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Metal/SilverShader.mb
+[9] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Metal/ChromeShader.mb
+[10] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Glass/DiamondShader.mb
+[11] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Metal/GoldShader.mb
+[12] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Cloth/Accessories/Jewelery/Earrings/Construction/Earings1.mb
+[13] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Metal/CopperShader.mb
+[14] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Glass/GlassAnisotropicShader.mb
+[15] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Props/FashionAccessories/Glasses/EyeGlasses1.mb
+[16] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Characters/BodyParts/Teeth/Teeth1.mb
+[17] C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/BeardStyles/WarlockBeard1.ma
+[18] C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/BeardStyles/FullBeard1.mb
+[19] C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/HairStyles/BangsStyle.mb
+[20] C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/HairStyles/FemaleMedLengthPartedHair3.mb
+[21] C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/Eyelashes/EyelashSystem1.mb
+[22] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Lighting/Sun/SoftSunLight1.mb
+[23] C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/HairStyles2/AfroFaded1.mb
+[24] C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/HairStyles2/Afro1.mb
+[25] C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/HairStyles2/ShortMessyStyleHair2.mb
+[26] C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/HairStyles/AfAmMedHair1.mb
+[27] C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/HairStyles/FemaleMedLengthPartedHair2.mb
+[28] C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/HairStyles/ShortHair1.mb
+[29] C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/HairStyles/AfAmShortHair2.mb
+[30] C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/HairStyles/AfAmShortHair1.mb
+[31] C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/MoustacheStyles/FullMoustache1.mb
+[32] C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/HairStyles/FemaleMedLengthPartedHair1.mb
+[33] C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/EyebrowStyles/EyebrowSystem2.mb
+[34] C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/HairStyles/ShortMessyStyleHair1.mb
+[35] C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/HairStyles/MalePartedHair1.mb
+[36] C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/HairStyles/FemaleLongLengthPartedHair1.mb
+[37] C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/Hair1.mb
+[38] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Characters/BodyParts/Eyes/Eye2.mb
+[39] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Characters/Rigs/FaceRig/EyeRig/EyeRig1.mb
+[40] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Character/Human/SkinShader1.mb
+[41] C:/Users/Glen/Documents/maya/projects/Netflix/scenes/Characters/BaseCharacter/FortuneTellerHead1.ma
+[42] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Plastic/GlossyPlasticShader.mb
+[43] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Glass/PhysicalGlassShader.mb
+[44] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Misc/CrystalBall/CyrstalBall1.ma
+[45] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Wood/WoodShader1.mb
+[46] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Wood/WoodBoardShader.mb
+[47] C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Models/Office/OfficeSet_02/ConferenceTable1.mb
+[48] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Plastic/SparklePlasticShader.mb
+[49] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Plastic/GlossyPlasticShader.ma
+[50] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Cloth/Accessories/Jewelery/Necklaces/Construction/Necklace1.mb
+[51] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Cloth/Accessories/Jewelery/Bracelets/Construction/Bracelet1.mb
+[52] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Cloth/Accessories/Jewelery/Rings/Construction/Rings1.mb
+[53] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Cloth/Clothing/Ties/Tie1.mb
+[54] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Metal/SatinedMetalShader.mb
+[55] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Metal/SteelShader.mb
+[56] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Cloth/Clothing/Belt/BeltBuckle2.mb
+[57] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Cloth/Clothing/Belt/Construction/BeltConstruction1.mb
+[58] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Cloth/Clothing/Shoes/Construction/LacesConstruction1.mb
+[59] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Cloth/Clothing/Shoes/Construction/Shoes1.mb
+[60] C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/BaseCharacter1/BaseCharacterBody1.mb
+[61] C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Rig/FaceRig/EyeRig/EyeRig1.mb
+[62] C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Rig/HumanIKRig2.mb
+[63] C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Rig/MixamoRig1.mb
+[64] C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Rig/CharRig3.mb
+[65] C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/BaseCharacter1/BodyRig1.mb
+[66] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Cloth/ClothingShader1.mb
+[67] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Sets/TestEnvironment/TestRenderEnv4.mb
+[68] C:/Users/Glen/Documents/maya/projects/Assets/scenes/Cloth/Clothing/Construction/ClothingMaster1.mb
+[69] C:/Users/Glen/Documents/maya/projects/Netflix/scenes/Characters/BaseCharacter/FortuneTellerBody1.ma
+________________________________________________________________________________________________________________________________________________________________________
+
+string $allReferences[] = { 
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Clothing/Hats/Feather1.ma", 
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Glass/GlassColoredShader.mb", 
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Clothing/Jewelery/construction/Jewelery1.ma", 
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Plastic/FormicaShader.mb", 
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Glass/FrostedGlassShader.mb", 
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Metal/MetallicPaintShader.mb", 
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Metal/IrredescentMetaShader.mb", 
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Metal/SilverShader.mb", 
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Metal/ChromeShader.mb", 
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Glass/DiamondShader.mb", 
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Metal/GoldShader.mb", 
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Cloth/Accessories/Jewelery/Earrings/Construction/Earings1.mb", 
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Metal/CopperShader.mb", 
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Glass/GlassAnisotropicShader.mb", 
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Props/FashionAccessories/Glasses/EyeGlasses1.mb", 
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Characters/BodyParts/Teeth/Teeth1.mb", 
+"C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/BeardStyles/WarlockBeard1.ma", 
+"C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/BeardStyles/FullBeard1.mb", 
+"C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/HairStyles/BangsStyle.mb", 
+"C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/HairStyles/FemaleMedLengthPartedHair3.mb", 
+"C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/Eyelashes/EyelashSystem1.mb", 
+"C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/HairStyles2/AfroFaded1.mb", 
+"C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/HairStyles2/Afro1.mb", 
+"C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/HairStyles2/ShortMessyStyleHair2.mb", 
+"C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/HairStyles/AfAmMedHair1.mb", 
+"C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/HairStyles/FemaleMedLengthPartedHair2.mb", 
+"C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/HairStyles/ShortHair1.mb", 
+"C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/HairStyles/AfAmShortHair2.mb", 
+"C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/HairStyles/AfAmShortHair1.mb", 
+"C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/MoustacheStyles/FullMoustache1.mb", 
+"C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/HairStyles/FemaleMedLengthPartedHair1.mb", 
+"C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/EyebrowStyles/EyebrowSystem2.mb", 
+"C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/HairStyles/ShortMessyStyleHair1.mb", 
+"C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/HairStyles/MalePartedHair1.mb", 
+"C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/HairStyles/FemaleLongLengthPartedHair1.mb", 
+"C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Hair/Hair1.mb", 
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Characters/BodyParts/Eyes/Eye2.mb", 
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Characters/Rigs/FaceRig/EyeRig/EyeRig1.mb", 
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Character/Human/SkinShader1.mb", 
+"C:/Users/Glen/Documents/maya/projects/Netflix/scenes/Characters/BaseCharacter/FortuneTellerHead1.ma", 
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Plastic/GlossyPlasticShader.mb", 
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Glass/PhysicalGlassShader.mb", 
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/Misc/CrystalBall/CyrstalBall1.ma", 
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Wood/WoodShader1.mb", 
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Wood/WoodBoardShader.mb", 
+"C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Models/Office/OfficeSet_02/ConferenceTable1.mb", 
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Plastic/SparklePlasticShader.mb", 
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Plastic/GlossyPlasticShader.ma", 
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Cloth/Accessories/Jewelery/Necklaces/Construction/Necklace1.mb", 
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Cloth/Accessories/Jewelery/Bracelets/Construction/Bracelet1.mb", 
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Cloth/Accessories/Jewelery/Rings/Construction/Rings1.mb", 
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Cloth/Clothing/Ties/Tie1.mb", 
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Metal/SatinedMetalShader.mb", 
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Metal/SteelShader.mb", 
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Cloth/Clothing/Belt/BeltBuckle2.mb", 
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Cloth/Clothing/Belt/Construction/BeltConstruction1.mb", 
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Cloth/Clothing/Shoes/Construction/LacesConstruction1.mb", 
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Cloth/Clothing/Shoes/Construction/Shoes1.mb", 
+"C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/BaseCharacter1/BaseCharacterBody1.mb", 
+"C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Rig/FaceRig/EyeRig/EyeRig1.mb", 
+"C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Rig/HumanIKRig2.mb", 
+"C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Rig/MixamoRig1.mb", 
+"C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/Rig/CharRig3.mb", 
+"C:/Users/Glen/Documents/maya/projects/PNCCashFlow/scenes/Characters/BaseCharacter1/BodyRig1.mb",  
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Shaders/Materials/Cloth/ClothingShader1.mb", 
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Sets/TestEnvironment/TestRenderEnv4.mb", 
+"C:/Users/Glen/Documents/maya/projects/Assets/scenes/Cloth/Clothing/Construction/ClothingMaster1.mb", 
+"C:/Users/Glen/Documents/maya/projects/Netflix/scenes/Characters/BaseCharacter/FortuneTellerBody1.ma" 
+ };
+ 
+for($i=0;$i<`size $allReferences`;$i++){
+	wizResaveFiles("-f " + $allReferences[$i]); 
+}
+
+clothingMaster : bracelet parent constraint to asset error

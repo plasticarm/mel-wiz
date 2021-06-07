@@ -1,0 +1,279 @@
+
+
+global proc ropeWiz()
+{
+	ropeWizWindow();
+	
+}
+
+global proc ropeWizWindow()
+{
+	string $dock = "ropeWizDock";
+	int $floatingState = 0;	
+	if(`optionVar -exists WIZ_ropeWizFloatingState`){
+		$floatingState = `optionVar -q WIZ_ropeWizFloatingState`;
+	} else{
+		optionVar -intValue WIZ_ropeWizFloatingState $floatingState;
+	}
+	
+	if(`dockControl -exists $dock` == 1){ 
+		deleteUI $dock;
+	}
+	
+	string $ropeWizWindow = "RopeWizWindow";
+	if(`window -exists $ropeWizWindow`){
+		deleteUI $ropeWizWindow;
+	}
+
+	string $window = `window
+		-t "Rope Wiz"
+		-wh 200 500
+		-mb on
+		-mbv on
+		-minimizeButton on
+		-maximizeButton on
+		-s on		
+		-titleBar on
+		$ropeWizWindow
+		`;
+	
+	ropeWizWindowLayout();	
+	
+	dockControl
+		-l "Rope Wiz"
+		-content $ropeWizWindow
+		-floating $floatingState
+		-floatChangeCommand ("if(`optionVar -q WIZ_ropeWizFloatingState` == 1){optionVar -iv WIZ_ropeWizFloatingState 0;}else{optionVar -iv WIZ_ropeWizFloatingState 1;}")
+		-width 200
+		//-height 600
+		-area "right"
+		-allowedArea "left"
+		-allowedArea "right"
+		-sizeable on
+		$dock
+		;
+		
+	if($floatingState){
+		showWindow $ropeWizWindow;
+	}
+
+}
+
+global proc ropeWizWindowLayout()
+{
+	string $layout = `frameLayout
+		-l "Rope Wiz"	
+		-mw 0
+		-mh 0	
+		`;
+		
+	string $columnLayout = `columnLayout
+		-adjustableColumn true
+		`;
+		
+	button
+		-l "Add Selected Mesh To Wire"
+		-c ("addSelectedToRopeWire(`ls -sl`);")
+		;
+
+		
+	button
+		-l "Attach All nDynamics To Rope"
+		-c ("attatchAllToRope();")
+		;
+		
+	button
+		-l "Attach Selected nDynamics To Rope"
+		-c ("attatchSelectedToRope();")
+		;
+		
+	setParent..;
+	
+}
+
+global proc ropeWizHudMenu()
+{
+	print("Select A Rope Asset And An Asset To Attach To Rope" + "\n");
+	if(`headsUpDisplay -ex ropeAddSelectedHudButton` == false){
+					
+		hudButton
+			-s 7
+			-b 7
+			-vis 1
+			-p 20
+			-l "Wire Deform Selected Mesh"
+			-bw 200
+			-bsh "rectangle"
+			-rc ("wireDeformRopeMesh(`ls -sl`);")
+			ropeWireDeformMeshHudButton
+			;
+			
+		hudButton
+			-s 7
+			-b 6
+			-vis 1
+			-p 20
+			-l "Attach All nDynamics To Rope"
+			-bw 200
+			-bsh "rectangle"
+			-rc ("attatchAllToRope();")
+			ropeAddAllHudButton
+			;
+			
+		hudButton
+			-s 7
+			-b 5
+			-vis 1
+			-p 20
+			-l "Attach Selected nDynamics To Rope"
+			-bw 200
+			-bsh "rectangle"
+			-rc ("attatchSelectedToRope();")
+			ropeAddSelectedHudButton
+			;
+		  
+		hudButton
+			-s 7
+			-b 4
+			-vis 1
+			-p 20
+			-l "Cancel"
+			-bw 200
+			-bsh "rectangle"
+			-rc ("cancelAttachToRope();")
+			cancelRopeHudButton
+			;
+	}
+}
+
+global proc attatchSelectedToRope(){
+	
+	string $dbl = "-dmi AttachSelectedToRopeMenuItem -t Attach Selected To Rope"; string $dbm = "add"; int $dbc = 1;
+	
+	string $sel[] = `ls -sl`;
+	select -add -hi $sel;
+	//debugListArray($dbl, " - Selected: ", $sel, $dbc, $dbm, "[NEXT]", 100);
+	
+	string $nucleus[] = `ls -sl -typ nucleus`;
+	string $solver = $nucleus[0];
+	
+	string $attach[] = `ls -sl -typ nRigid -typ dynamicConstraint`;
+	
+	debugListArray($dbl, " - Rope: ", $nucleus, $dbc, $dbm, "[ATTACH TO]", 100);
+	debugListArray($dbl, " - Attach: ", $attach, $dbc, $dbm, "[SOLVER]", 100);
+	
+	if(`size $attach` == 0){
+			print("You Must Select Objects To Attach To Rope" + "\n");
+			return;
+	}
+	if($solver == ""){
+			print("You Must Select A Rope Asset" + "\n");
+			return;
+	}
+	print("Attaching: " + stringArrayToString($attach, " ") + " To: " + $solver + "\n");
+	
+	select -r $attach;
+	if(catchQuiet(`assignNSolver $solver`) == 1){
+		print("Playback aAnimation to see if objects are attached to rope." + "\n");	
+	}
+	
+	string $buttons[] = {"ropeHudButton", "cancelRopeHudButton" } ;
+	removeHudButtons($buttons);
+	
+}
+
+
+global proc attatchAllToRope()
+{
+	global string $WIZ_wizPromptDia;
+	string $dbl = "-dmi AttachSelectedToRopeMenuItem -t Attach Selected To Rope"; string $dbm = "add"; int $dbc = 1;
+	
+	string $sel[] = `ls -sl`;
+	select -add -hi $sel;
+	//debugListArray($dbl, " - Selected: ", $sel, $dbc, $dbm, "[NEXT]", 100);
+	
+	string $nucleus[] = `ls -typ nucleus`;
+	string $solver;
+	if(`size $nucleus` > 1){
+		string $q = "There are " + `size $nucleus` + " Nucleus in the scene. Select the Rope Nucleus you want to use.";
+		string $n = wizPromptDialog((`size $nucleus` + " Nucleus Found"), $q, $nucleus, "OK", "Cancel");
+		if($n == "Cancel"){
+			return;
+		} else {
+			//int $nn = int($n);
+			//$solver = $n;	
+			//print("wizPromptDia: " + $WIZ_wizPromptDia + "\n");
+			//print("PromptDialog: " + `promptDialog -query -text` + "\n");
+			$solver = $WIZ_wizPromptDia;	
+		}
+	} else {
+		$solver = $nucleus[0];
+	}
+	
+	string $attach[] = `ls -typ nRigid -typ dynamicConstraint`;
+	
+	debugListArray($dbl, " - Rope: ", $nucleus, $dbc, $dbm, "[ATTACH TO]", 100);
+	debugListArray($dbl, " - Attach: ", $attach, $dbc, $dbm, "[SOLVER]", 100);
+	
+	if(`size $attach` == 0){
+			print("There are no objects in the scene to attach Rope too." + "\n");
+			return;
+	}
+	if($solver == ""){
+			print("There is no Rope Nucleus Solver." + "\n");
+			return;
+	}
+	print("Attaching: " + stringArrayToString($attach, " ") + " To: " + $solver + "\n");
+	
+	for($i=0;$i<`size $attach`;$i++){
+		select -r $attach[$i];
+		catchQuiet(`assignNSolver $solver`);
+	}
+	/*
+	select -r $attach;
+	if(catchQuiet(`assignNSolver $solver`) == 1){
+		print("Playback aAnimation to see if objects are attached to rope." + "\n");	
+	}
+	*/
+	
+	cancelAttachToRope();
+
+	
+}
+
+global proc cancelAttachToRope(){
+	string $buttons[] = {"ropeAddSelectedHudButton", "ropeAddAllHudButton", "cancelRopeHudButton", "ropeWireDeformMeshHudButton" } ;
+	removeHudButtons($buttons);
+
+}
+
+global proc attachRopeEnds(){
+		
+}
+
+global proc wireDeformRopeMesh( string $sel[] )
+{
+	wire -dds 12 -gw false -en 1 -ce 0 -li 0 -before -w RopePathCurve1 $sel[0];
+	
+}
+
+global proc addSelectedToRopeWire( string $sel[] )
+{
+	
+	for ($i = 0; $i < `size $sel`; $i++) {
+		string $s[] = `listRelatives -s $sel[$i]`;
+		if(`size $s` == 0){
+			continue;
+		}
+		deformer -e -g $s[0] RopeWire1;
+	}
+}
+/*
+proc removeRopeHudButtons(string $buttons[]){
+	for($i=0; $i<`size $buttons`;$i++){
+		if(`headsUpDisplay -ex $buttons[$i]`){
+			headsUpDisplay -rem $buttons[$i];
+		}
+	}
+}
+*/

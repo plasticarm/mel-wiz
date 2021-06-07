@@ -1,0 +1,2431 @@
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//|||||||||||||||||||||||||:::WIZ:::||||||||||||||||||||||||||||||||||
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+/*====================================================================
+Author: Glen Johnson
+Email: plasticarm@gmail.com
+Website: plasticarm.com / hrpictures.com
+----------------------------------------------------------
+Summary:
+
+
+
+====================================================================*/
+
+string $renameWizVersion = "renameWiz v1";
+float $renameWizButtonColor[] = {.6, .6, .6};
+string $longNameListArray[] = {};
+string $selectedNodes[] = {};
+//global string $quickNames[] = { "CAMERAS", "ENV", "LIGHTS", "CONSTRUCTION", "SHADING", "TEXTURE", "Input", "Fluids", "Particles", "Mesh", "pfx", "RIGGING" };
+global string $quickNames[] = { "Camera", "Env", "Lights", "construction", "export", "deformer", "Shading", "Texture", "Input", "Fluids", "Particles", "Mesh", "pfx", "Rigging", "def", "input", "curves" };
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////Select By Name
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			WINDOW
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+
+global proc renameWiz(){
+	//WizRename();
+	renameWizDock();	
+}
+
+
+global proc WizRename()
+{
+	
+	global string $renameWizVersion;
+
+	$renameWizUIWidth = 250;
+	if ((`window -ex  WizRenameUI`) == true){
+		deleteUI WizRenameUI;
+	}
+	
+	string $renameWizWindow = `window 
+		-title $renameWizVersion
+		-w $renameWizUIWidth
+		WizRenameUI
+		`;
+
+	//BuildWizRenameUI(1);
+
+	
+	showWindow WizRenameUI;
+}
+
+//RENAME WIZ FLOAT STATE SWITCH
+//------------------------------------
+global proc RenameWizFloatStateSwitch()
+{
+	if ( `optionVar -q WIZ_renameWizFloatingState` == 1 )
+		optionVar -intValue WIZ_renameWizFloatingState 0;
+	else
+		optionVar -intValue WIZ_renameWizFloatingState 1;
+}
+
+
+//RENAME WIZ FLOAT DOCK
+//------------------------------------
+global proc renameWizDock()
+{
+	global string $renameWizVersion;
+	float $mayaVersion = `getApplicationVersionAsFloat` ;		
+		
+	int $fFloatingState = 0;
+	
+	if(`optionVar -exists WIZ_renameWizFloatingState`){
+		$fFloatingState = `optionVar -q WIZ_renameWizFloatingState`;
+	} else{
+		optionVar -intValue WIZ_renameWizFloatingState $fFloatingState;
+	}
+	
+	string $window = "renameWiz";
+	string $dock = "renameWizDock";
+	
+	if(`window -exists $window` == 1){ 
+		deleteUI $window;
+	}
+	
+	if(`dockControl -exists $dock` == 1){ 
+		deleteUI $dock;
+	}
+	
+	window
+		-title "Rename Wiz"
+		-sizeable on
+		-rtf 1
+		-in "RenameWiz"
+		-mnb 1
+		-mxb 1
+		-nde on
+		$window;
+	
+	//columnLayout -adj false -rs 8;
+	frameLayout
+		-bv false
+		-w 270
+		-cll false
+		-cl false
+		-lv false
+		-mh 0
+		-mw 0
+		renameWizFrameLayout
+		;
+	
+	string $tabLayout = `tabLayout
+		-scrollable true
+		-childResizable true
+		-imageVisible true
+		-tabsVisible true
+		-p renameWizFrameLayout
+		renameWizTabLayout
+		`;
+		
+	//columnLayout ;
+	renameWizRenameLayout();
+	renameWizSelectLayout();	
+	renameWizColorsLayout();
+	
+	setParent $tabLayout;
+	
+	
+	tabLayout
+		-e
+		-tl "renameWizMainRenameColumnLayout" "Rename"
+		-tl "renameWizMainSelectColumnLayout" "Select"	
+		-tl "renameWizColorsColumnLayout" "Colors"
+		$tabLayout
+		;
+		
+	
+	dockControl
+		-label "RenameWiz"
+		-content $window
+		-floating $fFloatingState
+		-floatChangeCommand "RenameWizFloatStateSwitch"
+		-area "right"
+		-allowedArea "all"
+		-sizeable on	
+		$dock;
+	
+	//dockControl  -area "right" -allowedArea "right" -label "Ninja Rename" -w 300 -content WizRenameUI WizRename_Dock ;
+
+	//showWindow $window;
+
+}
+
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			LAYOUTS
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//RENAME WIZ SELECT LAYOUT
+//------------------------------------
+global proc string renameWizSelectLayout()
+{
+
+	global float $renameWizButtonColor[];
+	$renameWizUIWidth = 245;
+	$helpText = (
+				"Rename*\n"+
+				"\n"
+				);
+	
+	string $col = `columnLayout
+		-adjustableColumn true
+		-p renameWizTabLayout
+		renameWizMainSelectColumnLayout
+		`;
+
+		popupMenu;
+			menuItem -l "Interactuve Help" -c ("buildRenameWizHelpTopic renameWizFrameRename 1");
+		string $colB = `columnLayout renameWizSelectColumnLayoutB`;
+			//text -l "Select";
+			checkBox -l "Select Only Transforms " -v 1 renameWizIgnoreShapesCheckBox;
+
+			rowColumnLayout -nc 2   -columnWidth 1 155 -columnWidth 2 90 ;
+				textField -w 155 -text ""  -ec ("WizSelectByName ")"SearchName";
+				button -label "Select By Name" -h 20 -bgc $renameWizButtonColor[0] $renameWizButtonColor[1] $renameWizButtonColor[2] -c ("renameWizSelectByName");
+			setParent..;
+
+
+			rowColumnLayout -nc 2 -columnWidth 1 ($renameWizUIWidth/2) -columnWidth 2 ($renameWizUIWidth/2);
+				button -label "Select By Same Name" -h 20 -width ($renameWizUIWidth/2) -bgc $renameWizButtonColor[0] $renameWizButtonColor[1] $renameWizButtonColor[2] -c ("renameWizSelectBySameName");
+				button -label "Select Duplicate Names" -h 20 -width ($renameWizUIWidth/2) -bgc $renameWizButtonColor[0] $renameWizButtonColor[1] $renameWizButtonColor[2] -c ("renameWizFindDuplicateNames()");
+			setParent..;
+
+			separator -height 10 -width $renameWizUIWidth;
+			text -l "Selected Object List: " renameWizTextSelectionList;
+			textScrollList -w $renameWizUIWidth  -h 100 -ams true -dcc ("renameWizSelectRenameList()") renameWizSelectedObjList;
+				popupMenu;
+					menuItem -l "select hilited items" -c ("renameWizSelectRenameList");
+
+			//button -label "Update Selected Object List" -h 20 -width ($renameWizUIWidth) -bgc $renameWizButtonColor[0] $renameWizButtonColor[1] $renameWizButtonColor[2] -c ("updateRenameWizList");
+
+			separator -height 10 -width $renameWizUIWidth;
+			text -l "Object Type Filter List: " renameWizTypeList;
+			textScrollList -w $renameWizUIWidth  -h 100 -ams true -sc "filterTypeList" renameWizSelectedTypes;
+
+			rowColumnLayout -nc 2   -columnWidth 1 120 -columnWidth 2 120 ;
+				button -label "Update Fliter List" -h 20 -width ($renameWizUIWidth/2) -bgc $renameWizButtonColor[0] $renameWizButtonColor[1] $renameWizButtonColor[2] -c ("updateRenameWizFilterList");
+				button -label "Clear Fliter List" -h 20 -width ($renameWizUIWidth/2) -bgc $renameWizButtonColor[0] $renameWizButtonColor[1] $renameWizButtonColor[2] -c ("clearRenameWizFilterList");
+			
+			setParent..;
+			
+			
+		setParent $colB;//parent columnLayout
+	setParent $col;//parent framelayout
+	
+	return $helpText;
+}
+
+global proc renameWizColorsLayout()
+{
+	
+	string $col = `columnLayout
+		-adjustableColumn true
+		-p renameWizTabLayout
+		renameWizColorsColumnLayout
+		`;
+		
+	wizOutlineColorLayout($col);
+}
+
+//RENAME WIZ RENAME LAYOUT
+//------------------------------------
+global proc string renameWizRenameLayout()
+{
+	global float $renameWizButtonColor[];
+	$renameWizUIWidth = 245;
+
+	$helpText = (
+				"Rename*\n"+
+				"\n"
+				);
+
+	string $col = `columnLayout
+		-adjustableColumn true
+		-p renameWizTabLayout
+		renameWizMainRenameColumnLayout
+		`;
+
+	renameWizMainMenuBarLayout();
+		
+		popupMenu;
+		
+			menuItem -l "Interactuve Help" -c ("buildRenameWizHelpTopic renameWizFrameRename 1");
+			$wizRenameMain = `columnLayout`;			
+			
+			//New Name Button Command
+			string $nnbc = ("string $nn = `textField -q -tx renameWizNewNameTextField`;" + "\n"
+			+"addSelectedObjectsToTextScrollList({$nn}, \"renameWizRecentNamesTextScrollList\");" + "\n"
+			+"breakNameIntoPrefixNameSuffix($nn);"+"\n"
+			+"renameWizDoRename($nn);"+"\n"
+			
+			);
+			
+			//Prefix Button Command
+			string $pbc = ("string $pn = `textField -q -tx renameWizPrefixNameTextField`;" + "\n"
+			+"addSelectedObjectsToTextScrollList({$pn}, \"renameWizRecentPrefixTextScrollList\");" + "\n"			
+			);
+			
+			string $pbAddCom = ($pbc + "wizRenameAddPrefix();"+"\n");
+			
+			//Prefix ReplaceButton Command
+			string $pbReCom = ($pbc + "wizRenameChangePrefix($pn);"+"\n");
+			
+			
+			
+			//Suffix Button Command
+			string $sbc = ("string $sn = `textField -q -tx renameWizSuffixNameTextField`;" + "\n"
+			+"addSelectedObjectsToTextScrollList({$sn}, \"renameWizRecentSuffixTextScrollList\");" + "\n"
+			+"wizRenameAddSuffix($sn);"+"\n"
+			
+			);
+			
+			//Combo Name Button Command
+			string $cnbc = ("string $cn = `textField -q -tx renameWizComboNameTextField`;" + "\n"
+			+"addSelectedObjectsToTextScrollList({$nn}, \"renameWizRecentNamesTextScrollList\");" + "\n"
+			+"renameWizDoRename($cn);"+"\n"
+			);
+			
+			
+			//+"renameWizCleanupNameLibrary();"
+			
+			string $reNumBC = ("wizRenameRenumber();");
+			
+			checkBox -l "Add Node Type Suffix" -v 1 renameWizAddNodeTypeSuffixCheckBox;
+			text -l "Rename";
+						
+			rowColumnLayout -nc 3   -columnWidth 1 75 -columnWidth 2 145 -columnWidth 3 25 -columnWidth 4 25 ;
+			
+				text -l "New Name";
+				textField -w 145 -text "" -ec $nnbc renameWizNewNameTextField;
+					popupMenu -b 3;
+							menuItem -l "Get Name" -c ("string $sl[] = `ls -sl`; textField -e -tx $sl[0] renameWizNewNameTextField;");
+							
+				button -label "OK" -h 20 -width 20 -c $nnbc;				
+					
+				text -l "Prefix";
+				textField -w 145 -text "" -ec $pbc renameWizPrefixNameTextField;
+					popupMenu -b 3;
+							menuItem -l "Add" -c $pbAddCom;
+							menuItem -l "Replace" -c $pbReCom;
+							menuItem -l "Get Name" -c ("string $sl[] = `ls -sl`; textField -e -tx $sl[0] renameWizPrefixNameTextField;");
+							
+				button -label "OK" -h 20 -width 20 -c $pbAddCom;
+									
+				text -l "Suffix";
+				textField -w 145 -text "" -ec $sbc renameWizSuffixNameTextField;
+					popupMenu -b 3;
+							menuItem -l "Get Name" -c ("string $sl[] = `ls -sl`; textField -e -tx $sl[0] renameWizSuffixNameTextField;");
+				
+				button -label "OK" -h 20 -width 20 -c $sbc;
+			
+
+				text -l "Combo Name";
+				textField -w 145 -text "" -ec $cnbc renameWizComboNameTextField;
+						popupMenu -b 3;
+							menuItem -l "Get Name" -c ("string $sl[] = `ls -sl`; textField -e -tx $sl[0] renameWizComboNameTextField;");
+				
+				button -label "OK" -h 20 -width 20 -c $cnbc;
+				
+				
+				text -l "Start Number";
+				intField -w 145 -v 1  -ec ("wizRenameRenumber") renameWizStartNumberIntField;
+				button -label "OK" -h 20 -width 20 -c $reNumBC;
+				
+				
+			setParent..;// parent rowcolumnlayout
+
+			button -label "Alphabetize" -h 25 -width $renameWizUIWidth -bgc $renameWizButtonColor[0] $renameWizButtonColor[1] $renameWizButtonColor[2] -c ("wizRenameAlphabetize");
+
+			//Replace Name Section
+				text -l "Replace Name";
+
+				rowColumnLayout -nc 2   -columnWidth 1 75 -columnWidth 2 150;
+					text -l "Replace";
+					textField -w 150 -text ""  renameWizReplaceName;
+					text -l "With";
+					textField -w 150 -text ""  -ec ("wizRenameReplace") renameWizReplaceWithNameTextField;
+				setParent..;//paretn row columnLayout
+
+			button -label "Replace Name" -h 25 -width $renameWizUIWidth -bgc $renameWizButtonColor[0] $renameWizButtonColor[1] $renameWizButtonColor[2] -c ("wizRenameReplace");
+		//	separator -height 10 -width $renameWizUIWidth;
+			// List Section
+
+					//menuItem -l "select all" -c ("renameWizSelectRenameList all");
+		setParent ..;//parent columLayout
+
+		
+			
+	renameWizNameLibraryLayout();
+	
+	setParent $col;//parent frame Layout
+	scriptJob -e SelectionChanged ("updateRenameWizList") -p $wizRenameMain ;
+
+	return $helpText;
+
+}
+
+
+//RENAME WIZ NAME LIBRARY LAYOUT
+//==============================================================
+global proc renameWizNameLibraryLayout()
+{
+
+	string $rowLayoutA = `rowLayout
+		-nc 1
+		renameWizRecentNamesRowLayoutA
+		`;
+		
+		string $colLayoutA = `columnLayout
+			-adj true
+			-w 250
+			-p $rowLayoutA
+			renameWizRecentNamesColumnLayoutA
+			`;
+		text -l "Name Library" -al "center";
+		
+		renameWizNameLibraryMenuBarLayout("renameWizRecentNamesTextScrollList");
+		
+		/*
+		menuBarLayout;
+			menu -label "Name Library" -to true;		
+				menuItem -l "Characters" -c ("renameWizLoadNameLibrary(\"characters\", \"renameWizRecentNamesTextScrollList\");");
+				
+			*/
+			
+		//Recent Names
+		//
+		string $rntsldcc = ("string $newTx[] = `textScrollList -q -si renameWizRecentNamesTextScrollList`;"+"\n"
+		+"textField -e -tx $newTx[0] renameWizNewNameTextField;"+"\n"+"\n"		
+		+"renameWizRenameObjects();");
+		
+		string $rntslsc = ("string $newTx[] = `textScrollList -q -si renameWizRecentNamesTextScrollList`;"+"\n"
+		+"textField -e -tx $newTx[0] renameWizNewNameTextField;"+"\n"+"\n"		
+		+"string $pn = `textField -q -tx renameWizPrefixNameTextField`;"+"\n"
+		+"string $sn = `textField -q -tx renameWizSuffixNameTextField`;"+"\n"
+		
+		+"textField -e -tx ($pn + $newTx[0] + $sn) renameWizComboNameTextField;"+"\n"
+		);
+			
+		
+		string $tsl = `textScrollList
+			-h 100
+			-ams false
+			-dcc $rntsldcc
+			-sc $rntslsc
+			-dkc ("removeSelectedItemFromTextScrollList(\"renameWizRecentNamesTextScrollList\");")	
+			renameWizRecentNamesTextScrollList
+			`;	
+		
+		setParent..;
+		
+	string $rowLayoutB = `rowLayout
+		-nc 2
+		//-h 200
+		renameWizRecentNamesRowLayoutB
+		`;
+	
+		string $colLayoutA = `columnLayout
+			//-adj true
+			-w 125
+			-p $rowLayoutB
+			renameWizRecentPrefixSuffixColumnLayoutA
+			`;
+			text -l "Prefix Library" -al "center";
+			renameWizNameLibraryMenuBarLayout("renameWizRecentPrefixTextScrollList");
+			
+			//Recent Prefix Names
+			string $rptsldcc = ("string $newPrefixTx[] = `textScrollList -q -si renameWizRecentPrefixTextScrollList`;"+"\n"
+			+"textField -e -tx $newPrefixTx[0] renameWizPrefixNameTextField;"+"\n"+"\n"
+			+"wizRenameAddPrefix();"
+			);
+			
+			string $rptslsc = ("string $newPrefixTx[] = `textScrollList -q -si renameWizRecentPrefixTextScrollList`;"+"\n"
+			+"string $nn = `textField -q -tx renameWizNewNameTextField`;"+"\n"
+			+"string $sn = `textField -q -tx renameWizSuffixNameTextField`;"+"\n"		
+			+"textField -e -tx $newPrefixTx[0] renameWizPrefixNameTextField;"+"\n"
+			+"$newPrefixTx[0] = autoFormatRenameWizName($newPrefixTx[0], \"prefix\");"+"\n"
+			+"$sn = autoFormatRenameWizName($sn, \"suffix\");"+"\n"
+			+"textField -e -tx ($newPrefixTx[0] + $nn + $sn) renameWizComboNameTextField;"+"\n"
+			);
+			
+			//text -l "Recent Prefix" -al "left";
+			
+			string $tsl = `textScrollList
+				//-h 125
+				-ams false
+				-dcc $rptsldcc
+				-sc $rptslsc
+				-dkc ("removeSelectedItemFromTextScrollList(\"renameWizRecentPrefixTextScrollList\");")	
+				renameWizRecentPrefixTextScrollList
+				`;
+				
+			setParent $colLayoutA;
+		
+		string $colLayoutB = `columnLayout
+			//-adj true
+			-w 125
+			-p $rowLayoutB
+			renameWizRecentPrefixSuffixColumnLayoutB
+			`;
+			text -l "Suffix Library" -al "center";		
+			renameWizNameLibraryMenuBarLayout("renameWizRecentSuffixTextScrollList");
+			
+			//Recent Suffix
+			string $rstsldcc = ("string $newSuffixTx[] = `textScrollList -q -si renameWizRecentSuffixTextScrollList`;"+"\n"
+			+"textField -e -tx $newSuffixTx[0] renameWizSuffixNameTextField;"+"\n"+"\n"
+			+"renameWizRenameObjects();"
+			);
+			
+			string $rstslsc = (
+			"string $suffixName[] = `textScrollList -q -si renameWizRecentSuffixTextScrollList`;"+"\n"
+			+"string $prefixName = `textField -q -tx renameWizPrefixNameTextField`;"+"\n"
+			+"string $nn = `textField -q -tx renameWizNewNameTextField`;"+"\n"
+			+"textField -e -tx $suffixName[0] renameWizSuffixNameTextField;"+"\n"
+			+"$prefixName = autoFormatRenameWizName($prefixName, \"prefix\");"+"\n"
+			+"$suffixName[0] = autoFormatRenameWizName($suffixName[0], \"suffix\");"+"\n"
+			+"textField -e -tx ($prefixName + $nn + $suffixName[0]) renameWizComboNameTextField;"+"\n"
+			);
+			
+			
+			//text -l "Recent Suffix" -al "left";			
+			
+			string $tsl = `textScrollList
+				//-h 100
+				-ams false
+				-dcc $rstsldcc
+				-sc $rstslsc
+				-dkc ("removeSelectedItemFromTextScrollList(\"renameWizRecentSuffixTextScrollList\");")	
+				renameWizRecentSuffixTextScrollList
+				`;
+				
+			setParent $colLayoutB;	
+
+//	setParent $rowLayoutB;
+	
+}
+
+//""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+//////////////////////////////////////////////////////////////////////
+//			MENUS
+//////////////////////////////////////////////////////////////////////
+//""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+//RENAME WIZ NAME LIBRARY MENU BAR LAYOUT
+//=======================================================================================
+global proc renameWizNameLibraryMenuBarLayout( string $textScrollList )
+{
+	
+	global string $quickNames[];
+	menuBarLayout;
+			menu -label "Library";	
+				menuItem -sm true -l "QuickNames";
+					for ($i=0;$i<`size $quickNames`;$i++){
+						menuItem -l $quickNames[$i] -c ("renameWizDoRename(\"" + $quickNames[$i] + "\");");
+					}
+				setParent -menu..;	
+				
+				menuItem -l "All" -c ("renameWizLoadNameLibrary(\"all\", \"" + $textScrollList + "\");");
+				
+				menuItem -sm true -l "Prefix";						
+					menuItem -l "Direction" -c ("renameWizLoadNameLibrary(\"direction\", \"" + $textScrollList + "\");");
+					menuItem -l "Colors" -c ("renameWizLoadNameLibrary(\"colors\", \"" + $textScrollList + "\");");					
+				setParent -menu..;
+                         
+                menuItem -sm true -l "Names";		            
+                    menuItem -l "Characters" -c ("renameWizLoadNameLibrary(\"characters\", \"" + $textScrollList + "\");");
+                    menuItem -l "Clothing" -c ("renameWizLoadNameLibrary(\"clothing\", \"" + $textScrollList + "\");");
+                    menuItem -l "Scene" -c ("renameWizLoadNameLibrary(\"scene\", \"" + $textScrollList + "\");");
+                    menuItem -l "HIK Joints" -c ("renameWizLoadNameLibrary(\"hikJoints\", \"" + $textScrollList + "\");");
+				setParent -menu..;
+                
+                menuItem -sm true -l "Suffix";	
+                    menuItem -l "State" -c ("renameWizLoadNameLibrary(\"state\", \"" + $textScrollList + "\");");
+                    menuItem -l "Object Kind" -c ("renameWizLoadNameLibrary(\"objKind\", \"" + $textScrollList + "\");");
+                setParent -menu..;   
+				
+			menu -l "Actions";
+				menuItem -l "Clear All" -c ("clearTextScrollList(\"" + $textScrollList + "\");");
+				menuItem -l "Clear Combo" -c ("textField -e -tx \"\" renameWizComboNameTextField;"); 
+                menuItem -l "Remove Duplicates" -c ("removeDuplicatesFromTextScrollList(\"" + $textScrollList + "\");");
+				menuItem -sm true -l "Case";
+					menuItem -l "Capitalize" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"allCapsArray\")");
+					menuItem -l "Lower Case" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"lowerCaseArray\")");
+					menuItem -l "Up Low Case" -c ("passSelectionListToCommandGetReturnSelectionList(" + "\"" + $textScrollList + "\"" + ",\"interToUIArray\")");
+				setParent -menu..;
+				menuItem -sm true -l "Namespace";
+					menuItem -l "Auto Add _ After Prefix" -cb true renameWizAutoAddUnderscoreToPrefixMenuItem;
+					menuItem -l "Auto Add _ Before Suffix" -cb false renameWizAutoAddUnderscoreToSuffixMenuItem;
+				
+				
+				setParent -menu..;
+				
+}
+
+//RENAME WIZ MAIN MENU BAR LAYOUT
+//==================================================
+global proc renameWizMainMenuBarLayout()
+{
+	menuBarLayout;
+	global string $quickNames[];
+	menu -label "Library" -to true;
+		menuItem -sm true -l "QuickNames";
+					for ($i=0;$i<`size $quickNames`;$i++){
+						menuItem -l $quickNames[$i] -c ("renameWizDoRename(\"" + $quickNames[$i] + "\");");
+					}
+				setParent -menu..;	
+		menuItem -l "Save Name Lists With File" -c ("saveRenameWizListsWithFile();");
+		menuItem -l "Load Saved Names" -c ("loadRenameWizSavedLibraryNames();");
+	setParent -menu..;	
+	
+	menu -label "Namespaces" -to true;
+		menuItem -l "Remove All Namespaces" -c ("removeAllNamespaces();");	
+		menuItem -l "Remove Selected Namespaces" -c ("removeSelectedNamespaces();");	
+		menuItem -l "Remove All Underscore Namespaces" -c ("removeAllUnderscoreNamespaces();");
+		menuItem -l "Remove Selected Underscore Namespaces" -c ("removeAllSelectedUnderscoreNamespaces(`ls -sl`);");
+		menuItem -l "Rename Shapes With Unique Names" -c ("renameWizRenameShapesUniqueName(\"-sl\");");
+	setParent -menu..;	
+
+	menu -label "Templates" -to true;
+	
+		menuItem -l "Make Nice Names" -c ("renameWizMakeNiceNames(`ls -sl`);");
+		menuItem -label "Prefix All With First Selection Name" -c ("prefixAllWithFirstSelectionName(`ls -sl`);");
+		
+		
+		menuItem -sm true -l "Hierarchy";
+		menuItem -cb false -l "Auto Rename Hierarchy Below > NewNameObjectType" renameWizAutoRenameHierarchyBelowMenuItem;			
+		menuItem -label "Rename Hierarchy Below Selection > SelectionNameObjectType" -c ("wizRenameBelowTopLevelNameObjectType(`ls -sl`);");
+		menuItem -label "Prefix Hierarchy Below Selection > SelectionNameObjectName" -c ("wizPrefixBelowWithTopLevelName(`ls -sl`);");
+		
+		setParent -menu..;
+		
+		menuItem -sm true -l "Connected";
+		menuItem -cb false -l "Auto Rename Downstream Connections > NewNameObjectType" renameWizAutoRenameDownstreamConnectionsMenuItem;			
+		menuItem -label "Rename Downstream Connections > SelectionNameObjectType" -c ("wizRenameDownstreamConnectionsNameObjectType(`ls -sl`);");
+		menuItem -label "Rename Upstream Connections > SelectionNameObjectType" -c ("wizRenameUpstreamConnectionsNameObjectType(`ls -sl`);");
+		
+		setParent -menu..;
+		
+		menuItem -sm true -l "Shaders";
+		menuItem -l "Prefix Materials With Objects Name" -c ("prefixConnectedMaterialsWithSelectedObjectsNames(`ls -sl`);");
+		menuItem -l "TextureFile > FileName" -c ("wizRenameFileTexturesAfterFileName(`ls -sl`);");
+		menuItem -l "Bump > Connected Texture Name" -c ("wizRenameBumpNodesAfterTexureNodes(`ls -sl`);");
+		menuItem -l "Place(2d/3d)Textures > TextureNamePlace(2d/3d)Texture" -c ("wizRenamePlaceTextureNodesWithTextureName(`ls -sl`);");
+		
+		setParent -menu..;
+		
+		menuItem -sm true -l "Auto Rename";
+			menuItem -cb true -l "Auto Rename Enabled" renameWizAutoRenameEnabledMenuItem;
+			menuItem -cb true -l "Place Texture Nodes" renameWizAutoRenamePlaceTextureNodesMenuItem;
+		setParent -menu..;
+		
+	setParent -menu..;
+		
+	
+}
+
+//BUILD WIZ RENAME MENU
+//======================================================
+global proc BuildWizRenameMenu()
+{
+	menuBarLayout;
+   		menu -label "Rename UI" -to true;
+			menuItem -label "Bar Mode" -c ("WizRename");
+			menuItem -label "Dock Right" -c ("renameWizDock");
+}
+
+
+//()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()
+//////////////////////////////////////////////////////////////////////
+//			FUNCTIONS
+//////////////////////////////////////////////////////////////////////
+//()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()
+
+//@ RENAME WIZ RENAME OBJECTS
+//=======================================================
+
+//@ RENAME WIZ RENAME OBJECT
+//====================================================================
+/*****************************************************************//**
+	This just renames a single object and returns the new name.
+	<hr>
+	<b>Synopsis</b><br>
+	renameWizRenameObject [string $obj] [string $newName] <br>
+	
+	<b>Return value</b><br>
+	string The new name of the object already renamed.
+	
+	<b>Flags</b><br>
+
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	string $newName = renameWizRenameObject($obj, "newName");
+	
+	</code>
+*********************************************************************/
+global proc string renameWizRenameObject( string $obj, string $newName )
+{
+	select -r $obj;
+	string $newNames[] = renameWizDoRename($newName);
+	return $newNames[0];
+}
+
+
+//@ RENAME WIZ DO RENAME ARRAY
+//-----------------------------------------
+/* This renames an array of objects to an array of new names
+	string $nn[] = renameWizDoRenameArray($obj, $newName);
+*/
+global proc string[] renameWizDoRenameArray( string $sel[], string $newName[] )
+{
+	string $newNames[];
+	for ($i=0;$i<`size $sel`;$i++){
+		select -r $sel[$i];
+		string $nn[] = renameWizDoRename($newName[$i]);
+		appendStringArray($newNames, $nn, `size $nn`);
+	}
+	return $newNames;
+}
+
+//@ RENAME WIZ DO RENAME
+//-----------------------------------------
+/*****************************************************************//**
+*	This renames any selected objects the name given to the function.
+*	<b>Return</b><br>
+*	string array of new names already renamed.
+*	USAGE : string $nn[] = renameWizDoRename($newName);
+*
+*********************************************************************/
+global proc string[] renameWizDoRename( string $newName )
+{	
+	int $startNumber = `intField -q -v renameWizStartNumberIntField`;
+	string $selShort[] = `ls -sl -fl -sn`;
+	string $selLong[] = `ls -sl -fl -l`;
+	string $removeArray[] = {};
+	string $addArray[] = {};
+	string $newNames[];
+	
+	if (`size $selShort` == 0 || `size $selLong` == 0){
+		return $selShort;
+	}
+	for ($r = 0; $r < `size $selShort`; $r++){
+		if (`objExists $selShort[$r]` == 0){
+			wizlog("-w	[!] Cannot Rename : " + $selShort[$r] + " : Object Does Not Exist [!]");
+			continue;
+		}
+		//$selShort = `ls -sl -fl -sn`;	
+		//Add object type to name
+		string $objType;
+		if (`checkBox -q -v renameWizAddNodeTypeSuffixCheckBox`){
+			$objType = renameWizGetObjectTypeSuffix($selLong[$r]);
+			$objType = capitalizeString ($objType);
+		}		
+		
+		$name = `rename $selShort[$r] ($newName + $objType + ($startNumber + $r))`;
+		$newNames[`size $newNames`] = $name;
+		renameWizAutoRename($name);
+		
+	}
+
+	updateRenameWizList();
+	updateRenameWizFilterList();
+    select -cl;
+    
+	return $newNames;
+}
+
+//@ RENAME WIZ RENAME OBJECTS
+//-----------------------------------------
+/* This renames any selected objects the name in the rename wiz ui new name field
+This does not return any names
+	renameWizRenameObjects();
+*/
+global proc renameWizRenameObjects()
+{
+	//global string $longNameListArray[];
+	//global string $selectedNodes[];
+
+	$newName = `textField -q -text renameWizNewNameTextField`;
+	$startNumber = `intField -q -v renameWizStartNumberIntField`;
+	$selShort = `ls -sl -fl -sn`;
+	$selLong = `ls -sl -fl -l`;
+	string $removeArray[] = {};
+	string $addArray[] = {};
+	if (`size $selShort` == 0){
+		return;
+	}
+	for ($r = 0; $r < `size $selShort`; $r++){
+		//$selShort = `ls -sl -fl -sn`;
+		// Add object type to name
+		string $objType;
+		if (`checkBox -q -v renameWizAddNodeTypeSuffixCheckBox`){
+			$objType = renameWizGetObjectTypeSuffix($selLong[$r]);
+			$objType = capitalizeString ($objType);
+		}
+		$name = `rename $selShort[$r] ($newName + $objType + ($startNumber + $r))`;
+		renameWizAutoRename($name);
+	}
+
+    select -cl;
+    
+	updateRenameWizList();
+	updateRenameWizFilterList();
+}
+
+//@ RENAME WIZ GET OBJECT TYPE
+//============================================
+global proc string renameWizGetObjectType(string $obj)
+{
+	string $objType = `nodeType $obj`;
+	if($objType == "transform"){
+		string $s[] = `listRelatives -s $obj`;
+		if (`size $s` == 0){
+			return "Group";
+		} else {
+			return $s[0];	
+		}
+	}
+	return $objType;
+}
+
+//WIZ RENAME ADD PREFIX
+//==========================================
+global proc wizRenameAddPrefix()
+{
+	$renameWizPrefixNameTextField = `textField -q -text renameWizPrefixNameTextField`;
+
+	$sel = `ls -sl -fl -sn`;
+	for ($r = 0; $r < `size $sel`; $r++){
+		string $newName = autoFormatRenameWizName($renameWizPrefixNameTextField, "prefix");
+		$newName = ($newName + $sel[$r]) ;			
+		rename $sel[$r] $newName;
+	}
+    select -cl;
+    
+	updateRenameWizList();
+}
+
+//WIZ RENAME ADD SUFFIX
+//==========================================
+global proc wizRenameAddSuffix( string $suffix )
+{
+	string $sel[] = `ls -sl -fl -sn`;
+	$suffix = autoFormatRenameWizName($suffix, "suffix");
+	//print (wizDiv("se") + "\n");
+	//print ("Suffix : Formatted Suffix : " + $suffix + "\n");
+	
+	for ($i = 0; $i < `size $sel`; $i++){
+		//Get the numbers at the end of the name
+		string $numbers = `match "[0-9]+" $sel[$i]`;
+		//print ("Suffix : Numbers : " + $numbers + "\n");
+				
+		// Remove Obj Type From End of name
+		string $objType = `nodeType $sel`;
+		//print ("Suffix : ObjectType : " + $objType + "\n");		
+		string $objTypeSuf = renameWizGetObjectTypeSuffix($sel[$i]);
+		$objTypeSuf = capitalizeString ($objTypeSuf);
+		//print ("Suffix : ObjectTypeSuffix : " + $objTypeSuf + "\n");
+		string $newSuf;		
+		if ($suffix != $objTypeSuf){
+			$newSuf = $suffix + $objTypeSuf;
+		} else {
+			$newSuf = $suffix;
+		}
+		// make sure there are no spaces
+		$objType = substituteAllString($objType, " ", "");
+		$objTypeSuf = substituteAllString($objTypeSuf, " ", "");
+		
+		//print ("Suffix : NewSuffix : " + $newSuf + "\n");	
+		
+		string $removedObjType;
+		string $sub = `substitute $objType $sel[$i] $newSuf`;
+		string $upSub = `substitute $objTypeSuf $sel[$i] $newSuf`;	
+		//print ("Suffix : Substitute Node Type Lowercase: " + $sub + "\n");	
+		//print ("Suffix : Substitute Node Type Uppercase: " + $upSub + "\n");
+		if ($sub != $sel[$i]){		
+			$removedObjType = $sub;
+		} else if ($upSub != $sel[$i]){					
+			$removedObjType = $upSub;
+		} else {
+			$removedObjType = $sel[$i];
+		}
+		//print ("Suffix : Substitute Node Type : " + $removedObjType + "\n");	
+		
+		
+		//Remove namespaces
+		//string $noNS = removeNamespaceFromString($removedObjType);
+		
+		//print ("Suffix : Removed Namespaces : " + $noNS + "\n");
+		
+		//Remove numbers
+		//string $newName = substituteAllString($noNS, $numbers, "");
+		string $newName = substituteAllString($removedObjType, $numbers, "");
+		//print ("Suffix : Removed Numbers : " + $sub + "\n");
+		$newName = $newName + $numbers;
+		
+		//Do the renaming
+		//print ("Changing Suffix To : " + $newName + "\n");
+        $nn = `rename $sel[$i] $newName`;
+		renameWizAutoRename($newName);
+		
+        //print (wizDiv("se") + "\n");
+	}
+    select -cl;
+    
+	//print (wizDiv("se") + "\n");
+	updateRenameWizList();
+}
+
+//@ RENAME WIZ GET OBJECT TYPE SUFFIX
+//=====================================================
+//@ PROC NAME
+//====================================================================
+/*****************************************************************//**
+	Gets the object type suffix to add to name.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-fa string] [-fb linear] <br>
+	This will also determine if the name already has the node type suffix and return
+	nothing if it already has the suffix.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-fa, -fb
+	
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName("-fa aString -fb anotherString");
+	
+	</code>
+*********************************************************************/
+global proc string renameWizGetObjectTypeSuffix( string $sel )
+{
+	wizlog("[@] renameWizGetObjectTypeSuffix");
+	if (`objExists $sel` == 0){
+		wizlog("-w	[!] Can only get object type suffix from objects that exist [!]");
+		return "";
+	}
+	string $objType = `nodeType $sel`;
+	switch ($objType){
+		case "transform" :
+		if ($objType == "transform"){
+			string $s[] = `listRelatives -s $sel`;	
+			
+			if (`size $s` > 0){
+				$objType = `nodeType $s[0]`;				
+			} 
+			if (isGroup($sel)){
+				$objType = "Group";
+			}			
+			
+			
+			
+		}
+				
+		break ;
+		
+		case "objectSet" :
+		$objType = "Set";
+		break ;
+		
+		case "dagContainer" :
+		$objType = "";
+		break ;
+		
+		case "MASH_Waiter" :
+		$objType = "MASH";
+		break ;
+		
+	}
+	
+	//$objType = capitalizeString ($objType);
+	/*
+	if (endsWith ($sel, $objType)){
+		$objType == "";
+		wizLog("-db4 	[#] " + $sel + " Already Ends With Node Type. Skip Adding Node Type Suffix. [#]");
+	}
+	*/
+	return $objType;
+}
+
+/*
+global proc string renameWizGetNameNoTypeNoNumber( string $flags )
+{
+	
+	
+	
+
+}
+*/
+
+//@ RENAME WIZ REPLACE
+//=====================================================
+global proc wizRenameReplace()
+{
+	$replaceWith = `textField -q -text renameWizReplaceName`;
+
+	if ($replaceWith != ""){
+		$sel = `ls -sl -fl -sn`;
+		for ($r = 0; $r < `size $sel`; $r++){
+			$sel = `ls -sl -fl -sn`;
+			string $newName = substituteAllString($sel[$r], $replaceWith, $replaceWith);
+			string $buf[] = {};
+			int $numTokens = `tokenize $newName "|" $buf`;
+			$newName = $buf[(`size $buf` - 1)];
+			//print $newName;
+			rename $sel[$r] $newName;
+		}
+
+		updateRenameWizList();
+
+        }
+        select -cl;
+    
+}
+
+//@ RENAME WIZ RENUMBER
+//=====================================================
+global proc wizRenameRenumber()
+{
+	$startNumber = `intField -q -v renameWizStartNumberIntField`;
+	string $sel[] = `ls -sl -fl -sn`;
+	string $newName;
+	//print $sel;
+	//force a Number at end
+	for ($n = 0; $n < `size $sel`; $n++){
+		string $sel[] = `ls -sl -fl -sn`;
+		string $buf[] = {};
+		int $numTokens = `tokenize $sel[$n] "|" $buf`;
+		$newName = $buf[(`size $buf` - 1)];
+		rename $sel[$n] ($newName + $n);
+
+        }
+
+
+	for ($r = 0; $r < `size $sel`; $r++){
+		string $sel[] = `ls -sl -fl -sn`;
+		$filteredName = `match "[^|]*$"  $sel[$r]`;
+		$numbers = `match "[0-9]+" $filteredName`;
+		$newName = substituteAllString($filteredName, $numbers, "");//remove numbers
+           	rename $sel[$r] ($newName + ($r + $startNumber));
+        }
+
+	updateRenameWizList();
+    select -cl;
+    
+}
+
+//@ RENAME WIZ ALPHABETIZE
+//=====================================================
+global proc wizRenameAlphabetize()
+{
+	string $alphabetArray[]={"A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"};
+	//string $alphabetArrayA[]={"A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"};
+	$startNumber = `intField -q -v renameWizStartNumberIntField`;
+	string $sel[] = `ls -sl -fl -sn`;
+	string $newNameArray[] ={};
+	string $tempNameArray[] ={};
+	for ($r = 0; $r < `size $sel`; $r++){
+
+		string $newName;
+		string $numbers = `match "[0-9]+" $sel[$r]`;
+		if ($numbers != ""){
+			$newName = substituteAllString($sel[$r], $numbers, "");//remove numbers
+
+		} else {
+			$newName =  $sel[$r];
+
+		}
+
+		//print $newName;
+
+		string $buf[] = {};
+		int $numTokens = `tokenize $newName "|" $buf`;
+		$newName = $buf[0];
+		$newName = $buf[(`size $buf` - 1)];
+		$newNameArray[$r] = $newName;
+		$tempName = `rename $sel[$r] ("WizTempName" + $r)`;
+		$tempNameArray[$r] = $tempName;
+
+	}
+
+
+	//print $tempNameArray;
+//	print $newNameArray;
+//	error;
+	for ($t = 0; $t < `size $tempNameArray`; $t++){
+		print $tempNameArray[$t];
+		print  ($newNameArray[$t] + $alphabetArray[$t]);
+		$newName = ($newNameArray[$t] + $alphabetArray[$t]);
+		string $buf[] = {};
+		int $numTokens = `tokenize $newName "|" $buf`;
+		$newName = $buf[0];
+		$newName = $buf[(`size $buf` - 1)];
+
+		rename $tempNameArray[$t] $newName;
+
+      	}
+
+	updateRenameWizList();
+}
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			AUTO FORMAT
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//====================================================================
+//AUTO FORMAT RENAME WIZ NAMES
+//=========================================
+global proc string[] autoFormatRenameWizNames( string $names[], string $type )
+{
+	for ($i=0;$i<`size $names`;$i++){
+		$names[$i] = autoFormatRenameWizName($names[$i], $type);
+	}
+	
+	return $names;
+}
+
+//AUTO FORMAT RENAME WIZ NAME
+//=========================================
+global proc string autoFormatRenameWizName( string $name, string $type )
+{
+	if (`menuItem -q -cb renameWizAutoAddUnderscoreToPrefixMenuItem` == 1){
+		if ($type == "prefix"){
+			if (endsWith($name, "_") == 0){
+				$name = $name + "_";
+			}
+		}
+	}
+	if (`menuItem -q -cb renameWizAutoAddUnderscoreToSuffixMenuItem` == 1){	
+		if ($type == "suffix"){
+			if (startsWith($name, "_") == 0){
+				$name = "_" + $name;
+			}
+		}
+	}
+	
+	return $name;
+}
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			AUTO RENAME
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//====================================================================
+//RENAME WIZ AUTO RENAME
+//=========================================
+global proc renameWizAutoRename( string $obj )
+{
+	if (`menuItem -q -cb renameWizAutoRenameEnabledMenuItem` == 0){
+		return;
+	}
+	if (`menuItem -q -cb renameWizAutoRenamePlaceTextureNodesMenuItem`){
+		select -r $obj;
+		wizRenamePlaceTextureNodesWithTextureName(`ls -sl`);
+		
+	}
+	if (`menuItem -q -cb renameWizAutoRenameHierarchyBelowMenuItem`){
+		select -r $obj;			
+		wizRenameBelowTopLevelNameObjectType(`ls -sl`);
+	}
+	
+}
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			SELECTING
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//====================================================================
+//RENAME WIZ SELECT BY SAME NAME
+//=========================================
+global proc renameWizSelectBySameName()
+{
+	clearRenameWizFilterList;
+	string $definitionObj[];
+	string $sceneObjs[];
+	string $definitionObjName = "";
+
+	$definitionObj = (`ls -sl -sn -fl`);
+	string $selectionArray[] = {};
+	for ($i = 0; $i < `size $definitionObj`; $i++){
+		string $numbers = `match "[0-9]+" $definitionObj[$i]`;
+		if ($numbers != ""){
+			$definitionObjName = substituteAllString($definitionObj[$i], $numbers, "");//remove numbers
+			stringArrayInsertAtIndex(0, $selectionArray, ($definitionObjName + "*") );
+		}
+	}
+	//print $selectionArray;
+	select $selectionArray;
+
+	$ignoreShapes = `checkBox -q -v renameWizIgnoreShapesCheckBox`;
+	if ($ignoreShapes == 1){
+		$selection  = `ls -sl -fl -l -type "transform"`;
+		select $selection;
+
+	}
+	showHidden -a;
+	updateRenameWizFilterList;
+
+
+}
+
+//RENAME WIZ SELECT BY NAME
+//=========================================
+global proc renameWizSelectByName()
+{
+	global string $selectedNodes[];
+	$searchName = `textField -q -text "SearchName"`;
+	$sceneObjs = (`ls -dag -sn`);
+	$definitionObjName = $searchName;
+	select -r ($definitionObjName)  ;
+
+	$ignoreShapes = `checkBox -q -v renameWizIgnoreShapesCheckBox`;
+	if ($ignoreShapes == 1){
+		string $selectedNodes[] = `ls -sl -fl -l -type "transform"`;
+		select $selectedNodes;
+	}
+	showHidden -a;
+	updateRenameWizFilterList;
+}
+
+
+global proc updateRenameWizList()
+{
+	$renameWizUIWidth = 245;
+	global string $longNameListArray[];
+
+	textScrollList -e -w $renameWizUIWidth -ra renameWizSelectedObjList;
+
+	$ignoreShapes = `checkBox -q -v renameWizIgnoreShapesCheckBox`;
+	string $LongName[] = {};
+	if ($ignoreShapes == 1)
+		{
+			$longNameListArray = `ls -sl -l -fl -type "transform"`;
+        }
+
+	else
+		{
+			$longNameListArray = `ls -sl -l -fl -o`;
+
+        }
+
+		sort $longNameListArray;
+		string $shortName;
+		for ($i = (`size $longNameListArray`); $i >= 0; $i--)
+			{
+				$shortName = `shortNameOf $longNameListArray[$i]`;
+				$shortName = `match "[^|]*$"  $shortName`;
+				textScrollList -e -ap 1 $shortName renameWizSelectedObjList;
+			}//end for
+
+		//update selection
+		if (`size $longNameListArray` > 0)
+		{
+			//textField -e -text $shortName "renameWizNewNameTextField";
+		}
+			text -e -l ("Selected Object List: " + `size $longNameListArray`) renameWizTextSelectionList;
+
+
+}
+
+global proc clearRenameWizFilterList()
+{
+	global string $selectedNodes[];
+	$selectedNodes = {};
+	textScrollList -e -ra renameWizSelectedTypes;
+}
+
+global proc updateRenameWizFilterList()
+{
+	global string $selectedNodes[];
+	$selectedNodes = `ls -sl -fl -l`;
+	$sel = `ls -sl -fl -l`;
+	string $TypeArray[] = {};
+	for ($s = 0; $s < (`size $sel`); $s++)
+		{
+			string $Type = `nodeType $sel[$s]`;
+			stringArrayInsertAtIndex (0, $TypeArray, $Type);
+
+			$ShapeObjects = `listRelatives -s $sel[$s]`;
+			if (`size $ShapeObjects` == 0 && $Type == "transform")
+				{
+					stringArrayInsertAtIndex (0, $TypeArray, "Group");
+                }
+
+        }
+
+	$TypeArray = `stringArrayRemoveDuplicates $TypeArray`;
+	textScrollList -e -ra renameWizSelectedTypes;
+		for ($i = 0; $i < (`size $TypeArray`); $i++)
+			{
+				textScrollList -e -ap 1 $TypeArray[$i] -si $TypeArray[$i] renameWizSelectedTypes;
+			}
+
+	//print `size $TypeArray`;
+	text -e -l ("Object Type Filter List: " + `size $TypeArray` ) renameWizTypeList;
+}
+
+
+global proc filterTypeList()
+{
+	global string $selectedNodes[];
+	string $selectedTypes[] = `textScrollList -q -si renameWizSelectedTypes`;
+
+	//string $RemoveList[] = {};
+	string $AddList[] = {};
+	string $RemoveList = {};
+	for ($s = 0; $s < (`size $selectedNodes`); $s++){
+		$ShapeObjects = `listRelatives -s $selectedNodes[$s]`;
+		string $Type = `nodeType $selectedNodes[$s]`;
+
+		//This will add non transform nodes
+		if (stringArrayContains ($Type, $selectedTypes) && $Type != "transform"){
+			stringArrayInsertAtIndex(0, $AddList , $selectedNodes[$s]);
+		}
+
+
+		//This will add non Group Transforms if transform is selected
+		if ($Type == "transform"  && `size $ShapeObjects` != 0 && stringArrayContains ($Type, $selectedTypes)){
+				stringArrayInsertAtIndex(0, $AddList , $selectedNodes[$s]);
+		}
+
+		//this will add groups to the Addlist
+		if (stringArrayContains ("Group", $selectedTypes) && `size $ShapeObjects` == 0 && $Type == "transform")	{
+				stringArrayInsertAtIndex(0, $AddList , $selectedNodes[$s]);
+		}
+
+        }
+
+	select $AddList;
+
+
+}
+
+global proc renameWizFindDuplicateNames()
+{
+	clearRenameWizFilterList;
+	string $all[] = `ls -tr -sn -fl`;
+	string $obj;
+
+	string $duplicateArray[] = {};
+	for($obj in $all){
+		if(`gmatch $obj "*\|*"`){
+			stringArrayInsertAtIndex(0, $duplicateArray , $obj);
+
+		}
+	}
+
+	select $duplicateArray;
+	string $selection[] = `ls -sl -fl -type "transform"`;
+	select $selection;
+	showHidden -a;
+	updateRenameWizFilterList;
+
+
+}
+
+global proc renameWizSelectRenameList()
+{
+	global string $longNameListArray[];
+
+	//if ($type == "all")
+	//{
+	//	int $AllItems = `textScrollList -q -ni renameWizSelectedObjList`;
+	//	for ($s = 1; $s < ($AllItems + 1); $s++)
+	//		{
+	//			textScrollList -e -sii $s renameWizSelectedObjList;
+    //        }
+	//}
+
+
+	int $selList[] = `textScrollList -q -sii renameWizSelectedObjList`;
+	string $selectList[] = {};
+	for ($i = 0; $i < `size $selList`; $i++){
+		$index = $selList[$i];
+		stringArrayInsertAtIndex (0, $selectList, $longNameListArray[($index - 1)]);
+	}
+	select $selectList;
+	string $selection[] = `ls -sl -fl -type "transform"`;
+	select $selection;
+}
+
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			RENAME BY OBJECT TYPE
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//====================================================================
+global proc prefixDownstreamConnectionsWithObjectName( string $sel[] )
+{
+
+}
+
+global proc wizRenamePlaceTextureNodesWithTextureName( string $sel[] )
+{
+	if (`size $sel` == 0){
+		prefixAllPlaceTextureNodesWithTextureName();
+		return;
+	}
+	
+	for ($i=0;$i<`size $sel`; $i++){
+		string $con[] = `listConnections -s on -d off $sel[$i]`;
+		string $pt[] = `ls -type place2dTexture -type place3dTexture $con`;
+		$pt = stringArrayRemoveDuplicates($pt);
+		wizRenamePrefixObjectType($sel[$i], $pt);
+	}
+}
+
+//PREFIX ALL PLACE TEXTURE NODES WITH TEXTURE NAME
+//==============================================================
+global proc prefixAllPlaceTextureNodesWithTextureName()
+{
+
+	string $tex[] = `ls -textures -type projection`;
+	for ($i=0;$i<`size $tex`; $i++){
+		string $con[] = `listConnections -s on -d off $tex[$i]`;
+		string $pt[] = `ls -type place2dTexture -type place3dTexture $con`;
+		$pt = stringArrayRemoveDuplicates($pt);
+		wizRenamePrefixObjectType($tex[$i], $pt);
+	}
+}
+
+global proc prefixTexturePlacementWithMaterialName( string $sel[] )
+{
+
+	for ($i=0;$i<`size $sel`; $i++){
+		string $con[] = `listConnections -s on -d off $sel[$i]`;
+		string $pt[] = `ls -type place2dTexture -type place3dTexture $con`;
+		$pt = stringArrayRemoveDuplicates($pt);
+		wizRenamePrefixObjectType($sel[$i], $pt);
+	}
+}
+
+//WIZ RENAME PREFIX OBJECT TYPE
+//==============================================================
+global proc string[] wizRenamePrefixObjectType( string $prefix, string $sel[]  )
+{
+	string $renamed[];
+	for($i=0;$i<`size $sel`; $i++){
+		string $objType = `nodeType $sel[$i]`;
+		$objType = capitalizeString($objType);
+		string $newName = ($prefix + $objType);
+		catchQuiet(`rename $sel[$i] $newName`);
+		//string $nn = `rename $sel[$i] $newName`;
+		//print (" Renamed : " +  $sel[$i] + " To : " + $nn + "\n");
+		//rename $sel[$i] $newName;
+		$renamed[`size $renamed`] = $newName;
+		
+	}
+	return $renamed;
+}
+
+//PREFIX ALL WITH FIRST SELECTION NAME
+//==============================================================
+global proc string[] prefixAllWithFirstSelectionName( string $sel[] )
+{
+	string $renamed[];
+	string $prefix = $sel[0];
+	for($i=1;$i<`size $sel`;$i++){
+		string $newName = $prefix + (capitalizeString($sel[$i]));
+		//rename $sel[$i] $newName;
+		catchQuiet(`rename $sel[$i] $newName`);
+		$renamed[`size $renamed`] = $newName;
+	}
+	return $renamed;
+}
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			RENAME HIERARCHY
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//====================================================================
+global proc string[] wizRenameBelowTopLevelNameObjectType( string $sel[] )
+{
+	string $renamed[];
+	for($i=0;$i<`size $sel`;$i++){
+		string $rn[] = wizRenameHierarchyObjectObjectType($sel[$i]);
+		stringArrayCatenate($renamed, $rn);
+		
+	}
+	return $renamed;
+	
+}
+
+global proc string[] wizRenameHierarchyObjectObjectType(string $sel)
+{
+	string $renamed[];
+	string $prefix = $sel;
+	select -r -hi $sel;
+	//string $below[] = `ls -tr -sn -sl`;
+	string $below[] = `ls -sn -sl`;
+	
+	for($i=0;$i<`size $below`;$i++){
+		string $objType = renameWizGetObjectType($below[$i]);	
+		$objType = capitalizeString($objType);
+		
+		string $newName = $prefix + $objType;
+		$newName = removeIllegalCharacters($newName);
+		string $nn = `rename -is $below[$i] $newName`;
+		$renamed[`size $renamed`] = $nn;
+	}
+	return $renamed;
+}
+
+global proc string[] wizPrefixBelowWithTopLevelName( string $sel[] )
+{
+	if(`size $sel` > 1){
+		print("WIZ| Select only 1 object at a time please.\n");
+	}
+	string $renamed[];
+	
+	select -r -hi;
+	select -d $sel;
+	string $below[] = `ls -sl`;
+	
+	string $prefix = $sel[0];
+	for($i=0;$i<`size $below`;$i++){				
+		string $newName = $prefix + $below[$i];
+		string $nn = `rename -is $below[$i] $newName`;
+		$renamed[`size $renamed`] = $nn;
+	}
+	return $renamed;
+	
+}
+
+global proc wizRenameDownstreamConnectionsNameObjectType( string $sel[] )
+{
+	for($i=0;$i<`size $sel`;$i++){
+		wizRenameDownstreamConnections($sel[$i]);
+	}
+
+
+}
+
+global proc wizRenameUpstreamConnectionsNameObjectType( string $sel[] )
+{
+	for($i=0;$i<`size $sel`;$i++){
+		wizRenameUpstreamConnections($sel[$i]);
+	}
+
+
+}
+
+/*
+global proc string[] wizRenameDownstreamConnections( string $sel[] )
+{
+	print("WIZ| this function is not done : renameWiz : wizRenameDownstreamConnections\n");
+	for($i=0;$i<`size $sel`;$i++){
+		wizRenameObjectDownstreamConnections($sel[$i]);
+	}
+	//string $downstream[] = getAllDownstreamNodes
+	return $sel;
+}
+*/
+
+global proc wizRenameDownstreamConnections( string $sel )
+{
+	string $downstream[] = getAllDownstreamNodes({$sel});
+	wizRenamePrefixObjectType($sel, $downstream);
+	
+}
+
+global proc wizRenameUpstreamConnections( string $sel )
+{
+	string $upstream[] = getAllUpstreamNodes({$sel});
+	wizRenamePrefixObjectType($sel, $upstream);
+	
+}
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			AUTO RENAME RELATED OBJECTS
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//====================================================================
+global proc string[] wizRenameFileTexturesAfterFileName( string $sel[] )
+{
+	if(`size $sel` == 0){
+		$sel = `ls -type file`;	
+	}
+	string $newNames[];
+	for($i=0;$i<`size $sel`;$i++){
+		string $nn = wizRenameFileTextureAfterFileName($sel[$i]);
+		$newNames[`size $newNames`] = $nn;
+	}
+	return $newNames;
+	
+}
+
+global proc string wizRenameFileTextureAfterFileName( string $sel )
+{
+	
+	string $type = `nodeType $sel`;
+	if($type != "file"){ return $sel;}
+	
+	string $fileName = `getAttr ($sel + ".fileTextureName")`;
+	string $ext = `fileExtension $fileName`;
+	$ext = "." + $ext;
+	string $bn = basename ($fileName, $ext);
+	
+	string $newName = $bn + "File";
+	$newName = removeIllegalCharactersFromName($newName);
+	string $renamed = `rename -is $sel $newName`;
+	return $renamed;
+	
+}
+
+global proc string[] wizRenameBumpNodesAfterTexureNodes( string $sel[] )
+{
+	if(`size $sel` == 0){
+		$sel = `ls -type bump2d -type bump3d`;	
+	}
+	string $newNames[];
+	for($i=0;$i<`size $sel`;$i++){
+		string $type = `nodeType $sel[$i]`;
+		if($type != "bump2d" && $type != "bump3d"){ continue;}
+		
+		string $nn = wizRenameBumpNodeAfterTexureNode($sel[$i]);
+		$newNames[`size $newNames`] = $nn;
+		
+	}
+	return $newNames;
+	
+}
+
+global proc string wizRenameBumpNodeAfterTexureNode( string $sel )
+{
+	
+	string $type = `nodeType $sel`;
+	$type = capitalizeString($type);
+
+	string $con[] = `listConnections -d off $sel`;
+	if(`size $con` == 0){
+		print("WIZ| wizRenameBumpNodeAfterTextureNode : Did not find any textures connected to bump.\n");	
+	}
+	string $newName = $con[0] + $type;
+	$newName = removeIllegalCharactersFromName($newName);
+	string $renamed = `rename -is $sel $newName`;
+	return $renamed;
+	
+}
+
+//PREFIX CONNECTED MATERIALS WITH SELECTED OBJECTS NAMES
+//-----------------------------------------------------------
+global proc prefixConnectedMaterialsWithSelectedObjectsNames( string $sel[] )
+{
+	print("WIZ| prefixConnectedMaterialsWithSelectedObjectsNames : " + stringArrayToString($sel, "\n") + "\n");
+	
+	if(`size $sel` == 0){
+		print ("Nothing Is Selected!\n");	
+	}
+	
+	for($i=0;$i<`size $sel`;$i++){
+		prefixConnectedMaterialsWithSelectedObjectName($sel[$i]);
+	}
+}
+
+//PREFIX CONNECTED MATERIALS WITH SELECTED OBJECT NAME
+//-----------------------------------------------------------
+global proc prefixConnectedMaterialsWithSelectedObjectName( string $sel )
+{
+	print("WIZ| prefixConnectedMaterialsWithSelectedObjectName : " + $sel + "\n");
+	
+	string $mat[] = getShadersFromSelected({$sel});
+	string $prefix = capitalizeString($sel);
+	
+	select -r $mat;	
+	for ($i = 0; $i < `size $mat`; $i++){
+		string $matName = capitalizeString($mat[$i]);
+		string $newName = ($prefix + $matName);
+
+		print("WIZ| renaming : " + $mat[$i] + " To : " + $newName + "\n");
+		rename $mat[$i] $newName;
+	}
+	
+}
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			NAMESPACES
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//====================================================================
+// **********************************************************   
+// Removes ALL Namespaces From Every Node In The Scene
+global proc removeAllNamespaces()
+{
+	// Get All Nodes In Scene  
+	string $allNodes[] = `ls` ;  
+	   
+	// Loop Through Them  
+	for($node in $allNodes) {  
+	   
+	   // Tokenize And Rename  
+	   string $buffer[] ;  
+	   tokenize $node ":" $buffer ;  
+	   string $newName = $buffer[size($buffer)-1] ;  
+	   catchQuiet(`rename $node $newName`) ;  
+	   
+	} 
+}
+
+global proc removeSelectedNamespaces()
+{
+	// Get All Nodes In Scene  
+	string $allNodes[] = `ls -sl` ;  
+	   
+	// Loop Through Them  
+	for ($node in $allNodes) {  
+	   
+	   // Tokenize And Rename  
+	   string $buffer[] ;  
+	   tokenize $node ":" $buffer ;  
+	   string $newName = $buffer[size($buffer)-1] ;  
+	   catchQuiet(`rename $node $newName`) ;  
+	   
+	} 
+}
+
+global proc string[] wizRemoveNamespaces( string $sel[] )
+{
+	if (`size $sel` == 0){
+		$sel = `ls -sl`;
+	}
+	string $newNames[];
+	for ($node in $sel) {  
+	   
+	   // Tokenize And Rename  
+	   string $buffer[] ;  
+	   tokenize $node ":" $buffer ;  
+	   string $newName = $buffer[size($buffer)-1] ;  
+	   catchQuiet(`rename $node $newName`) ;  
+	   $newNames[`size $newNames`] = $newName;
+	} 
+	return $newNames;
+}
+
+//@ REMOVE NAMESPACE FROM STRING
+//====================================================
+global proc string removeNamespaceFromString( string $name )
+{
+	string $buffer[] ;  
+	tokenize $name ":" $buffer ;  
+	string $newName = $buffer[size($buffer)-1] ;
+	return $newName;
+}
+
+
+// **********************************************************   
+//REMOVE ALL UNDERSCORE NAMESPACES
+global proc removeAllUnderscoreNamespaces()
+{
+	// Get All Nodes In Scene  
+	string $allNodes[] = `ls` ;  
+	   
+	// Loop Through Them  
+	for($node in $allNodes) {  
+	   
+	   // Tokenize And Rename  
+	   string $buffer[] ;  
+	   tokenize $node "_" $buffer ;  
+	   string $newName = $buffer[size($buffer)-1] ;  
+	   catchQuiet(`rename $node $newName`) ;  
+	   
+	} 
+}
+
+//REMOVE ALL SELECTED UNDERSCORE NAMESPACES
+global proc  removeAllSelectedUnderscoreNamespaces( string $sel[] )
+{
+	// Loop Through Them  
+	for($node in $sel) {  
+	   
+	   // Tokenize And Rename  
+	   string $buffer[] ;  
+	   tokenize $node "_" $buffer ;  
+	   string $newName = $buffer[size($buffer)-1] ;  
+	   catchQuiet(`rename $node $newName`) ;  
+	   
+	} 
+}
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			NICE NAMES
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//====================================================================
+
+//@ RENAME WIZ MAKE NICE NAMES
+//====================================================================
+/*****************************************************************//**
+	Renames selected objects with nice names.
+	<hr>
+	<b>Synopsis</b><br>
+	renameWizMakeNiceNames [string $sel]<br>
+	No parameters. Just renames objects and that's it.
+	
+	<b>Return value</b><br>
+	none.
+	
+	<b>Flags</b><br>
+	-tag1, -tag2
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	renameWizMakeNiceNames(`ls -sl`);
+	
+	</code>
+*********************************************************************/
+global proc renameWizMakeNiceNames( string $sel[] )
+{
+	wizlog("[@] renameWizMakeNiceNames");
+	
+	string $nn[];
+	for ($i=0;$i<`size $sel`;$i++){
+		//$nn[`size $nn`] = removeSpecialCharacters($sel[$i]);
+		string $buffer[] ;  
+		tokenize $sel[$i] "_" $buffer ;  
+		for ($b=0;$b<`size $buffer`;$b++){	
+			$buffer[$b] = capitalizeString($buffer[$b]);
+		}
+		$nn[`size $nn`] = stringArrayToString($buffer, "");   
+		//$nn[`size $nn`] = capitalizeString($nn[$i]);
+		//capitalizeString($nn[$i]);
+		
+		wizLog("	[#] Old Name : " + $sel[$i] + " New Name : " + $nn[$i] + "\n");
+		select -r $sel[$i];
+		renameWizDoRename($nn[$i]);
+	}
+	
+}
+
+//@ RENAME WIZ MAKE NICE NAMES
+//====================================================
+global proc string renameWizRenameWithNiceName( string $sel )
+{
+
+	string $nn;
+
+	string $buffer[] ;  
+	tokenize $sel "_" $buffer ;  
+	for ($b=0;$b<`size $buffer`;$b++){	
+		$buffer[$b] = capitalizeString($buffer[$b]);
+	}
+	$nn = stringArrayToString($buffer, "");   
+	
+	print ("Old Name : " + $sel + " New Name : " + $nn + "\n");
+	select -r $sel;
+	string $newNames[] = renameWizDoRename($nn);
+	return $newNames[0];
+	
+}
+
+//BREAK NAME INTO PREFIX NAME SUFFIX
+//==================================================
+/* 
+This will break up a name like bigHeadMesh and return { "Big", "Head", "Mesh" }
+*/
+global proc string[] breakNameIntoPrefixNameSuffix( string $name )
+{
+	string $return[];
+	string $prefix;
+	string $newName;
+	string $suffix;
+	string $intToUI = `interToUI $name`;
+	string $parts[] = tokenizeString($intToUI, " ");
+	if (`size $parts` > 1){
+		string $prefix = $parts[0];
+		if (`size $parts` > 2){
+			for ($i=1;$i<(`size $parts` - 1);$i++){
+				$newName = $newName + $parts[$i];				
+			}
+			$suffix = $parts[(`size $parts` - 1)];
+			$return = { $prefix, $newName, $suffix };
+			//textField -e -tx $prefix renameWizPrefixNameTextField;
+			if ($newName != ""){
+				addSelectedObjectsToTextScrollList({$newName}, "renameWizRecentNamesTextScrollList");
+			}
+			if ($prefix != ""){
+				addSelectedObjectsToTextScrollList({$prefix}, "renameWizRecentPrefixTextScrollList");
+			}
+			if ($suffix != ""){
+				addSelectedObjectsToTextScrollList({$suffix}, "renameWizRecentSuffixTextScrollList");
+			}
+		} else {
+			$return = { $prefix , $suffix };
+			if ($newName != ""){
+				addSelectedObjectsToTextScrollList({$newName}, "renameWizRecentNamesTextScrollList");
+                addSelectedObjectsToTextScrollList({$newName}, "renameWizRecentSuffixTextScrollList");
+			}
+			if ($prefix != ""){
+				addSelectedObjectsToTextScrollList({$prefix}, "renameWizRecentPrefixTextScrollList");
+			}
+
+			
+
+		}
+	} else {
+		$return = { $name };
+		if ($newName != ""){
+			addSelectedObjectsToTextScrollList({$newName}, "renameWizRecentNamesTextScrollList");
+		}
+	}
+	
+	return $return;
+}
+
+
+
+global proc string[] wizRenameChangePrefix( string $prefix )
+{
+	string $newName[];
+	string $sel[] = `ls -sl`;
+	for ($i=0;$i<`size $sel`;$i++){
+		string $splice[] = breakNameIntoPrefixNameSuffix($sel[$i]);
+
+		stringArrayRemoveAtIndex(0, $splice);
+		
+		string $newPrefixeName = $prefix + stringArrayToString($splice, "");
+		//$newName[`size $newName`] = renameWizRenameObject($sel[$i], $newPrefixeName);
+		$newName[`size $newName`] = `rename $sel[$i] $newPrefixeName`;
+	}
+	return $newName;
+}
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			MIRRORED OBJECTS
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//====================================================================
+//RENAME MIRRORED OBJECTS
+//==========================================================================================
+//WIZ RENAME MIRRORED OBJECTS
+//---------------------------------------------------
+global proc string[] wizRenameMirroredObjects( string $originalName[], string $sel[] )
+{
+	string $nn[];
+	for ($i=0;$i<`size $sel`;$i++){
+		$nn[$i] = wizRenameMirroredObject($originalName[$i], $sel[$i]);
+	
+	}
+	return $nn;
+}
+
+//WIZ RENAME MIRRORED OBJECT
+//---------------------------------------------------
+global proc string wizRenameMirroredObject( string $originalName, string $sel )
+{
+	string $tok[] = tokenizeString($originalName, "_");
+	string $mirrorPrefix;
+	if (`size $tok` > 1){
+		switch($tok[0]){
+			case "Right" :
+			$mirrorPrefix = "Left";
+			break;
+			
+			case "right" : 
+			$mirrorPrefix = "left";
+			break;
+			
+			case "R" : 
+			$mirrorPrefix = "L";
+			break;
+			
+			case "r" :
+			$mirrorPrefix = "l";			
+			break;
+			
+			case "Left" :
+			$mirrorPrefix = "Right";
+			break;
+			
+			case "left" : 
+			$mirrorPrefix = "right";
+			break;
+			
+			case "L" : 
+			$mirrorPrefix = "R";
+			break;
+			
+			case "l" :
+			$mirrorPrefix = "r";			
+			break;
+			
+			case "Top" :
+			$mirrorPrefix = "Bottom";
+			break;
+			
+			case "top" : 
+			$mirrorPrefix = "bottom";
+			break;
+					
+			case "Bottom" :
+			$mirrorPrefix = "Top";
+			break;
+			
+			case "bottom" : 
+			$mirrorPrefix = "top";
+			break;		
+			
+			case "Front" :
+			$mirrorPrefix = "Back";
+			break;
+			
+			case "front" : 
+			$mirrorPrefix = "back";
+			break;
+					
+			case "Back" :
+			$mirrorPrefix = "Front";
+			break;
+			
+			case "back" : 
+			$mirrorPrefix = "front";
+			break;
+		
+			
+		}
+		
+		string $newName = $mirrorPrefix + "_" + $tok[1];
+		
+		string $nn = `rename $sel $newName`;
+		print ("WIZ| renameMirroredObject : Original Name : " + $originalName + " Duplicate Name : " + $nn + "\n");
+		return $nn;
+	
+	} else {
+		print ("WIZ| renameMirrorObject can rename mirrored objects with opposite prefixes if you use a right_  prefix\n");
+		
+		return $sel;
+	}
+}
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			NAME LIBRARY FUNCTIONS
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+
+global proc newRenameWizLibrary()
+{
+	string $libName = wizPromptDialog("New Name Library", "Library Name: ", {"OK", "Cancel"}, "OK", "Cancel");
+	
+}
+
+//====================================================================
+//SAVE RENAME WIZ LISTS WITH FILE
+//=========================================================
+/*
+	This saves the lists in rename wiz with the file.
+	Use this script as example how to automatically save a script with a scene and have it update when saved.
+	
+*/
+global proc saveRenameWizListsWithFile()
+{
+	string $nList[] = `textScrollList -q -ai renameWizRecentNamesTextScrollList`;
+	string $pList[] = `textScrollList -q -ai renameWizRecentPrefixTextScrollList`;
+	string $sList[] = `textScrollList -q -ai renameWizRecentSuffixTextScrollList`;
+	
+	string $nListString = stringArrayToStringArrayString($nList);
+	string $pListString = stringArrayToStringArrayString($pList);
+	string $sListString = stringArrayToStringArrayString($sList);
+	string $bs = (
+	"string $nList[] = " + $nListString + ";"+"\n"
+	+"string $pList[] = " + $pListString + ";"+"\n"
+	+"string $sList[] = " + $sListString + ";"+"\n"
+	+"if (`textScrollList -q -ex renameWizRecentNamesTextScrollList`){"+"\n"
+	+"	replaceTextScrollListWithSelectedObjects($nList, \"renameWizRecentNamesTextScrollList\");"+"\n"
+	+"	replaceTextScrollListWithSelectedObjects($pList, \"renameWizRecentPrefixTextScrollList\");"+"\n"
+	+"	replaceTextScrollListWithSelectedObjects($sList, \"renameWizRecentSuffixTextScrollList\");"+"\n"
+	+"}"+"\n"	
+	);
+	
+	string $snName = "RenameWizSceneLibraryList";
+	if (`objExists $snName`){
+		scriptNode -e -bs $bs $snName;
+	} else {
+		scriptNode -st 2 -bs $bs -n $snName;
+	}
+	scriptJob -runOnce true -e SceneSaved ("saveRenameWizListsWithFile");
+	
+}
+
+//====================================================================
+//loadRenameWizSavedLibraryNames
+//=========================================================
+/*
+	This loads the list saved in the script node RenameWizSceneLibraryList.
+	
+*/
+global proc loadRenameWizSavedLibraryNames()
+{
+    if (`objExists RenameWizSceneLibraryList`){
+        
+        ExpressionEditor;
+        select -r RenameWizSceneLibraryList;
+       // string $eval = ("EEnodeListCB;EEscriptNodeTestCB;");
+        //eval($eval);
+        EEnodeListCB;
+        EEscriptNodeTestCB;
+       // python ("EEnodeListCB;EEscriptNodeTestCB");
+	} else {
+        print ("WIZ| No Rename Wiz Library Found\n");
+    }
+}
+
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			NAME LIBRARY
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//====================================================================
+
+//RENAME WIZ LOAD NAME LIBRARY
+//=======================================================================================
+global proc renameWizLoadNameLibrary( string $lib, string $textScrollList )
+{
+	string $names[];
+	string $characterNames[] = { "Body", "Head", "Arm", "Leg", "Hand", "Foot", "Eyes", "Eye", "Teeth", "Hair", "Eyebrow", "Eyebrows", "Moustache",
+	"Beard", "Ear", "Skin"};
+	string $clothingNames[] = { "Shirt", "TShirt", "Blouse", "Sweater", "Pants", "Shoes", "Shoes", "Dress", "Tie", "Belt", "BeltBuckle", "Button" };
+	
+	string $stateNames[] = { "Construction", "Test", "Testing", "Temp", "New", "Old", "Base", "Dirty", "Clean", "Render" };
+	
+	string $colorNames[] = { "Red", "Green", "Blue", "Yellow", "Orange", "Purple", "Black", "White", "Grey", "Silver", "Pink",
+	"Transparent", "Light", "Dark"};
+	
+	string $objKindNames[] = { "Mesh", "Model", "Lighting", "Camera", "Cloth", "Hair", "Effects", "Fluid", "Character", "Rig", "Shader", "Constraint"};
+	
+	string $directionNames[] = { "Right", "Left", "Middle", "Top", "Bottom", "Front", "Back", "Side", "Inside", "Outside"};
+	
+	string $sceneNames[] = { "Background", "BG", "Foreground", "FG", "Environment", "Env", "Set", "Interior", "Exterior"};
+	
+	string $hikJointNames[] = { "Hips", "Spine", "Spine1", "Spine2", "Neck", "Head",
+	"Head_End", "RightShoulder", "RightArm", "RightForeArm", "RightHand",
+	"RightHandThumb1", "RightHandThumb2", "RightHandThumb3", "RightHandThumb4",
+	"RightHandIndex1", "RightHandIndex2", "RightHandIndex3", "RightHandIndex4",
+	"RightHandMiddle1", "RightHandMiddle2", "RightHandMiddle3", "RightHandMiddle4",
+	"RightHandRing1", "RightHandRing2", "RightHandRing3", "RightHandRing4", 
+	"RightHandPinky1", "RightHandPinky2", "RightHandPinky3", "RightHandPinky4",
+	"LeftShoulder", "LeftArm", "LeftForeArm", "LeftHand", "LeftHandThumb1",
+	"LeftHandThumb2", "LeftHandThumb3", "LeftHandThumb4", "LeftHandIndex1",
+	"LeftHandIndex2", "LeftHandIndex3", "LeftHandIndex4", "LeftHandMiddle1",
+	"LeftHandMiddle2", "LeftHandMiddle3", "LeftHandMiddle4", "LeftHandRing1",
+	"LeftHandRing2", "LeftHandRing3", "LeftHandRing4", "LeftHandPinky1",
+	"LeftHandPinky2", "LeftHandPinky3", "LeftHandPinky4", "RightUpLeg", "RightLeg",
+	"RightFoot", "RightToeBase", "RightToe_End", "LeftUpLeg", "LeftLeg", "LeftFoot",
+	"LeftToeBase", "LeftToe_End"};
+
+	
+	switch($lib){
+		case "characters" : 
+		$names = $characterNames;
+		break;
+		
+		case "clothing" : 
+		$names = $clothingNames;
+		break;
+		
+		case "state" : 
+		$names = $stateNames;
+		break;
+		
+		case "colors" : 
+		$names = $colorNames;
+		break;
+		
+		case "objKind" : 
+		$names = $objKindNames;
+		break;
+		
+		case "direction" : 
+		$names = $directionNames;
+		break;
+		
+		case "scene" : 
+		$names = $sceneNames;
+		break;
+		
+		case "hikJoints" : 
+		$names = $hikJointNames;
+		break;
+	}
+	
+	addSelectedObjectsToTextScrollList($names, $textScrollList);
+	
+}
+
+global proc renameWizCleanupNameLibrary()
+{
+	
+	string $nl[] = `textScrollList -q -ai renameWizRecentPrefixTextScrollList`;
+	$nl = stringArrayRemoveDuplicates($nl);
+	replaceTextScrollListWithSelectedObjects($nl, "renameWizRecentNamesTextScrollList");
+
+	string $pl[] = `textScrollList -q -ai renameWizRecentPrefixTextScrollList`;
+	$pl = stringArrayRemoveDuplicates($pl);
+	replaceTextScrollListWithSelectedObjects($pl, "renameWizRecentPrefixTextScrollList");
+
+	string $sl[] = `textScrollList -q -ai renameWizRecentSuffixTextScrollList`;
+	$sl = stringArrayRemoveDuplicates($sl);
+	replaceTextScrollListWithSelectedObjects($sl, "renameWizRecentSuffixTextScrollList");
+
+	/*
+	string $nl[] = `textScrollList -q -ai renameWizRecentPrefixTextScrollList`;
+	if(`size $nl` >= 2){
+		$nl = stringArrayRemoveDuplicates($nl);
+		replaceTextScrollListWithSelectedObjects($nl, "renameWizRecentNamesTextScrollList");
+	}
+	
+	string $pl[] = `textScrollList -q -ai renameWizRecentPrefixTextScrollList`;
+	if(`size $pl` >= 2){
+		$pl = stringArrayRemoveDuplicates($pl);
+		replaceTextScrollListWithSelectedObjects($pl, "renameWizRecentPrefixTextScrollList");
+	}
+	string $sl[] = `textScrollList -q -ai renameWizRecentSuffixTextScrollList`;
+	if(`size $sl` >= 2){
+		$sl = stringArrayRemoveDuplicates($sl);
+		replaceTextScrollListWithSelectedObjects($sl, "renameWizRecentSuffixTextScrollList");
+	}
+	*/
+}	
+
+
+
+//@ WIZ NAME SPLICE
+//====================================================================
+/*****************************************************************//**
+	Does all kinds of operations on names.
+	<hr>
+	<b>Synopsis</b><br>
+	wizNameSplice [-fa string] [-fb linear] <br>
+	Returns a string array of name components in order they were requested.
+	
+	<b>Return value</b><br>
+	string[] names
+	
+	<b>Flags</b><br>
+	-query(-q) <br>
+	-name(-n) <br>
+	-add <br>
+	-remove(-rm)<br>
+	
+	-prefix(-pre) <br>
+	-suffix(-suf) <br>
+	-nodeType(-nt) <br>
+	-numbers(-num) <br>
+	-rename(-rnm) <br>
+	-niceName(-nn) <br>
+	-namespaces(-nsp) <br>
+	-flat(-fl) <br>
+	
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	string $nameSplice[] = wizNameSplice("-pre -n -suf -nt -num Big_PolyCubeMesh24");
+	returns : { "Big", "PolyCube", "", "Mesh", "24" }
+	
+	</code>
+*********************************************************************/
+global proc string[] wizNameSplice( string $flags )
+{
+	string $name, $prefix, $suffix, $nodeType, $numbers, $namespaces;
+	int $add, $remove, $flat;
+
+	string $sel[] = wizFlagObjTrail($flags);
+	string $nameSource = $sel[0];
+	
+	// Break name apart into all name components
+	// namespaces
+	string $nsTok[] = tokenizeString($nameSource, ":");
+	$name = $nsTok[(`size $nsTok` - 1)];
+	stringArrayRemoveAtIndex((`size $nsTok` - 1), $nsTok);
+	$namespaces = stringArrayToString($nsTok, ":");
+	
+	// node type
+	$nodeType = renameWizGetObjectTypeSuffix($sel[0]);
+	string $upNT = capitalizeString($nodeType);
+	string $ntMatch = `match $nodeType $name`;
+	if ($ntMatch == ""){
+		$ntMatch = `match (capitalizeString($nodeType)) $name`;
+	}
+	if ($ntMatch != ""){
+		$nodeType = $ntMatch;
+	}	
+	$name = substituteAllString($sel[0], $nodeType, "");
+	$name = substituteAllString($sel[0], $upNT, "");
+	
+	// numbers
+	$numbers = `match "[0-9]+" $name`;
+	$name = substituteAllString($name, $numbers, "");
+	
+	// prefix and suffix
+	string $unTok[] = tokenizeString($name, "_");
+	if (`size $unTok` > 1){
+		$prefix = $unTok[0];
+		$suffix = $unTok[(`size $unTok` - 1)];	
+		$name = substituteAllString($name, $prefix, "");
+		$name = substituteAllString($name, $suffix, "");
+		$name = substituteAllString($name, "_", "");
+	}
+	
+	string $returnName[];
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-pre" : case "-prefix" :
+			$returnName[`size $returnName`] = $prefix;			
+			break;
+				
+			case "-n" : case "-name" :
+			$returnName[`size $returnName`] = $name;			
+			break;
+			
+			case "-suf" : case "-suffix" :
+			$returnName[`size $returnName`] = $suffix;			
+			break;
+			
+			case "-nt" : case "-nodeType" :
+			$returnName[`size $returnName`] = $nodeType;			
+			break;		
+
+			case "-num" : case "-numbers" :
+			$returnName[`size $returnName`] = $numbers;			
+			break;		
+			
+			case "-ns" : case "-namespaces" :
+			$returnName[`size $returnName`] = $namespaces;			
+			break;
+			
+			case "-fl" : case "-flat" :
+			$flat = 1;			
+			break;
+			
+		}
+	}
+	
+	if ($flat){
+		string $flatName = stringArrayToString($returnName, "");
+		clear($returnName);
+		$returnName[0] = $flatName;
+	}
+	
+	for ($i=0;$i<`size $returnName`;$i++){
+		strip($returnName[$i]);	
+	}
+	
+	
+	return $returnName;
+}
+
+global proc string renameWizMakeUniqueNumberedName( string $obj )
+{
+	wizlog ("[@] renameWizMakeUniqueNumberedName");
+	int $num = 0;
+	while (true){
+		
+		if (`objExists ($obj + $num)` == 1){
+			wizlog ("	Object Exists : " + ($obj + $num));
+			$num++;
+		} else {
+			wizlog ("	New Name : " + ($obj + $num));
+			return ($obj + $num);
+		}
+		
+	}
+
+}
+
+//@ RENAME WIZ RENAME SHAPES UNIQUE NAME
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName("-obj someObject -q -sl");
+	
+	</code>
+*********************************************************************/
+global proc renameWizRenameShapesUniqueName( string $flags )
+{
+	string $obj, $type;
+	string $sel[];
+	int $edit;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+				
+			case "-sl" : case "-selected" :
+			$sel = `ls -l -sl`;
+			break ;			
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	for ($i=0;$i<`size $sel`;$i++){
+		select -r $sel[$i];
+		string $rel[]= `listRelatives -f $sel[$i]`;
+		select -add $rel;
+		string $sh[] = `ls -l -s -sl`;
+		string $tr[] = `ls -l -tr -sl`;
+		select -r $sh;
+		string $newShapeName = removeIllegalCharacters(($sh[0] + $i));
+		string $newTransformName = removeIllegalCharacters(($tr[0] + $i));
+		rename $sh[0] $newShapeName;
+		rename $tr[0] $newTransformName;
+		
+	}
+	
+	
+
+}
+

@@ -1,0 +1,5501 @@
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//|||||||||||||||||||||||||:::WIZ:::||||||||||||||||||||||||||||||||||
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//                         WIZCRAFT
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+/*====================================================================
+Author: Glen Johnson
+Email: plasticarm@gmail.com
+Website: plasticarm.com / hrpictures.com
+----------------------------------------------------------
+Summary:
+
+Pools:
+	brush pool
+	texture pool 
+	nucleus field pool
+	
+
+Build Areas :
+    Roof Area
+    Overhang Area
+    Window Area
+    Entrance Area
+    Bridge Area
+    Spire Area
+    
+Shaders :
+    Roof
+    Overhang
+    
+    
+Roof Analysis
+    project uvs in y axis and make new uv set
+    select a single face and then convert selection to uv shell to get continous areas
+    
+Analysis using textures
+
+	- Create nHairs on object for each type of surface area : roof, overhang, windows, ect.
+	- Create snow texture
+	- Use convertSolidTx to output texture map1
+	- Use settings : uMin = -1 uMax = 2 vMin = -1 vMax = 2 : all other options should be off. except extend seam color
+	- Use tex map on hair baldness
+	
+nHair Method Outline :
+	- Create new us sets for areas
+	- Make uv set current set
+	- Creat nHair system on grid : the hair system will only build on faces that have uvs
+	- Use transforms from hair follicles to place objects : Z is up
+	
+createHair
+
+	1: 10 = uGrid Count
+	2: 10 = vGrid Count
+	3: 10 = numCvs
+	4: 0 = restCurve
+	5: 0 = passiveFill
+	6: 0 = edgeBounded
+	7: 0 = equalize
+	8: 10 = hairLength
+	9: 0 = randomization
+	10: 1 = paintEffects 2 = nurbsCurve 3 = paintEffects and nurbsCurve
+	11: 2 = static 1 = dynamic
+	12: 1 = grid 2 = onSelectedFaces
+
+
+global proc createHair(int $uCount, int $vCount, int $numCvs, int $restCurves, int $passiveFill, int $edgeBounded, int $equalize, float $length, float $randomization, int $outputMode, int $simulationType, int $hairCreateType)
+{
+
+paintHairTool 1;
+hairCurvePaint hairPaintContext;
+toolPropertyWindow1 ("");
+artUserPaintValues hairPaintContext;
+toolPropertyShow;
+changeToolIcon;
+updateHSPlaceMenu false;
+autoUpdateAttrEd;
+
+
+wizCraft name system
+	liveWizCraftAsset
+	
+	structureType
+	
+		featureType
+			roof
+			overhang
+			windows 
+			
+			componentType
+				structuralSupport
+				antenna
+				
+			placementMethod
+				grid(regular)
+				random 
+				
+			
+	
+		
+
+====================================================================*/
+global proc wizCraft()
+{
+
+}
+
+//========================================================================================================
+//########################################################################################################
+//********************************************************************************************************
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//                     FUNCTIONS
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//********************************************************************************************************
+//########################################################################################################
+//========================================================================================================
+
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         MANAGEMENT
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//@ WIZ CRAFT MGMT
+//====================================================================
+/*****************************************************************//**
+	Get or set various wizcraft objects.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-q bool] [-n string] <br>
+	Use this to maintain a system of nameing and organizing objects
+	into sets and groups. The prefix of the names will always be either
+	the wizCraftAsset that is currently being built from or the name of 
+	the object that is being analysed.
+	Important Sets : <br>
+	string $buildLocSet[] = wizCraftMGMT("-q -n -s -ft " + $ft[$i] + " -ot BuildLocators");
+	
+	<b>Return value</b><br>
+	string[] return based on requested return type
+	
+	<b>Flags</b><br>
+	-query(-q) <br>
+	-name(-n) <br>
+	-add(-a) <br>
+	-set(-s) <br>
+	-group(-grp) <br>
+	-featureType(-ft) <br>
+	-componentType(-ct) <br>
+	-objectType(-ot) <br>
+	-suffix(-suf) <br>	
+	-addToAsset(-ata) <br>
+	-pool <br>
+	
+	<hr>
+	<b>Related</b><br>
+	wizCraftCallback(), wizCraftDuplicateObject(), wizCraftGetFileOutputPaths()
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	wizCraftMGMT("-s -grp -ft roof -ot nHair -sl");<br>
+	
+	<strong>
+	this will group the selected objects into a group called wizCraft_roof_nHair_Group <br>
+	it will also add the selected objects to a set called wizCraft_roof_nHair_Set <br>
+	if either the group or set already exists the objects will just be added to
+	the corresponding set and group <br>
+	</strong>
+
+
+	string $supStNHair[] = wizCraftMGMT("-q -n -s -ft overHang -ct supportStructure -ot nHair");<br>
+	<strong>
+	returns : wizCraft_overHang_supportStructure_nHair_Set
+	</strong>
+	
+	wizCraftMGMT("-ata -sl");
+	wizCraftMGMT("-ata pSphere1 pSphere2");
+	<strong>	
+	adds the selected objects to the wizCraft asset
+	</strong>
+	wizCraftMGMT("-sla");
+	<strong>	
+	sets the liveWizCraftAsset to the current selection
+	</strong>
+	
+	</code>
+*********************************************************************/
+global proc string[] wizCraftMGMT( string $flags )
+{
+	string $ft; // featureType : roof, overhang, windows,
+	string $ct; // componentType : roofComp, structureSupportComponent,
+	string $ot; // objecType : locator, nHair, 
+
+	string $name;
+	string $suffix;
+	string $num;
+	
+	int $query;
+	int $bd; // blind data
+	string $return[];
+	string $returnType;
+	string $createType;
+	int $addToAsset;
+	string $pool;
+	
+	global string $WIZCRAFT_liveWizCraftAsset;
+	string $sel[];
+	int $it;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-q" : case "-query" :
+			$query = 1;
+			break;
+			
+			case "-ft" : case "-featureType" :
+			$ft = $tok[($i + 1)];
+			break;
+			
+			///////////////////////////////////////////////////////////////////////////////////////////////////////////
+			//	Set LiveWizCraftAsset
+			//////////////////////////////////////////////////////////////////////////////////////////////////////////
+			case "-sla" : case "-setLiveAsset" : 
+			string $lwcAsset;
+			string $con[] = `ls -typ dagContainer -sl`;			
+			if (`size $con` == 0){
+				$lwcAsset = $tok[($i + 1)];				
+			} else {
+				$lwcAsset = $con[0];
+			}
+			if (`objExists $lwcAsset`){
+				if (`attributeExists "wizAssetType" $lwcAsset`){
+					$WIZCRAFT_liveWizCraftAsset = $lwcAsset;
+					return {$lwcAsset};
+				}				
+			} else {
+				wizlog ("-w 	[!] Cannot Set LiveWizCraftAsset : " + $lwcAsset + " : Does Not Exist [!]");
+				return { "" };
+			}			
+			break ;
+			
+			///////////////////////////////////////////////////////////////////////////////////////////////////////////
+			//	if -featureTypes is requested just return the featureTypes
+			//////////////////////////////////////////////////////////////////////////////////////////////////////////
+			case "-fts" : case "-featureTypes" :			
+			if (`objExists $WIZCRAFT_liveWizCraftAsset`){
+				string $listFt[] = `listAttr -string ("*Analyze") $WIZCRAFT_liveWizCraftAsset`;
+				$listFt = substituteAllStringArray($listFt, "Analyze", "");
+				return $listFt;
+			} else {
+				global string $WIZCRAFT_featureTypes[];
+				return $WIZCRAFT_featureTypes;
+			}
+			break ;
+				
+			case "-ct" : case "-componentType" :
+			$ct = $tok[($i + 1)];
+			break;
+			
+			case "-ot" : case "-objectType" :
+			$ot = "_" + ($tok[($i + 1)]);
+			break;
+			
+			case "-s" : case "-set" :
+			$suffix = "_Set";
+			$createType = "set";
+			break;
+			
+			case "-grp" : case "-group" :
+			$suffix = "_Group";
+			$createType = "group";
+			break;
+			
+			case "-n" : case "-name" :
+			$returnType = "name";
+			break;
+			
+			case "-ex" : case  "-exists" :
+			$returnType = "exists";
+			break;
+			
+			case "-sl" : case  "-selected" :
+			$sel = `ls -sl`;
+			break;
+			
+			case "-suf" : case "-suffix" :
+			$suffix = "_" + $tok[($i + 1)];
+			break;
+			
+			case "-num" : case "-number" :
+			$num = ($tok[($i + 1)]);
+			break;
+			
+			case "-ata" : case  "-addToAsset" :
+			$addToAsset = 1;
+			break;
+			
+			case "-pool" :
+			$pool = $tok[($i + 1)];
+			break ;
+			
+			case "-bd" : case "-blindData" :
+			$bd = 1;
+			break ;
+			
+			
+		}
+	}
+	
+	// if there are objects listed at the end of the flags use them
+	// as selected objects.
+	string $selObjs[] = wizFlagObjTrail($flags);
+	if (`objExists $selObjs[0]`){
+		clear ($sel);		
+		$sel = $selObjs;
+		//stringArrayRemoveDuplicates($sel);
+		wizLog((niceArrayList("		[#] Selected Objects : ", $sel)));	
+	}	
+		
+		
+	string $returnSet;
+	string $returnGroup;
+	string $prefix;
+	// prefix the name with either the wizCraftAsset or the structure nice name
+	if (`size $WIZCRAFT_liveWizCraftAsset` > 0){
+		$prefix = $WIZCRAFT_liveWizCraftAsset + "_";
+	} else {
+		global string $WIZCRAFT_objNN; 
+		if (`size $WIZCRAFT_objNN` > 0){
+			$prefix = $WIZCRAFT_objNN + "_";
+		}
+	}
+	
+	// construct name
+	string $nameBody = $ft + $ct + $ot;
+	$name = $prefix + $nameBody + $suffix + $num;
+	
+	//_________________________________________
+	// Returning A Pool Contents
+	if (`size $pool` > 0 && `objExists $WIZCRAFT_liveWizCraftAsset` == 1){
+		string $poolObjsString = `getAttr ($WIZCRAFT_liveWizCraftAsset + "." + $ft + $pool)`;
+		string $poolObjs[] = tokenizeString($poolObjsString, " ");
+		return $poolObjs;
+	}
+	
+	
+	if ($query){
+		switch ($returnType){
+			case "name" :
+			return { $name };
+		
+		
+		}
+		
+	} else {
+		for ($i=0;$i<`size $tok`;$i++){
+			switch ($tok[$i]){
+				//_________________________________________
+				// Creating A Set
+				case "-s" : case "-set" :
+				$name = $prefix + $nameBody + "_Set" + $num;
+				if (`objExists $name` == 0){
+					$returnSet = createSetFromSelection($sel, $name);
+					$return[`size $return`] = $returnSet;
+				}
+				string $newSet = addSelectedObjectsToSet($sel, $name);					
+				if (`size $WIZCRAFT_liveWizCraftAsset` > 0){	
+					if (`objExists $name` && `objExists $WIZCRAFT_liveWizCraftAsset`){
+						container -e -includeTransform -force -addNode $name $WIZCRAFT_liveWizCraftAsset;
+					}
+				}
+				break;
+				
+				//_________________________________________
+				// Creating A Group
+				case "-grp" : case "-group" :
+				$name = $prefix + $nameBody + "_Group" + $num;
+				if (`objExists $name` == 0){
+					$return[`size $return`] = `group -em -n $name`;
+					parent $sel $name;
+					//$returnGroup = `group -n $name $sel`;
+					//$return[`size $return`] = $returnGroup;	
+				} else {
+					//group -em -n $name;
+					parent $sel $name;			
+					$return[`size $return`] = $name;
+				}
+				break;
+				
+				//_________________________________________
+				// Creating Blind Data
+				case "-bd" : case "-blindData" :
+				
+				string $bdString = $ft;
+				string $at = getSelectedComponentType("-sl -fn");	
+				wizlog ("	[+] Blind Data : Feature Type : " + $ft + " Attribute Type : " + $at);
+				wizBlindData("-id 0 -ldn wizCraft -sd " + $ft + " -sl -at " + $at);
+				break ;
+			
+			}
+		}
+	
+	
+	}
+	//_________________________________________
+	// Adding Object To the WizCraft Asset
+	if ($addToAsset){
+			if (`size $WIZCRAFT_liveWizCraftAsset` > 0){		
+			container -e -includeTransform -force -addNode $sel $WIZCRAFT_liveWizCraftAsset;
+		}
+	}
+	
+	return $return;
+	
+}
+
+//@ SET WIZ CRAFT SOURCE VALUES
+//====================================================================
+/*****************************************************************//**
+	This sets the values used in a wizCraft build.
+	<hr>
+	<b>Synopsis</b><br>
+	setWizCraftSourceValues [string $sel] [string $name] <br>
+	This is for setting the values that all other procedures pull
+	values from. So we can use either the ui or attributes.
+	
+	<b>Return value</b><br>
+	none.
+	
+	<b>Flags</b><br>
+	
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName("-fa aString -fb anotherString");
+	
+	</code>
+*********************************************************************/
+	global proc setWizCraftSourceValues( string $sel, string $name )
+{
+
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//	DEPRECATE THIS
+	//	
+	//	
+	//	
+	//	
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	wizLog("@setWizCraftSourceValues\n");
+	if (`objExists $sel` == 0){
+        return;
+    }
+	
+	global int $WIZCRAFT_autoBuildMode;
+	global string $WIZCRAFT_objNN; // Just a nice name for naming purposes
+	
+	global string $WIZCRAFT_liveWizCraftAsset; // The wizCraftAsset that is currently being built.
+	global string $WIZCRAFT_baseStructure; // The object we are building on.
+		
+	global int $WIZCRAFT_lowPolyForAnalysis, $WIZCRAFT_lowAnalysisPolyCount;
+	
+	global int $WIZCRAFT_analyzeRoof, $WIZCRAFT_analyzeOverhang, $WIZCRAFT_analyzeWindows;
+	global string $WIZCRAFT_dupType, $WIZCRAFT_analysisMethod;
+	
+	global int $WIZCRAFT_buildRoof, $WIZCRAFT_buildOverhang, $WIZCRAFT_buildWindows;
+	
+	global int $WIZCRAFT_minURoofObj, $WIZCRAFT_maxURoofObj, $WIZCRAFT_minVRoofObj, $WIZCRAFT_maxVRoofObj,
+	$WIZCRAFT_minUOverhangObj, $WIZCRAFT_maxUOverhangObj, $WIZCRAFT_minVOverhangObj, $WIZCRAFT_maxVOverhangObj,
+	$WIZCRAFT_minUWindowObj, $WIZCRAFT_maxUWindowObj, $WIZCRAFT_minVWindowObj, $WIZCRAFT_maxVWindowObj;
+		
+	global int $WIZCRAFT_flatRoof, $WIZCRAFT_flatOverhang, $WIZCRAFT_flatWindows, $WIZCRAFT_normAlRoofComp, $WIZCRAFT_normAlOverhangComp ;	
+	
+	global int $WIZCRAFT_normAlign;
+	
+	global float $WIZCRAFT_maxRoofAngle, $WIZCRAFT_minRoofFaces, $WIZCRAFT_minRoofHeight, $WIZCRAFT_maxRoofHeight,
+	$WIZCRAFT_flatRoofMargin, 
+	$WIZCRAFT_maxOverhangAngle, $WIZCRAFT_minOverhangFaces, $WIZCRAFT_minOverhangHeight, $WIZCRAFT_maxRoofHeight,
+	$WIZCRAFT_flatOverhangMargin,
+	$WIZCRAFT_maxWindowAngle, $WIZCRAFT_minWindowFaces,  $WIZCRAFT_minWindowHeight, $WIZCRAFT_maxWindowHeight;
+	
+	global string $WIZCRAFT_roofComponentLocators[];
+	global string $WIZCRAFT_overhangComponentLocators[];
+	global string $WIZCRAFT_windowComponentLocators[];
+	
+	global int $WIZCRAFT_keepHistory;	
+	
+	if ($name == "wizCraftAsset"){
+		$WIZCRAFT_liveWizCraftAsset = $sel;
+
+	} else {
+		$WIZCRAFT_liveWizCraftAsset = "";
+	}
+	
+}
+
+//@ GET WIZ CRAFT ATTR
+//====================================================================
+/*****************************************************************//**
+	This returns an attribute value as a string for the requested obj/attr/featureType
+	<hr>
+	<b>Synopsis</b><br>
+	getWizCraftAttr [-obj string] [-attr string] [-ft string] <br>
+	
+	This returns a string value because we don't know what type it is till
+	we query the value. The string must be converted to the type needed.<br> <br>
+	
+	Control labels must be formatted correctly like : "Min U Obj" <br>
+	Controls will be named : wizCraft_[featureType][attr]_[controlType] <br>
+	Attributes on assets will be named : obj.[featureType][attr] <br><br>
+		
+	If no -featureType flag is passed then it's assumed that the
+	variable is a global type of attribute and the feature type will not 
+	be included in attribute name. <br><br>
+	
+	An object must be passed. If the object is a wizCraftAsset then
+	The attributes will all be derived from attributes on the wizCraftAsset. <br>
+	If the object is not a wizCraftAsset then all values will come from the UI. <br>
+	
+	<b>Return value</b><br>
+	string the requested attribute value.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-attribute(-attr) <br>
+	-featureType(-ft) <br>
+	
+	<hr>
+	<b>Related</b><br>
+	wizCraftCallback(), wizCraftDuplicateObject(), wizCraftMGMT(), 
+	
+	<b>Examples</b><br>
+	<code>
+	int $minObjU = int(getWizCraftAttr("-obj wizCraft1 -attr MinObjU -ft roof"));
+	int $lowPolyCount = int(getWizCraftAttr("-obj wizCraft1 -attr lowerPolyCountForAnalysis"));
+	float $maxAngle = float(getWizCraftAttr("-sl -attr MaxAngle -ft roof");
+	
+	string $liveWizCraftAsset = getWizCraftAttr("-attr liveWizCraftAsset");
+	
+	</code>
+*********************************************************************/
+global proc string getWizCraftAttr( string $flags )
+{
+	wizlog("[@] getWizCraftAttr");
+	global string $WIZCRAFT_liveWizCraftAsset;
+	global string $WIZCRAFT_baseStructure;
+	global string $WIZCRAFT_objNN;
+	
+	global string $WIZCRAFT_roofComponentLocators[];
+	global string $WIZCRAFT_overhangComponentLocators[];
+	global string $WIZCRAFT_windowComponentLocators[];
+	
+	string $obj, $attr, $ft; 
+	int $useAsset;
+	
+	string $tok[] = tokenizeString($flags, " ");	
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" :
+			$obj = $tok[($i + 1)];			
+			break ;
+
+			case "-sl" :
+			string $sel[] = `ls -sl`;
+			$obj = $sel[0];
+			break ;
+			
+			case "-attr" : case "-attribute" :
+			$attr = wizFlagString($tok, $i);
+			break;
+							
+			case "-ft" : case "-featureType" :
+			$ft = $tok[($i + 1)];
+			break;
+			
+		}
+	}
+	if (`size $WIZCRAFT_liveWizCraftAsset` > 0){
+		if (`objExists $WIZCRAFT_liveWizCraftAsset`){
+			$useAsset = 1;
+			$obj = $WIZCRAFT_liveWizCraftAsset;
+		} else {
+			$WIZCRAFT_liveWizCraftAsset = "";
+		}
+	}
+		
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//	For returning global variables and exceptions to all other rules
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	switch ($attr){
+		case "LiveWizCraftAsset" :
+		if ($WIZCRAFT_liveWizCraftAsset == ""){
+			return $obj;
+		} else {
+			wizlog ("	[-] LiveWizCraftAsset Does Not Exist: " + $WIZCRAFT_liveWizCraftAsset + " [-]");	
+			return $WIZCRAFT_liveWizCraftAsset;
+		}
+		break ;
+			
+	}
+	
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//	For returning attributes that are specific to a wizCraft object and/or featureType
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// <!ToDo!> Get this list from the controls instead of defining them here.
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	string $dt; // not in use
+	string $ctrlType;
+	string $as;
+	string $convertMethod = "string";
+	
+	// set string for attr source
+	switch ($attr){
+	
+		// bool types
+		case "autoBuildMode" : 
+		case "lowerPolyForAnalysis" : 		
+		case "KeepAnalysisHistory" :
+		case "Analyze" : 
+		case "Build" : 		
+		case "Flat" : 
+		case "NormalAlign" :
+		case "ReplaceCBldrCurves" :
+		case "CallBuildOnComponents" :
+		case "DynamicHairs" :
+		case "RandomizeEveryComponent" :
+		case "runSimulationBeforeBuild" :
+		case "StraightenHairCurves" :
+		case "SplitIntoShells" :
+		case "CornerMask" :
+		case "HeightMask" :
+		case "AreaPerimeterCurves" :
+				
+		$dt = "bool";
+		$ctrlType = "checkBox";		
+		break ;
+		
+		// int types
+		case "lowTargetPolyCount" :
+		case "MinUObjs" : 
+		case "MaxUObjs" :
+		case "MinVObjs" : 
+		case "MaxVObjs" :		 
+		
+		$dt = "int";
+		$ctrlType = "intSliderGrp";		
+		break ;
+		
+		// float types
+		case "MinAngle" : 
+		case "MaxAngle" :
+		case "MinFaces" : 
+		case "MinHeight" : 
+		case "MaxHeight" :
+		case "MinCornerAngle" :
+		case "MaxCornerAngle" :
+		case "HairLength" : 
+		case "FlatMargin" : 		
+		case "HairRandomization" :
+		case "simulationTime" :
+		
+		$dt = "float";
+		$ctrlType = "floatSliderGrp";		
+		break ;
+	
+		case "TextureRotation" : 
+		
+		$dt = "float";
+		$ctrlType = "floatFieldGrp";	
+		$convertMethod = "floatArrayToString";
+		break ;
+		
+		// string types
+		/*
+		$dt = "string";
+		$ctrlType = "optionMenuGrp";		
+		break ;
+		*/
+		
+		// enum types
+		case "AnalysisMethod" :
+		case "DuplicationType" :
+		case "TextureSelectionMethod" :
+		case "SurfaceTileOrdering" :
+		case "TileRandomFrequency" :
+		case "FittingOption" :
+		
+		$as = " -as "; // for getting the attriubte as a string
+		$dt = "string";
+		$ctrlType = "optionMenuGrp";		
+		break ;
+	}
+	
+
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//	Evaluate to get a return value
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	string $attrSrc;
+	if ($useAsset){
+		$attrSrc = ("getAttr " + $as + $obj + "." + $ft + $attr);		
+	} else {
+		$attrSrc = ($ctrlType + " -q -v wizCraft_" + $ft + $attr + "_" + $ctrlType);		
+	}
+	string $return;
+	if ($convertMethod == "string"){
+		$return = string(eval($attrSrc));
+	} else if ($convertMethod == "floatArrayToString") {
+		$return = floatArrayToString((eval($attrSrc)), " ");	
+	}	
+
+	wizlog ("	[#] Attr : " + $ft + $attr + " Value : " + $return);
+	if ($return == ""){
+		wizlog ("-w 	[!] WizCraft Attribute Was Not Found [!]");
+	}
+	
+	return $return;
+	
+}
+
+//@ WIZ CRAFT GET FILE OUTPUT PATHS
+//====================================================================
+/*****************************************************************//**
+	Use this to get a file path for any type of file wizCraft needs.
+	<hr>
+	<b>Synopsis</b><br>
+	wizCraftGetFileOutputPaths [-type string] [-ext string] <br>
+	All file paths will be in the directory of the current file in a folder
+	called "fileName_files" as defined in fileWiz in the global string $WIZ_subFileFolderSuffix<br>
+	This only serves for file orginazation for wizCraft.
+	
+	<b>Return value</b><br>
+	string[] output file paths
+	
+	<b>Flags</b><br>
+	-type(-typ)<br>
+	-extension(-ext)<br>
+		
+	<hr>
+	<b>Related</b><br>
+	wizCraftCallback(), wizCraftDuplicateObject(), wizCraftMGMT(), getWizCraftAttr()
+	
+	<b>Examples</b><br>
+	<code>
+	string $filename[] = wizCraftGetFileOutputPaths("-typ selectionMap -ext tif");
+	
+	</code>
+*********************************************************************/
+global proc string[] wizCraftGetFileOutputPaths( string $flags )
+{	
+	wizLog("[@]wizCraftGetFileOutputPaths\n");
+	wizlog ("[flags] " + $flags);
+	string $objType;
+	string $name;
+	string $curFile = `file -q -sn`;
+	string $dir;
+	int $pwfn;
+	int $usd;
+	int $ucd;
+	int $inc;
+	int $xga;
+	if (`size $curFile` == 0){
+		int $saved = wizSaveFile();
+		if ($saved == 0){
+			warning ("File Must Be Saved Before Output Paths Can Be Created!\n");
+			return {""};
+		} else {
+			$curFile = `file -q -sn`;
+		}
+		
+	}
+	string $filePathSplice[] = wizSpliceFilePath($curFile, "-fn -dir -ex");
+	string $ext = $filePathSplice[2];
+	
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-n" : case "-name" :
+			$name = $tok[($i + 1)];
+			break ;
+			
+			case "-typ" : case "-type" :
+			$objType = $tok[($i + 1)];
+			break ;
+			
+			case "-ext" : case "-extension" :
+			$ext = $tok[($i + 1)];
+			break ;
+			
+			case "-pwfn" : case "-prefixWithFileName" :
+			$pwfn = 1;
+			break ;
+			
+			case "-usd" : case "-useSameDir" :
+			$usd = 1;
+			break ;
+			
+			case "-dir" : case "-directory" :
+			$ucd = 1;
+			$dir = $tok[($i + 1)];
+			break ;
+			
+			case "-inc" : case "-increment" :
+			$inc = 1;
+			break ;
+			
+			case "-xga" : case "-xGenArchive" :
+			$xga = 1;
+			break ;
+
+		}
+	} 
+	
+	if (`size $tok` == 0){
+	
+	}
+	string $fileName = $objType;
+	
+    string $exportName;
+    string $exportDir;
+	
+	//_________________________________________
+	// Directory
+	
+	// Use Same Directory
+	if ($usd){
+		$exportDir = $filePathSplice[1];
+	} else if ($ucd){
+		$exportDir = $dir;
+	} else if ($xga){
+		string $newDir = wizMakeDir(($filePathSplice[1] + "xgenArchive" + "/"));
+		if ($newDir == ""){ return {""};}
+		$exportDir = $newDir;
+		
+	} else {		
+	// Make New Directory
+		int $v = getLatestFileVersionNumber($exportName);
+		
+		global string $WIZ_subFileFolderSuffix;
+		string $newDir = wizMakeDir(($filePathSplice[1] + $filePathSplice[0] + $WIZ_subFileFolderSuffix + "/"));
+		if ($newDir == ""){ return {""};}
+		$exportDir = $newDir;
+	}
+	wizlog ("	[+] Directory : " + $exportDir);
+	
+	//_________________________________________
+	// Name
+	
+	// prefix with the file name
+	if ($pwfn){
+		if (`size $objType` > 0){
+			$objType = "_" + $objType;
+		}
+		$exportName = $filePathSplice[0] + $objType + "." + $ext;
+	} else if (`size $name` > 0){
+		if (`size $objType` > 0){
+			$objType = "_" + $objType;
+		}
+		$exportName = $name + $objType + "." + $ext;
+	} else {
+		$exportName = $filePathSplice[0] + $objType + "." + $ext;
+	}
+
+	string $return = $exportDir + $exportName;
+	
+	if ($inc){
+		$return = getIncrementedFileVersionName($return);
+	}
+	
+	//string $return = $exportName;
+   // $exportName = $newDir + $objType + $v + "." + $ext;
+	
+    wizLog ("	[#] Object Type : " + $objType + "\n	- File Name : " + $exportName + "\n");
+
+	return {$return};
+	
+}
+
+//@ WIZ CRAFT CALLBACK
+//====================================================================
+/*****************************************************************//**
+	Create A Callback For wizCraft.
+	<hr>
+	<b>Synopsis</b><br>
+	wizCraftCallback [-tags string] [-command string] <br>
+	Pass a tag "-ex" "-exall" or "-q" and a "name" for a command
+	followed by a string command.<br>
+	
+	-ex will execute the named command <br>
+	-exall will execute any command following the tag <br>
+	-q will hold the command for later <br>
+	
+	<b>Return value</b><br>
+	string[] nothing.
+	
+	<b>Flags</b><br>
+	-tag1, -tag2
+	
+	<b>Related</b><br>
+	wizCraftMGMT(), setWizCraftSourceValues()
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	wizCraftCallback("-q buildCall", $buildCommand);
+	wizCraftCallback("-exall buildCall", "");
+	</code>
+*********************************************************************/
+global proc string[] wizCraftCallback( string $tags, string $command )
+{
+	wizLog("[@] wizCraftCallback\n");
+	global string $wizCraft_CB[];
+	string $tok[] = tokenizeString($tags, " ");
+	string $evalCom;
+	string $return[];
+	int $index = 0;
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+						
+			case "-q" : case "-queue" :
+			//int $index = stringArrayFind($tok[($i + 1)], 0, $wizCraft_CB);
+			$wizCraft_CB[`size $wizCraft_CB`] = $tok[($i + 1)];
+			$wizCraft_CB[`size $wizCraft_CB`] = $command;
+			break;
+			
+			case "-ex" : case "-execute" :
+			$index = stringArrayFind($tok[($i + 1)], 0, $wizCraft_CB);
+			eval($wizCraft_CB[($index + 1)]);
+			$return[`size $return`] = $wizCraft_CB[($index + 1)];
+			break;
+			
+			case "-exall" : case "-executeAll" :
+			int $count = stringArrayCount($tok[($i + 1)], $wizCraft_CB);
+			$index = 0;
+			for ($p=0;$p<$count;$p++){
+				$index = stringArrayFind($tok[($i + 1)], $index, $wizCraft_CB);
+				eval($wizCraft_CB[($index + 1)]);
+				wizLog($wizCraft_CB[($index + 1)]);
+				$index++;
+				$return[`size $return`] = $wizCraft_CB[($index + 1)];
+				if (wizProgressCancelled() == 1){ return {""}; }
+			}			
+			break;
+			
+		}
+	}
+	wizLog("	[+] Flags : " + $tags + " : Command : " + $command + " [+] \n"); 
+	return $return;
+}
+
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         BUILD
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//@ RMB WIZ CRAFT DO BUILD
+//====================================================================
+global proc rmbWizCraftDoBuild( string $object )
+{
+	//string $sel[] = `ls -sl`;
+	//string $wc[] = lsWizAssetOfType($sel, "-typ wizCraftAsset");
+	wizCraftDoBuild();
+
+}
+
+//@ WIZ CRAFT DO BUILD
+//====================================================================
+global proc wizCraftDoBuild()
+{
+	global string $WIZ_currentLogField;
+	$WIZ_currentLogField = "wizCraftAnalysis_scrollField";	
+	wizLog ("-date");
+	wizLog ("[@] wizCraftDoBuild\n");
+	wizLog ("-st wizCraftBuild");	
+	wizLog ("wizCraftDoBuild : Starting Build...\n" + wizDiv("s"));
+	
+	global string $WIZCRAFT_objNN;
+	global string $WIZCRAFT_liveWizCraftAsset; 
+	global string $WIZCRAFT_baseStructure;
+	//_________________________________________
+	// Get the wizCraft Assets
+	
+	/*
+    string $dc[] = `ls -typ dagContainer -sl`;
+    string $wca[] = lsWizAssetOfType($dc, "-typ wizCraftAsset");   	
+	string $sbldr[] = lsWizAssetOfType($dc, "-typ sBldrAsset");
+    if (`size $wca` == 0){
+		wizlog ("-w		[!] A wizCraft Object Must Be Selected... Aborting Build [!]\n");
+		return ;
+	}
+	*/
+	string $sel[] = `ls -sl`;
+	string $wca[] = wizCraftMGMT("-sla");
+	if (`size $wca` == 0){
+		wizlog ("-w		[!] A wizCraft Object Must Be Selected... Aborting Build [!]\n");
+		return ;
+	}
+    string $wc = $wca[0];
+		
+	//This sets where the values are coming from : A asset or the gui
+    //setWizCraftSourceValues($wc, "wizCraftAsset");
+	//$WIZCRAFT_liveWizCraftAsset = $wc;
+	$WIZCRAFT_objNN = makeNiceName($wc);
+	wizlog ("	[#] LiveWizCraftAsset : " + $WIZCRAFT_liveWizCraftAsset + " [+]");	
+	
+	refresh -f;
+	refreshAE;
+	
+	//_________________________________________
+	// Get Structure
+	// Get a structure component to build on. If one already exists then just use that object.
+	string $obj;
+	string $scp[];
+	string $bsSet[] = wizCraftMGMT("-q -s -n -ot BaseStructure");
+	if (`objExists $bsSet[0]`){
+		$scp = `sets -q $bsSet[0]`;
+	} else {
+		$scp[0] = getRandomObjectFromComponentPool($wc, "structureComponentPool");
+		$scp = smartSelectObjectsOfType($scp, "mesh");
+	}
+    if (`size $scp` == 0){
+		$scp = smartSelectObjectsOfType({$wc}, "mesh");
+		if (`size $scp` == 0){
+			wizLog ("-w	 [!] BUILD ABORTED : No build structure found [!] \n" + wizDiv("end"));	
+			return ;
+		} 
+    }
+
+	$obj = $scp[0];
+	/*
+	string $obj;
+	string $wcAssetType = `getAttr ($wc + ".wizAssetType")`;
+	string $bo[];
+	if ($wcAssetType == "sBldrAsset"){
+		$bo = smartSelectObjectsOfType($sel, "mesh");
+		if (`size $bo` > 0){
+			$obj = $bo[0];
+		}
+	} else if ($wcAssetType == "wizCraftAsset"){
+		$obj = getRandomObjectFromComponentPool($wc, "structureComponentPool");
+	}
+*/
+
+	wizlog ("	[#] Obj : " + $obj);
+	
+	// zoom out on the object so we can see it
+	$WIZCRAFT_baseStructure = $obj;
+		
+	select -r $obj;	
+	viewFit -an true -f 1.0;
+	
+	wizCraftMGMT("-s -ot BaseStructure -sl");
+	
+	refresh -f;
+	refreshAE;
+	
+	//_________________________________________
+	// Build Analysis
+	wizLog ("	[#] Analysing Structure : " + $obj + "\n" + wizDiv("s"));
+	
+    doBuildAnalysisOnObject($obj);
+	
+    wizLog (" - ANALYSIS COMPLETE - \n" + wizDiv("end"));
+	
+	refresh -f;
+	refreshAE;
+	
+	
+	//_________________________________________
+	// Run Hair Simulation
+	int $runSim = int(getWizCraftAttr("-obj " + $obj + " -attr runSimulationBeforeBuild"));
+	if ($runSim == 1){
+		wizLog ("	[-] Running Hair Simulation [-]");
+		wizCraftRunSimulation();
+		
+		refresh -f;
+		refreshAE;
+	}
+	
+	//_________________________________________
+	// Build Components
+	wizLog ("	[#] Building On Structure : " + $obj + "\n" + wizDiv("s"));
+	
+	doBuildOnWizCraftStructure($obj);
+	
+	wizLog (" - BUILD COMPLETE - \n" + wizDiv("end"));
+	
+	refresh -f;
+	refreshAE;
+  /*
+	wizCraftCallback("-exall cleanup", "");
+	deleteEmptyTopLevelTransforms();
+	*/
+	
+	wizLog ("WIZCRAFT| BUILDING COMPLETE\n" + wizDiv("end") + wizDiv("end"));
+	wizLog ("-et wizCraftBuild");
+	select -cl;
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                        PRE - ANALYSIS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//@ LOWER POLY COUNT FROM INPUTS
+//====================================================================
+/*****************************************************************//**
+	Pass an object, the count to lower the mesh too and
+	a tag "-d" if you want to duplicate the mesh before reducing.
+	<hr>
+	<b>Synopsis</b><br>
+	lowerPolyCountFromInputs [string $obj] [int $count] [string $tags] <br>
+	Pass an object, the count to lower the mesh too and
+	a tag "-d" if you want to duplicate the mesh before reducing.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-duplicate(-d)
+	
+	<hr>
+	<b>Related</b><br>
+	
+	<b>Examples</b><br>
+	<code>
+	string $lowObj = lowerPolyCountFromInputs($sel[0], 5000, "-d");
+	
+	</code>
+*********************************************************************/
+global proc string lowerPolyCountFromInputs( string $obj , int $count , string $tags )
+{
+	wizLog ("@lowerPolyCountFromInputs\n");
+	string $lowObj = $obj;
+	
+	if ($tags == "-d"){
+		//Create duplicate with input graph
+		string $dup[] = `duplicate -rr -renameChildren -un $obj`;
+		wizLog ("	- Create Low Poly Duplicate : " + $dup[0] + "\n");
+		$lowObj = $dup[0];
+		select -r $lowObj;
+		//wizCraftCallback("-q cleanup", ("setAttr " + $nt[0] + ".polygonCount " + $curCount + ";"));
+		wizCraftCallback("-q cleanup", ("hide " + $lowObj + ";"));
+	}
+		
+	//Make sure we have got a mesh node
+	string $mr[] = `listRelatives -typ mesh $lowObj`;
+	if (`size $mr` == 0){
+		string $geo[] = smartSelectGeometryObjects({$lowObj});
+		$lowObj = $geo[0];
+		$mr = `listRelatives -typ mesh $lowObj`;
+	}	
+	
+	//Get the nurbsTessellate node and set the count
+	string $nt[] = `listConnections -t nurbsTessellate $mr[0]`;
+	wizLog ("	- NurbsTessallate : " + $nt[0] + "\n");
+	if (`size $nt` > 0){
+		int $format = `getAttr ($nt[0] + ".format")`;
+		if ($format == 0){	
+			int $curCount = `getAttr ($nt[0] + ".polygonCount")`;
+			setAttr ($nt[0] + ".polygonCount") $count;
+			//wizCraftCallback("-q cleanup", ("setAttr " + $nt[0] + ".polygonCount " + $curCount + ";"));			
+			
+		} else if ($format == 2){
+			int $srtCount = int(sqrt($count));
+			setAttr ($nt[0] + ".uNumber") $srtCount;
+			setAttr ($nt[0] + ".vNumber") $srtCount;
+			
+		}
+	}
+	
+	return $lowObj;
+
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         ANALYSIS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//@ DO BUILD ANALYSIS ON SELECTED OBJECTS
+//====================================================================
+//** This will analyze multiple objects. */
+global proc doBuildAnalysisOnSelectedObjects( string $sel[] )
+{
+	wizLog ("@doBuildAnalysisOnSelectedObjects\n");
+    for ($i=0;$i<`size $sel`;$i++){
+        doBuildAnalysisOnObjectFromSource($sel[$i], "wizCraftGUI");
+    }
+    
+}
+
+global proc doBuildAnalysisOnObjectFromSource( string $obj, string $source )
+{
+	wizLog ("@doBuildAnalysisOnObjectFromSource\n");
+	setWizCraftSourceValues($obj, $source);
+	doBuildAnalysisOnObject($obj);
+
+}
+
+//@ DO BUILD ANALYSIS ON OBJECT
+//====================================================================
+/*****************************************************************//**
+	Build Analysis finds areas on a structure to build more object on.
+	<hr>
+	<b>Synopsis</b><br>
+	doBuildAnalysisOnObject [string $obj] <br>
+	Any mesh can be passed to build analysis.
+	
+	<b>Return value</b><br>
+	none.
+	
+	<b>Flags</b><br>
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	string $sel[] = `ls -sl`;
+	doBuildAnalysisOnObject($sel[0]);
+	
+	</code>
+*********************************************************************/
+global proc doBuildAnalysisOnObject( string $obj )
+{
+	wizLog ("[@] doBuildAnalysisOnObject\n");
+	wizLog ("-st BuildAnalysis");
+	
+	global string $WIZ_currentLogField;
+	$WIZ_currentLogField = "wizCraftAnalysis_scrollField";
+	// CLEAR LOG
+	$WIZCRAFT_analysisLog = "";
+	
+	global string $WIZCRAFT_objNN;
+	$WIZCRAFT_objNN = makeNiceName($obj);
+	global string $WIZCRAFT_baseStructure;
+	$WIZCRAFT_baseStructure = $obj;
+	global string $WIZCRAFT_liveWizCraftAsset;
+	
+    string $mr[] = `listRelatives -typ mesh $obj`;
+	if (`size $mr` == 0){
+		string $geo[] = smartSelectGeometryObjects({$obj});
+		$obj = $geo[0];
+		$WIZCRAFT_baseStructure = $obj;
+	}
+	
+	
+	wizLog (" [*] Analyzing Object : " + $WIZCRAFT_objNN + " **" + wizDiv("s"));
+	
+	int $autoBuildMode = int(getWizCraftAttr("-obj " + $obj + " -attr autoBuildMode"));
+	int $lowPolyCount = int(getWizCraftAttr("-obj " + $obj + " -attr lowTargetPolyCount"));
+	
+	// warn if the poly count is high and lower it if neccessary
+	if ($autoBuildMode == 0){		
+		int $lowerPolyCount = wizHighPolyCountWarning({$obj}, $lowPolyCount, "");
+		wizLog ("	[!] High Poly Warning : " + $obj + "\n");
+		if ($lowerPolyCount == 1){
+			$WIZCRAFT_lowPolyForAnalysis = 1;
+			wizLog ("	[*] Lower Poly Count On : " + $obj + "\n");
+		}
+	}
+	
+	wizLog (" [-] wizCraft Analysis Start [-] \n" + wizDiv("s"));
+    wizProgressWindowStart((" - wizCraft Analysis - "), ("Analyzing [" + $WIZCRAFT_objNN + "]..."), 1);
+    wizProgressWindowMinMax(0,3);     
+    
+	//Decrease the poly count to speed up analysis?
+	int $lowPoly = int(getWizCraftAttr("-obj " + $obj + " -attr lowerPolyForAnalysis"));
+	if ($lowPoly == 1){	
+		wizProgressWindowStatus(("Lowering Poly Count To : " + $lowPolyCount));
+		$obj = lowerPolyCountFromInputs($obj, $lowPolyCount, "-d");		
+	}
+	
+	// add a cleanup callback to reset the shaders
+	string $shaders[] = getShadersFromSelected({$obj});
+	select -r $obj;
+	select -add $shaders;
+	string $resetShaderSet[] = wizCraftMGMT("-s -ot ShaderReset -sl");
+	wizCraftCallback("-q cleanup", ("select -r " +  $resetShaderSet[0] + "; sets -e -forceElement " + $shaders[0] + ";"));
+	wizLog ("	[#] Live wizCraft Asset : " + $WIZCRAFT_liveWizCraftAsset + " -\n");
+
+	string $ft[] = wizCraftMGMT("-featureTypes");
+	
+	for ($i=0;$i<`size $ft`;$i++){
+	
+		int $doAnalysis = int(getWizCraftAttr("-obj " + $obj + " -attr Analyze -ft " + $ft[$i]));
+		select -r $obj;		
+		
+		// if there is build information already give the option to analyze again or skip
+		string $bs[] = wizCraftMGMT("-q -s -n -ft " + $ft[$i] + " -ot BuildLocators");
+		if (`objExists $bs[0]` == 1 && $doAnalysis == 1){
+			string $title = ("Skip " + (capitalizeString($ft[$i])) + " Analysis");
+			string $message = ("There is already build information for " + $ft[$i] + " features. Do You Want To Analyze Again?");
+			if (wizInformationDialog($title, $message, "Yes", "Skip") == 0){
+				wizlog ("	[-] Skipping : " + $ft[$i] + " Analysis [-]");
+				continue;
+			}
+			
+		}
+		
+		if ($doAnalysis == 1){
+
+			wizLog (">> Analyzing " + (capitalizeString($ft[$i])) + " <<" + wizDiv("s"));
+			wizProgressWindowStatus(" - Analyzing " + (capitalizeString($ft[$i])) + " - ");
+			
+			// do the analysis
+			string $loc[] = doFeatureTypeAnalysis("-obj " + $obj + " -fs -fl -bl -st -ft " + $ft[$i]);
+			
+			wizLog (">> End " + (capitalizeString($ft[$i])) + " Analysis <<" + wizDiv("end"));
+			
+			// put the locators in a set so we can find them later
+			select -r $loc;
+			string $locSet[] = wizCraftMGMT("-s -ft " + $ft[$i] + " -ot BuildLocators -sl");
+			wizLog ("	[+] " + `size $loc` + " " + (capitalizeString($ft[$i])) + " Build Locators Created [+]");
+			
+			/*
+			if (`objExists $WIZCRAFT_liveWizCraftAsset`){
+				string $rbs = `getAttr ($WIZCRAFT_liveWizCraftAsset + ".roofBuildSet")`;
+				if (`size $rbs` == 0){
+					setAttr ($WIZCRAFT_liveWizCraftAsset + ".roofBuildSet") -type "string" $roofLocSet;
+					wizLog("	[+] Roof Build Set : " + $roofLocSet + " [+]\n");
+			
+				}
+			}*/
+			
+			wizProgressWindowStep(1);        
+			if (wizProgressCancelled() == 1){ return; }
+			
+		}
+	
+	}
+    
+	/*
+	wizLog (">> Analysis Cleanup <<" + wizDiv("s"));
+	wizCraftCallback("-q cleanup", ("deleteNonDefaultUVSets({\"" + $obj + "\"});"));
+	wizCraftCallback("-ex resetRenderGlobals", "");
+	*/
+	
+    polySelectConstraint -dis;
+    
+    select -r $obj;
+    wizLog ("****ANALYSIS COMPLETE*****" + wizDiv("end"));
+    wizProgressWindowEnd();
+	wizLog ("-et BuildAnalysis");
+}
+
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                        ANALYSIS TYPES
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+global proc rmbDoFeatureTypeAnalysis( string $object )
+{	
+	select -r $object;
+	wizCraftMGMT("-sla");
+	string $obj[] = smartSelectObjectsOfType(`ls -sl`, "mesh");
+	string $ft = `getAttr ($object + ".featureTypeName")`;
+	
+	doFeatureTypeAnalysis("-obj " + $obj[0] + " -ft " + $ft);
+	
+	
+	
+}
+
+//@ DO FEATURE TYPE ANALYSIS
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-fa string] [-fb linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-featureType(-ft) <br>
+	-flatten(-fl) <br>
+	-featureSelection(-fs) <br>
+	-buildLocators(-bl) <br>
+	
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = doFeatureTypeAnalysis("");
+	
+	</code>
+*********************************************************************/
+global proc string[] doFeatureTypeAnalysis( string $flags )
+{/*
+global proc string[] doFeatureTypeAnalysis( string $obj, string $ft )
+{*/
+	
+	string $obj, $ft;
+	int $fs, $bl, $fl, $apc, $st;
+	string $tok[] = tokenizeString($flags, " ");
+	string $sel[];
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-ft" : case "-featureType" :
+			$ft = $tok[($i + 1)];
+			break ;
+			
+			case "-fl" : case "-flatten" :
+			$fl = 1;
+			break ;
+			
+			case "-fs" : case "-featureSelection" :
+			$fs = 1;
+			break ;
+			
+			case "-bl" : case "-buildLocators" :
+			$bl = 1;
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			$obj = $sel[0];
+			break ;
+			
+			case "-apc" : case "-areaPerimeterCurves" :
+			$apc = 1;
+			break ;
+			
+			case "-st" : case "-surfaceTiles" :
+			$st = 1;
+			break ;
+			
+		}
+	}
+	$sel = wizFlagObjTrail($flags);
+	
+	wizLog ("[@] doFeatureTypeAnalysis\n");
+	wizLog ("	[-] Object : " + $obj + " Feature Type : " + $ft);
+
+	string $anMeth = getWizCraftAttr(("-obj " + $obj + " -attr AnalysisMethod -ft " + $ft));
+	
+    int $minUObj = int(getWizCraftAttr("-obj " + $obj + " -attr MinUObjs -ft " + $ft));
+    int $maxUObj = int(getWizCraftAttr("-obj " + $obj + " -attr MaxUObjs -ft " + $ft));
+    int $minVObj = int(getWizCraftAttr("-obj " + $obj + " -attr MinVObjs -ft " + $ft));
+    int $maxVObj = int(getWizCraftAttr("-obj " + $obj + " -attr MaxVObjs -ft " + $ft));
+    
+    int $uObjCount = rand($minUObj, $maxUObj);
+    int $vObjCount = rand($minVObj, $maxVObj);
+
+    float $maxAngle = float(getWizCraftAttr("-obj " + $obj + " -attr MaxAngle -ft " + $ft));
+	float $minFaceCount = float(getWizCraftAttr("-obj " + $obj + " -attr MinFaces -ft " + $ft));
+	
+	float $minHeight = float(getWizCraftAttr("-obj " + $obj + " -attr MinHeight -ft " + $ft));
+	float $maxHeight = float(getWizCraftAttr("-obj " + $obj + " -attr MaxHeight -ft " + $ft));
+	
+	int $flatten = int(getWizCraftAttr("-obj " + $obj + " -attr Flat -ft " + $ft));
+	
+	int $createAreaPerimeterCurves = int(getWizCraftAttr("-obj " + $obj + " -attr AreaPerimeterCurves -ft " + $ft));
+	
+	// Surface Tiles
+	int $surfaceTiles = int(getWizCraftAttr("-obj " + $obj + " -attr SurfaceTiles -ft " + $ft));
+	int $uTiles = int(getWizCraftAttr("-obj " + $obj + " -attr SurfaceUTiles -ft " + $ft));
+	int $vTiles = int(getWizCraftAttr("-obj " + $obj + " -attr SurfaceVTiles -ft " + $ft));
+	string $stso = getWizCraftAttr(("-obj " + $obj + " -attr SurfaceTileOrdering -ft " + $ft));
+	string $strf = getWizCraftAttr(("-obj " + $obj + " -attr TileRandomFrequency -ft " + $ft));
+	
+	string $buildLoc[];
+		
+	string $tt = getWizCraftAttr("-obj " + $obj + " -attr TextureSelectionMethod -ft " + $ft);
+	
+	int $cornerMask = int(getWizCraftAttr("-obj " + $obj + " -attr CornerMask -ft " + $ft));
+	string $cm;
+	if ($cornerMask == 1){
+		$cm = " -cm";
+	}
+	//float $rot[] = { 0.0, 0.0, 0.0 };
+	string $rotString = getWizCraftAttr("-obj " + $obj + " -attr TextureRotation -ft " + $ft);
+	string $rotTok[] = tokenizeString($rotString, " ");
+	float $rot[] = stringArrayToFloatArray($rotTok);
+			
+	//wizCraftCreateClosestPointOnMeshNode($obj, $ft);
+	
+		
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//	Do each step
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+
+	//_________________________________________
+	// Surface Tiles
+	if ($surfaceTiles == 1 || $st == 1){
+		//wizCraftTileSurface("-obj " + $obj + " -ft " + $ft + " -u " + $uTiles + " -v " + $vTiles);
+		string $sufTileSelSets[] = wizCraftCreateMarchingTileSelectSets("-obj " + $obj + " -ft " + $ft + " -u " + $uTiles + " -v " + $vTiles + " -ct f -uvr");
+
+	}
+
+	//_________________________________________
+	// Split Into Shells By Angle
+	int $split = int(getWizCraftAttr("-obj " + $obj + " -attr SplitIntoShells -ft " + $ft));
+	if ($split){
+		wizCraftMaxAngleShellSelection("-obj " + $obj + " -ma " + $maxAngle);
+	}
+	
+	//_________________________________________
+	// Component Texture Selection
+	// old method
+	if ($fs){
+		if ($anMeth == "selectConstraint"){
+			doDirectionalBuildAnalysis($obj, $ft, { 0.0 , 1.0, 0.0 }, $maxAngle, $minFaceCount, $minHeight, $uObjCount, $vObjCount, $flatten);
+		} 
+		
+		// good method
+		if ($anMeth == "selectMap"){		
+			string $buildCommand = ("-obj " + $obj + " -ft " + $ft
+			+ " -tt " + $tt + " -ro " + $rot[0] + " " +  $rot[1] + " " + $rot[2] + " -ma " + $maxAngle + " -mfc " + $minFaceCount
+			+ " -mnh " + $minHeight + " -mxh " + $maxHeight + " -u " + $uObjCount + " -v " + $vObjCount
+			+ " -fl " + $flatten + $cm);
+			
+			wizLog("	[*] doTextureMapSelectBuildAnalysis(\"" + $buildCommand + "\");");
+			
+			doTextureMapSelectBuildAnalysis($buildCommand);
+		}
+	}
+
+	//_________________________________________
+	// Flatten		
+	if ($flatten == 1 || $fl == 1){
+		string $vSet[] = wizCraftMGMT(("-q -n -s -ft " + $ft + " -ot " + $tt + "_vertex"));
+		if (`objExists $vSet[0]`){
+			flattenDeformedPolyMeshArea("-obj " + $obj + " -s " + $vSet[0] + " -ft " + $ft);
+		}
+	}	
+	
+	//_________________________________________
+	// Hair Placement
+	if ($bl){	
+		// Make the hair and locators
+		//string $buildLoc[] = wizCraftPlaceLocatorsOnSurfaceUsingHairSystem($obj, $uObjCount, $vObjCount, $typeName, ("_" + $typeName + "_buildLocatorSet"));
+		string $buildLoc[] = wizCraftPlaceLocatorsOnSurfaceUsingHairSystem(("-obj " + $obj + " " + " -u " + $uObjCount + " -v " + $vObjCount + " -ft " + $ft));
+
+	}	
+	
+	//_________________________________________
+	// Area Parimeter Curves
+	if ($apc == 1 || $createAreaPerimeterCurves == 1){
+		wizCraftCreateAreaPerimeterCurves(("-obj " + $obj + " -ft " + $ft));
+	}
+	
+	return $buildLoc;
+	
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                      ANALYSIS METHODS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//@ DO TEXTURE MAP SELECT BUILD ANALYSIS
+//====================================================================
+/*****************************************************************//**
+	This makes a selection by creating a 3d texture map and then
+	outputing the texture to a file, and then selecting base on luminosity.
+	<hr>
+	<b>Synopsis</b><br>
+	doTextureMapSelectBuildAnalysis [-tag1 string] [-tag2 linear] <br>
+	-object(-obj) : string <br>
+	-featureType(-ft) : string <br>
+	-maxAngle(-ma) : float <br>
+	-minFaceCount(-mfc) : float <br>
+	-minHeight(-mnh) : float <br>
+	-uObjCount(-u) : int <br>
+	-vObjCount(-v) : int <br>
+	-flatten(-fl) : int <br>
+	-direction(-dir) : linear linear linear <br>
+	-rotation(-ro) : linear linear linear <br>
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>		
+	-obj, -ft, -ma, -mfc, -mnh, -mxh, -u, -v, -fl, -dir, -ro
+	
+	<hr>
+	<b>Related</b><br>
+	createMeshSelectionFromTextureOutput()
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName($string, 2);
+	
+	</code>
+*********************************************************************/
+global proc string[] doTextureMapSelectBuildAnalysis( string $tags )
+{
+	wizLog ("[@] doTextureMapSelectBuildAnalysis\n");
+	wizlog ("	[*] doTextureMapSelectBuildAnalysis(\"" + $tags + "\");");
+	
+	//_________________________________________
+	// Break Tags apart
+	string $tok[] = tokenizeString($tags, " ");
+	string $obj, $tt, $ft, $tt;
+	float $dir[];
+	float $rot[];
+	float $maxAngle, $minFaceCount, $minHeight, $maxHeight;
+	int $uObjCount, $vObjCount, $flatten, $cornerMask;
+	string $selCom;
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			$selCom = $selCom + " -obj " + $obj;
+			wizLog ("----OBJ---- : " + $obj + "\n");
+			break;
+			
+			case "-ft" : case "-ft" :
+			$ft = $tok[($i + 1)];
+			$selCom = $selCom + " -typ " + $ft;
+			break;
+			
+			case "-tt" : case "-textureType" :
+			$tt = $tok[($i + 1)];
+			$selCom = $selCom + " -tt " + $tt;
+			break;
+			
+			case "-ma" : case "-maxAngle" :
+			$maxAngle = float($tok[($i + 1)]);
+			$selCom = $selCom + " -ma " + $maxAngle;
+			break;
+			
+			case "-mfc" : case "-minFaceCount" :
+			$minFaceCount = float($tok[($i + 1)]);
+			$selCom = $selCom + " -mfc " + $minFaceCount;
+			break;
+			
+			case "-mnh" : case "-minHeight" :
+			$minHeight = float($tok[($i + 1)]);
+			$selCom = $selCom + " -mnh " + $minHeight;
+			break;
+			
+			case "-mxh" : case "-maxHeight" :
+			$maxHeight = float($tok[($i + 1)]);
+			$selCom = $selCom + " -mxh " + $maxHeight;
+			break;
+			
+			case "-u" : case "-uObjCount" :
+			$uObjCount = int($tok[($i + 1)]);
+			$selCom = $selCom + " -u " + $uObjCount;
+			break;
+			
+			case "-v" : case "-vObjCount" :
+			$vObjCount = int($tok[($i + 1)]);
+			$selCom = $selCom + " -v " + $vObjCount;
+			break;
+			
+			case "-fl" : case "-flatten" :
+			$flatten = int($tok[($i + 1)]);
+			break;
+			
+			case "-dir" : case "-direction" :
+			$dir = { (float($tok[($i + 1)])), (float($tok[($i + 2)])), (float($tok[($i + 3)])) };
+			$selCom = ($selCom + " -dir " + $dir[0] + " " + $dir[1] + " " + $dir[2]);
+			break;
+			
+			case "-ro" : case "-rotation" :
+			$rot = { (float($tok[($i + 1)])), (float($tok[($i + 2)])), (float($tok[($i + 3)])) };
+			$selCom = ($selCom + " -ro " + $rot[0] + " " + $rot[1] + " " + $rot[2]);
+			break;
+			
+			case "-cm" : case "-cornerMask" :
+			$cornerMask = 1;
+			break ;
+		}
+	}
+	
+	global string $WIZCRAFT_objNN;
+	string $allSets[]; // Put all the sets created in here.
+	
+	string $cm;
+	if ($cornerMask == 1){
+		$cm = " -cm";
+	}
+	
+	// Create a point on mesh info node for getting information about mesh
+	/*
+	string $pom[] = wizCraftMGMT("-q -n -ft " + $ft + " -ot PointOnMeshInfo");
+	string $pointOnMesh = `pointOnMesh $obj`;
+	$pointOnMesh = renameWizRenameObject($pointOnMesh, $pom[0]);
+	wizCraftMGMT("-ata " + $pointOnMesh);
+	*/
+	
+	
+	//_________________________________________
+	// Selection From Texture
+	
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// This creates a 3d texture, outputs a texture file from 3d texture, then creates a selction from
+	// the map "mask" - the white areas
+	// It also returns a file node with a map that we will use to mask hair with the hair baldness map
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	wizLog ("	[*] " + ($selCom + " -rt textureFile -rt components -sln " + $ft + "Selection"));
+	string $sel[] = createMeshSelectionFromTextureOutput(($selCom + " -rt textureFile -rt components -sln " + $ft + "Selection" + $cm));
+	
+	wizLog ("	[-] Results From Create Mesh Selection From Texture Output : size Sel : " + `size $sel` + " : Texture File Node : " + $sel[0] + "\n");
+	//wizLog((printNiceArrayList(" Selection From Texture Map :", $sel)));
+	
+	///////////////////////////////////////////
+	//	The texture file should be in first index
+	///////////////////////////////////////////
+	string $texFile = $sel[0];
+	wizLog ("	[+] Texture File :" + $texFile);
+	
+	// The vertex selection is the remainder of array
+	stringArrayRemoveAtIndex(0, $sel);
+	string $v[] = $sel;
+	//wizLog(printNiceArrayList(" Vertices :", $v));	
+	
+	// Create a set of vertices
+	
+	//string $vSet = createSetFromSelection($v, ($WIZCRAFT_objNN + "_" + $tt + "_verticesSet"));
+	string $vSet[] = wizCraftMGMT(("-s -bd -ft " + $ft + " -ot " + $tt + "_vertex"));
+	wizLog ("	[+] Vertex Set :" + $vSet[0]);
+	
+	// return the locators
+	return $v;
+	
+}
+
+
+
+//@ GET TEXTURE DEFORMERS TEXTURES FROM SELECTION
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-fa string] [-fb linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-fa, -fb
+	
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName("-fa aString -fb anotherString");
+	
+	</code>
+*********************************************************************/
+global proc string[] getTextureDeformersTexturesFromSelection()
+{
+	string $texDef[] = smartSelectObjectsOfType(`ls -sl`, "textureDeformer");
+	string $textures[];
+	for ($i=0;$i<`size $texDef`;$i++){
+		string $con[] = `listConnections $texDef[$i]`;
+		string $tex[] = `ls -tex $con`;
+		appendStringArray($textures, $tex, `size $tex`);
+	}	
+	stringArrayRemoveDuplicates($textures);
+	return $textures;
+
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                     MAX ANGLE SELECTION METHOD
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//@ WIZ CRAFT MAX ANGLE SHELL SELECTION
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-fa string] [-fb linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	
+	
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	wizCraftMaxAngleShellSelection("-sl -ma 10");
+	
+	</code>
+*********************************************************************/
+global proc wizCraftMaxAngleShellSelection( string $flags )
+{
+	wizlog ("[@] wizCraftMaxAngleShellSelection");
+	
+	string $obj;
+	string $ft = "all";
+	float $maxAngle, $minFaceCount, $minHeight, $maxHeight;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break;
+			
+			case "-ft" : case "-ft" :
+			$ft = $tok[($i + 1)];
+			break;
+						
+			case "-ma" : case "-maxAngle" :
+			$maxAngle = float($tok[($i + 1)]);
+			break;
+			
+			case "-mfc" : case "-minFaceCount" :
+			$minFaceCount = float($tok[($i + 1)]);
+			break;
+			
+			case "-mnh" : case "-minHeight" :
+			$minHeight = float($tok[($i + 1)]);
+			break;
+			
+			case "-mxh" : case "-maxHeight" :
+			$maxHeight = float($tok[($i + 1)]);
+			break;
+			
+			case "-sl" : case "-selected" :
+			string $sel[] = `ls -sl`;
+			$obj = $sel[0];
+			break;
+			
+		}
+	}
+
+	string $setName[] = wizCraftMGMT("-q -s -n -ft " + $ft + " -ot Shell");
+	if (`objExists $setName[0]`){
+		wizlog ("	[!] Feature : " + $ft + " Is Already Broken Into Shells");
+		return ;
+	}
+	string $e[] = getComponentsOfTypeAtMinMaxAngle({$obj}, "edge", $maxAngle, 360);
+	select -r $e;
+	refresh -f;
+	refreshAE;
+	
+	//wizlog ("	[-] Sorting Into Shells. Please Wait... [-]");
+	
+	polyMapCut;
+	
+	select -r $obj;
+	
+	/*
+	string $shells[] = sortMeshComponentsIntoShellSets("-sl -pre " + $setName[0] + " -si -typ faces");
+	sort($shells);
+	string $shellsSet[] = wizCraftMGMT("-s -ft " + $ft + " -ot AreaShells " + (stringArrayToString($shells, " ")));
+	*/
+
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         FLATTEN AREAS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//@ FLATTEN DEFORMED POLY MESH AREA
+//====================================================================
+/*****************************************************************//**
+*	This just sets the selected components to have a deform weight of 0.
+*	Pass a set of components.
+*
+*********************************************************************/
+global proc flattenDeformedPolyMeshArea( string $flags )
+{
+/*
+global proc flattenDeformedPolyMeshArea( string $obj, string $set , string $ft )
+{*/
+	wizLog ("[@] flattenDeformedPolyMeshArea\n");
+	string $obj;
+	string $ft, $set;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break;
+				
+			case "-s" : case "-set" :
+			$set = $tok[($i + 1)];
+			break ;
+			
+			case "-ft" : case "-featureType" :
+			$ft = $tok[($i + 1)];
+			break ;			
+						
+		}
+	}
+	
+	float $margin = float(getWizCraftAttr("-obj " + $obj + " -ft " + $ft + " -attr FlatMargin"));
+    if (`size $set` > 0){
+		select -r $set;
+	}
+    string $rf[] = `ls -sl`;
+
+    string $def[] = `findRelatedDeformer $obj`;
+    string $texDef[] = `ls -typ textureDeformer $def`;
+	if (`size $texDef` == 0){
+		wizLog ("	[!] No Texture Deformer Found To Flatten [!]");
+		return ;
+	}
+    for ($i=0;$i<`size $rf`;$i++){
+        // Method 1 : make ramps with black areas 
+        /*
+        float $mmuv[] = getMinMaxUVArea({$rf[$i]});
+        //print ("Min U : " + $mmuv[0] + "Min V : " + $mmuv[1] + "Max U : " + $mmuv[2] + "Max V : " + $mmuv[2] + "\n");
+        $mmuv[0] = $mmuv[0] + $margin;
+        $mmuv[1] = $mmuv[1] - $margin;
+        $mmuv[2] = $mmuv[2] + $margin;
+        $mmuv[3] = $mmuv[3] - $margin;
+        string $newRampMask = makeUVAreaMaskRamp(($obj + "RoofAreaMaskRamp"), $mmuv);
+        */
+        
+        //Method 2 : set texture deformer weights to 0
+        select -r $rf;
+        ConvertSelectionToVertices;
+        ShrinkPolygonSelectionRegion;
+        percent -v 0.0 $texDef[0];        
+        wizLog ("	[-] Flattened Roof Areaa : " + $rf[$i] + " [-]");
+    }
+    
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         WIZCRAFT HAIR
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//@ WIZ CRAFT PLACE LOCATORS ON SURFACE USING HAIR SYSTEM
+//====================================================================
+/*****************************************************************//**
+	Utilize the nHair system of placing follicles on an objects
+	surface to place locators on the surface.
+	<hr>
+	<b>Synopsis</b><br>
+	wizCraftPlaceLocatorsOnSurfaceUsingHairSystem [-tag1 string] [-tag2 linear] <br>
+	This ensures even placement of objects.
+	nHair objects use presets named wizCraft(nodeType)
+	
+	<b>Return value</b><br>
+	string[] an array of locators.
+	
+	<b>Flags</b><br>
+	-tag1, -tag2
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName($string, 2);
+	
+	</code>
+*********************************************************************/
+global proc string[] wizCraftPlaceLocatorsOnSurfaceUsingHairSystem( string $tags )
+{
+	wizLog ("[@] wizCraftPlaceLocatorsOnSurfaceUsingHairSystem\n");
+	wizlog ("	[*] wizCraftPlaceLocatorsOnSurfaceUsingHairSystem(\"" + $tags + "\");");
+
+	string $obj, $ft, $name, $baldmap;
+	int $uCount, $vCount;
+	int $delHair;
+
+	string $tok[] = tokenizeString($tags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break;
+				
+			case "-ft" : case "-featureType" :
+			$ft = $tok[($i + 1)];
+			break;
+			
+			case "-n" : case "-name" :
+			$name = $tok[($i + 1)];
+			break;
+			
+			case "-u" : case "-uCount" :
+			$uCount = int($tok[($i + 1)]);
+			break;
+			
+			case "-v" : case "-vCount" :
+			$vCount = int($tok[($i + 1)]);
+			break;
+			
+			case "-bm" : case "-baldnessMap" :
+			$baldmap = $tok[($i + 1)];
+			break;
+			
+			case "-del" : case "-deleteHair" :
+			$delHair = int($tok[($i + 1)]);
+		}
+	}
+	
+	global string $WIZCRAFT_baseStructure;
+	global string $WIZCRAFT_objNN;
+	if ($baldmap == ""){
+		//string $baldmapq[] = wizCraftMGMT("-q -n -ft " + $ft + " -ot FeatureMaskMap");
+		string $baldmapq[] = wizCraftMGMT(("-q -n -s -ft " + $ft + " -ot FeatureMaskMap"));
+		select -r $baldmapq[0];
+		string $bmSel[] = `ls -sl`;
+		$baldmap = $bmSel[0];
+	}
+	//int $keepHistory = int(getWizCraftAttr("-obj " + $obj + " -attr KeepAnalysisHistory"));
+	int $normAlign = int(getWizCraftAttr("-obj " + $obj + " -attr NormalAlign -ft " + $ft));
+	
+	string $allLoc[];
+	
+	select -cl;
+	selectMode -o;
+	select -r $obj;
+	
+	wizLog ("	[#] Object : " + $obj + " [#]");
+	
+	int $dynamic = int(getWizCraftAttr("-obj " + $obj + " -attr DynamicHairs -ft " + $ft));
+	float $randomization = float(getWizCraftAttr("-obj " + $obj + " -attr HairRandomization -ft " + $ft));
+	float $hairLength = float(getWizCraftAttr("-obj " + $obj + " -attr HairLength -ft " + $ft));	
+	float $bboxSize[] = `getAttr ($obj + ".boundingBoxSize")`;
+	$hairLength = $bboxSize[1] * ($hairLength * 0.01);
+	
+	//Create the hair system
+	wizlog ("	[*] createHair " + $uCount + " " + $vCount + " 10 0 0 0 0 " + $hairLength + " " + $randomization + " 1 " + $dynamic + " 1;");	
+	createHair $uCount $vCount 10 0 0 0 0 $hairLength 0 1 1 1;
+	string $hsObjects[];
+	string $hs[] = `ls -typ hairSystem -sl`;	
+	
+	// set hairSytem to wizCraft preset
+	wizLog ("	[*] applyAttrPreset : wizCraftHairSystem To : " + $hs[0]);
+	applyAttrPreset $hs[0] wizCraftHairSystem 1;
+	
+	wizSelectHairSystemFolliclesOfType($hs, "all");
+	string $follicles[] = `ls -sl`;
+	wizCraftMGMT("-s -ft " + $ft + " -ot Follicles -sl");
+	
+	// set nucleus to wizCraft preset
+	string $nuc[] = `listConnections -t nucleus $hs[0]`;
+	wizLog ("	[*] applyAttrPreset " + $nuc[0] + " wizCraftNucleus 1;");
+	applyAttrPreset $nuc[0] wizCraftNucleus 1;
+	
+	string $hsSet[] = wizCraftMGMT("-s -grp -ft " + $ft + " -ot nHair -sl");
+	
+	wizLog ("	 [+] Hair System : " + stringArrayToString($hs , " ") + "\n");
+
+	// connect baldmap
+	if (`objExists $baldmap` > 0 && `attributeExists "baldnessMap" $hs[0]`){
+		wizLog ("	[#] Hair System : " + $hs[0] + "\n		[#] BaldnessMap : " + $baldmap + "\n");
+		connectAttr -force ($baldmap + ".outAlpha") ($hs[0] + ".baldnessMap");	
+	} else {
+		wizLog ("-w	[!] Cannot Connect BaldnessMap : " + $baldmap + "\n		[!] To : " + $hs[0] + "\n");
+	}
+	
+	// make the obj a collider if it's not already a collider
+	select -r $obj;
+	string $rels[] = `listRelatives -s $obj`;
+	string $nr[] = `listConnections -type nRigid $rels`;	
+	if (`size $nr` == 0){		
+		string $nRigid[] = `makeCollideNCloth`;
+		wizLog ("	[*] applyAttrPreset " + $nRigid[0] + " wizCraftnRigid 1;");
+		applyAttrPreset $nRigid[0] wizCraftnRigid 1;
+	}
+	
+	int $useFollicles; // this is probably not usefull we should always just use the pfx curves
+
+	// Select the pfxHair connected to the hairSystem and convert to curves
+	// the baldness map only makes the pfx disappear. We have to convert the pfx to curves
+	// and then select the curves. Then we can select the first cv in each curve and get a transform for locators
+	string $pfx[] = `listConnections -sh true -t pfxHair $hs[0]`;
+	string $c[];
+	if (`size $pfx` > 0){
+		// convert the pfx to curves
+		select -r $pfx;
+		wizCraftMGMT("-s -grp -ft " + $ft + " -ot nHairPfx -sl");		
+		doPaintEffectsToCurve( 1);
+		// doPaintEffectsToCurve does not return the curves that were created so we have to select the group that was created by name
+		select -r ($pfx[0] + "Curves");
+		wizCraftMGMT("-s -grp -ft " + $ft + " -ot nHairCurves -sl");
+		
+		//
+		$c = `listRelatives -typ nurbsCurve -ad ($pfx[0] + "Curves")`;
+		stringArrayRemoveDuplicates($c);
+		
+		select -r $c;		
+		wizCraftMGMT("-s -ft " + $ft + " -ot nHairCurves -sl");
+	} else {	
+		$useFollicles = 1;
+		
+	}
+	
+	select -cl;
+	
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//	Create a group to hold the locators	
+	//	Place spaceLocators at follicle positions and geometry constrain and normal constrain them
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	string $cpc[] = wizCraftMGMT("-q -n -ft " + $ft + " -ot ClosestPointConstraintIn");
+	string $cpom[] = wizCraftMGMT("-q -n -ft " + $ft + " -ot ClosestPointOnMesh");
+	
+	
+	// place locators at the base of the pfx curves and tangent constraint the locators
+	for ($i=0;$i<`size $c`;$i++){
+		string $slName[] = wizCraftMGMT("-q -n -ft " + $ft + " -ot Locator");
+		string $sl[] = `spaceLocator -n ($slName[0] + $i)`;
+		
+		// we may not have to do this namespace stuff
+		removeSelectedNamespaces();
+		$sl = `ls -sl`;
+		
+		// get the world space position of the first cv and move the locator to that position
+		float $pos[] = `xform -q -ws -t ($c[$i] + ".cv[0]")`;		
+		xform -ws -t $pos[0] $pos[1] $pos[2] $sl[0];	
+		
+		
+		/*
+		xform -ws -t $pos[0] $pos[1] $pos[2] $cpc[0];	
+		
+		int $cf = `getAttr ($cpom[0] + ".closestFaceIndex")`;
+		select -r ($obj + ".f[" + $cf + "]");
+		polySelectBorderShell 0;
+		string $f[] = `ls -fl -sl`;
+		*/
+		
+		///////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//	Add a attribute for area size.
+		//	
+		//	
+		//	
+		//	
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
+		
+		
+			/*
+			///////////////////////////////////////////////////////////////////////////////////////////////////////////
+			//	We could constrain the locator to base structure surface but we might as well
+			//	constrain to the hair curve. So... get rid of this below.
+			//////////////////////////////////////////////////////////////////////////////////////////////////////////
+			
+			global string $WIZCRAFT_baseStructure;
+			string $cnstTo = $obj;
+			if ($WIZCRAFT_baseStructure != ""){
+				$cnstTo = $WIZCRAFT_baseStructure;
+			}
+			geometryConstraint -w 1 $cnstTo $sl[0];
+			
+			string $normCon[] = `normalConstraint -w 1 -aim 0 1 0 -u 0 1 0 -wut "vector" -wu 0 1 0 $cnstTo $sl[0]`;
+			if ($WIZCRAFT_normAlign == 0){
+				delete $normCon;
+				if ($ft == "roof"){
+					setAttr ($sl[0] + ".rotateX") 0;
+					setAttr ($sl[0] + ".rotateZ") 0;
+				} else if ($ft == "overhang"){
+					setAttr ($sl[0] + ".rotateX") -180;
+					setAttr ($sl[0] + ".rotateZ") 0;
+				}
+			}
+			parent $sl[0] $bsGroup;
+			*/
+		
+		///////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//	We can parent the locator to the curve and then make a tangent constraint
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
+		string $ctr[] = `listTransforms $c[$i]`;
+		parent $sl[0] $ctr[0];		
+		tangentConstraint -weight 1 -aimVector 0 1 0 -upVector 0 1 0 -worldUpType "vector" -worldUpVector 0 1 0 $c[$i] $sl[0];
+		
+		$allLoc[`size $allLoc`] = $sl[0];
+	}
+	select -r $allLoc;
+	wizCraftMGMT("-s -ft " + $ft + " -ot BuildLocators -sl");
+	/*
+	// delete the history if requested. - probably a bad idea to use!
+	if ($delHair == 1 || $keepHistory == 0){
+		wizLog ("	[-] delete history : delete all hair system objects [-]");
+		//Delete the hair system
+		select -r $hs[0];
+		deleteEntireHairSystem;	
+		//And the nucleus
+		string $nuc[] = `ls -typ nucleus`;
+		delete $nuc;	
+	}
+	*/
+	return $allLoc;
+	
+}
+
+
+//@ WIZ CRAFT CREATE CLOSEST POINT ON MESH NODE
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-fa string] [-fb linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-fa, -fb
+	
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName("-fa aString -fb anotherString");
+	
+	</code>
+*********************************************************************/
+global proc string[] wizCraftCreateClosestPointOnMeshNode( string $obj , string $ft )
+{
+	wizlog ("[@] wizCraftCreateClosestPointOnMeshNode");
+	// Create a closest point on mesh node for getting information about mesh
+	string $cpcName[] = wizCraftMGMT("-q -n -ft " + $ft + " -ot ClosestPointConstraintIn");
+	string $cpomName[] = wizCraftMGMT("-q -n -ft " + $ft + " -ot ClosestPointOnMesh");
+	if (`objExists $cpcName[0]`){
+		return { $cpcName[0], $cpomName[0] };
+	}
+	
+	select -r $obj;
+	closestPointOn (1, 1);
+	string $cp[] = `ls -sl`;
+	string $cpom[] = `listConnections -type closestPointOnMesh $cp`;	
+	$cp[0] = renameWizRenameObject($cp[0], $cpcName[0]);
+	$cpom[0] = renameWizRenameObject($cpom[0], $cpomName[0]);
+	wizCraftMGMT("-ata " + $cpom[0]);
+	wizlog ("	[+] Closest Point On Mesh Node : " + $cpom[0]);
+
+	
+}
+
+//@ GET CLOSEST MESH COMPONENTS
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	getClosestMeshComponents [-fa string] [-fb linear] <br>
+	Valid Component Types : <br>
+	vertex <br>
+	face <br>
+	edge <br>
+	shellVertices <br>
+	shellEdges <br>
+	shellFaces <br>
+	shellEdgePerimeter <br>
+	
+	<b>Return value</b><br>
+	string[] requested components
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-type(-typ) <br>
+	-selected(-sl) <br>
+	-position(-pos) <br>
+	-transform(-tr) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $closestVertex[] = getClosestMeshComponents("-sl -typ v -pos 0 1 2");
+	string $shellFaces[] = getClosestMeshComponents("-sl -typ sf -tr pShere1");
+	string $uv[] = getClosestMeshComponents("-sl -typ uv -tr pShere1");
+	</code>
+*********************************************************************/
+global proc string[] getClosestMeshComponents( string $flags )
+{
+	wizlog ("[@] getClosestMeshComponents");
+	wizlog("	[#] Flags : " + $flags );
+	
+	string $type, $obj;
+	string $sel[];
+	float $pos[];
+	int $kcp;
+	int $useCp;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-typ" : case "-type" :
+			$type = $tok[($i + 1)];
+			break ;
+				
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;
+			
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;	
+
+			case "-pos" : case "-position" :
+			string $posStr[] = wizFlagArray($tok, $i);
+			$pos = stringArrayToFloatArray($posStr);
+			break ;
+			
+			case "-tr" : case "-transform" :
+			string $tr = $tok[($i + 1)];
+			$pos = `xform -q -ws -t $tr`;
+			break ;
+			
+			case "-kcp" : case "-keepClosestPoint" :
+			$kcp = 1;
+			wizlog ("	[#] Keep Closest Point On [#]");
+			break ;
+			/*
+			case "-cp" : case "-closestPosition" :
+			$useCp = 1;
+			break ;
+			*/
+		}
+	}
+		
+	select -r $obj;
+	//closestPointOn (1, 0);
+	closestPointOn (1, 1);
+	//closestPointOn (0, 1);
+	
+	string $cp[] = `ls -sl`;
+	//wizlog ("	[#] Closest Point Objects : " + (stringArrayToString($cp, " ")));
+	
+	xform -ws -t $pos[0] $pos[1] $pos[2] $cp[0];
+	string $cpom[] = `listConnections -type closestPointOnMesh $cp`;
+	int $cfi = `getAttr ($cpom[0] + ".closestFaceIndex")`;
+	int $cvi = `getAttr ($cpom[0] + ".closestVertexIndex")`;
+	float $pu = `getAttr ($cpom[0] + ".parameterU")`;
+	float $pv = `getAttr ($cpom[0] + ".parameterV")`;
+	$pos = `getAttr ($cpom[0] + ".position")`;
+	float $norm[] = `getAttr ($cpom[0] + ".normal")`;
+
+	if ($kcp == 0){
+		delete $cp;
+	}
+
+	string $return[];
+	string $e[];
+	switch ($type){
+		case "f" : case "face" :		
+		$return[`size $return`] = ($obj + ".f[" + $cfi + "]");
+		select -add $return;
+		break ;
+		
+		case "v" : case "vertex" :		
+		$return[`size $return`] = ($obj + ".vtx[" + $cfi + "]");
+		select -add $return;
+		break ;
+		
+		case "e" : case "edge" :		
+		select -r ($obj + ".f[" + $cfi + "]");
+		ConvertSelectionToEdges;
+		$e = `ls -fl -sl`;
+		$return = $e;
+		select -add $return;
+		break ;
+		
+		case "sf" : case "shellFaces" :
+		select -r ($obj + ".f[" + $cfi + "]");
+		polySelectBorderShell 0;
+		string $f[] = `ls -fl -sl`;
+		$return = $f;
+		select -add $return;
+		break ;
+		
+		case "sv" : case "shellVertices" :
+		select -r ($obj + ".f[" + $cfi + "]");
+		polySelectBorderShell 0;
+		ConvertSelectionToVertices;
+		string $v[] = `ls -fl -sl`;
+		$return = $v;
+		select -add $return;
+		break ;
+		
+		case "se" : case "shellEdges" :
+		select -r ($obj + ".f[" + $cfi + "]");
+		polySelectBorderShell 0;
+		ConvertSelectionToEdges;
+		$e = `ls -fl -sl`;
+		$return = $e;
+		select -add $return;
+		break ;
+		
+		case "sep" : case "shellEdgePerimeter" :
+		select -r ($obj + ".f[" + $cfi + "]");
+		polySelectBorderShell 0;
+		ConvertSelectionToEdgePerimeter;
+		$e = `ls -fl -sl`;
+		$return = $e;
+		select -add $return;
+		break ;
+		
+		case "uv" : case "uvParameter" :
+		$return[`size $return`] = $pu;
+		$return[`size $return`] = $pv;
+		break ;
+		
+		case "norm" : case "normal" :
+		$return = floatArrayToStringArray($norm);
+		select -add $return;
+		break ;
+		
+		case "pos" : case "position" :
+		$return = floatArrayToStringArray($pos);
+		select -add $return;
+		break ;
+				
+	}
+	
+	//wizlog ((niceArrayList("		[#] Closest " + $type + " : ", $return)));
+	//select -r $return;
+	
+	if ($kcp == 1){
+		//$return = appendStringArray($return, $cp, `size $cp`);
+		$return[`size $return`] = $cpom[0];
+	}
+	
+	if (`size $return` == 0){
+		wizlog ("-e		ERROR : No Components Selected");
+		return { "" };
+	}
+	return $return;
+}
+
+//@ WIZ CRAFT CREATE AREA PERIMETER CURVES
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-fa string] [-fb linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-featureType(-ft) <br>
+	
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName("-fa aString -fb anotherString");
+	
+	</code>
+*********************************************************************/
+global proc wizCraftCreateAreaPerimeterCurves( string $flags )
+{
+	wizlog ("[@] wizCraftCreateAreaPerimeterCurves");
+	
+	string $obj, $ft;
+	string $sel[];
+	int $sl;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-ft" : case "-featureType" :
+			$ft = $tok[($i + 1)];
+			break ;
+			
+			case "-sl" : case "-selected" :
+			wizlog ("	[-sl]");
+			$sel = `ls -sl`;
+			$sl = 1;
+			break ;
+
+			
+		}
+	}
+	
+	if ($sl == 1){
+		wizlog ("	[+] Create Area Perimeter Curves From Selection [+]");
+		ConvertSelectionToEdgePerimeter;
+		string $e[] = `ls -fl -sl`;
+		string $areaCurve[] = createCurveFromPolyEdge($e);
+		
+		return ;
+	}
+	
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//	Make Option to make perimeter curves for all shells or just shells with build locators.
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	string $vSet[] = wizCraftMGMT("-q -n -s -obj " + $obj + " -ft " + $ft + " -ot VertexSelection");
+	
+	
+	string $buildLoc[];
+	string $buildLocSet[] = wizCraftMGMT("-q -n -s -ft " + $ft + " -ot BuildLocators");
+	if (`objExists $buildLocSet[0]`){
+		select -r $buildLocSet;
+		$buildLoc = `ls -sl`;
+	} else {
+		wizlog ("	[!] Can Not Build Area Perimeter Curves Without Build Locators [!]");
+		return ;
+	}
+	
+	string $areaCurves[];
+	for ($i=0;$i<`size $buildLoc`;$i++){
+		select -r $buildLoc[$i];
+		string $e[] = getClosestMeshComponents("-obj " + $obj + " -tr " + $buildLoc[$i] + " -typ shellEdgePerimeter");
+		string $areaEdgeSet[] = wizCraftMGMT("-s -grp -bd -ft " + $ft + " -ot AreaPerimeterEdges");
+		wizCraftMGMT("-bd -ft " + $ft + "_edges");
+		
+		string $areaCurve[] = createCurveFromPolyEdge($e);
+		appendStringArray($areaCurves, $areaCurve, `size $areaCurve`);
+		
+	}
+	
+	select -r $areaCurves;
+	string $areaCurveSet[] = wizCraftMGMT("-s -grp -ft " + $ft + " -ot AreaPerimeterCurves");
+	wizlog((niceArrayList("		[+] Area Perimeter Curves : ", $areaCurves)));
+	
+	
+	
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         GET COMPONENTS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//@ GET RANDOM OBJECT FROM COMPONENT POOL
+//====================================================================
+/*****************************************************************//**
+	Gets a random component from a component pool.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-fa string] [-fb linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string a random component object.
+	
+	<b>Flags</b><br>
+	
+	<hr>
+	<b>Related</b><br>
+	
+	<b>Examples</b><br>
+	<code>
+	string $bObj = getRandomObjectFromComponentPool("wizCraft", "componentPoolName");
+	
+	</code>
+*********************************************************************/
+global proc string getRandomObjectFromComponentPool( string $wc, string $cpName )
+{
+	wizLog ("[@] getRandomObjectFromComponentPool\n");
+    string $cp = `getAttr ($wc + "." + $cpName)`;
+	if (`attributeExists $cpName $wc` == 0){
+		wizLog("	[!!!] " + $wc + " DOES NOT HAVE THE ATTRIBUTE POOL : " + $cpName + " [!!!]\n");
+		return "";
+	}
+    string $sel[] = tokenizeString($cp, " ");
+	wizLog ((niceArrayList("		[#] Random Component Pool : ", $sel)));
+	
+    int $ranSel = randInt(0, (`size $sel` - 1));
+	wizLog ("	[#] Selected Component : " + $sel[$ranSel]);
+	if (`size $sel[$ranSel]` == 0){
+		wizLog ("-w 	[!] Selected Component Is Empty [!]");
+		return "";
+	}
+    //If the name is not a valid object name then it must be a reference file path
+    //In which case... reference the file
+	if (`objExists ($sel[$ranSel])` == 0){
+    //if (`isValidObjectName ($sel[$ranSel])` == 0){
+		//Reference the file and get the new nodes
+		wizLog (("	[-] Referencing Component : " + $sel[$ranSel] + "\n"));
+		string $ns = wizGetNamespaceForFile($sel[$ranSel]);
+		string $rnn[] = `file -r -type "mayaBinary" -pmt false -gr -mergeNamespacesOnClash false -namespace $ns -options "v=0;" -rnn $sel[$ranSel]`;
+		/*
+		// Select the group was created when referencing file
+		string $rGroup[] = `ls -sl`;
+		// Put the pivot at the center of the world
+		xform -ws -piv 0 0 0 $rGroup[0];
+		*/
+		
+		//string $rnn[] = wizReferenceFileReturnNewNodes($sel[$ranSel]);
+		wizLog (("	[-] " + `size $rnn` + " New Nodes Added - \n"));
+		
+		string $wcObj = wizCraftSmartSelectBuildComponent($rnn);
+		if ($wcObj == ""){
+			wizLog ("	[!] No wizCraft Build Objects Found [!] \n");
+			
+			return "";
+		}
+		return $wcObj;
+			
+    }
+	
+    return $sel[$ranSel];
+}
+
+
+
+//@ WIZCRAFT DUPLICATE OBJECT
+//====================================================================
+/*****************************************************************//**
+*	Duplicates objects for wizCraft building.
+*
+*********************************************************************/
+global proc string[] wizCraftDuplicateObject( string $obj, int $count, string $dupMethod )
+{
+	wizLog ("[@] wizCraftDuplicateObject\n");
+    // valid methods: duplicate, instance, reference copy
+    string $dupCommand;
+	string $dup[];
+	string $allDup[];
+	wizLog ("	[#] Duplication Object : " + $obj + "\n");
+	wizLog ("	[#] Duplication Count : " + $count + "\n");
+	wizLog ("	[#] Duplication Method : " + $dupMethod + "\n");
+	
+	//_________________________________________
+	// WizCraftAsset
+	if ((nodeType ($obj)) == "dagContainer"){
+		if (`attributeExists "wizAssetType" $obj`){			
+			wizlog ("	[#] Duplicate WizCraftAsset [#]");
+			string $wizAssetType = `getAttr -as ($obj + ".wizAssetType")`;
+			if ($wizAssetType == "referencePoolAsset"){
+				wizlog ("	[#] Reference Pool Asset [#]");
+				string $refPoolRef[] = loadReferencePoolReference("-rp " + $obj);
+				wizlog (niceArrayList("	[#] Reference Pool Asset Loaded [#]", $refPoolRef));
+				return $refPoolRef;
+			}
+		}
+
+    }
+	
+	//_________________________________________
+	// Instance
+	if ($dupMethod == "instance"){
+		$dupCommand = "instance -lf " + $obj;			
+		for ($p=0;$p<$count;$p++){
+			$dup = `eval($dupCommand)`;
+			appendStringArray($allDup, $dup, `size $dup`);
+		}
+		
+		
+	} 
+	
+	//_________________________________________
+	// Reference Copy	
+	if ($dupMethod == "referenceCopy" || $dupMethod == "ReferenceCopy" || $dupMethod == "reference copy"){
+		for ($p=0;$p<$count;$p++){
+			string $filepath;
+			string $refObj = $obj;
+			// if the object is not referenced make sure it's not a reference that has been grouped
+			if ((catchQuiet($filepath = `referenceQuery -f $obj`)) == 1){
+				string $ad[] = `listRelatives -ad $obj`;
+				for ($i=0;$i<`size $ad`;$i++){
+					if ((catchQuiet(`referenceQuery -f $ad[$i]`)) == 0){	
+						$filepath = `referenceQuery -f $ad[$i]`;
+						$refObj = $ad[$i];
+						break ;
+					}
+				}
+				if (`size $filepath` == 0){
+					wizLog("	[!] Object Is Not Referenced : " + $obj + " : Making Duplicate Instead [!]");
+					$dupMethod = "duplicate";
+					break ;
+				}				
+			} 
+			
+			$filepath = `referenceQuery -f $refObj`;
+			
+			string $ns = wizGetNamespaceForFile($filepath);
+			
+			//1: `file -r -type "mayaBinary" -gl -options "v=0;p=17;f=0" -pmt false -rnn $filepath`;
+			//2: `file -r -type "mayaBinary" -pmt false -gl -shd "displayLayers" -shd "shadingNetworks" -shd "renderLayersByName" -mergeNamespacesOnClash false -options "v=0;" -rnn $filepath`;
+			//3: `file -r -type "mayaBinary" -pmt false -gl -shd "displayLayers" -shd "shadingNetworks" -shd "renderLayersByName" -mergeNamespacesOnClash false -options "v=0;" -rnn $filepath`;
+			//4: `file -r -type "mayaBinary" -pmt false -gl -mergeNamespacesOnClash false -namespace $basename -options "v=0;" -rnn $filepath`;
+			string $rnn[] = `file -r -type "mayaBinary" -pmt false -mergeNamespacesOnClash false -namespace $ns -options "v=0;" -rnn $filepath`;
+			string $nias[] = `ls -ni -as $rnn`;			
+			appendStringArray($allDup, $nias, `size $nias`);
+		}
+	}
+	
+	//_________________________________________
+	// Duplicate
+	if ($dupMethod == "duplicate" || $dupMethod == "copy" || $dupMethod == "Duplicate" || $dupMethod == "Copy" || $dupMethod == "Dup" || $dupMethod == "dup"){ 
+		$dupCommand = "duplicate -rr -renameChildren " + $obj;
+		for ($p=0;$p<$count;$p++){
+			$dup = `eval($dupCommand)`;
+			appendStringArray($allDup, $dup, `size $dup`);
+		}
+	}
+	
+	wizLog ("	[*] " + $dupCommand + " [*] \n");
+
+	return $allDup;
+	
+}
+
+//@ WIZ CRAFT SMART SELECT BUILD COMPONENT
+//====================================================================
+/*****************************************************************//**
+	Finds wizCraft asset objects or top level transforms of geometry objects.
+	<hr>
+	<b>Synopsis</b><br>
+	wizCraftSmartSelectBuildComponent [string $sel[]] <br>	
+	Pass a selection of objects.
+	Returns only the first valid object. So scene can really only contain one valid object or this will not work.
+	First it looks for wizCraftComponentAssets, cBldrAssets, and lBldrAssets.
+	If none are found then it will select the first top level transform that it finds
+	that has visible geometry inside it.
+	
+	<b>Return value</b><br>
+	string a validated wizCraft object.
+	
+	<b>Flags</b><br>
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	string $wizCraftObj = wizCraftSmartSelectBuildComponent(`ls -sl`);
+	
+	</code>
+*********************************************************************/
+global proc string wizCraftSmartSelectBuildComponent( string $sel[] )
+{
+	wizLog ("[@] wizCraftSmartSelectBuildComponent\n");
+	wizLog ("	[-] Looking For Object To Build On [-] \n");
+	string $ass[] = lsWizAssetOfType($sel, "-typ cBldrAsset -typ lBldrAsset -typ wizCraftComponentAsset -typ textureLayerAsset");
+	if (`size $ass` == 0){
+		wizLog ("	[!] No cBldr, lBldr, or wizCraftComponent Assets Found, Looking For Geometry Objects ! \n");
+		string $nias[] = `ls -ni -as $sel`;
+		wizLog ((niceArrayList(" 	[-] Top Level Transforms : ", $nias)));
+		
+		for ($i=0;$i<`size $nias`;$i++){
+			select -r -hi -vis $nias[$i];
+			
+			string $vishi[] = `ls -sl`;
+			wizLog ((printNiceArrayList("	 - Visibile Hierarchy : ", $vishi)));
+			string $geo[] = smartSelectGeometryObjects($vishi);
+			wizLog ((niceArrayList("	 [-] Geometry Objects : ", $geo)));
+			if (`size $geo` > 0){
+				//select -r $return;
+				wizLog ("	[-] Build Object : " + $nias[$i] + " : Found - \n");
+				return $nias[$i];	
+				
+			}
+		}				
+		
+		if (`size $nias` == 0){
+			wizLog ("	[!] No wizCraft Build Objects Found [!] \n");
+			return "";
+		} 
+				
+	} else {
+		wizLog ("	[-] WizCraft Object : " + $ass[0] + " : Found [-] \n");
+		return $ass[0];
+	}
+	
+	return "";
+		
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         BUILD ON STRUCTURE
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//@ DO BUILD ON WIZ CRAFT STRUCTURE
+//====================================================================
+/*****************************************************************//**
+	This begins the building process after wizCraft analysis is done
+	on a structure.
+	<hr>
+	<b>Synopsis</b><br>
+	doBuildOnWizCraftStructure [string $obj] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	none.
+	
+	<b>Flags</b><br>
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	string $sel[] = `ls -sl`;
+	doBuildOnWizCraftStructure($sel[0]);
+	
+	</code>
+*********************************************************************/
+global proc doBuildOnWizCraftStructure( string $obj )
+{
+	wizLog("[@] doBuildOnWizCraftStructure");
+	string $pools[] = getWizCraftPoolNames();
+	string $nn = makeNiceName($obj);
+	global string $WIZCRAFT_liveWizCraftAsset;
+	
+	wizProgressWindowStart((" - wizCraft Build - "), ("Building..."), 1);
+    wizProgressWindowMinMax(0,3);     
+	wizProgressWindowStep(1);
+	
+	string $ft[] = wizCraftMGMT("-featureTypes");
+	
+	for ($i=0;$i<`size $ft`;$i++){	
+		
+		// If build is not checked then go on to the next featureType		
+		int $doBuild = int(getWizCraftAttr("-obj " + $obj + " -attr Build -ft " + $ft[$i]));
+		if ($doBuild == 0){
+			continue ;
+		}
+		
+		//_________________________________________
+		// Straighten Curves
+	
+		int $straightCurves = int(getWizCraftAttr("-obj " + $obj + " -attr StraightenHairCurves -ft " + $ft[$i]));
+		
+		if ($straightCurves){
+			string $nHairCurves[] = wizCraftMGMT("-q -s -n -ft " + $ft[$i] + " -ot nHairCurves");
+			if (`objExists $nHairCurves[0]`){
+				select -r $nHairCurves[0];
+				wizlog ("	[-] Straighten And Bend Sharp Curve Angles [-]");
+				straightenAndBendSharpCurveAngles(`ls -sl`);
+			}
+		}				
+		
+		//_________________________________________
+		// Do Build
+						
+		// get the set for the feature type locators
+		string $buildLoc[];
+		string $buildLocSet[] = wizCraftMGMT("-q -n -s -ft " + $ft[$i] + " -ot BuildLocators");
+		if (`objExists $buildLocSet[0]`){
+			select -r $buildLocSet;
+			$buildLoc = `ls -sl`;
+		}		
+		
+		if (`size $buildLoc` > 0){
+			wizLog ("	- " + `size $buildLoc` + " To Build " + (capitalizeString($ft[$i])) + " Components On - \n");
+
+		string $buildComp[] = doBuildOnStructureLocators($obj, $buildLoc, ($ft[$i] + "ComponentPool"), $ft[$i] );
+		if (`size $buildComp` == 0){
+				wizLog ("	[!] No " + (capitalizeString($ft[$i])) + " Components Built [!] \n");
+			} else {			
+				select -r $buildComp;
+				string $cSet[] = wizCraftMGMT("-s -grp -ft " + $ft[$i] + " -ot Components -sl");				
+				wizLog("	[+] " + $WIZCRAFT_liveWizCraftAsset + " " + (capitalizeString($ft[$i])) + " Component Set : " + (stringArrayToString($cSet, " ")) + "[+]");
+				
+			}
+			
+			        
+			if (wizProgressCancelled() == 1){ return; }
+			
+		}
+		
+		//_________________________________________
+		// Do Surface Tiling
+		
+		//string $tilePoolTiles[] = wizCraftMGMT("-pool SurfaceTilePool -ft " + $ft[$i]);
+
+		//wizlog ((niceArrayList("	[#] Surface Tiles [#]", $tilePoolTiles)));
+		
+		/*
+		string $surfTiles[];
+		string $surfTileSets[] = wizCraftMGMT("-q -n -s -ft " + $ft[$i] + " -ot SurfaceTileSelSets");
+		if (`objExists $surfTileSets[0]`){
+			select -r $surfTileSets;
+			$surfTiles = `ls -sl`;
+		}
+		
+		if (`size $surfTiles` > 0){
+		
+		*/
+			int $uTiles = int(getWizCraftAttr("-obj " + $obj + " -attr SurfaceUTiles -ft " + $ft[$i]));
+			int $vTiles = int(getWizCraftAttr("-obj " + $obj + " -attr SurfaceVTiles -ft " + $ft[$i]));
+			
+			// <!ToDoWiz!> Ordering must be implemented in surface tile proc
+			string $stso = getWizCraftAttr(("-obj " + $obj + " -attr SurfaceTileOrdering -ft " + $ft[$i]));
+			string $strf = getWizCraftAttr(("-obj " + $obj + " -attr TileRandomFrequency -ft " + $ft[$i]));
+			wizlog ("	[*] " + "wizCraftTileSurface(\"-wc " + $WIZCRAFT_liveWizCraftAsset + " -obj " + $obj + " -ft " + $ft[$i] + " -u " + $uTiles + " -v " + $vTiles + "\");");
+			wizCraftTileSurface("-wc " + $WIZCRAFT_liveWizCraftAsset + " -obj " + $obj + " -ft " + $ft[$i] + " -u " + $uTiles + " -v " + $vTiles);
+		
+		/*
+		
+		string $tilePoolTiles[] = wizCraftMGMT("-pool SurfaceTilePool -ft " + $ft[$i]);
+		
+		
+			select -r $obj;
+			select -add $tilePoolTiles[0];
+			wizCraftTileSurface("-sl -u " + $uTiles + " -v " + $vTiles);
+			*/
+		/*
+		}
+		*/
+		
+		if (wizProgressCancelled() == 1){ return; }
+		
+		wizProgressWindowStep(1);
+		
+	}
+		
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//	Call build using callback. So we can wait till all the references are added before
+	//	doing to much at once.
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	wizCraftCallback("-exall buildCall", "");
+
+	wizProgressWindowEnd();
+	
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         BUILD METHODS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//@ DO BUILD ON STRUCTURE LOCATORS
+//====================================================================
+global proc string[] doBuildOnStructureLocators( string $obj, string $loc[], string $pool, string $ft )
+{
+	wizLog ("[@] doBuildOnStructureLocators\n");
+	global string $WIZCRAFT_liveWizCraftAsset;
+	
+	int $autoBuildMode = int(getWizCraftAttr("-obj " + $obj + " -attr autoBuildMode"));
+	string $dupType = getWizCraftAttr("-obj " + $obj + " -ft " + $ft + " -attr DuplicationType");	
+
+	string $bObj = getRandomObjectFromComponentPool($WIZCRAFT_liveWizCraftAsset, $pool);
+	int $ranEveryComp = int(getWizCraftAttr("-obj " + $obj + " -attr RandomizeEveryComponent -ft " + $ft));
+	
+	string $allDup[];
+	string $curveReplaceSets[];
+	for ($i=0;$i<`size $loc`;$i++){
+		
+		string $dup[];
+		if ($ranEveryComp){
+			$dup[0] = getRandomObjectFromComponentPool($WIZCRAFT_liveWizCraftAsset, $pool);
+		} else {
+			// make a duplicate of the component
+			$dup = wizCraftDuplicateObject($bObj, 1, $dupType);
+		}
+		
+		//_________________________________________
+		// Make sure the component fits in area
+		
+		string $f[] = getClosestMeshComponents("-obj " + $obj + " -typ sf -tr " + $loc[$i]);
+		float $areaSize = getBoudingBoxAreaOfSelectedComponents();
+		
+		float $bboxSize[] = `getAttr ($dup[0] + ".boundingBoxSize")`;
+		float $fitSize = $bboxSize[0] * $bboxSize[2];
+		
+		string $fitOption = getWizCraftAttr("-obj " + $obj + " -attr FittingOption -ft " + $ft);
+		if ($fitOption == "mustFit" && $fitSize > $areaSize){
+			wizlog ("	[-] Object Does Not Fit In : Area Size " + $areaSize + " : Obj Size : " + $fitSize);
+			continue ;
+		} else if ($fitOption == "scaleToFit" && $fitSize > $areaSize){
+			float $sf = $areaSize / $fitSize;
+			float $scale[] = `getAttr ($dup[0] + ".scale")`;
+			xform -s ($scale[0] / $sf) ($scale[1] / $sf) ($scale[2] / $sf) $dup[0];
+			wizlog ("	[-] Scale To Fit : Area Size " + $areaSize + " : Obj Size : " + $fitSize);
+		}
+		
+		// put the dup at the locator transform
+		transferTransforms($loc[$i], $dup[0]);
+		
+		//_________________________________________
+		// Replace cBldr Curves
+		
+		// each locator is parented to a curve. get the curve shape and use that for the replacement
+		string $rel[] = `listRelatives -p $loc[$i]`;
+		string $s[] = `listRelatives -s $rel[0]`;
+		
+		select -r $dup;		
+		select -add $rel;
+		
+		string $crs[] = wizCraftMGMT(("-s -ft " + $ft + " -ot cBldrCurveReplacement -num " + $i));
+		appendStringArray($curveReplaceSets, $crs, `size $crs`);
+		int $replaceCurves = int(getWizCraftAttr("-obj " + $obj + " -attr ReplaceCBldrCurves -ft " + $ft));
+		if ($replaceCurves){
+			select -r $dup;
+			select -add $s;
+			cBldrReplaceCurveWithCurve(`ls -sl`);
+
+		}		
+			
+		
+		//_________________________________________
+		// Call Build
+		
+		// call build on objects so they do their own builing procedures
+		int $callBuild = int(getWizCraftAttr("-obj " + $obj + " -attr CallBuildOnComponents -ft " + $ft));
+		if ($autoBuildMode == 1 || $callBuild == 1){
+			select -r $dup;	
+			callBuildOnObject(("-sl -ft " + $ft));
+		}
+		
+		$allDup[`size $allDup`] = $dup[0];
+	}
+	
+	// Make a set of all the duplicates
+	select -r $allDup;	
+	string $sbSet[] = wizCraftMGMT("-s -ft " + $ft + " -ot StructureComponents -sl");
+	
+	// Make a set of all the cBldr curve replacement sets
+	//select -r $curveReplaceSets;
+	wizCraftMGMT("-s -ft " + $ft + " -ot AllcBldrCurveReplacement " + (stringArrayToString($curveReplaceSets, " ")));
+	
+	wizLog ("	[+] Structure Component Set : " + $sbSet[0]);
+
+	return $allDup;
+	
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         CALL BUILD
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+/*****************************************************************//**
+*	This calls build on a wizCraft object.
+*	Valid types include : wizCraftComponentAsset, cBldrAsset, lBldrAsset
+*
+*********************************************************************/
+global proc callBuildOnObjects( string $sel[] )
+{
+	wizLog("[@] callBuildOnObjects\n");
+	for ($i=0;$i<`size $sel`;$i++){
+		callBuildOnObject($sel[$i]);
+	}	
+}
+
+//@ CALL BUILD ON OBJECT
+//====================================================================
+/*****************************************************************//**
+	This will pass a command to a wizCraft Asset to build.
+	<hr>
+	<b>Synopsis</b><br>
+	callBuildOnObject [] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	none.
+	
+	<b>Flags</b><br>
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	
+	</code>
+*********************************************************************/
+global proc callBuildOnObject( string $flags )
+{/*
+global proc callBuildOnObject( string $obj )
+{*/
+	wizLog("[@] callBuildOnObject\n");
+	
+	string $obj, $ft;
+	string $sel[];
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$sel[0] = $tok[($i + 1)];
+			break ;
+				
+			case "-ft" : case "-featureType" :
+			$ft = $tok[($i + 1)];
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	
+	string $bldr = wizCraftSmartSelectBuildComponent($sel);
+	if (`size $bldr` == 0){
+		wizLog("	[!] No wizCraft Asset Found To Call Build On [!]\n");
+		return ;
+	}
+	
+	select -r $bldr;
+	if (`attributeExists "wizAssetType" $bldr` == 0){
+		wizLog("	[!] Obj : " + $bldr + " : Is Not A wizCraft Asset And Cannot Accept Build Call [!]\n");
+		return ;
+		
+	}
+	string $type = `getAttr -as ($bldr + ".wizAssetType")`;
+	wizLog("	[-] " + $sel[0] + " : Is A : " + $type + " : Calling Build -\n");
+	
+	string $buildCommand;
+	
+	switch ($type){
+		// cBldr
+		case "cBldrAsset" :				
+		$buildCommand = ("updateDuplicatesOnCurve(\"" + $bldr + "\");");
+		break;
+		
+		// lBldr
+		case "lBldrAsset" :
+		//rmbLBldrDoBuild($bldr);
+		$buildCommand = ("rmbLBldrDoBuild(\"" + $bldr + "\");");
+		break;
+		
+		// wizCraftComponent
+		case "wizCraftComponent" :
+		// What does wizcraft component do?
+		break;
+		
+		// textureLayerAsset
+		case "textureLayerAsset" :			
+		string $v[] = wizCraftMGMT("-s -q -n -ft " + $ft + " -ot VertexSelection");	
+		if (`objExists $v[0]` == 1){
+			$buildCommand = ("addTextureLayerToObject(\"-tl " + $bldr + " -set " + $v[0] + "\");");
+		}
+		break ;
+		
+		
+	}
+	wizLog ("	[*] " + $buildCommand + " [*]\n");
+	
+	// wait till we are done with everything else to do the building
+	/*
+	wizCraftCallback("-q buildCall", $buildCommand);
+	*/
+	evalDeferred($buildCommand);
+
+}
+
+//@ WIZ CRAFT REPLACEC BLDR CURVES
+//====================================================================
+/*****************************************************************//**
+	Finds all sets of cBldrCurveReplacement and calls cBldrReplaceCurveWithCurve on each set.
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	wizCraftReplacecBldrCurves();
+	
+	</code>
+*********************************************************************/
+global proc wizCraftReplacecBldrCurves()
+{
+	wizlog("[@] wizCraftReplacecBldrCurves");
+	global string $WIZCRAFT_featureTypes[];
+	for ($i=0;$i<`size $WIZCRAFT_featureTypes`;$i++){
+		string $cBldrCurves[] = wizCraftMGMT("-q -s -n -ft " + $WIZCRAFT_featureTypes[$i] + " -ot cBldrCurveReplacement");
+		if (`size $cBldrCurves` == 0){ continue; }
+		
+		string $crs[] = `ls ("*" + $cBldrCurves[0] + "*")`;
+		for ($p=0;$p<`size $crs`;$p++){
+			select -r $crs[$p];
+			cBldrReplaceCurveWithCurve(`ls -sl`);
+			wizLog("	[-] Replace Curves : " + $crs[$p]);
+			
+		}
+		
+	}
+
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         SIMULATION
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//@ WIZ CRAFT RUN SIMULATION
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-fa string] [-fb linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-fa, -fb
+	
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName("-fa aString -fb anotherString");
+	
+	</code>
+*********************************************************************/
+global proc wizCraftRunSimulation()
+{
+	wizlog ("[@] wizCraftRunSimulation");
+	
+	float $simTime = float(getWizCraftAttr("-attr simulationTime"));
+	
+	// play till the end of simulation time
+	playbackOptions -l "once" -max $simTime -aet $simTime;
+	// wait to continue with proc till playback stops
+	play -w -st true;
+	
+	wizlog ("	[-] Playback Complete [-]");
+	
+	//_________________________________________
+	// Set nHair start curves
+	string $ft[] = wizCraftMGMT("-featureTypes");
+	for ($i=0;$i<`size $ft`;$i++){
+		string $folSet[] = wizCraftMGMT("-q -s -n -ft " + $ft[$i] + " -ot Follicles");
+		if (`objExists $folSet[0]`){
+			wizlog ("	[-] Setting Start Curves On Follicle Set : " + $folSet[0]);
+			select -r $folSet[0];
+			setSelectedHairCurves "current" "start";
+		
+		}			
+			
+	}
+	
+	// rewind to beginning
+	float $minTime = `playbackOptions -q -min`;
+	currentTime -e $minTime;
+}
+
+//@ WIZ RUN SIMULATION
+//====================================================================
+/*****************************************************************//**
+	Runs playback for specified frames.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-fa string] [-fb linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-fa, -fb
+	
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	wizRunSimulation("-f 100.0");
+	
+	</code>
+*********************************************************************/
+global proc int wizRunSimulation( string $flags )
+{
+	wizlog ("[@] wizRunSimulation");
+	
+	float $frames = float(getWizCraftAttr("-attr simulationTime"));
+	int $rewind;
+	string $cc; // A command to run when playback has finished.
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-f" : case "-frames" :
+			$frames = float($tok[($i + 1)]);
+			break;
+			
+			case "-rw" : case "-rewind" :
+			$rewind = 1;
+			break;
+			
+			case "-cc" : case "-completionCommand" :
+			$cc = wizFlagString($tok, $i);
+			break ;
+			
+		}
+		
+	}
+			
+	// play till the end of simulation time
+	playbackOptions -l "once" -max $frames -aet $frames;
+	// wait to continue with proc till playback stops
+	play -w -st true;
+	
+	wizlog ("	[-] Playback Complete [-]");
+
+	if ($rewind){
+		// rewind to beginning
+		float $minTime = `playbackOptions -q -min`;
+		currentTime -e $minTime;
+	
+	}
+	
+	if (`size $cc` > 0){
+		eval ($cc);	
+	}
+	return 1;
+}
+
+
+
+//@ WIZ CLOSEST POINT FOLLICLE
+//====================================================================
+/*****************************************************************//**
+	Creates a hair follicle at a point closest to a mesh.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	The follicle can then be used as a constraint.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-transform(-tr) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $fol[] = wizClosestPointFollicle("-sl");
+	
+	</code>
+*********************************************************************/
+global proc string[] wizClosestPointFollicle( string $flags )
+{
+	string $mesh, $tr;
+	string $sel[];
+	int $edit;
+	int $dhs, $kcp;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$mesh = $tok[($i + 1)];
+			break ;
+				
+			case "-tr" : case "-transform" :
+			$tr = $tok[($i + 1)];
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			$tr = $sel[0];
+			$mesh = $sel[1];
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+			case "-dhs" : case "-deleteHairSystem" :
+			$dhs = 1;
+			break ;
+			
+			case "-kcp" : case "-keepClosestPoint" :
+			$kcp = 1;
+			break ;
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	string $f[] = getClosestMeshComponents("-obj " + $mesh + " -typ face -tr " + $tr );
+	string $uvCom = "-obj " + $mesh + " -typ uv -tr " + $tr ;
+	if ($kcp){
+		$uvCom = $uvCom + " -kcp";
+	}
+	string $uvString[] = getClosestMeshComponents($uvCom);
+	wizlog (niceArrayList("	[#] Closest Point [#]", $uvString));
+	string $uvStingUV[] = { $uvString[0], $uvString[1] };
+	float $uv[] = stringArrayToFloatArray($uvStingUV);
+	
+	//createHair 1 1 10 0 0 0 0 $hairLength 0 1 1 1;
+	select -r $f;
+	createHair 1 0 2 0 0 0 0 1 0 2 2 2;
+	
+	string $hsObjects[];
+	string $hs[] = `ls -typ hairSystem -sl`;	
+	
+	wizSelectHairSystemFolliclesOfType($hs, "all");
+	string $follicles[] = `ls -sl`;
+		
+	if ($kcp){
+		connectAttr ($uvString[2] + ".parameterU") ($follicles[0] + ".parameterU");
+		connectAttr ($uvString[2] + ".parameterV") ($follicles[0] + ".parameterV");
+	
+	} else {
+		setAttr ($follicles[0] + ".parameterU") $uv[0];
+		setAttr ($follicles[0] + ".parameterV") $uv[1];
+	}
+	
+	if ($dhs){		
+		string $nuc[] = `listConnections -t nucleus $hs[0]`;
+		delete $hs;
+		delete $nuc;
+	}
+	return {$follicles[0]};
+}
+
+
+global proc string[] wizCraftDuplicateObjectOnToFollicles( string $flags )
+{
+	string $obj, $type;
+	string $sel[];
+	string $fol[];
+	int $edit;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-fol" : case "-follicles" :
+			$fol = wizFlagArray($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	return {""};
+
+}
+
+global string $WIZ_materialPoolSuffix;
+$WIZ_materialPoolSuffix = "MaterialPool";
+//@ WIZ CRAFT MATERIAL POOL
+//====================================================================
+/*****************************************************************//**
+	Creates And Randomizes Sets of Objects And Materials.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] dependant on type requested.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-set(-s) <br>
+	-name(-n) <br>
+	-randomize(-rand) <br>
+	-all <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $matPoolSet[] = wizCraftMaterialPool("-n RingGold -sl");
+	
+	wizCraftMaterialPool("-rand -all");
+	
+	</code>
+*********************************************************************/
+global proc string[] wizCraftMaterialPool( string $flags )
+{
+	string $lssl[] = `ls -sl`;
+	global string $WIZ_materialPoolSuffix;
+	string $obj;
+	string $name;
+	string $setName = $WIZ_materialPoolSuffix;
+	string $sets[];
+	string $sel[];
+	int $edit;
+	int $all;
+	int $randomize;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			$sel[`size $sel`] = $obj;
+			break ;
+			
+			case "-n" : case "-name" :
+			$name = $tok[($i + 1)];
+			break ;
+			
+			case "-s" : case "-set" :
+			$sets[`size $sets`] = $tok[($i + 1)];
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+			case "-rand" : case "-randomize" : case "-r" :
+			$edit = 1;
+			$randomize = 1;
+			break ;
+			
+			case "-all" :
+			$all = 1;
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	if (`size $sets` == 0){
+		$sets = `ls -type dagContainer -sl`;
+		
+	}
+	
+	if ($all){	
+		$sets = `ls -r on ("*" + $WIZ_materialPoolSuffix + "*")`;		
+	}
+	
+	if ($edit){
+	
+	
+	} else {	
+		//_________________________________________
+		// Creat New Material Pool Set
+		if (`size $name` > 0){
+			$setName = $name + "_" + $setName;
+		}
+		if (`size $sel` == 0){
+			wizlog ("-w 	[!] No Objects Selected To Create Material Pool Set [!]");
+			return {""};
+		}
+		string $newSet = `sets -n $setName $sel`;
+		// Create a set to contain all materialPool sets
+		string $wcMatPoolSet;
+		if (`objExists "wizCraftMaterialPools"` == 0){
+			string $wcMatPoolSet = `sets -em -n "wizCraftMaterialPools"`;
+			
+		}	
+		sets -e -fe "wizCraftMaterialPools" $newSet;		
+
+		addAttr -ln "randomizeEachObject" -at bool $newSet;
+		setAttr -e -keyable true ($newSet + ".randomizeEachObject");
+		setAttr ($newSet + ".randomizeEachObject") 0;
+			
+		return { $newSet, $wcMatPoolSet };
+	}
+
+	//_________________________________________
+	// Randomize 
+	if ($randomize){
+		if (`size $sets` == 0){
+			wizlog ("-w		[!] A Material Pool Set Must Be Selected To Randomize [!]");
+			return {""};
+		}
+		string $assMat[];
+		for ($i=0;$i<`size $sets`;$i++){	
+			
+			// get the contents and materials in set
+			string $contents[] = `sets -q $sets[$i]`;
+			string $mat[] = `ls -mat $contents`;
+			string $objs[] = stringArrayRemove($mat, $contents);
+			
+			if (`size $mat` <= 1 || `size $objs` == 0){
+				continue ;
+			}
+			
+			// get a random indice
+			int $r = randInt(0, (`size $mat` - 1));
+			// assign the random material selection
+			
+			//_________________________________________
+			// Do we randomize each object or all objects collectively
+			int $ranEachObj;
+			if (`attributeExists "randomizeEachObject" $sets[$i]`){
+				int $reo = `getAttr ($sets[$i] + ".randomizeEachObject")`;
+				
+				if ($reo == 1){
+					$ranEachObj = 1;
+				}				
+			}
+			
+			if ($ranEachObj == 1){
+				for ($o=0;$o<`size $objs`;$o++){
+					$r = randInt(0, (`size $mat` - 1));
+					select -r $objs[$o];
+					select -add $mat[$r];
+					wizAssignMaterialToSelected("-mat " + $mat[$r] + " -sl");
+					
+					$assMat[`size $assMat`] = $mat[$r];	
+				}
+				
+			} else {
+				
+				select -r $objs;
+				select -add $mat[$r];
+				wizAssignMaterialToSelected("-mat " + $mat[$r] + " -sl");
+				
+				$assMat[`size $assMat`] = $mat[$r];
+				
+			}
+		}
+		
+		select -r $lssl;		
+		return $assMat;
+		
+	}
+	return {""};
+}
+
+//########################################################################################################
+//########################################################################################################
+///////////////////                                 //////////////////////////////////////////////////////
+//			                GARBAGE PILE
+///////////////////                                 //////////////////////////////////////////////////////
+//########################################################################################################
+//########################################################################################################
+
+
+//@ PROC NAME
+//====================================================================
+/*****************************************************************//**
+	This just adds objects to a group named "(type)_BuildGroup".
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-tag1 string] [-tag2 linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-tag1, -tag2
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName($string, 2);
+	
+	</code>
+*********************************************************************/
+global proc addToBuildGroup( string $sel[], string $buildType )
+{
+	wizLog("[@] addToBuildGroup");
+	string $bgName = ($buildType + "_BuildGroup");
+	wizLog("	[#] Build Group Name : " + $bgName);
+	if (`objExists $bgName` == 0){
+		group -em -w -n $bgName $sel;
+		return ;
+	}
+	
+	group -n $bgName $sel;
+	
+}
+
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                   CREATE BUILD SOURCE LOCATORS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//@ CREATE BUILD SOURCE AREAS FOR STRUCTURE AREAS
+//====================================================================
+/*======================| SUMMARY |===================================
+    This divides polygon areas into smaller evenly spaced area.
+    Sets and locators are create to organize areas.
+    This returns a list of sets created.
+	
+	This could also be modified to use distance to point select constraints.
+	
+	The nHair method probably works better.
+/*=======================| USAGE |====================================	
+
+====================================================================*/
+global proc string[] createBuildSourceAreasForStructureAreas( string $obj, string $areaFaces[], int $uObjCount, string $name, string $type )
+{
+	wizLog("[@] createBuildSourceAreasForStructureAreas\n");
+	global string $WIZCRAFT_roofComponentLocators[];
+	global string $WIZCRAFT_objNN;
+    string $bsGroup = `group -em -n ($obj + $name)`;
+    string $allSets[];
+    float $yda;
+    
+    for ($i=0;$i<`size $areaFaces`;$i++){
+        select -r $areaFaces[$i];
+        
+        // Get the center of the components
+        float $bc[] = getBoundingBoxCenterOfSelectedComponents();
+        // Create a locator and spin in y to get direction to do poly select constraint
+		string $slNamePrefix = removeNamespaceFromString($areaFaces[$i]);
+        string $csl[] = `spaceLocator -n ($slNamePrefix + "_center_locator")`;
+        string $dircsl[] = `spaceLocator -n ($slNamePrefix + "_dir_locator")`;
+        parent $csl[0] $bsGroup;
+        parent $dircsl $csl[0];
+        
+        xform -ws -t $bc[0] $bc[1] $bc[2] $csl[0];
+        move -os -r 0 0 1 $dircsl[0];
+        
+        float $rotY = 360 / $uObjCount;
+        //debugListString($dbl, (" -db 0 " + $rotY), $dbc, $dbm);
+        //debugListString($dbl, (" - U Obj Count : " + $uObjCount), $dbc, $dbm);
+        
+        for ($p=0;$p<$uObjCount;$p++){
+        
+            xform -r -ro 0 $rotY 0 $csl[0];
+            float $ro[] = `xform -q -ro $csl[0]`;
+            //debugListString($dbl, (" - Rotation : " + $ro[0] + ", " + $ro[1] + ", " + $ro[2]), $dbc, $dbm);
+            // debugListString($dbl, (" - Direction Rotation : " + ($rotY * ($i + 1))), $dbc, $dbm);
+           
+            float $dirPos[] = `xform -q -ws -t $dircsl[0]`;
+            float $dir[] = getDirectionFromTwoPoints($bc, $dirPos);
+                            
+            select -r $areaFaces[$i];
+            ConvertSelectionToVertices;
+            
+			//Select the faces in direction... keep that selection then select again
+			getComponentsOfTypeInBoundingBoxSide({$obj}, "v", $dir);
+			
+            string $bf[] = `polySelectConstraint -m 2 -t 0x0001 -d 2 -db 0 ($rotY * 0.1) -dp $bc[0] $bc[1] $bc[2]
+            -da $dir[0] $dir[1] $dir[2] -o 2 -oa $dir[0] 0 $dir[2] -ob 0 90 `;
+            
+            ConvertSelectionToFaces;
+            
+            string $pscc = ("polySelectConstraint -m 2 -t 0x0001 -d 2 -db 0 " + ($rotY * 0.1) + " -dp " + $bc[0] + " " + $bc[1] + " " + $bc[2] +
+            " -da " + " " + $dir[0] + " " + $dir[1] + " " + $dir[2] + " -o 2 -oa " + " " + $dir[0] + " 0 " + $dir[2] + " -ob 0 90;");
+           // print ($pscc + "\n");
+            
+            string $uAreaFaces[] = `ls -sl`;
+            if (`size $uAreaFaces` == 0){ polySelectConstraint -dis; continue;}
+            
+            string $uAreaFaceSet = createSetFromSelection($uAreaFaces, ($WIZCRAFT_objNN + "_" + $type + "_areaFaces_" + $i + $p));
+            $allSets[`size $allSets`] = $uAreaFaceSet;
+            
+            
+            float $bbc[] = getBoundingBoxCenterOfSelectedComponents();
+            string $areaSl[] = `spaceLocator -n ($WIZCRAFT_objNN + "_" + $type + "_locator_" + $i + $p)`;
+            xform -ws -t $bbc[0] $bbc[1] $bbc[2] $areaSl[0];
+            parent $areaSl[0] $bsGroup;
+            
+			if ($type == "roof"){
+				$WIZCRAFT_roofComponentLocators[`size $WIZCRAFT_roofComponentLocators`] = $areaSl[0];
+			}
+            //debugListArray($dbl, " - U Area Faces : ", $uAreaFaces, $dbc, $dbm, "[NEXT]", 100);
+                       
+            polySelectConstraint -dis;
+            
+        }
+        
+    }
+    string $bsGroupChild[] = `listRelatives -c -typ transform $bsGroup`;
+    string $locSet = createSetFromSelection($bsGroupChild, ($WIZCRAFT_objNN + "_" + $type + "_areaLocatorSet"));
+    $allSets[`size $allSets`] = $locSet;
+	
+    return $allSets;
+    //sets -fe $locSet $uAreaFaceSet
+            
+}
+
+
+//@ DO DIRECTIONAL BUILD ANALYSIS
+//====================================================================
+/*****************************************************************//**
+*	This analyzes the object and returns locators to build from.
+*	There are a number of settings that have to be set
+*	USAGE : Don't use this.
+*
+*********************************************************************/
+global proc string[] doDirectionalBuildAnalysis( string $obj, string $typeName, float $dir[], float $maxAngle, float $minFaceCount, float $minHeight, int $uObjCount, int $vObjCount, int $flatten)
+{
+	wizLog("[@] doDirectionalBuildAnalysis\n");
+	polyUVSet -currentUVSet -uvSet "map1";
+	
+	global string $WIZCRAFT_objNN;
+	string $allSets[]; // Put all the sets created in here.
+	string $cName = capitalizeString($typeName);
+
+	wizLog(wizDiv("s") + "	- " + $cName + " Directional Build Analysis - \n" + wizDiv("s"));
+	wizLog("	[*] doDirectionalBuildAnalysis(\"" + $obj + "\", \"" + $typeName + "\", {" + $dir[0] + ", " + $dir[1] + ", " + $dir[2] + " }, " + $maxAngle + ", " + $minFaceCount + ", " + $uObjCount + ", " + $vObjCount + ", " + $flatten + ");\n");
+	
+	//The goal here is to place locators spaced evenly over 
+	//the areas that qualify for being roof areas.
+	//We will go through a process of elimination with shells 
+	//But we also need to keep the shells in the grid layout that it is in.
+		
+	// Get the face count
+	select -r $obj;	
+	int $fco[] = `polyEvaluate -f`;
+	int $fCount = $fco[0];	
+	$minFaceCount = ($minFaceCount * $fCount) * 0.01;
+	wizLog ("	[-] Min " + $cName + " Percent Face Count : " + $minFaceCount + " - \n");
+	
+	selectMode -co;
+    selectType -pf true;
+	
+	//_________________________________________
+	// STEP 1
+	// First : Select areas facing upward. This is easy using poly select constraint.
+	
+    string $dirFaces[] = `polySelectConstraint -m 3 -t 0x0008 -o 1 -oa $dir[0] $dir[1] $dir[2] -ob 0 $maxAngle `;
+    string $dfSel[] = `ls -sl`;
+	polySelectConstraint -dis;	
+    //printNiceArrayList ($cName + " Faces : ", $dfSel);	
+	
+    if (`size $dfSel` == 0){  
+		wizLog("	[-] Select Constraint Selected No Faces For " + $cName + " Areas - \n");	
+		return {""};   
+	}		
+	select -r $dfSel;
+	
+	//_________________________________________
+	// STEP 2
+	//Get a selction of faces into a uv set.	
+	//Project Y uvs on roof and make sets from the shells	
+	
+	//Do this later just for assigning materials
+	//polyProjection -ch 1 -type Planar -ibd off -cm on -uvSetName ("roofUVSet") -kir -md y ;
+
+	string $newUVSetName = $typeName + "ShellSet";
+	ConvertSelectionToUVs;
+	polyCopyUV -cm true -uvs $newUVSetName;
+	polyUVSet -currentUVSet -uvSet $newUVSetName;
+		 
+	string $uvSets[] = createFacesSetsFromUVSetShells($obj, $newUVSetName);
+	
+	string $allUVSets = createSetFromSelection($uvSets, ($WIZCRAFT_objNN + $newUVSetName));
+	$allSets[`size $allSets`] = $allUVSets;
+
+	string $validFaceSets[] = getPolyShellSetsWithFaceCountGreaterThan($uvSets, $minFaceCount); 
+	$validFaceSets = getPolyShellSetsWithinHeightRange($validFaceSets, $minHeight, 9999999.9); 
+		
+	if (`size $validFaceSets` == 0){
+		wizLog("	[!] No " + $cName + " Face Areas In Valid Count Range (" + $minFaceCount + ") Were Found - \n");
+		polySelectConstraint -dis;
+		return {""};
+	}
+	
+	$validFaceSet = createSetFromSelection($validFaceSets, ($WIZCRAFT_objNN + "_" + $typeName + "_facesSet"));	
+	select -r $validFaceSet;
+	
+	// <ToDoWiz!> Make this into an option
+	//polyNormalizeUV -normalizeType 1 -preserveAspectRatio off -centerOnTile on ;
+	//ConvertSelectionToUVs;
+	polyMultiLayoutUV -lm 1 -sc 2 -rbf 0 -fr 1 -ps 0.2 -l 2 -psc 0 -su 1 -sv 1 -ou 0 -ov 0;
+	
+	//Invert the selection and delete the other uvs
+	InvertSelection;
+	polyMapDel -ch 1;
+	
+	polySelectConstraint -dis;
+			
+	if ($flatten){
+		if (`size $validFaceSet` > 0){
+			flattenDeformedPolyMeshArea("-obj " + $obj + " -set " + $validFaceSet + " -ft " + $typeName);
+		}
+	}
+	
+
+	/*
+	//Create a cylindrical projected uv set for hair follicle creation
+	select -r $roofSet;
+	string $polyProj[] = `polyCylindricalProjection -cm on`;
+	setAttr ($polyProj[0] + ".projectionHorizontalSweep") 360;
+	*/
+	
+	// Last : Use nHair system to make evenly space hairs on the uv set we made.
+	
+	//string $bsSets[] = createBuildSourceAreasForStructureAreas($obj, $validFaceSets, $uObjCount, "_" + $typeName + "_areaFaceSet", $typeName );
+	string $bsLoc[] = wizCraftPlaceLocatorsOnSurfaceUsingHairSystem(("-obj " + $obj + " " + " -u " + $uObjCount + " -v " + $vObjCount + " -typ " + $typeName + ("_" + $typeName + "_buildLocatorSet") + " -del"));
+	string $bsSets = createSetFromSelection($bsLoc, ($WIZCRAFT_objNN + "_" + $typeName + "_locatorSet"));
+		
+	$allSets[`size $allSets`] = $validFaceSet;
+	$allSets[`size $allSets`] = $bsSets;
+	
+	wizLog("	- " + `size $allSets` + " " + (capitalizeString($typeName)) + " Build Areas Were Found -\n");    
+	wizLog(niceArrayList ("		[+] " + $cName + " Build Locators - ", $bsLoc));
+	
+    polySelectConstraint -dis;
+	
+	select -r $obj;
+	
+    //polyUVSet -uvs $newUVSetName -delete ;
+	
+    createSetFromSelection($allSets, ($WIZCRAFT_objNN + "_" + $typeName + "_buildSet"));
+	wizLog (wizDiv("end"));
+	
+	return $bsLoc;
+	
+}
+
+
+global proc setWizCraftHairDefaultValues( string $hs )
+{
+	 
+	select -r $hs;
+
+	setAttr ($hs + ".stiffnessScale[0].stiffnessScale_Interp") 0;
+	setAttr ($hs + ".stiffnessScale[1].stiffnessScale_Interp") 0;
+	setAttr ($hs + ".stiffnessScale[1].stiffnessScale_Position") 0.05;
+	
+	setAttr ($hs + ".drag") 0;
+	setAttr ($hs + ".damp") 1;
+	setAttr ($hs + ".stretchResistance") 1;
+	setAttr ($hs + ".compressionResistance") 1;
+	setAttr ($hs + ".bendFollow") 0;
+	setAttr ($hs + ".hairsPerClump") 1;
+	
+}
+
+//@ CONSOLIDATE WIZ SETS
+//====================================================================
+/*****************************************************************//**
+	Puts common wiz sets into large sets for orginazation.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName("-obj someObject -q -sl");
+	
+	</code>
+*********************************************************************/
+global proc consolidateWizSets()
+{
+	string $wizSets[] = { "randomizerWizSet", "materialPoolSet" };
+	for ($i=0;$i<`size $wizSets`;$i++){
+		string $rset[] = `ls -r true ("*" + $wizSets[$i] + "*")`;
+		if (`size $rset` > 0){
+			if (`objExists ($wizSets[$i] + "s")` == 0){
+				sets -em -n ($wizSets[$i] + "s");
+			}
+			sets -fe ($wizSets[$i] + "s") $rset;
+		}
+	}
+	
+
+}
+
+/*
+global proc wizCraftMapSpread (	string $flags )
+{
+*/
+global proc wizCraftMapSpread (	string $objectToBeDuplicated, int $objectsNb, string $map,	float $threshold, float $placingFactor)
+{
+
+	// Start message
+	if (`exists colorAtPoint` != 1) { error "Cannot process because \"colorAtPoint\" MEL function does not exist.\n";}
+	if ($threshold > 1) { $threshold = 0.99; print("Threshold corrected to 0.99 (To prevent error).\n");}
+	print("\n\nProcessing started from the " + nodeType($map) + " texture called : \"" + $map + "\".\n");
+	waitCursor -state on;
+
+	int $objectsCount = 0;
+	while($objectsCount < $objectsNb) {
+
+		// Get random values for placement
+		float $randomU = `rand 0 1`;
+		float $randomV = `rand 0 1`;
+
+		// Analyse the map color at this point
+		float $alphaLevelAtPoint[] = `colorAtPoint -o A -u $randomU -v $randomV $map`;
+
+		// Check if the object can exist
+		if($alphaLevelAtPoint[0] >= $threshold) {
+
+			// An object can be created here. So place it.
+			float $x = $randomU*$placingFactor;
+			float $z = $randomV*$placingFactor;
+			string $duplicatedObject[] = `duplicate $objectToBeDuplicated`;
+			move $x 0 $z $duplicatedObject;
+
+			// Count one more object 
+			$objectsCount++;
+			// print ("\t" + $objectsCount + " . " + $objectToBeDuplicated + " duplicated to (" + $x + ", " + $z + ").\n");
+		}
+	}
+
+	// End message
+	waitCursor -state off;
+	print("Process successful : " + $objectsCount + " objects placed.\n\n");
+}
+
+
+
+//@ WIZ EXPORT SET
+//====================================================================
+/*****************************************************************//**
+	Creates sets that can be configured for automatic exporting.
+	<hr>
+	<b>Synopsis</b><br>
+	wizExportSet [-obj string] [-typ linear] <br>
+	Using "all" in set name will export the objects in set in all supported formats. <br>
+	Warning : Using underscores in reference files will mess up file naming. <br>
+	A export set should be named as follows: <br>
+		wiz_(name)_(fileType)_exportSet <br>
+		e.g. wiz_sphere1_all_exportSet <br>
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-newSet(-ns) <br>
+	-export(-ex) <br>
+	-exportAll(-ea) <br>
+	-name(-n) <br>
+	-extension(-ext) <br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	wizExportCacheFile(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $newExportSet[] = wizExportSet("-ns -sl");
+	wizExportSet("-exportAll");
+	
+	</code>
+*********************************************************************/
+
+global proc string[] wizOptimizeSet( string $flags )
+{
+	wizlog ("[@] wizOptimizeSet");
+	
+	string $obj, $type;
+	string $name;
+	string $ext = `optionMenuGrp -q -v wizExportSets_exportType_optionMenuGrp`;
+	string $sel[];
+	int $edit;
+	int $ctftSet;
+	int $lodSet;
+	int $tmSet;
+	int $optimizeAll;
+	int $export;
+	int $ns;
+	int $resX;
+	int $resY;
+	
+	
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+		
+			case "-ns" : case "-newSet" :
+			$ns = 1;
+			break ;
+			
+			case "-ex" : case "-export" :
+			$export = 1;
+			break ;
+			
+			case "-oa" : case "-optmizeAll" :
+			$optmizeAll = 1;
+			break ;
+			
+			case "-n" : case "-name" :
+			$name = $tok[($i + 1)];
+			break ;
+			
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			$sel[`size $sel`] = $obj;
+			break ;
+				
+			case "-typ" : case "-type" :
+			$type = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+					
+			case "-ext" : case "-extension" :
+			$ext = $tok[($i + 1)];
+			break ;
+			
+			case "-lod" : case "-levelOfDetail" :
+			$lodSet = 1;
+			break ;
+			
+			case "-tm" : case "-transferMaps" :
+			$tmSet = 1;
+			break ;
+			
+			case "-ctft" : case "-convertToFileTexture" :
+			$ctftSet = 1;
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	
+	string $setName;
+	if ($ns){	
+		$setName = "wiz";
+		if (`size $name` > 0){
+			$setName = $setName + "_" + $name;
+		} else {
+			$setName = $setName + "_ObjectName";
+		}
+		
+		$setName = $setName + "_optimizeSet";
+		
+		string $newSet = addSelectedObjectsToSet($sel, $setName);	
+		
+		//string $filename[] = wizCraftGetFileOutputPaths("-n " + $name + " -typ " + $type + " -ext " + $ext);
+	
+		string $imageType[] = { "png", "tif", "exr" };
+		
+		
+		for ($i=0;$i<`size $imageType`;$i++){				
+			if (`attributeExists $imageType[$i] $newSet` == 0){
+				addAttr -ln $imageType[$i] -at bool $newSet;
+				setAttr ($newSet + "." + $imageType[$i]) 1;
+			} else {
+				setAttr ($obj + "." + $imageType[$i]) 1;
+			}
+				
+		}
+		
+		if (`attributeExists "convertToFileTexture" $newSet` == 0){
+			addAttr -ln "convertToFileTexture" -at bool $newSet;
+			setAttr ($newSet + ".convertToFileTexture") 1;				
+		}
+		if (`attributeExists "transferNormalMap" $newSet` == 0){
+			addAttr -ln "transferNormalMap" -at bool $newSet;
+			setAttr ($newSet + ".transferNormalMap") 1;				
+		}
+		if (`attributeExists "transferDisplacementMap" $newSet` == 0){
+			addAttr -ln "transferDisplacementMap" -at bool $newSet;
+			setAttr ($newSet + ".transferDisplacementMap") 1;				
+		}
+		
+		/*
+		if (`attributeExists "diffuseMap" $newSet` == 0){
+			addAttr -ln "diffuseMap" -at bool $newSet;
+			setAttr ($newSet + ".diffuseMap") 1;				
+		}
+				
+		if (`attributeExists "displacementMap" $newSet` == 0){
+			addAttr -ln "displacementMap" -at bool $newSet;
+			setAttr ($newSet + ".displacementMap") 1;				
+		}
+		*/
+		
+		if (`attributeExists "resolutionX" $newSet` == 0){
+			addAttr -ln "resolutionX" -at long $newSet;
+			setAttr ($newSet + ".resolutionX") 1024;				
+		}
+		
+		if (`attributeExists "resolutionY" $newSet` == 0){
+			addAttr -ln "resolutionY" -at long $newSet;
+			setAttr ($newSet + ".resolutionY") 1024;				
+		}
+		
+		return { $newSet };
+	}
+			
+	if ($optimizeAll){
+		wizlog ("	[#] Optimizing All Optimize Sets [#]");
+		string $all[] = `ls -r true ("*optimizeSet")`;
+		for ($i=0;$i<`size $all`;$i++){
+						
+			string $tok[] = tokenizeString($all[$i], "_");						
+			$name = $tok[1];
+			
+			string $opSel[] = `sets -q $all[$i]`;
+			select -r $opSel;
+			string $eSl[] = `ls -sl`;
+			
+			wizlog (niceArrayList("	[#] Optmize Object(s) [#]", $opSel));
+			
+			if (`attributeExists "useFileName" $all[$i]` == 1){
+				int $useFileName = `getAttr ($all[$i] + ".useFileName")`;
+				if ($useFileName == 1){
+					string $sceneFile = `file -q -sn`;
+					string $sfSplice[] = wizSpliceFilePath($sceneFile, "-fn");
+					$name = $sfSplice[0];
+				}
+			}
+			
+			string $opCom;
+			
+			int $usd = `getAttr ($all[$i] + ".useSameDirectory")`;
+			if (`attributeExists "useSameDirectory" $all[$i]` == 1){
+				int $useSameDirectory = `getAttr ($all[$i] + ".useSameDirectory")`;
+				if ($useSameDirectory == 1){
+					$opCom = " -usd";
+				}
+			}
+			
+			///////////////////////////////////////////////////////////////////////////////////////////////////////////
+			//	Need to get the texture and object to convert!!!
+			//	
+			//	
+			//	
+			//	
+			//////////////////////////////////////////////////////////////////////////////////////////////////////////
+			
+			string $tex;
+			
+			int $ctft = `getAttr ($all[$i] + ".convertToFileTexture")`;
+			if ($ctft){
+				string $fin[] = wizCraftGetFileOutputPaths("-n " + $name + " -ext abc" + $opCom);
+				string $converted[] = `convertSolidTx -antiAlias 1-bm 3
+					-fts 0
+					-sp 0
+					-sh 0
+					-alpha 0
+					-doubleSided 0
+					-componentRange 0
+					-resolutionX $resX
+					-resolutionY $resY
+					-fileFormat $ext
+					-fin $fin
+					$tex
+					$sel[0]
+					`;
+			}
+			
+			
+		}
+			
+		
+	}
+	
+	
+	return {$setName};
+	
+	
+}
+
+
+//--------------------------------------------------------------------
+//////////////////////////////////////////////////////////////////////
+//			WIZ PROCESS KITBASH OBJ FILES
+//////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------
+
+global proc wizProcessKitbashObjFileInDirectory()
+{
+	string $dir = wizGetDirectory();
+	string $objFiles[] = wizGetAllFilesOfTypeInAllSubfoldersOfDirectory($dir, "OBJ");
+	for ($i=0;$i<`size $objFiles`;$i++){
+		file -import -type "OBJ"  -ignoreVersion -ra true -mergeNamespacesOnClash false -namespace "KitBash" -options "mo=1;lo=0"  -pr  -importFrameRate true  -importTimeRange "override" $objFiles[$i];
+
+		print ("Processing : " + $objFiles[$i] + "\n");
+		wizProcessKitbashObjFile();
+		wizExportOBJ($objFiles[$i]);
+		wizMeshThumbnailImage($objFiles[$i]);
+		
+		file -f -new;
+		print ("[ COMPLETE ] \n");
+	}
+
+	
+}
+
+global proc wizProcessKitbashObjFile()
+{
+
+	removeAllNamespaces();
+		
+	select -r -ado;
+	float $ranVal = rand(0.5, 0.15);
+	polyColorPerVertex -r $ranVal -g $ranVal -b $ranVal -a 1 -cdo;
+	string $shaderName = "kitbashBlinn1";
+	string $shader[] = wizCreateNewShader($shaderName,"blinn");
+	setAttr ($shaderName + ".color") -type double3 $ranVal $ranVal $ranVal ;
+	select -r -ado;
+	select -add $shader[1];	
+	sets -e -forceElement $shader[1];
+	
+	select -r -ado;
+
+}
+
+global proc wizObjThumbnailsInDirectory()
+{
+	string $dir = wizGetDirectory();
+	string $objFiles[] = wizGetAllFilesOfTypeInAllSubfoldersOfDirectory($dir, "OBJ");
+	for ($i=0;$i<`size $objFiles`;$i++){
+		file -import -type "OBJ" -pmt false -ignoreVersion -ra true -mergeNamespacesOnClash false -namespace "KitBash" -options "mo=1;lo=0"  -pr  -importFrameRate true  -importTimeRange "override" $objFiles[$i];
+
+		print ("Processing : " + $objFiles[$i] + "\n");
+		//wizProcessKitbashObjFile();
+		//wizExportOBJ($objFiles[$i]);
+		wizMeshThumbnailImage($objFiles[$i]);
+		
+		file -f -new;
+		print ("[ COMPLETE ] \n");
+	}
+
+	
+}
+
+global proc wizFbxThumbnailsInDirectory()
+{
+	string $dir = wizGetDirectory();
+	string $fbxFiles[] = wizGetAllFilesOfTypeInAllSubfoldersOfDirectory($dir, "fbx");
+	for ($i=0;$i<`size $fbxFiles`;$i++){
+		file -import -type "FBX" -pmt false -ignoreVersion -ra true -mergeNamespacesOnClash false -namespace "KitBash" -options "mo=1;lo=0"  -pr  -importFrameRate true  -importTimeRange "override" $fbxFiles[$i];
+
+		print ("Processing : " + $fbxFiles[$i] + "\n");
+		//wizProcessKitbashObjFile();
+		//wizExportOBJ($objFiles[$i]);
+		wizMeshThumbnailImage($fbxFiles[$i]);
+		
+		file -f -new;
+		print ("[ COMPLETE ] \n");
+	}
+
+	
+}
+
+global proc wizFixMPVRFBXFile( string $flags )
+{
+	int $initOnly = 0;
+	int $exportSel = 0;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-init" : 
+			$initOnly = 1;
+			break ;
+			
+			case "-exs" : 
+			$exportSel = 1;
+			break ;
+		}
+	} 
+	
+	if ($exportSel){
+		string $filename[] = wizCraftGetFileOutputPaths("-ext fbx");
+		wizlog ("[#] Exporting FBX File : " + $filename[0]);
+		wizExportFBX($filename[0]);
+		return ;
+	}
+	
+	/*
+	removeAllNamespaces();
+	*/
+	
+	string $voxelModel[] = `ls "*ReferenceModel_Selection_1"`;
+	if (`size $voxelModel` == 0){
+		print ("[*] No Voxel Mesh Found [*]\n");		
+	} else {
+		float $ranVal = rand(0.6, 0.1);
+		string $newShader[] = wizCreateNewShader(("voxelMeshMaterial"), "blinn");	
+		setAttr (("voxelMeshMaterial") + ".color") -type double3 $ranVal $ranVal $ranVal ;	
+		
+		select -r $voxelModel[0];
+		sets -e -forceElement $newShader[1];	
+	}
+	
+	
+	/*
+	string $sculptGroup = "SculptLayer_Layer_1";
+	string $checkForSculpt[] = `ls "*SculptLayer_Layer_1"`;
+	if (`size $checkForSculpt` == 0){
+		print ("[!] No SculptLayer_Layer_1 Found [!]\n");
+		return ;
+	}
+	
+	select -r "SculptLayer_Layer_1";
+	
+	setAttr ($sculptGroup + ".scale") 1.0 1.0 1.0;
+	
+	setAttr ($sculptGroup + ".rotate") 0.0 0.0 0.0;
+	//makeIdentity -apply true -t 1 -r 1 -s 1 -n 0 -pn 1;
+	*/
+	string $sculptGroup = `group -n "SculptLayer_Layer_1"`;
+	
+	string $refModels[];
+	// Replace duplicates with instances?
+	int $replaceInstances = 0;
+	if (`checkBox -q -v wizCraft_mpvrProcessingReplaceDuplicatesWithInstances_checkBox` == 1 ){
+		$refModels = wizMPVRReplaceDuplicatesWithInstances();	
+		$replaceInstances = 1;
+	}
+	
+	if ($initOnly){ return ; }
+	
+	// Assign a shader to ribbons and combine
+	//select -r "*Ribbon*";
+	
+	
+	
+	string $ribbons[] = `ls  "*Ribbon*"`;
+	if (`size $ribbons` > 0){
+		float $ranVal = rand(0.6, 0.1);
+		//polyColorPerVertex -r $ranVal -g $ranVal -b $ranVal -a 1 -cdo;
+	
+		string $ribbonShader[] = wizCreateNewShader("ribbonBlinn1", "blinn");	
+		setAttr "ribbonBlinn1.color" -type double3 $ranVal $ranVal $ranVal ;	
+		select -r $ribbons;
+		sets -e -forceElement $ribbonShader[1];
+		
+		select -r $ribbons;
+		string $ribbonGroup = `group -n "RibbonsGroup1" -p $sculptGroup`;
+		//doGroup 0 1 1;
+		
+	}
+		
+	
+	// Get all the geometry transforms
+	string $allGeo[] = getGeometryTransforms(`ls -dag`);
+	select -r $allGeo;
+	
+	//polyNormalPerVertex -ufn true;
+	
+	//select -r $allGeo;
+
+	string $nonRibbon[];
+	for ($i=0;$i<`size $allGeo`;$i++){
+		// Sort out the ribbons
+		int $sw = startsWith($allGeo[$i], "Ribbon");
+		
+		if ($sw == 0 && $allGeo[$i] != "ReferenceModel_Selection_1"){
+			$nonRibbon[`size $nonRibbon`] = $allGeo[$i];
+			
+		}
+		
+		select -r $allGeo[$i];
+		
+	}
+	
+	select -r $nonRibbon;
+	
+	
+	// Set Poly Geometry Sorting Options
+	checkBox -e -v 1 sortMethodsSortIntoGroupsCheckBox;
+	checkBox -e -v 0 sortByMatchingGeometryCompareFacesCheckBox;
+	checkBox -e -v 1 sortByMatchingGeometryCompareVerticesCheckBox;
+	checkBox -e -v 1 sortByMatchingGeometryCompareUVsCheckBox;
+	checkBox -e -v 0 sortByMatchingGeometryCompareEdgesCheckBox;
+	checkBox -e -v 0 sortByMatchingGeometryCompareUVSetIndicesCheckBox;
+	
+	string $sorted[];
+	if ($replaceInstances == 0){	
+		$sorted = sortByMatchingPolyGeometry(`ls -sl`);
+	} else {
+		$sorted = $refModels;
+	}
+	
+	for ($i=0;$i<`size $sorted`;$i++){
+		if ($sorted[$i] == "|"){
+			continue;
+		}
+		if (`objExists $sorted[$i]` == 0){
+			continue;
+		}
+		float $ranVal = rand(0.6, 0.1);
+		// If we are not replaceing duplicates with instances then make a new material for each object?
+		if (`checkBox -q -v wizCraft_mpvrProcessingReplaceDuplicatesWithInstances_checkBox` == 0 ){
+			// Create a material for each object and assign it
+			string $newShader[] = wizCreateNewShader(("meshMaterial" + $i), "blinn");	
+			setAttr (("meshMaterial" + $i) + ".color") -type double3 $ranVal $ranVal $ranVal ;	
+			
+			select -r $sorted[$i];
+			sets -e -forceElement $newShader[1];	
+		}
+		
+		string $rel[] = `listRelatives -c -type "transform"`;
+		select -r $rel;
+		if (`size $rel` < 2){
+			continue;
+		}
+		/*
+		string $unitedp[] = `polyUnite -ch 1 -mergeUVSets 1`;
+		parent $unitedp[0] "SculptLayer_Layer_1";
+		select -r $unitedp[0];
+		delete -ch;
+		*/
+	}
+	
+	
+	for ($i=0;$i<`size $allGeo`;$i++){
+		// Sort out the ribbons
+		int $rib = startsWith($allGeo[$i], "Ribbon");
+		if ($rib == 0){
+			$nonRibbon[`size $nonRibbon`] = $allGeo[$i];
+			
+		}
+		// Skip voxel model
+		if ($allGeo[$i] == "ReferenceModel_Selection_1"){
+			continue;
+		}
+		
+		select -r $allGeo[$i];
+		
+		
+		// Do some cleanup of normals and such
+		if ($rib == 1){
+		
+			polyMergeVertex  -d 0.001 -am 1 -ch 1;
+			
+			select -r $allGeo[$i];
+			
+			polyNormalPerVertex -ufn true;
+			
+			select -r $allGeo[$i];
+		
+			polySoftEdge -a 60 -ch 1 ;
+			
+			select -r $allGeo[$i];
+			
+			if (`checkBox -q -v wizCraft_mpvrProcessingNormalizeRibbons_checkBox` == 1 ){
+				polyNormalizeUV -normalizeType 1 -preserveAspectRatio off -centerOnTile off -normalizeDirection 0;
+			}
+			
+		} else if ($rib == 0 && $replaceInstances == 0){
+			polyMergeVertex  -d 0.01 -am 1 -ch 1;
+		
+			select -r $allGeo[$i];
+		
+			polyNormalPerVertex -ufn true;
+		
+			select -r $allGeo[$i];
+			
+			polySoftEdge -a 30 -ch 1 ;
+		}
+		
+		if ($replaceInstances == 0){
+			
+			select -r $allGeo[$i];
+			
+			// Convert back to Quads if possible
+			polyQuad  -a 30 -kgb 1 -ktb 1 -khe 1 -ws 1 -ch 1;
+			
+			select -r $allGeo[$i];
+			polyCleanupArgList 4 { "0","1","0","0","0","0","0","0","0","1e-005","0","1e-005","0","1e-005","0","1","1","0" };
+		}
+		
+	}
+	
+	if ($replaceInstances == 1 && `size $refModels` > 0){
+		for ($i=0;$i<`size $refModels`;$i++){
+			select -r $refModels[$i];
+			polyMergeVertex  -d 0.01 -am 1 -ch 1;
+		
+			select -r $refModels[$i];
+		
+			polyNormalPerVertex -ufn true;
+		
+			select -r $refModels[$i];
+			
+			polySoftEdge -a 30 -ch 1 ;
+			
+			select -r $refModels[$i];
+			
+			polyQuad  -a 30 -kgb 1 -ktb 1 -khe 1 -ws 1 -ch 1;
+			
+			select -r $refModels[$i];
+			
+			polyCleanupArgList 4 { "0","1","0","0","0","0","0","0","0","1e-005","0","1e-005","0","1e-005","0","1","1","0" };
+		}
+		
+	}
+	
+	if (`checkBox -q -v wizCraft_mpvrProcessingCombineRibbons_checkBox` == 1){
+		// Unite RibbonsGroup1
+		if (`size $ribbons` > 0){
+			select -r $ribbons;
+			string $unitedRibbons[] = `polyUnite -ch 1 -mergeUVSets 1`;
+			parent $unitedRibbons[0] "SculptLayer_Layer_1";
+			rename $unitedRibbons[0] "RibbonsMesh1";
+			
+			delete -ch;
+		}
+	}
+	
+	if (`checkBox -q -v wizCraft_mpvrProcessingCombineMatchingGeometry_checkBox` == 1 && $replaceInstances == 0){
+		for ($i=0;$i<`size $sorted`;$i++){
+			if ($sorted[$i] == "|"){
+				continue;
+			}
+			if (`objExists $sorted[$i]` == 0){
+				continue;
+			}
+		
+			select -r $sorted[$i];
+			string $rel[] = `listRelatives -c -type "transform"`;
+			select -r $rel;
+			if (`size $rel` < 2){
+				continue;
+			}
+			
+			string $unitedMeshes[] = `polyUnite -ch 1 -mergeUVSets 1`;
+			parent $unitedMeshes[0] "SculptLayer_Layer_1";
+			//rename $unitedMeshes[0] "SculptMesh";
+			renameWizRenameObject($unitedMeshes[0], "Sculpt");
+			delete -ch;
+		}
+	}
+	
+}
+
+
+
+global proc wizCarftSortByMatchingPolyGeometry()
+{
+	//<DEBUG>
+	string $sel[] = `ls -sl`;
+	string $copy[];
+	string $remove[];
+	int $uniqueCount, $instanceCount;
+	appendStringArray($copy, $sel, `size $sel`);
+	
+	//string $sorted[];
+	
+	
+	for ($i=0;$i<`size $sel`;$i++){
+		if (`objExists $sel[$i]` == false){ continue;}
+		if (`isPolyGeometry($sel[$i])`== 0){ continue;}	
+		
+		//If the object was added to our remove list then skip it.
+		$removed = stringArrayContains($sel[$i],$remove);
+		if ($removed){continue;}
+				
+		
+		string $sameObjs[];		
+		//$sorted[`size $sorted`] = $sel[$i];
+		
+		for ($p=1;$p<`size $copy`;$p++){		
+			if (`objExists $copy[$p]` == false){ continue;}
+			if (`isPolyGeometry($copy[$p])`== 0){ continue;}
+			
+			if ($sel[$i] == $copy[$p]){ continue;}
+			
+			//If the object was added to our remove list then skip it.
+			$removed = stringArrayContains($copy[$p],$remove);
+			if ($removed){continue;}
+				
+			//If we are acidentally comparing a poly object to something that isn't a poly object and get an error then skip it.
+			if (catchQuiet(`polyCompare -v $sel[$i] $copy[$p]`) == 1){
+				continue;
+			}
+			
+			//A value of 0 means a successfull match
+			
+			int $same = wizPolyCompare($sel[$i], $copy[$p]);
+			if ($same == 0){
+				$sameObjs[`size $sameObjs`] = $copy[$p];							
+				//Put the object in our remove list so we don't bother looking at it anymore.
+				$remove[`size $remove`] = $copy[$p];	
+				
+			}
+		}
+		//select -r $sameObjs;
+		string $newGroupName = stripNumbersFromEndOfString($sel[$i]);
+		$newGroupName = $newGroupName + "Group";
+		if (`size $sameObjs` == 0){
+			continue;
+		}
+		select -r $sameObjs;
+		
+		string $newGroup = `group -w -n $newGroupName`;
+				
+
+		
+	}
+		
+}
+
+///--------------------------------------------
+/// This was just renamed for archival purposes. Use above function
+global proc wizFixMPVRFBXFileOriginal( string $flags )
+{
+	int $initOnly = 0;
+	int $exportSel = 0;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-init" : 
+			$initOnly = 1;
+			break ;
+			
+			case "-exs" : 
+			$exportSel = 1;
+			break ;
+		}
+	} 
+	
+	if ($exportSel){
+		string $filename[] = wizCraftGetFileOutputPaths("-ext fbx");
+		wizlog ("[#] Exporting FBX File : " + $filename[0]);
+		wizExportFBX($filename[0]);
+		return ;
+	}
+	
+	/*
+	removeAllNamespaces();
+	*/
+	
+	string $voxelModel[] = `ls "*ReferenceModel_Selection_1"`;
+	if (`size $voxelModel` == 0){
+		print ("[*] No Voxel Mesh Found [*]\n");		
+	} else {
+		float $ranVal = rand(0.6, 0.1);
+		string $newShader[] = wizCreateNewShader(("voxelMeshMaterial"), "blinn");	
+		setAttr (("voxelMeshMaterial") + ".color") -type double3 $ranVal $ranVal $ranVal ;	
+		
+		select -r $voxelModel[0];
+		sets -e -forceElement $newShader[1];	
+	}
+	
+	string $sculptGroup = "SculptLayer_Layer_1";
+	string $checkForSculpt[] = `ls "*SculptLayer_Layer_1"`;
+	if (`size $checkForSculpt` == 0){
+		print ("[!] No SculptLayer_Layer_1 Found [!]\n");
+		return ;
+	}
+	
+	select -r "SculptLayer_Layer_1";
+	
+	setAttr ($sculptGroup + ".scale") 1.0 1.0 1.0;
+	// This is no longer needed for fbx files but use for obj
+	/*
+	setAttr ($sculptGroup + ".rotateX") -90;
+	setAttr ($sculptGroup + ".rotateY") -90;
+	*/
+	setAttr ($sculptGroup + ".rotate") 0.0 0.0 0.0;
+	//makeIdentity -apply true -t 1 -r 1 -s 1 -n 0 -pn 1;
+	
+	string $refModels[];
+	// Replace duplicates with instances?
+	int $replaceInstances = 0;
+	if (`checkBox -q -v wizCraft_mpvrProcessingReplaceDuplicatesWithInstances_checkBox` == 1 ){
+		$refModels = wizMPVRReplaceDuplicatesWithInstances();	
+		$replaceInstances = 1;
+	}
+	
+	if ($initOnly){ return ; }
+	
+	// Assign a shader to ribbons and combine
+	//select -r "*Ribbon*";
+	
+	string $ribbons[] = `ls  "*Ribbon*"`;
+	if (`size $ribbons` > 0){
+		float $ranVal = rand(0.6, 0.1);
+		//polyColorPerVertex -r $ranVal -g $ranVal -b $ranVal -a 1 -cdo;
+	
+		string $ribbonShader[] = wizCreateNewShader("ribbonBlinn1", "blinn");	
+		setAttr "ribbonBlinn1.color" -type double3 $ranVal $ranVal $ranVal ;	
+		select -r $ribbons;
+		sets -e -forceElement $ribbonShader[1];
+		
+		select -r $ribbons;
+		string $ribbonGroup = `group -n "RibbonsGroup1" -p $sculptGroup`;
+		//doGroup 0 1 1;
+		
+	}
+		
+	
+	// Get all the geometry transforms
+	string $allGeo[] = getGeometryTransforms(`ls -dag`);
+	select -r $allGeo;
+	
+	//polyNormalPerVertex -ufn true;
+	
+	//select -r $allGeo;
+
+	string $nonRibbon[];
+	for ($i=0;$i<`size $allGeo`;$i++){
+		// Sort out the ribbons
+		int $sw = startsWith($allGeo[$i], "Ribbon");
+		
+		if ($sw == 0 && $allGeo[$i] != "ReferenceModel_Selection_1"){
+			$nonRibbon[`size $nonRibbon`] = $allGeo[$i];
+			
+		}
+		
+		select -r $allGeo[$i];
+		
+	}
+	
+	select -r $nonRibbon;
+	
+	
+	// Set Poly Geometry Sorting Options
+	checkBox -e -v 1 sortMethodsSortIntoGroupsCheckBox;
+	checkBox -e -v 0 sortByMatchingGeometryCompareFacesCheckBox;
+	checkBox -e -v 1 sortByMatchingGeometryCompareVerticesCheckBox;
+	checkBox -e -v 1 sortByMatchingGeometryCompareUVsCheckBox;
+	checkBox -e -v 0 sortByMatchingGeometryCompareEdgesCheckBox;
+	checkBox -e -v 0 sortByMatchingGeometryCompareUVSetIndicesCheckBox;
+	
+	string $sorted[];
+	if ($replaceInstances == 0){	
+		$sorted = sortByMatchingPolyGeometry(`ls -sl`);
+	} else {
+		$sorted = $refModels;
+	}
+	
+	for ($i=0;$i<`size $sorted`;$i++){
+		if ($sorted[$i] == "|"){
+			continue;
+		}
+		if (`objExists $sorted[$i]` == 0){
+			continue;
+		}
+		float $ranVal = rand(0.6, 0.1);
+		// If we are not replaceing duplicates with instances then make a new material for each object?
+		if (`checkBox -q -v wizCraft_mpvrProcessingReplaceDuplicatesWithInstances_checkBox` == 0 ){
+			// Create a material for each object and assign it
+			string $newShader[] = wizCreateNewShader(("meshMaterial" + $i), "blinn");	
+			setAttr (("meshMaterial" + $i) + ".color") -type double3 $ranVal $ranVal $ranVal ;	
+			
+			select -r $sorted[$i];
+			sets -e -forceElement $newShader[1];	
+		}
+		
+		string $rel[] = `listRelatives -c -type "transform"`;
+		select -r $rel;
+		if (`size $rel` < 2){
+			continue;
+		}
+		/*
+		string $unitedp[] = `polyUnite -ch 1 -mergeUVSets 1`;
+		parent $unitedp[0] "SculptLayer_Layer_1";
+		select -r $unitedp[0];
+		delete -ch;
+		*/
+	}
+	
+	
+	for ($i=0;$i<`size $allGeo`;$i++){
+		// Sort out the ribbons
+		int $rib = startsWith($allGeo[$i], "Ribbon");
+		if ($rib == 0){
+			$nonRibbon[`size $nonRibbon`] = $allGeo[$i];
+			
+		}
+		// Skip voxel model
+		if ($allGeo[$i] == "ReferenceModel_Selection_1"){
+			continue;
+		}
+		
+		select -r $allGeo[$i];
+		
+		
+		// Do some cleanup of normals and such
+		if ($rib == 1){
+		
+			polyMergeVertex  -d 0.001 -am 1 -ch 1;
+			
+			select -r $allGeo[$i];
+			
+			polyNormalPerVertex -ufn true;
+			
+			select -r $allGeo[$i];
+		
+			polySoftEdge -a 60 -ch 1 ;
+			
+			select -r $allGeo[$i];
+			
+			if (`checkBox -q -v wizCraft_mpvrProcessingNormalizeRibbons_checkBox` == 1 ){
+				polyNormalizeUV -normalizeType 1 -preserveAspectRatio off -centerOnTile off -normalizeDirection 0;
+			}
+			
+		} else if ($rib == 0 && $replaceInstances == 0){
+			polyMergeVertex  -d 0.01 -am 1 -ch 1;
+		
+			select -r $allGeo[$i];
+		
+			polyNormalPerVertex -ufn true;
+		
+			select -r $allGeo[$i];
+			
+			polySoftEdge -a 30 -ch 1 ;
+		}
+		
+		if ($replaceInstances == 0){
+			
+			select -r $allGeo[$i];
+			
+			// Convert back to Quads if possible
+			polyQuad  -a 30 -kgb 1 -ktb 1 -khe 1 -ws 1 -ch 1;
+			
+			select -r $allGeo[$i];
+			polyCleanupArgList 4 { "0","1","0","0","0","0","0","0","0","1e-005","0","1e-005","0","1e-005","0","1","1","0" };
+		}
+		
+	}
+	
+	if ($replaceInstances == 1 && `size $refModels` > 0){
+		for ($i=0;$i<`size $refModels`;$i++){
+			select -r $refModels[$i];
+			polyMergeVertex  -d 0.01 -am 1 -ch 1;
+		
+			select -r $refModels[$i];
+		
+			polyNormalPerVertex -ufn true;
+		
+			select -r $refModels[$i];
+			
+			polySoftEdge -a 30 -ch 1 ;
+			
+			select -r $refModels[$i];
+			
+			polyQuad  -a 30 -kgb 1 -ktb 1 -khe 1 -ws 1 -ch 1;
+			
+			select -r $refModels[$i];
+			
+			polyCleanupArgList 4 { "0","1","0","0","0","0","0","0","0","1e-005","0","1e-005","0","1e-005","0","1","1","0" };
+		}
+		
+	}
+	
+	if (`checkBox -q -v wizCraft_mpvrProcessingCombineRibbons_checkBox` == 1){
+		// Unite RibbonsGroup1
+		if (`size $ribbons` > 0){
+			select -r $ribbons;
+			string $unitedRibbons[] = `polyUnite -ch 1 -mergeUVSets 1`;
+			parent $unitedRibbons[0] "SculptLayer_Layer_1";
+			rename $unitedRibbons[0] "RibbonsMesh1";
+			
+			delete -ch;
+		}
+	}
+	
+	if (`checkBox -q -v wizCraft_mpvrProcessingCombineMatchingGeometry_checkBox` == 1 && $replaceInstances == 0){
+		for ($i=0;$i<`size $sorted`;$i++){
+			if ($sorted[$i] == "|"){
+				continue;
+			}
+			if (`objExists $sorted[$i]` == 0){
+				continue;
+			}
+		
+			select -r $sorted[$i];
+			string $rel[] = `listRelatives -c -type "transform"`;
+			select -r $rel;
+			if (`size $rel` < 2){
+				continue;
+			}
+			
+			string $unitedMeshes[] = `polyUnite -ch 1 -mergeUVSets 1`;
+			parent $unitedMeshes[0] "SculptLayer_Layer_1";
+			//rename $unitedMeshes[0] "SculptMesh";
+			renameWizRenameObject($unitedMeshes[0], "Sculpt");
+			delete -ch;
+		}
+	}
+	
+}
+
+global proc string[] wizMPVRReplaceDuplicatesWithInstances()
+{
+	
+	//Rename all objects that are names RefModel_OBJ to RefModel_OBJ#
+	string $refMesh[] = `ls "*RefModel_OBJ"`;
+	for ($i = 0; $i < `size $refMesh`; $i++){
+		rename $refMesh[$i] ("RefModel_OBJ" + $i);
+		
+	}
+	
+	// Get all models that start with "ReferenceModel"
+	$refModels = `ls "*ReferenceModel*"`;
+	string $modelNames[];
+	for ($i=0;$i<`size $refModels`;$i++){
+		// Replace "FBX" with "_" to get the name of the model only
+		string $refModelString = $refModels[$i];
+		string $fbxExp = "FBX";
+		string $s1 = `substitute $fbxExp $refModelString "_"`;
+		string $tok[] = tokenizeString($s1, "_");
+		$modelNames[`size $modelNames`] = $tok[1];
+		
+	}
+	// remove duplicate names to get a list of unique model names to search for.
+	string $remove[] = { "Selection" };
+	$modelNames = stringArrayRemove($remove, $modelNames);
+
+	string $uniqueModelNames[] = stringArrayRemoveDuplicates($modelNames);
+	printNiceArrayList("[*] Unique Model Names [*]", $uniqueModelNames);
+	
+	string $return[];
+	for ($i=0;$i<`size $uniqueModelNames`;$i++){
+		string $allSameModel[] = `ls ("*" + $uniqueModelNames[$i] + "*")`;
+		string $rel[] = `listRelatives -c $allSameModel[0]`;
+		if (`size $rel` < 1){
+			print("No Relatives!");
+			//printNiceArrayList("[*] Rel [*]", $rel);
+			continue;
+		}
+		string $srcModel = $rel[0];
+		//$return[`size $return`] = $srcModel;
+		
+		// Make a shader to assign to the instances		
+		string $newShader[] = wizCreateNewShader(($uniqueModelNames[$i]), "blinn");	
+		float $ranVal = rand(0.6, 0.1);
+		setAttr (($newShader[0]) + ".color") -type double3 $ranVal $ranVal $ranVal ;	
+		// Assign the shader to the srcModel
+		select -r $srcModel;
+		sets -e -forceElement $newShader[1];	
+		
+		string $renamedGroups[];
+		// Staring with the 2nd found model replace with an instance of the 1st
+		for ($j=1;$j<`size $allSameModel`;$j++){
+			// Delete the duplicate in each model group
+			string $children[] = `listRelatives -c $allSameModel[$j]`;
+			if (`size $children` == 0){
+				continue ;
+			}
+			delete $children;
+			select -r $srcModel;
+			// Instance the first found model and parent it to the transform
+			string $newInstance[] = `instance $srcModel`;
+			string $newInstName = ($uniqueModelNames[$i] + "_" + $j);
+			$return[`size $return`] = `rename $newInstance[0] $newInstName`;
+			
+			print ("newInstance : " + $newInstName + " : allSameModel : " + $allSameModel[$j] + " j : " + $j);
+			parent $newInstName $allSameModel[$j];
+			
+			// Reset the transform of the instance
+			setAttr ($newInstName + ".translate") 0.0 0.0 0.0;
+			setAttr ($newInstName + ".rotate") 0.0 0.0 0.0;
+			setAttr ($newInstName + ".scale") 1.0 1.0 1.0;
+			
+			// Assign the shader
+			select -r $newInstName;
+			sets -e -forceElement $newShader[1];
+			string $newGroupName = ($uniqueModelNames[$i] + "_Group" + $j);
+			$renamedGroups[`size $renamedGroups`] = `rename $allSameModel[$j] $newGroupName`;
+			
+		}
+		
+		string $newGroupName = ($uniqueModelNames[$i] + "_Group0");
+		$renamedGroups[`size $renamedGroups`] = `rename $allSameModel[0] $newGroupName`;
+		//select -r $allSameModel;
+		//string $newNamedModels[] = renameWizDoRenameArray($allSameModel, {$uniqueModelNames[$i]});
+		//select -r $newNamedModels;
+		select -r $renamedGroups;
+		
+		group -n ($uniqueModelNames[$i] + "Group");
+		//renameWizDoRenameArray($allSameModel, {$uniqueModelNames[$i]});
+		//rename $srcModel ($uniqueModelNames[$i] + "1");
+		$return[`size $return`] = `rename $srcModel ($uniqueModelNames[$i] + "_0")`;
+	}
+	
+	printNiceArrayList("[*] Root Instances [*]", $return);
+	return $return;
+}
+
+
+global proc string[] wizMPVRRenameAndOrganizeNOTWORKING()
+{
+	
+	//Rename all objects that are names RefModel_OBJ to RefModel_OBJ#
+	string $refMesh[] = `ls "*RefModel_OBJ"`;
+	for ($i = 0; $i < `size $refMesh`; $i++){
+		rename $refMesh[$i] ("RefModel_OBJ" + $i);
+		
+	}
+	
+	// Get all models that start with "ReferenceModel"
+	$refModels = `ls "*ReferenceModel*"`;
+	string $modelNames[];
+	for ($i=0;$i<`size $refModels`;$i++){
+		// Replace "FBX" with "_" to get the name of the model only
+		string $refModelString = $refModels[$i];
+		string $fbxExp = "FBX";
+		string $s1 = `substitute $fbxExp $refModelString "_"`;
+		string $tok[] = tokenizeString($s1, "_");
+		$modelNames[`size $modelNames`] = $tok[1];
+		
+	}
+	// remove duplicate names to get a list of unique model names to search for.
+	string $remove[] = { "Selection" };
+	$modelNames = stringArrayRemove($remove, $modelNames);
+
+	string $uniqueModelNames[] = stringArrayRemoveDuplicates($modelNames);
+	printNiceArrayList("[*] Unique Model Names [*]", $uniqueModelNames);
+	
+	string $return[];
+	for ($i=0;$i<`size $uniqueModelNames`;$i++){
+		string $allSameModel[] = `ls -typ "transform" ("*" + $uniqueModelNames[$i] + "*")`;
+		string $rel[] = `listRelatives  -typ "transform" -c $allSameModel[0]`;
+		if (`size $rel` < 1){
+			print("No Relatives!");
+			//printNiceArrayList("[*] Rel [*]", $rel);
+			continue;
+		}
+		string $srcModel = $rel[0];
+		//$return[`size $return`] = $srcModel;
+		
+		// Make a shader to assign to the instances		
+		string $newShader[] = wizCreateNewShader(($uniqueModelNames[$i]), "blinn");	
+		float $ranVal = rand(0.6, 0.1);
+		setAttr (($newShader[0]) + ".color") -type double3 $ranVal $ranVal $ranVal ;	
+		// Assign the shader to the srcModel
+		select -r $srcModel;
+		sets -e -forceElement $newShader[1];	
+		
+		string $renamedGroups[];
+		
+		/*
+		// Staring with the 2nd found model replace with an instance of the 1st
+		for ($j=1;$j<`size $allSameModel`;$j++){
+			// Delete the duplicate in each model group
+			string $children[] = `listRelatives -typ "transform" -c $allSameModel[$j]`;
+			if (`size $children` == 0){
+				continue ;
+			}
+			//delete $children;
+			//select -r $srcModel;
+			// Instance the first found model and parent it to the transform
+			//string $newInstance[] = `instance $srcModel`;
+			string $newInstName = ($uniqueModelNames[$i] + "_" + $j);
+			$return[`size $return`] = `rename $children[0] $newInstName`;
+			
+			//print ("newInstance : " + $newInstName + " : allSameModel : " + $allSameModel[$j] + " j : " + $j);
+			//parent $newInstName $allSameModel[$j];
+			
+			
+			// Assign the shader
+			select -r $newInstName;
+			sets -e -forceElement $newShader[1];
+			string $newGroupName = ($uniqueModelNames[$i] + "_Group" + $j);
+			$renamedGroups[`size $renamedGroups`] = `rename $allSameModel[$j] $newGroupName`;
+			
+		}
+		*/
+		
+		
+		string $shapes[] = `listRelatives -s $allSameModel[0]`;
+		select `listRelatives -ap $shapes[0]`;
+		string $allInstances[] = `ls -sl`;
+		sets -e -forceElement $newShader[1];
+		
+		for ($j=0;$j<`size $allInstances`;$j++){
+			string $newGroupName = ($uniqueModelNames[$i] + "_Group" + $j);
+			$renamedGroups[`size $renamedGroups`] = `rename $allSameModel[$j] $newGroupName`;
+		}
+
+		string $newGroupName = ($uniqueModelNames[$i] + "_Group0");
+		$renamedGroups[`size $renamedGroups`] = `rename $allSameModel[0] $newGroupName`;
+		
+		//select -r $renamedGroups;
+		select -r $allInstances;
+		group -w -n ($uniqueModelNames[$i] + "Group");
+		//renameWizDoRenameArray($allSameModel, {$uniqueModelNames[$i]});
+		//rename $srcModel ($uniqueModelNames[$i] + "1");
+		$return[`size $return`] = `rename $srcModel ($uniqueModelNames[$i] + "_0")`;
+	}
+	
+	//printNiceArrayList("[*] Root Instances [*]", $return);
+	return $return;
+}
+
+
+global proc string[] wizMPVRRenameAndOrganize()
+{
+	
+	//Rename all objects that are names RefModel_OBJ to RefModel_OBJ#
+	string $refMesh[] = `ls "*RefModel_OBJ"`;
+	for ($i = 0; $i < `size $refMesh`; $i++){
+		rename $refMesh[$i] ("RefModel_OBJ" + $i);
+		
+	}
+	
+	// Get all models that start with "ReferenceModel"
+	$refModels = `ls "*ReferenceModel*"`;
+	string $modelNames[];
+	for ($i=0;$i<`size $refModels`;$i++){
+		// Replace "FBX" with "_" to get the name of the model only
+		string $refModelString = $refModels[$i];
+		string $fbxExp = "FBX";
+		string $s1 = `substitute $fbxExp $refModelString "_"`;
+		string $tok[] = tokenizeString($s1, "_");
+		string $modName;
+		for ($ti=1;$ti<`size $tok`;$ti++){
+			if ((startsWith($tok[($ti + 1)], "ASC")) == 1){
+				if ($ti == 1){
+					$modName = $modName + $tok[$ti];
+				} else {
+					$modName = $modName + "_" + $tok[$ti];
+				}
+				break ;
+			} else {
+				if ($ti == 1){
+					$modName = $tok[$ti];
+				} else {
+					$modName = $modName + "_" + $tok[$ti];
+				}
+			}
+						
+		}
+		$modelNames[`size $modelNames`] = $modName;
+		
+	}
+	// remove duplicate names to get a list of unique model names to search for.
+	// Remove any objects named selection. they are not to be used
+	string $remove[] = { "Selection", "Selection_10", "Selection_10Shape" };
+	$modelNames = stringArrayRemove($remove, $modelNames);
+
+	string $uniqueModelNames[] = stringArrayRemoveDuplicates($modelNames);
+	printNiceArrayList("[*] Unique Model Names [*]", $uniqueModelNames);
+	
+	string $return[];
+	string $newGroups[];
+	for ($i=0;$i<`size $uniqueModelNames`;$i++){
+		if ((startsWith($uniqueModelNames[$i], "Selection")) == 1){
+			continue;
+		}
+		string $allSameModel[] = `ls -typ "transform" ("*" + $uniqueModelNames[$i] + "*")`;
+		string $rel[] = `listRelatives -pa -typ "transform" -c $allSameModel[0]`;
+		if (`size $rel` < 1){
+			print("No Relatives!");
+			//printNiceArrayList("[*] Rel [*]", $rel);
+			continue;
+		}
+		string $srcModel = $rel[0];
+		//$return[`size $return`] = $srcModel;
+		
+		// Make a shader to assign to the instances		
+		string $newShader[] = wizCreateNewShader(($uniqueModelNames[$i]), "blinn");	
+		float $ranVal = rand(0.6, 0.1);
+		setAttr (($newShader[0]) + ".color") -type double3 $ranVal $ranVal $ranVal ;	
+		// Assign the shader to the srcModel
+		select -r $srcModel;		
+		sets -e -forceElement $newShader[1];	
+		
+		string $renamedGroups[];
+		
+		// Staring with the 2nd found model replace with an instance of the 1st
+		for ($j=1;$j<`size $allSameModel`;$j++){
+			// Delete the duplicate in each model group
+			if ((`objExists $allSameModel[$j]`) == 0){
+				continue ;
+			}
+			string $children[] = `listRelatives -pa -typ "transform" -c $allSameModel[$j]`;
+			if (`size $children` == 0){
+				continue ;
+			}
+			//delete $children;
+			//select -r $srcModel;
+			// Instance the first found model and parent it to the transform
+			//string $newInstance[] = `instance $srcModel`;
+			string $newInstName = ($uniqueModelNames[$i] + "_" + $j);
+			$return[`size $return`] = `rename $children[0] $newInstName`;
+			
+			//print ("newInstance : " + $newInstName + " : allSameModel : " + $allSameModel[$j] + " j : " + $j);
+			//parent $newInstName $allSameModel[$j];
+			
+			/*
+			// Reset the transform of the instance
+			setAttr ($newInstName + ".translate") 0.0 0.0 0.0;
+			setAttr ($newInstName + ".rotate") 0.0 0.0 0.0;
+			setAttr ($newInstName + ".scale") 1.0 1.0 1.0;
+			*/
+			
+			// Assign the shader
+			select -r $newInstName;
+			sets -e -forceElement $newShader[1];
+			string $newGroupName = ($uniqueModelNames[$i] + "_Group" + $j);
+			$renamedGroups[`size $renamedGroups`] = `rename $allSameModel[$j] $newGroupName`;
+			
+		}
+		
+		string $newGroupName = ($uniqueModelNames[$i] + "_Group0");
+		$renamedGroups[`size $renamedGroups`] = `rename $allSameModel[0] $newGroupName`;
+		//select -r $allSameModel;
+		//string $newNamedModels[] = renameWizDoRenameArray($allSameModel, {$uniqueModelNames[$i]});
+		//select -r $newNamedModels;
+		select -r $renamedGroups;
+		
+		$newGroups[`size $newGroups`] = `group -n ($uniqueModelNames[$i] + "Group")`;
+		//renameWizDoRenameArray($allSameModel, {$uniqueModelNames[$i]});
+		//rename $srcModel ($uniqueModelNames[$i] + "1");
+		if ((`objExists $srcModel`) == 1){
+			$return[`size $return`] = `rename $srcModel ($uniqueModelNames[$i] + "_0")`;
+		}
+	}
+	
+	string $allNewGroups[];
+	for  ($i=1;$i<`size $newGroups`;$i++){
+		if ((`objExists $newGroups[$i]`) == 0){
+					continue ;
+		} else {
+			$allNewGroups[`size $allNewGroups`] = $newGroups[$i];
+		}
+	}
+	select -r $allNewGroups;
+	group -n ("ModelGroup1");
+	
+	printNiceArrayList("[*] Root Instances [*]", $return);
+	
+	return $return;
+}
+
+global proc wizMPVRSortIntoMatchingGeometryGroups()
+{
+	string $allGeo[] = getGeometryTransforms(`ls -dag`);
+	select -r $allGeo;
+	
+	checkBox -e -v 1 sortMethodsSortIntoGroupsCheckBox;
+	checkBox -e -v 0 sortByMatchingGeometryCompareFacesCheckBox;
+	checkBox -e -v 1 sortByMatchingGeometryCompareVerticesCheckBox;
+	checkBox -e -v 1 sortByMatchingGeometryCompareUVsCheckBox;
+	checkBox -e -v 0 sortByMatchingGeometryCompareEdgesCheckBox;
+	checkBox -e -v 0 sortByMatchingGeometryCompareUVSetIndicesCheckBox;
+	
+	//string $sorted[] = sortByMatchingPolyGeometry(`ls -sl`);
+	wizCarftSortByMatchingPolyGeometry();
+}
+
+global proc wizCreateSelfIntersectionHelper()
+{
+	assignNewPfxToon;
+	string $toonShape[] = `ls -sl`;
+	applyPresetToNode ($toonShape[0]) "" "" "selfIntersectionLines" 1;
+}
+
+
+global proc wizSelectOccludedFaces()
+{
+	string $sel[] = `ls -sl`;	
+	buildOcclusionLightArray();
+	select -r $sel;
+	polyGeoSampler -ids -cs -sf 1 -cmn 0 0 0 -amn 0 -cmx 1 1 1 -amx 1 -su -cdo -colorBlend "overwrite" -alphaBlend "overwrite";
+	
+	string $delFaces[];
+	for ($i=0;$i<`size $sel`;$i++){			
+		select -r $sel[$i];
+		int $numFaces[] = `polyEvaluate -f`;
+
+		for ($j=0;$j < $numFaces[0];$j++){
+		
+			string $faceID = ($sel[$i] + ".f[" + $j + "]");
+			select -r $faceID;
+			string $vs[] = `polyListComponentConversion -tv`;
+			select -r $vs;
+			int $notOccluded = 0;
+			float $rValue[] = `polyColorPerVertex -q -r`;
+			for ($k=0;$k<`size $rValue`;$k++){
+				if ( $rValue[0] > 0.05){
+					$notOccluded = 1;
+					continue;
+				}				
+			}
+			
+			if ( $notOccluded == 0){
+				//select -r $faceID;
+				//delete ;
+				$delFaces[`size $delFaces`] = $faceID;
+			}
+		}
+	}
+	
+	select -r $delFaces;
+	polySelectConstraint -pp 2;
+	string $set = createSetFromSelection(`ls -sl`, "occludedFacesSet1");
+	
+}
+
+global proc buildOcclusionLightArray()
+{
+	defaultDirectionalLight(1, 1,1,1, "0", 0,0,0, 0);
+	defaultDirectionalLight(1, 1,1,1, "0", 0,0,0, 0);
+	setAttr "directionalLight2.rotateX" 90;
+	defaultDirectionalLight(1, 1,1,1, "0", 0,0,0, 0);
+	setAttr "directionalLight3.rotateX" 180;
+	defaultDirectionalLight(1, 1,1,1, "0", 0,0,0, 0);
+	setAttr "directionalLight4.rotateX" -90;
+	defaultDirectionalLight(1, 1,1,1, "0", 0,0,0, 0);
+	setAttr "directionalLight5.rotateY" 90;
+	defaultDirectionalLight(1, 1,1,1, "0", 0,0,0, 0);
+	setAttr "directionalLight6.rotateY" -90;
+	
+}
+
+
+global proc wizCraftRenderTextures()
+{
+	string $filename[] = wizCraftGetFileOutputPaths("-ext png");
+	//compositeTest 2048 2048;
+	//renderWindowEditor -edit -loadImage "G:/maya/projects/Assets/images/testComp.0001.iff" renderView;
+	
+	convertSolidTx -bm "extend" -rx 2048 -ry 2048 -fil png -fileImageName "myTexture.png" wizCraft_windows_WindowsSelectionLayeredTexture pPlane1;
+	
+}

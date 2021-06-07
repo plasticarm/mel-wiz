@@ -1,0 +1,1638 @@
+global proc stringWiz()
+{
+
+}
+
+global proc stringWizMainLayout( string $parent )
+{
+	string $colLayout = `columnLayout
+		-p $parent
+		stringWizMainColumnLayout
+		`;
+
+	filePathWizLayout($colLayout);	
+	
+}
+
+global proc filePathWizLayout( string $parent )
+{
+	string $toNativeCommand = (
+	"string $fp = `textFieldButtonGrp -q -tx filePathWizConvertToNativeTextFieldButtonGrp`;"+"\n"
+	+"string $convertedfp = convertFilePathToNativePath($fp);"+"\n"
+	+"textFieldButtonGrp -e -tx $convertedfp filePathWizConvertToNativeTextFieldButtonGrp;"
+	);
+	
+	string $toNative = `textFieldButtonGrp
+		-l "To Native Path"
+		-bl "Convert"
+		-bc $toNativeCommand 
+		filePathWizConvertToNativeTextFieldButtonGrp
+		`;
+		
+	string $toMayaPathCommand = (
+	"string $mp = `textFieldButtonGrp -q -tx filePathWizConvertToMayaPathTextFieldButtonGrp`;"+"\n"
+	+"string $convertedmp = fromNativePath($mp);"+"\n"
+	+"textFieldButtonGrp -e -tx $convertedmp filePathWizConvertToMayaPathTextFieldButtonGrp;"
+	);
+	
+	string $toMayaPathCommand = `textFieldButtonGrp
+		-l "To Maya Path"
+		-bl "Convert"
+		-bc $toMayaPathCommand 
+		filePathWizConvertToMayaPathTextFieldButtonGrp
+		`;
+
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         EVAL
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//EVAL STRINGS
+//============================================
+global proc evalAllInEvalArray(string $eval[])
+{
+	for($i=0;$i<`size $eval`;$i++){
+		eval($eval);
+	}
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         CONVIENT STRINGS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//CONVIENENT STRINGS
+//======================================
+global proc string blackSpace(int $size)
+{
+	string $space = repeatString(" ",$size);
+	return $space;
+}
+
+//@ WIZ DIV
+//-------------------------
+//@ WIZ DIV
+//====================================================================
+/*****************************************************************//**
+	Just a convient way to make a divider in a print output.
+	<hr>
+	<b>Synopsis</b><br>
+	wizDiv [-tag1 string] [-tag2 linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-tag1, -tag2
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName($string, 2);
+	
+	</code>
+*********************************************************************/
+global proc string wizDiv( string $type )
+{
+	string $div;
+	switch($type){
+		case "" :
+		$div = "======================";
+		break;
+		
+		case "scriptEditor" : case "se" : case "-se" :
+		$div = "----------------------------------------------------";
+		break;
+		
+		case "textScrollList" : case "tsl" : case "-tsl" :
+		$div = "=====================";
+		break;
+		
+		case "endList" : case "end" : case "-end" :
+		$div = "\n___________________________________________________\n=======================[END]=======================\n";
+		break;	
+		
+		case "startList" : case "s" : case "start" : case "-s" : case "-start" :
+		$div = "\n===================================================\n";
+		break;
+
+	}
+	
+	return $div;
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         MATCHING
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//MATCHING
+//==============================================================================
+
+//FIND MEL PROC IN STRING
+//-----------------------------------
+global proc string findMelProcInString(string $string)
+{
+	string $matchMel = `match ".mel" $string`;
+	if($matchMel == ""){
+		return $matchMel;	
+	}
+}
+
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         REMOVE FROM STRING
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//REMOVE CHARACTERS
+//==============================================================================
+
+global proc string removeAllButAlphabet( string $string )
+{
+	string $return;
+	$return = stripNumbersFromEndOfString($string);
+	$return = removeSpecialCharacters($return);
+	$return = removeIllegalCharacters($return);
+	$return = removeAllSpaces($return);
+	return $return;
+	
+} 
+
+//NUMBERS
+//=======================================================
+//REMOVE NUMBERS FROM END OF STRING
+//---------------------------------------------
+global proc string stripNumbersFromEndOfString(string $string)
+{
+	//string $num = `match "^[0-9]+" $string`;
+	string $num = `match "[0-9.]*$" $string`;
+	if(endsWith($string, $num)){
+		$string = `substitute $string $num ""`;
+	} else{
+		print("There are numbers not on end of string. stripNumbersFromEndOfString needs to be fixed!" + "\n");
+	}
+	return $string;
+}
+
+//SPECIAL CHARACTERS AND ILLEGAL CHARACTERS
+//=======================================================
+
+//@ REMOVE SPECIAL CHARACTERS
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $string = removeSpecialCharacters("-col -dot -s some:Bad[1]Object");
+	
+	</code>
+*********************************************************************/
+global proc string removeSpecialCharacters( string $flags )
+{
+	int $us, $dot, $col;
+	string $tok[] = tokenizeString($flags, " ");
+	string $string;
+
+	string $sel[];
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-col" : case "-colon" :
+			$col = 1;
+			break ;
+			
+			case "-dot" : case "-period" :
+			$dot = 1;
+			break ;
+			
+			case "-us" : case "-underscore" :
+			$us = 1;
+			break ;
+			
+			case "-s" : case "-string" :
+			$string = wizFlagString($tok, $i);
+			break ;
+		
+			
+		}
+	}
+
+	if (`size $string` == 0){
+		$string = $flags;
+	}
+	
+	string $newString = $string;
+	string $specialCharacters[] = { "[", "]", "-" };
+	if ($dot){
+		$specialCharacters[`size $specialCharacters`] = ".";
+	}
+	if ($col){
+		$specialCharacters[`size $specialCharacters`] = ":";
+	}
+	if ($us){
+		$specialCharacters[`size $specialCharacters`] = "_";
+	}
+	for ($special in $specialCharacters){
+		$newString = substituteAllString($newString, $special, "");
+	}
+	return $newString;
+}
+
+//SPECIAL CHARACTERS FROM SELECTION LIST
+//----------------------------------------------
+global proc string[] removeSpecialCharactersFromSelectionList(string $sel[])
+{
+	debugList("Old Names", $sel, 1, "replace");
+	for ($i=0;$i<`size $sel`;$i++){
+		//string $newName = removeIllegalCharactersFromName($sel[$i]);
+		string $newName = removeSpecialCharactersFromName($sel[$i]);
+		debugList("Removed Special Characters", {$newName}, 2, "add");
+		if(catchQuiet(`rename -is $sel[$i] $newName`) == 1){
+			
+			debugList("Rename Error", {($sel[$i] + " | " + $newName)}, 3, "add");
+		} else {
+			$sel[$i] = $newName;	
+		}
+	}
+	return $sel;
+}
+
+//SPECIAL CHARACTERS FROM NAME
+//-------------------------------
+global proc string removeSpecialCharactersFromName(string $name)
+{
+	string $newName = removeSpecialCharacters($name);
+	return $newName;	
+}
+
+
+//REMOVE ILLEGAL CHARACTERS
+//------------------------------------------------
+global proc string removeIllegalCharacters(string $string)
+{
+	string $newString = $string;
+	string $illegalCharacters[] = { ".", "[", "]", ":", "|", "-"};
+	for($illegal in $illegalCharacters){
+		$newString = substituteAllString($newString, $illegal, "");
+	}
+	return $newString;
+}
+
+//REMOVE ILLEGAL CHARACTERS FROM NAMES
+//------------------------------------------------
+global proc string[] removeIllegalCharactersFromNames(string $name[])
+{
+	string $newName[];
+	for($i=0;$i<`size $name`;$i++){
+		$newName[$i] = removeIllegalCharactersFromName($name[$i]);	
+	}
+	return $newName;	
+}
+
+//REMOVE ILLEGAL CHARACTERS FROM NAME
+//------------------------------------------------
+global proc string removeIllegalCharactersFromName(string $name)
+{
+	string $newName = removeIllegalCharacters($name);
+	return $newName;	
+}
+
+//REMOVE BACK QUOTES
+//------------------------------------------------
+global proc string removeBackQuotes(string $string)
+{
+	string $newString = $string;
+	$newString = substituteAllString($newString, "`", "");
+	return $newString;
+}
+
+//SPACES
+//===========================================================
+
+//REMOVE ALL SPACES
+//------------------------------------------------
+global proc string removeAllSpaces(string $string)
+{
+	string $newString = strip($string);
+	$newString = substituteAllString($newString, " ", "");
+	return $newString;
+}
+
+//STRING ARRAY REMOVE ALL SPACES
+//------------------------------------------------
+global proc string[] stringArrayRemoveAllSpaces(string $arr[])
+{
+	for($i=0;$i<`size $arr`;$i++){	
+		$arr[$i] = removeAllSpaces($arr[$i]);
+	}
+	return $arr;
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         FORMAT STRING
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//FORMAT STRING
+//==============================================================================
+
+//ALL CAPS
+//------------------------
+global proc string[] allCapsArray( string $arr[] )
+{
+	string $caps[];
+	for ($i=0;$i<`size $arr`;$i++){
+		$caps[$i] = allCaps($arr[$i]);
+	}
+	return $caps;
+}
+
+global proc string allCaps(string $string)
+{
+	string $caps = interToUI($string);
+	$caps = toupper($caps);
+	//string $div = repeatString("=",`size $caps`);	
+	return $caps;
+}
+
+//LOWER CASE
+//------------------------
+global proc string[] lowerCaseArray( string $arr[] )
+{
+	string $lc[];
+	for ($i=0;$i<`size $arr`;$i++){
+		$lc[$i] = lowerCaseString($arr[$i]);
+	}
+	return $lc;
+}
+
+global proc string lowerCaseString( string $string )
+{
+	string $lc = tolower($string);
+	return $lc;
+}
+
+global proc string uncapitalizeString( string $string )
+{
+	string $ss = startString($string, 1);
+	$ss = tolower($ss);
+	string $sub = substring($string, 2, `size $string`);
+	string $return = $ss + $sub;
+	return $return;
+
+}
+
+//INTER TO UI ARRAY
+//------------------------
+global proc string[] interToUIArray( string $arr[] )
+{
+	string $n[];
+	for ($i=0;$i<`size $arr`;$i++){
+		string $low = tolower($arr[$i]);		
+		$low = interToUI($low);
+		$n[$i] = substituteAllString($low, " ", "");
+	}
+	return $n;
+}
+
+//CAPS NO SPACES
+//------------------------
+global proc string capsNoSpaces(string $string)
+{
+	string $buffer[];
+	int $numTok = `tokenize $string " " $buffer`;
+	for($i=0;$i<`size $buffer`;$i++){	
+		$buffer[$i] = capitalizeString($buffer[$i]);
+	}
+	string $newString = stringArrayToString($buffer, "");
+	$newString = removeAllSpaces($newString);
+	return $newString;
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         NICE NAMES
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//@ MAKE NICE UI NAME
+//------------------------
+global proc string makeNiceUIName(string $name)
+{
+	$name = substituteAllString($name, " ", "");
+	$name = removeIllegalCharactersFromName($name);
+	$name = removeSpecialCharactersFromName($name);
+	$name = tolower($name);
+	return $name;
+}
+
+//@ MAKE NICE NAME
+//====================================================================
+/*****************************************************************//**
+	Makes sure that the name is something that maya can use and isn't ugly.
+	<hr>
+	<b>Synopsis</b><br>
+	makeNiceName [string $name]<br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string the modified name
+	
+	<b>Flags</b><br>
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	string $nicename = makeNiceName("BqButt:!Fizzly7&Fizz:myName");
+	makeNiceName("fizzy#ballz01234");
+	
+	</code>
+*********************************************************************/
+global proc string makeNiceName( string $name )
+{
+	string $mnn = $name;
+	wizlog("-dbl4	[#] Name : " + $mnn);
+	// get rid of namespaces
+	$mnn = getObjectNameNoNamespaces($mnn);
+	wizlog("-dbl4	[#] No Namespaces : " + $mnn);
+	if ($mnn == ""){
+		
+		$mnn = $name;
+		wizlog("-dbl4	[!] Opps, Fixed No Namespaces : " + $mnn);
+	}
+	// remove any extra blank spaces
+	$mnn = substituteAllString($mnn, " ", "");
+	wizlog("-dbl4	[#] Removed Extra Spaces : " + $mnn);
+	// remove illegal characters and special characters
+	$mnn = removeIllegalCharactersFromName($mnn);
+	wizlog("-dbl4	[#] Removed Illegal Characters : " + $mnn);
+	$mnn = removeSpecialCharactersFromName($mnn);
+	wizlog("-dbl4	[#] Removed Special Characters : " + $mnn);
+	// capitalize it
+	$mnn = capitalizeString($mnn);
+	wizlog("-dbl4	[#] Capitalized : " + $mnn);
+	
+	return $mnn;
+}
+
+//@ MAKE NICE MENU ITEM NAME
+//@ PROC NAME
+//====================================================================
+/*****************************************************************//**
+	This formats a name for use in a menu item.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-tag1 string] [-tag2 linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-tag1, -tag2
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName($string, 2);
+	
+	</code>
+*********************************************************************/
+global proc string makeNiceMenuItemName( string $name)
+{
+	string $niceName = strip($name);
+	$niceName = substituteAllString($name, " ", "");
+	$niceName = removeIllegalCharactersFromName($name);
+	$niceName = removeSpecialCharactersFromName($name);
+	return $niceName;
+}
+
+//@ MAKE NICE ATTRIBUTE NAME
+//====================================================================
+//@ PROC NAME
+//====================================================================
+/*****************************************************************//**
+	This formats a given string to make a name suitable for an attribute
+	<hr>
+	<b>Synopsis</b><br>
+	makeNiceAttributeName [string $name] <br>
+	gets rid of anything that would make a bad attribute name
+	
+	<b>Return value</b><br>
+	string the name made nice
+	
+	<b>Flags</b><br>
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	string $nn = makeNiceAttributeName("!funkyJunkie_Attrbute");
+	
+	</code>
+*********************************************************************/
+global proc string makeNiceAttributeName( string $name )
+{
+	string $niceAttrName;
+	string $attrName[] = tokenizeString($name, " ");
+	if (`size $attrName` == 1){
+		string $itui = interToUI($name);
+		$attrName = tokenizeString($itui, " ");
+	}
+	$attrName[0] = tolower($attrName[0]);
+	$niceAttrName = $attrName[0];
+	for ($i=1;$i<`size $attrName`;$i++){
+		$attrName[$i] = capitalizeString($attrName[$i]);
+		$niceAttrName = $niceAttrName + $attrName[$i];
+		
+	}
+	$niceAttrName = removeSpecialCharacters($niceAttrName);
+	$niceAttrName = removeIllegalCharacters($niceAttrName);
+	return $niceAttrName;
+}
+
+//@ REMOVE LEADING SEPARATORS
+//====================================================================
+/*****************************************************************//**
+	Just removes | from the start of each element of array.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] all objects without | at beginning.
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = removeLeadingSeparators({"|SomeName:0:SomeNameaaa|AnObject", "|Anotehr|", "NoSep|"});
+	
+	</code>
+*********************************************************************/
+global proc string[] removeLeadingSeparators( string $arr[] )
+{
+	string $return[];
+	for ($i=0;$i<`size $arr`;$i++){
+		if ((startsWith($arr[$i], "|")) == 1){
+			string $subs = substring($arr[$i], 2, `size $arr[$i]`);
+			$return[`size $return`] = $subs;
+		} else {
+			$return[`size $return`] = $arr[$i];
+		}
+	}
+	return $return;
+}
+
+//REPEAT STRING
+//------------------------
+global proc string repeatString(string $string, int $times)
+{
+	string $repeatString;	
+	for($i=0;$i<$times;$i++){
+		$repeatString = $repeatString + $string;
+	}
+	return $repeatString;
+}
+
+global proc string removeStringFromString(string $string, string $remove)
+{
+	return "";	
+}
+
+
+//@ REMOVE NODE TYPES FROM OBJECT NAMES
+//====================================================
+// removeNodeTypesFromObjectNames(`ls -sl`);
+global proc string[] removeNodeTypesFromObjectNames( string $sel[] )
+{
+	string $nn[];
+	for ($i=0;$i<`size $sel`;$i++){
+		$nn[`size $nn`] = removeNodeTypeFromObjectName($sel[$i]);
+	}
+	return $nn;
+}
+
+//@ REMOVE NODE TYPE FROM OBJECT NAME
+//---------------------------------------------------
+global proc string removeNodeTypeFromObjectName( string $sel )
+{
+	string $objType = `nodeType $sel`;
+	if ($objType == "transform"){
+		string $s[] = `listRelatives -s $sel`;				
+		if (`size $s` > 0){
+			$objType = `nodeType $s[0]`;						
+		} 
+		if (isGroup($sel)){
+			$objType = "Group";
+		}			
+	}
+	//string $tok[] = tokenizeString($sel, $objType);
+	//string $return = removeNamespaceFromString($tok[0]);
+	string $sub = `substitute $objType $sel ""`;
+	$sub = `substitute (capitalizeString($objType)) $sel ""`;
+	string $return = removeNamespaceFromString($sub);
+	return $return;
+}
+
+//TOKENIZE
+//===========================================================================================
+//TOKENIZE ALL STRINGS IN STRING ARRAY
+//-------------------------------------------
+global proc string[] tokenizeAllStringsInStringArray(string $array[], string $sep)
+{
+	string $allTok[];
+	for($i=0;$i<`size $array`;$i++){
+		string $buffer[];
+		int $numTok = `tokenize $array[$i] $sep $buffer`;
+		appendStringArray($allTok,$buffer,`size $buffer`);
+	}
+	return $allTok;
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         NO NAMESPACES
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//@ GET OBJECT NAMES NO NAMESPACES
+//====================================================================
+/*****************************************************************//**
+	Returns the name of the objects without any namespaces.
+	<hr>
+	<b>Synopsis</b><br>
+	getObjectNamesNoNamespaces [string $array[] ] <br>
+	Just gets rid of everything before the last ":"
+	This does not rename the objects.
+		
+	<b>Return value</b><br>
+	string[] the object names without any namespaces
+	
+	<b>Flags</b><br>
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	string $sel[] = `ls -sl`;
+	string $selNoNamespaces[] = getObjectNamesNoNamespaces($sel);
+	
+	</code>
+*********************************************************************/
+global proc string[] getObjectNamesNoNamespaces( string $array[] )
+{
+	string $allTok[];
+	for($i=0;$i<`size $array`;$i++){
+		string $buffer[];
+		int $numTok = `tokenize $array[$i] ":" $buffer`;
+		if(`size $buffer` < 2){
+			continue;	
+		}
+		$allTok[`size $allTok`] = $buffer[(`size $buffer` - 1)];
+		
+	}
+	$allTok = stringArrayRemoveAllSpaces($allTok);
+	return $allTok;
+}
+
+//@ GET OBJECT NAMES NO NAMESPACES
+//====================================================================
+/*****************************************************************//**
+	Returns the name of the object without any namespaces.
+	<hr>
+	<b>Synopsis</b><br>
+	getObjectNameNoNamespaces [string $array[] ] <br>
+	Just gets rid of everything before the last ":"
+	This does not rename the object.
+		
+	<b>Return value</b><br>
+	string[] the object name without any namespaces
+	
+	<b>Flags</b><br>
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	string $sel[] = `ls -sl`;
+	string $noNs = getObjectNamesNoNamespaces($sel[0]);
+	
+	</code>
+*********************************************************************/
+global proc string getObjectNameNoNamespaces( string $obj )
+{
+	string $nns[] = getObjectNamesNoNamespaces({$obj});
+	return $nns[0];
+}
+
+//TOKENIZE GROUP HIERARCHY
+//-------------------------------------------
+global proc string[] tokenizeGroupHierarchy(string $hierarchy)
+{
+	string $buffer[];
+	int $numTok = `tokenize $hierarchy "|" $buffer`;
+	return $buffer;
+}
+
+//TOKENIZE STRING
+//-------------------------------------------
+global proc string[] tokenizeString(string $string, string $sep)
+{
+	string $buffer[];
+	int $numTok = `tokenize $string $sep $buffer`;
+	return $buffer;
+}
+
+//TAGS
+//==========================================================
+//GET TAGS FROM STRING
+//-----------------------------
+global proc string[] getTagsFromString(string $string, string $tags[])
+{
+	string $returnTags[];
+	string $tok[];
+	int $numTok = `tokenize $string " " $tok`;
+	for($i=0;$i<`size $tags`;$i++){	
+		int $count = stringArrayCount($tags[$i], $tok);
+		for($t=0;$t<$count;$t++){
+			$returnTags[`size $returnTags`] = $tags[$i];	
+		}
+	}
+	return $returnTags;
+}
+
+//GET NEXT TAG INDEX
+//-----------------------------
+global proc int getNextTagIndex( string $arr[], int $start)
+{
+	for ($i=$start;$i<`size $arr`;$i++){	
+		if (startsWith($arr[$i], "-") == 1){
+			return $i;	
+		}
+	}	
+	return `size $arr`;
+}
+
+//GET TAG ARGUMENT
+//-----------------------------
+global proc string getTagArgument(string $tag, string $argString)
+{
+	string $return;
+	string $tok[] = tokenizeString($argString, " ");
+	int $index = stringArrayFind($tag, 0, $tok);
+	if($index > -1){
+		string $toNext[] = getStringArrayFromCurrentIndexToNextTagIndex($tok, ($index + 1));
+		$return = stringArrayToString($toNext, " ");
+	}
+	
+	return $return;
+}
+
+//PREFIX
+//===========================================================
+
+//ADD PREFIX TO STRING ARRAY
+//------------------------------------
+global proc string[] addPrefixToStringArray( string $arr[], string $prefix)
+{
+	for ($i=0;$i<`size $arr`;$i++){
+		$arr[$i] = $prefix + $arr[$i];
+	}
+	return $arr;	
+}
+
+//ADD SUFFIX TO STRING ARRAY
+//------------------------------------
+global proc string[] addSuffixToStringArray( string $arr[], string $suffix)
+{
+	for ($i=0;$i<`size $arr`;$i++){
+		$arr[$i] = $arr[$i] + $suffix;
+	}
+	return $arr;	
+}
+
+global proc string[] stringArrayAddSuffix( string $arr[], string $suffix )
+{
+	for ($i=0;$i<`size $arr`;$i++){
+		$arr[$i] = $arr[$i] + $suffix;
+	}
+	return $arr;	
+
+}
+
+//ADD PREFIX TO SELECTED OBJECTS
+//------------------------------------
+global proc string[] addPrefixToSelectedObjects(string $sel[], string $prefix)
+{
+	string $newNameObj[];
+	for($i=0;$i<`size $sel`;$i++){
+		string $newName = $prefix + $sel[$i];
+		string $nn = `rename $sel[$i] $newName`;
+		$newNameObj[`size $newNameObj`] = $nn;
+	}
+	return $newNameObj;
+}
+
+//ADD INDEX NUMBERS TO STRING ARRAY
+//------------------------------------
+global proc string[] addIndexNumbersToStringArray(string $arr[])
+{
+	string $arrCopy[];
+	appendStringArray($arrCopy,$arr,`size $arr`);
+	for($i=0;$i<`size $arrCopy`;$i++){	
+		$arrCopy[$i] = "[" + $i + "]" + " " + $arrCopy[$i];
+	}
+	return $arrCopy;
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         NICE ARRAY LISTS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//NICE LISTS
+//==============================================================================
+//STRING ARRAY TO STRING NICE LIST
+//------------------------------------
+global proc string stringArrayToStringNiceList( string $array[] )
+{
+	//Make a divider	
+	string $div = repeatString("_",(`size $array[0]` * 2));
+	
+	//Make a start line
+	//string $listStart = $div + "\n" + " * Size: " + `size $array` + "\n";
+	string $listStart = wizDiv("s");	
+	
+	//Make a end line
+	string $listEnd = ("\n" + "	[*] Size: " + `size $array` + " [*] " + wizDiv("end"));
+	//string $listEnd = "\n" + $div + "\n";
+	
+	//Number the array
+	string $numArr[] = addIndexNumbersToStringArray($array);
+	
+	//Make a string from everything
+	string $list = $listStart + stringArrayToString($numArr, ("\n")) + $listEnd;
+	
+	return $list;
+}
+
+//@ PRINT NICE ARRAY LIST
+//====================================================================
+global proc printNiceArrayList( string $message, string $array[] )
+{
+	string $niceList = stringArrayToStringNiceList($array);
+	print ($message + "\n" + $niceList);
+}
+
+//@ PRINT NICE ARRAY LIST
+//====================================================================
+global proc string niceArrayList( string $message, string $array[] )
+{
+	//Make a divider	
+	string $div = repeatString("_",(`size $array[0]` * 2));
+	$div = $div + "\n";
+
+	//Number the array
+	string $numArr[] = addIndexNumbersToStringArray($array);
+	
+	string $listEnd = ("\n" + "	[*] Size: " + `size $array` + " [*] \n");
+		
+	string $return = ($div + $message + "\n" + (stringArrayToString($numArr, ("\n"))) + "\n" + $div);
+	return $return;
+}
+
+
+
+//@ PRINT NICE FLOAT ARRAY LIST
+//====================================================================
+global proc printNiceFloatArrayList( string $message, float $array[] )
+{
+	string $fsa[] = floatArrayToStringArray($array);
+	string $niceList = stringArrayToStringNiceList($fsa);
+	print ($message + $niceList);
+}
+
+//@ PRINT NICE INT ARRAY LIST
+//====================================================================
+global proc printNiceIntArrayList( string $message, int $array[] )
+{
+	string $fsa[] = intArrayToStringArray($array);
+	string $niceList = stringArrayToStringNiceList($fsa);
+	print ($message + "\n" + wizDiv("s") + $niceList + wizDiv("end"));
+}
+
+
+//MULTI ARRAY NICE LISTS 2
+//------------------------------------
+global proc string multiArrayToNiceList2(string $message1, string $arr1[], string $message2, string $arr2[])
+{
+	string $list;
+	int $iEnd;
+	int $divSize = (`size $arr1[0]` + `size $arr2[0]`) * 1.5;
+	if(`size $arr1` > `size $arr2`){
+		$iEnd = `size $arr1`;
+	} else {
+		$iEnd = `size $arr2`;
+	}
+	
+	string $div = repeatString("-",$divSize);
+	int $spaceSize = `size $arr1[0]`;
+	string $space = repeatString(" ",$spaceSize);
+	$list = $div + "\n";
+	
+	for($i=0;$i<$iEnd;$i = $i + 2){
+		string $line = $message1 + $arr1[$i] + $space + " | " + $message2 + $arr2[$i] + "\n";
+		$list = $list + $line;
+	
+	}
+	$list = $list + $div + "\n";
+	return $list;
+}
+
+//MULTI ARRAY NICE LISTS 3
+//------------------------------------
+global proc string multiArrayToNiceList3(string $arr1[], string $arr2[], string $arr3[])
+{
+	string $list;
+	int $allArr = `size $arr1` + `size $arr2` + `size $arr3`;
+	int $divSize = (`size $arr1[0]` + `size $arr2[0]` + `size $arr3[0]`) * 1.5;
+	int $space = `size $arr1[0]` * 2;
+	string $div = repeatString("-",$divSize);
+	$list = $div + "\n";
+	//print($div);
+	for($i=0;$i<$allArr;$i = $i + 3){
+		string $line = $arr1[$i] + $space + $arr2[($i+1)] + $space + $arr3[($i+2)] + "\n";
+		$list = $list + $line;
+		//print($line);
+	}
+	$list = $list + $div + "\n";
+	return $list;
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         COMBO STRING ARRAYS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//COMBO STRING ARRAYS
+//=================================================
+//COMBO STRING ARRAY 2
+//------------------------------------
+global proc string[] comboStringArray2(string $arr1[], string $arr2[])
+{
+	if($arr1[(`size $arr1` -1)] != "|"){
+		$arr1[`size $arr1`] = "|";
+	}
+	if($arr2[(`size $arr2` -1)] != "|"){
+		$arr2[`size $arr2`] = "|";
+	}
+	$arr1 = appendStringArray($arr1,$arr2,`size $arr2`);
+	return $arr1;
+}
+
+//COMBO STRING ARRAY 3
+//------------------------------------
+global proc string[] comboStringArray3(string $arr1[], string $arr2[], string $arr3[])
+{
+	$arr1 = comboStringArray2($arr1,$arr2);
+	$arr1 = comboStringArray2($arr1,$arr3);
+	return $arr1;
+}
+
+//COMBO STRING ARRAY 4
+//------------------------------------
+global proc string[] comboStringArray4(string $arr1[], string $arr2[], string $arr3[], string $arr4[] )
+{
+	$arr1 = comboStringArray3($arr1,$arr2,$arr3);
+	$arr1 = comboStringArray2($arr1,$arr4);
+	return $arr1;
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         FORMAT ALL
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//FORMAT ALL IN ARRAY
+//=========================================================
+//INTER TO UI
+//------------------------------------
+global proc string[] interToUIStringArray(string $arr[])
+{
+	string $arrCopy[] = wizCopyStringArray($arr);
+	for($i=0;$i<`size $arr`;$i++){	
+		$arrCopy[$i] = interToUI($arrCopy[$i]);
+	}
+	return $arrCopy;
+}
+
+//CAPITALIZE
+//------------------------------------
+global proc string[] capitalizeStringArray(string $arr[])
+{
+	string $arrCopy[] = wizCopyStringArray($arr);
+	for($i=0;$i<`size $arr`;$i++){	
+		$arrCopy[$i] = capitalizeString($arrCopy[$i]);
+	}
+	return $arrCopy;	
+}
+
+//STRIP
+//------------------------------------
+global proc string[] stripAllStringArray(string $arr[])
+{
+	string $stripped[];
+	for($i=0;$i<`size $arr`;$i++){	
+		$stripped[$i] = strip($arr[$i]);
+	}
+	return $stripped;
+}
+
+//SUBSTRING
+//------------------------------------
+global proc string[] substringArray(string $arr[], int $start, int $end)
+{
+	string $substring[];	
+	for($i=0;$i<`size $arr`;$i++){	
+		$substring[$i] = substring($arr[$i], $start, $end);
+	}	
+	return $substring;
+}
+
+//ARRAY TO ARRAY FORMATTED
+//===============================================================================
+
+//ARRAY FORMATTED STRING ARRAY
+//-----------------------------------------
+global proc string arrayFormattedStringArray(string $string[])
+{
+	string $quotes= "\""; //"
+	
+	string $comma = ",";
+	string $endLine = "\"\n\"";
+	string $rs;
+	$rs = "{ ";
+	int $i;
+	for($i=0;$i<`size $string`;$i++){
+		$rs = $rs + $quotes + $string[$i] + $quotes;
+		if($i < (`size $string` - 1)){
+			$rs = $rs + $comma + " ";
+		}
+	}
+	$rs = $rs + "}";
+	return $rs;	
+}
+
+global proc string arrayFormattedStringArrayNoQuotes(string $string[])
+{
+	
+	string $comma = ",";
+	string $endLine = "\"\n\"";
+	string $rs;
+	$rs = "{ ";
+	int $i;
+	for($i=0;$i<`size $string`;$i++){
+		$rs = $rs + $string[$i];
+		if($i < (`size $string` - 1)){
+			$rs = $rs + $comma + " ";
+		}
+	}
+	$rs = $rs + "}";
+	return $rs;	
+}
+
+//ARRAY FORMATTED INT ARRAY
+//-----------------------------------------
+global proc string arrayFormattedIntArray(int $arr[])
+{
+	string $comma = ",";
+	string $endLine = "\"\n\"";
+	string $rs;
+	$rs = "{ ";
+	int $i;
+	for($i=0;$i<`size $arr`;$i++){
+		$rs = $rs + $arr[$i];
+		if($i < (`size $arr` - 1)){
+			$rs = $rs + $comma + " ";
+		}
+	}
+	$rs = $rs + "}";
+	return $rs;	
+}
+
+//ARRAY FORMATTED FLOAT ARRAY
+//-----------------------------------------
+global proc string arrayFormattedFloatArray(float $arr[])
+{
+	string $comma = ",";
+	string $endLine = "\"\n\"";
+	string $rs;
+	$rs = "{ ";
+	int $i;
+	for($i=0;$i<`size $arr`;$i++){
+		$rs = $rs + $arr[$i];
+		if($i < (`size $arr` - 1)){
+			$rs = $rs + $comma + " ";
+		}
+	}
+	$rs = $rs + "}";
+	return $rs;	
+}
+
+//VARIATIONS
+//=========================================
+//STRING ARRAY TO STRING ARRAY STRING
+//-----------------------------------------
+global proc string stringArrayToStringArrayString(string $string[])
+{
+	string $return = arrayFormattedStringArray($string);
+	return $return;
+}
+
+
+//CREATE STRING FORMATTED STRING ARRAY
+//-----------------------------------------
+global proc string createStringFormatedStringArray(string $string[])
+{
+	string $return = arrayFormattedStringArray($string);
+	return $return;
+
+}
+
+//STRING ARRAY TO QUOTE AND SPACE SEPARATED STRING
+//-----------------------------------------------------
+global proc string stringArrayToQuoteAndSpaceSeparatedString(string $sel[])
+{
+	string $returnString;
+	int $i;
+	for($i=0;$i<`size $sel`;$i++){
+		if(`objExists $sel[$i]` == false){ continue;}
+		$returnString = $returnString + "\"" + $sel[$i] + "\"" + " ";
+	}
+	return $returnString;
+}
+
+//ADD QUOTES TO STRING ARRAY
+//-----------------------------------------
+global proc string[] addQuotesToStringArray(string $string[])
+{
+	string $quotes= "\"";
+	//"""
+	string $newString;
+	int $i;
+	for($i=0;$i<`size $string`;$i++){
+		$newString = $newString + $quotes + $string[$i] + $quotes + " ";
+	
+	}
+	string $returnString[] = stringToStringArray($newString, " ");
+	return $returnString;
+
+}
+
+//MISC
+//==============================================================================
+//REPLACE EMPTY STRINGS WITH STRING
+//---------------------------------------
+global proc string[] replaceEmptyStringsWithString(string $array[], string $replace)
+{
+	for($i=0;$i<`size $array`;$i++){
+		$array[$i] = strip($array[$i]);
+		if($array[$i] == ""){
+			$array[$i] = $replace;
+		}
+	}
+	return $array;
+}
+
+
+//@ BOOL TO STRING
+//=====================================
+global proc string boolToString( int $bool )
+{
+	if($bool == 0){
+		return "false";	
+	} else {
+		return "true";	
+	}
+}
+
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         TEST STRINGS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//TEST STRINGS
+//============================
+global proc string[] getTestStringArray(int $length)
+{
+	string $all[] = `ls`;
+	string $return[];
+	for($i=0;$i<$length;$i++){
+		$return[`size $return`] = $all[$i];
+	}
+	//string $testArray[] = { "
+	return $return;
+}
+
+global proc string getTestStringArrayWithBrackets(int $length)
+{
+	string $arr[] = getTestStringArray($length);
+	string $arrString = stringArrayToStringArrayString($arr);
+	return $arrString;
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         PRINTING
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//PRINTING
+//=====================================
+global proc printBracketedArrayList(string $array[])
+{
+	string $print = stringArrayToStringArrayString($array);
+	print($print + "\n");
+
+}
+
+global proc string[] testPrintObjectsInArray(string $sel[])
+{
+	for($i=0;$i<`size $sel`;$i++){
+		print("Selected: " + $sel[$i] + "\n");
+	}
+	return $sel;
+}
+
+//########################################################################################################
+//########################################################################################################
+///////////////////                                 //////////////////////////////////////////////////////
+//			                DEPRECATE 
+///////////////////                                 //////////////////////////////////////////////////////
+//########################################################################################################
+//########################################################################################################
+
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         RENAMING - DEPRECATE!
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//RENAMING
+//================================
+//BY TEMPLATE
+global proc string[] renameSelectedObjectsByTemplate(string $sel[])
+{
+	string $newNames[];
+	for($i=0;$i<`size $sel`;$i++){
+		string $newName = renameObjectByTemplate($sel[$i]);
+		$newNames[`size $newNames`] = $newName;
+	}
+	return $newNames;
+}
+
+global proc string renameObjectByTemplateRootType(string $obj)
+{
+
+	string $type = getObjectNodeType($obj);
+	$type = capitalizeString($type);
+	
+	string $root = getObjectRoot($obj);
+	
+	string $parent = getParentOfObject($obj);
+	
+	string $newName = $root + $type;
+	//string $newName = $root + $parent + $type;
+	$newName = substituteAllString($newName, "|", "");
+	
+	return $newName;
+}
+
+global proc string renameObjectByTemplateNameType(string $obj)
+{
+	string $type = getObjectNodeType($obj);
+	$type = capitalizeString($type);
+	
+	string $newName = $obj + $type;
+	
+	$newName = substituteAllString($newName, "|", "");
+	
+	return $newName;	
+}
+
+global proc string[] renameHeirarchyUnderSelectedObjectsByTemplateA(string $sel[])
+{
+	string $newNames[];
+	for($i=0;$i<`size $sel`;$i++){
+		select -add -hi $sel[$i];
+	}
+	//string $transforms[] = `ls -type transform -sl`;
+	string $transforms[] = `ls -sl`;
+	debugML1("Renaming: " + "\n		- " + stringArrayToString($transforms, "\n		- ") + "\n");
+	
+	$newNames = renameSelectedObjectsByTemplate($transforms);
+	
+	string $nns[];
+	
+	for($i=0;$i<`size $transforms`;$i++){
+		if(`objExists $transforms[$i]` == 0){ continue;}
+		/*
+		if(catchQuiet(`rename $transforms[$i] $newNames[$i]`) == 1){
+			continue;
+		}
+		*/
+		string $nn = `rename $transforms[$i] $newNames[$i]`;
+		debugML1("		- Renamed: " + $transforms[$i] + " To: " + $nn + "\n");
+		$nns[`size $nns`] = $nn;
+	}
+	
+	return $newNames;
+}
+
+global proc renameHeirarchyUnderSelectedObjectsByTemplate(string $template)
+{
+	
+	string $sel[] = `ls -l -sl`;
+	string $newNames[];
+	string $nns[];
+	string $t[];
+	appendStringArray($t, $sel, `size $sel`);
+	string $children[];
+	string $rc[];
+	while(`size $t` > 0){
+		debugML2("Renaming: " + "\n		- " + stringArrayToString($t, "\n		- ") + "\n");
+		for($i=0;$i<`size $t`;$i++){
+			//Get the new name for the object
+			
+			string $getName;
+			if($template == "nameType"){
+				$getName = renameObjectByTemplateNameType($t[$i]);
+			} else if($template == "rootType"){
+				$getName = renameObjectByTemplateRootType($t[$i]);
+			}
+			//string $renameCommand = ("rename " + $t[$i] + $getName + ";");
+			//$rc[`size $rc`] = $renameCommand;
+			
+			string $nn = `rename $t[$i] $getName`;
+			debugML1("		- Renamed: " + $t[$i] + " To: " + $nn + "\n");
+			$nns[`size $nns`] = $nn;
+			$t[$i] = $nn;
+			
+			
+			//Get the children of the object to recurse
+			string $rel[] = `listRelatives -f -type "transform" $t[$i]`;
+			debugML2("		- Relatives: " + stringArrayToString($rel, " ") + "\n");
+			appendStringArray($children, $rel, `size $rel`);
+		}	
+		clear $t;
+		appendStringArray($t, $children, `size $children`);	
+		clear $children;
+	}
+
+}
+
+global proc string[] getRawObjectNames(string $sel[])
+{
+	printProc("getRawObjectNames");
+	string $raw[];
+	appendStringArray($raw,$sel,`size $sel`);
+	for($i=0;$i<`size $raw`;$i++){
+		if($raw[$i] == "|"){ continue;}
+		$raw[$i] = `match "[^|]*$" $raw[$i]`;
+		$raw[$i] = `match "[^0-9]*" $raw[$i]`;
+	}
+	return $raw;
+}
+
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         RENUMBER
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//RENUMBER
+//==============================================================================
+
+//RENUMBER ALL IN ARRAY
+//----------------------------------
+global proc string[] renumberAllInArray(string $arr[])
+{
+	
+	for($i=0;$i<`size $arr`;$i++){
+		$arr[$i] = `ls $arr[$i]`;
+		$arr[$i] = stripNumbersFromEndOfString($arr[$i]);
+		
+	}
+	return $arr;
+}
+
+//GET UNIQUE NUMBERED NAME
+//----------------------------------
+global proc string getUniqueNumberedName(string $name)
+{
+	string $sel[] = `ls ($name + "*")`;
+	if(`size $sel` == 0){
+		//$name = $name + "1";
+		return $name;
+	}
+	$sel = sort($sel);
+	int $selI = (`size $sel` - 1);
+	int $num = `match "[0-9.]*$" $sel[$selI]`;
+	$name = $name + ($num + 1);
+	return $name;
+}
+
+//GET NEW NUMBERED NAME FOR OBJECTS
+//----------------------------------
+global proc string[] getNewNumberedNamesForObject(string $name)
+{
+	string $sel[] = `ls ($name + "*")`;
+	if(`size $sel` == 0){
+		return {$name};
+	}
+	$sel = sort($sel);
+	for($i=0;$i<`size $sel`;$i++){
+		$sel[$i] = `match "[^0-9]*" $sel[$i]`;
+		$sel[$i] = $sel[$i] + $i;
+	}
+	return $sel;
+}
+
+global proc string[] getObjectsNamesWithNoNumbers(string $sel[])
+{
+	string $noNum[];
+	appendStringArray($noNum,$sel,`size $sel`);
+	for($i=0;$i<`size $noNum`;$i++){
+		//Skip separators	
+		if($noNum[$i] == "|"){ continue;}
+		
+		//Get the numbers on the end
+		string $endNum = `match "[0-9.]*$" $noNum[$i]`;
+		//Use the exact numbers on  the end to get the rest of the string
+		$noNum[$i] = `match ("[^" + $endNum + "]*") $noNum[$i]`;
+		
+		//If it's blank then we stripped off too much
+		if($noNum[$i] == ""){
+			$noNum[$i] = $sel[$i];
+		}
+	}
+	return $noNum;
+}
+
+global proc renumberSelectedObjectsName(string $sel[])
+{
+	int $startNumber = 1;
+	//string $sel[] = `ls -sl -fl -sn`;
+	string $newName;
+	//print $Sel;
+	//force a Number at end
+	for($n=0;$n<`size $sel`;$n++){
+		$sel = `ls -sl -fl -sn`;
+		string $buf[] = {};
+		int $numTokens = `tokenize $sel[$n] "|" $buf`;
+		$newName = $buf[(`size $buf` - 1)];
+		rename $sel[$n] ($newName + $n);
+    }
+	for($r=0;$r<`size $sel`;$r++){
+		$sel = `ls -sl -fl -sn`;
+		$filteredName = `match "[^|]*$"  $sel[$r]`;
+		$numbers = `match "[0-9]+" $filteredName`;
+		$newName = substituteAllString($filteredName, $numbers, "");//remove numbers
+		rename $sel[$r] ($newName + ($r + $startNumber));
+	}	
+	
+}
+
+global proc string convertFilePathToNativePath( string $filename )
+{
+	string $return = toNativePath($filename);
+	return $return;
+}
+
+global proc string convertToMayaPath( string $filename )
+{
+	string $return = substituteAllString($filename, "\\", "/");
+	return $return;
+
+}
+
+//@ PROC NAME
+//====================================================================
+/*****************************************************************//**
+	Generates a random string of text with parameters
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-fa string] [-fb linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-size(-sz) <br>
+	-alphaUpperCase(-aup) <br>
+	-alphaLowerCase(-alc) <br>
+	-numbers(-num) <br>
+	-specialCharacters(-sc) <br>
+	-include(-inc) <br>
+	-exclude(-ex) <br>
+	
+	
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName("-fa aString -fb anotherString");
+	
+	</code>
+*********************************************************************/
+global proc string generateRandomTextString( string $flags )
+{
+	string $fa, $fb;
+	string $fc[];
+	int $it;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-sz" : case "-size" :
+			$fa = $tok[($i + 1)];
+			break;
+				
+			case "-aup" : case "-alphaUpperCase" :
+			$fb = wizFlagString($tok, $i);
+			break;
+			
+			case "-alc" : case "-alphaLowerCase" :
+			$fc = wizFlagArray($tok, $i);
+			break;			
+			
+			case "-num" : case "-numbers" :
+			$it = int($tok[($i + 1)]);
+			break;
+			
+		}
+	}
+	
+
+	return "";
+}

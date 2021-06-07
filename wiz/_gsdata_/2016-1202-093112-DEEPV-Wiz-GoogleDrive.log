@@ -1,0 +1,7 @@
+2016-12-02 09:31:12: == Rename Conflict Losing File is On, expect some weirdness in auto-resolving Vertical Conflicts
+2016-12-02 09:31:13: -- Analysis Started by Trying Locks Again
+2016-12-02 09:31:16: Changes: 0, Conflicts: 0, CopyTime: 0, CopyState: 0/11, Errors: 0, All: 2849
+2016-12-02 09:31:16: == Sync Started by Trying Locks Again
+2016-12-02 09:31:19: Deleted Recycled: gdocs://www.googleapis.com/wiz/wiz/_gsdata_/_saved_/FaceCaptureManager.cs
+2016-12-02 09:31:24: == Sync Complete. Time: 00:00:08, Speed: 0 bytes/s, OK: 11, Errors: 0
+2016-12-02 09:31:26: 

@@ -1,0 +1,242 @@
+string exportFolder;
+int nfiles;
+int n = 0;
+void main(){
+	n = 0;
+	ModalDialog("First Select Export Folder. Click OK to start."," ");
+	// prompt for export folder
+	FolderDialog(exportFolder);
+	print("ExportFolder : " + exportFolder + "\n");
+	
+	nfiles=0;
+	
+	if(ModalDialogOkCancel("Now Select A File In The Import Folder"," ")){
+		//This function will call void ForAnyFile(string &in FileName) for each file in user defined folder
+		ForEachFileInFolder("","*.fbx","BakeMaps");
+		//ModalDialog(formatInt(nfiles,'l')+" files processed."," ");
+	}
+	
+
+} 
+
+void BakeMaps(string &in FileName){
+
+	/*
+	Import as paint object. Set texture width height to 8192
+		"{CY}Model for Per Pixel Painting" or "$ImportDPMesh"
+			"COMBOBOX_UVMapping" = Keep UV
+			"COMBOBOX_TEXTURE_SIZE_X" = 8192
+			"COMBOBOX_TEXTURE_SIZE_Y" = 8192
+			
+	Merge into retopo room?
+		"Use Visible Paint Objects as Retopo" or "$UseCurrMesh"
+		cmd($UseCurrMesh);
+		
+	Rename retopo object name of file
+		RenameCurrentRetopoLayer(string& Name); 
+	 
+	Bake 8192 map
+		"Bake w/ Per Pixel Painting w/ Displacement" or "$MergeForDP_disp"
+			"$BakeDepth::BakeScanDepthIn" = 0.5
+			"$BakeDepth::BakeScanDepthOut" = 0.5
+			"Ok" or "$DialogButton#1"
+			
+		
+	Export textures and mesh to some directory / filename /
+		"{CY}Export Objects & Textures" or "$EXPORTOBJECT"
+			"ExportGeometry" or "$ExportOpt::ExportGeometry" = true
+			"$ExportOpt::ExportMeshName" = folder + "/" + filename
+			"COMBOBOX_TexApproach" = specular
+			"COMBOBOX_" - This is the export presets = Unity(Specular)
+			"Use Source Positions" or "$ExportOpt::PickSourcePositions" = true
+			"Create Padding" or "$ExportOpt::CreatePadding" = 256
+			
+			"Ok" or "$DialogButton#1"
+			
+	delete paint object(s) retopo meshes
+		"$RtpGroupBtn1"
+		
+	delete paint layer name filename
+		bool SelectPaintLayer(string& in ID) 
+		"$LayersPanel::TrashLayer"
+	*/
+
+		ToRoom("UV");
+		// Import as paint object. Set texture width height to 8192
+		//--------------------
+		// IMPORT CALLBACKS!!
+		//--------------------		
+		SetFileForFileDialogs(FileName); 
+		
+		SetModalDialogCallback("ModalDialogCallbackImportObjectForPerPixelPainting");
+
+		cmd("$MERGEOBJ");
+		
+		
+		
+		// Get the name of the volume we are working with from filename
+		string fn;
+		fn = GetFileName(FileName);
+		fn = RemoveExtension(fn);
+		
+		ToRoom("Retopo");
+		// Merge into retopo room
+		cmd("$UseCurrMesh");
+		RenameCurrentRetopoLayer(fn); 
+		
+		//bool doesExist = SetCurVolume(fn);
+		// If we can't find a volume with matching name then return
+		//if (doesExist == false){
+		//	return ;
+		//}
+		
+		// Make sure the volume is visisble
+		//SetVolumeVisibility(true);
+		
+	
+		// Bake maps
+		//--------------------
+		// BAKE CALLBACKS
+		//--------------------
+		//SetModalDiagloCallback("ModalDialog________?_______");
+		//cmd($MergeForDP_disp);
+
+		
+		// Use the current volume name as filename 
+		//string outFilename; 
+		//outFilename = GetCurVolume();  
+		
+		// Add the extension
+		//outFilename += ".fbx";  
+		
+		// Add the dir to filename
+		//outFilename = exportFolder + "/" + outFilename;
+		
+		//SetFileForFileDialogs(outFilename); 
+		
+		//and finally export 
+		//--------------------
+		// EXPORT TEXTURES AND OBJECTS CALLBACKS
+		//--------------------
+		//ToRoom("Paint");
+		//SetModalDiagloCallback("ModalDialog________?_______");
+		//cmd("$EXPORTOBJECT");/*Export Object and Textures*/
+
+		//--------------------
+		// Cleanup
+		//--------------------
+		// Select the paint layer with baked textures and delete
+		//SelectPaintLayer(fn);
+		//cmd("$LayersPanel::TrashLayer");
+		
+		// Delete the retopo layer
+		//ToRoom("Retopo");
+		//SelectRetopoLayer(fn);
+		//cmd("$RtpGroupBtn1");
+		
+		// Delete the paint objects???
+		
+		//SetVolumeVisibility(false);
+		
+		
+		print(("Finished Baking : " + fn));
+		
+
+
+		nfiles++;
+	
+}
+
+
+
+
+
+
+void ModalDialogCallbackImportObjectForPerPixelPainting(){
+
+	SetEditBoxValue("COMBOBOX_TEXTURE_SIZE_X","$COMBOBOX_TEXTURE_SIZE_XCustomSize");	
+	SetEditBoxValue("COMBOBOX_TEXTURE_SIZE_Y","$COMBOBOX_TEXTURE_SIZE_YCustomSize");
+	
+	cmd("$COMBOBOX_TEXTURE_SIZE_XCustomSize");
+	cmd("$COMBOBOX_TEXTURE_SIZE_YCustomSize");
+	
+	SubstituteInputText("2048");
+	cmd("$ImpUV2::CUSTOM_SIZE_X[0]");
+	SubstituteInputText("2048");
+	cmd("$ImpUV2::CUSTOM_SIZE_Y[0]");
+	
+	cmd("$DialogButton#1");/*press Ok*/ 
+}
+
+
+
+
+void ModalDialogCallbackImportObjectForPerPixelPaintingAss(){
+
+/*
+	SetEditBoxValue("COMBOBOX_UVMapping" = Keep UV
+			"COMBOBOX_TEXTURE_SIZE_X" = 8192
+			"COMBOBOX_TEXTURE_SIZE_Y" = 8192
+			
+	SetSliderValue("$DecimationParams::ReductionPercent",ExportReductionPercent);
+	*/
+/*
+	float sizeX;
+	float sizeY;
+	sizeX = GetEditBoxValue("COMBOBOX_TEXTURE_SIZE_X");
+	sizeY = GetEditBoxValue("COMBOBOX_TEXTURE_SIZE_Y");
+	
+	ShowFloatingMessage(("Size X: " + sizeX + " Size Y: " + sizeY), 5);
+	*/
+	
+	//SetEditBoxValue("$MergeForDP_disp::COMBOBOX_TEXTURE_SIZE_X", 8192.0);
+	//SetEditBoxValue("$MergeForDP_disp::COMBOBOX_TEXTURE_SIZE_Y", 8192.0);
+	//if(n++>100)
+	//SubstituteInputText("COMBOBOX_TEXTURE_SIZE_X", 8192);
+	//SubstituteInputText("COMBOBOX_TEXTURE_SIZE_Y", 8192);
+	
+	//SetSliderValue("$MergeForDP_disp::COMBOBOX_TEXTURE_SIZE_X", 8192);
+	//SetSliderValue("$MergeForDP_disp::COMBOBOX_TEXTURE_SIZE_Y", 8192);
+	//SetSliderValue("$COMBOBOX_TEXTURE_SIZE_X8192");
+	//SetSliderValue("$COMBOBOX_TEXTURE_SIZE_Y8192");
+	//cmd("$COMBOBOX_TEXTURE_SIZE_X8192");
+	//cmd("$COMBOBOX_TEXTURE_SIZE_Y8192");
+	//cmd("$COMBOBOX_TEXTURE_SIZE_X8192");
+	//cmd("$COMBOBOX_TEXTURE_SIZE_Y8192");
+	
+	//SetEditBoxValue("COMBOBOX_TEXTURE_SIZE_X", "$COMBOBOX_TEXTURE_SIZE_X8192");
+	//SetEditBoxValue("COMBOBOX_TEXTURE_SIZE_X", "$COMBOBOX_TEXTURE_SIZE_Y8192");
+	//cmd("$COMBOBOX_TEXTURE_SIZE_XCustomSize");
+	
+	//SetEditBoxValue("COMBOBOX_TEXTURE_SIZE_X","$COMBOBOX_TEXTURE_SIZE_X8192");
+	//SetEditBoxValue("COMBOBOX_TEXTURE_SIZE_Y","$COMBOBOX_TEXTURE_SIZE_Y8192");
+	/*
+	SetEditBoxValue("COMBOBOX_TEXTURE_SIZE_X","$COMBOBOX_TEXTURE_SIZE_XCustomSize");
+	SubstituteInputText("8192");
+	cmd("$COMBOBOX_TEXTURE_SIZE_XCustomSize");
+	SetEditBoxValue("COMBOBOX_TEXTURE_SIZE_X","$COMBOBOX_TEXTURE_SIZE_YCustomSize");
+	SubstituteInputText("8192");
+	cmd("$COMBOBOX_TEXTURE_SIZE_YCustomSize");
+	SubstituteInputText("8192");
+	
+	SetEditBoxValue("$COMBOBOX_TEXTURE_SIZE_YCustomSize","");
+	*/
+	/*
+	SubstituteInputText("8192");
+	cmd("$ImpUV2::CUSTOM_SIZE_X[0]");
+	SubstituteInputText("8192");
+	cmd("$ImpUV2::CUSTOM_SIZE_Y[0]");
+	SubstituteInputText("8192");
+*/
+	//SetEditBoxValue("$ImpUV2::CUSTOM_SIZE_X[0]", 2048.0);
+	//SetEditBoxValue("$ImpUV2::CUSTOM_SIZE_Y[0]", 2048.0);
+	SetEditBoxValue("COMBOBOX_TEXTURE_SIZE_X","$COMBOBOX_TEXTURE_SIZE_X8192");
+	SetEditBoxValue("COMBOBOX_TEXTURE_SIZE_Y","$COMBOBOX_TEXTURE_SIZE_Y8192");
+	cmd("$DialogButton#1");/*press Ok*/  
+	
+	/*
+	cmd("$RESIZE_TOOL");
+	SetEditBoxValue("COMBOBOX_TEXTURE_SIZE_X","$COMBOBOX_TEXTURE_SIZE_XCustomSize");
+	SetEditBoxValue("COMBOBOX_TEXTURE_SIZE_Y","$COMBOBOX_TEXTURE_SIZE_YCustomSize");
+	*/
+} 

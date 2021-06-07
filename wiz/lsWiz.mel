@@ -1,0 +1,33 @@
+global proc lsWiz()
+{
+
+}
+
+global proc string[] lsWiz(string $arguments)
+{
+string $arg[];
+//string $arg[] = tokenizeList($arguments);
+return $arg;
+}
+
+global proc string[] getSelectFromConstructorList()
+{
+string $child[] = `columnLayout -q -ca selectFromConstructorLayout`;
+
+string $lsConst[];
+for($i=0;$i<`size $child`;$i++){
+	if(catchQuiet(`optionMenuGrp -q -v $child[$i]`) == 0){
+		string $ls = `optionMenuGrp -q -v $child[$i]`;
+		$lsConst[`size $lsConst`] = $ls; 
+    }    
+}
+return $lsConst;
+
+}
+
+global proc makeSelectionFromSelectFromConstructor()
+{
+string $ls[] = getSelectFromConstructorList();
+debugML1("ls: " + stringArrayToString($ls, " ") + "\n");
+
+}

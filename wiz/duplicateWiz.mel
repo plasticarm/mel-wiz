@@ -1,0 +1,113 @@
+global proc duplicateWiz()
+{
+/*
+global string $duplicateWizWindow;
+$duplicateWizWindow = "duplicateWiz";
+if(`window -exists $duplicateWizWindow`){
+	deleteUI $duplicateWizWindow;
+}
+
+window
+	-title "Duplicate Wiz"
+	-widthHeight 400 200
+	-menuBar on
+	-menuBarVisible on
+	-minimizeButton on
+	-maximizeButton on
+	-sizeable on		
+	-resizeToFitChildren off
+	-titleBar on
+	$duplicateWizWindow;
+	
+	string $masterLayout = `columnLayout
+		-adjustableColumn true
+		masterLayout
+		`;
+		
+	attributesModule($masterLayout);
+	
+	showWindow $duplicateWizWindow;
+	*/
+	//superDuplicator();
+}
+
+
+global proc string[] duplicateGroupHeirarchyParentsOnly(string $sel[])
+{
+/*
+for($i=0;$i<`size $sel`;$i++){
+	select -add -hi -vis $sel[$i];	
+}
+string $allTransforms[] = `ls -sl`;
+select -cl;
+for($i=0;$i<`size $allTransforms`;$i++){
+	int $isGroup = isGroup($allTransforms[$i]);
+	if($isGroup == 1){
+		select -add $allTransforms[$i];
+	}
+}
+
+select -r `ls -et transform -v -sl`;
+*/
+
+string $heirarchy[] = `ls -dag -tr -v $sel`;
+select -r $heirarchy;
+string $dup[] = `duplicate -po -rc`;
+return $dup;
+
+}
+
+global proc string[] duplicateGroupHeirarchyVisibleOnly(string $sel[])
+{
+
+for($i=0;$i<`size $sel`;$i++){
+	select -add -hi -vis $sel[$i];	
+}
+
+//select -r `ls -et transform -v -sl`;
+select -r `ls -v -sl`;
+string $dup[] = `duplicate -po -rc`;
+$dup = stringArrayRemoveDuplicates($dup);
+debugML1("DuplicateGroupHeirarchyVisibleOnly: Duplicates: " + "\n		- " + stringArrayToString($dup, "\n		- ") + "\n");
+return $dup;
+
+/*
+string $sel[] = `ls -sl`;
+string $heirarchy[] = `ls -dag -tr -v $sel`;
+string $hi = stringArrayToStringNiceList($heirarchy);
+debugML1("Heirarchy: " + $hi + "\n");
+select -r $heirarchy;
+string $geo[] = `ls -dag -lf -v -sl`;
+string $g = stringArrayToStringNiceList($geo);
+debugML1("Geometry: " + $g + "\n");
+select -add $geo;
+string $dup[] = `duplicate -po -rc`;
+return $dup;
+*/
+/*
+string $sel[] = `ls -sl`;
+string $heirarchy[] = `ls -dag -v $sel`;
+string $hi = stringArrayToStringNiceList($heirarchy);
+debugML1("Heirarchy: " + $hi + "\n");
+select -r $heirarchy;
+string $dup[] = `duplicate -po -rc`;
+*/
+/*
+string $sel[] = `ls -sl`;
+select -add -hi -vis $sel;
+string $dup[] = `duplicate -rc`;
+return $dup;
+*/
+}
+
+/*
+global proc string[] replaceInstancesWithDuplicates(string $instances[])
+{
+
+}
+*/
+
+global proc string[] wizDuplicateArray( string $flags )
+{
+	return {""};
+}

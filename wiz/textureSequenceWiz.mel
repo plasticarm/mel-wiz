@@ -1,0 +1,486 @@
+
+global proc textureOutputSequenceLayout(string $parent)
+{
+string $layout = `frameLayout
+	-l "Texture Output Sequence"	
+	-ann ""
+	-bv true
+	-la "center"
+	-li 10
+	-lv true
+	-mw 10
+	-mh 10		
+	
+	-cll true
+	-cl true
+	-parent $parent
+	`;
+	
+	outputTextureSequenceLayout($layout);
+	
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         TEXTURE SEQUENCE
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+
+global proc processTextureSequence()
+{
+	string $obj = `textFieldGrp -q -text getObject`;
+	string $shader = `textFieldGrp -q -text getShader`;
+	//setup some variables to work with. these act as your settings for controlling the script.
+	int $startframe = `intFieldGrp  -q -v1 outputRange`;
+	int $endframe = `intFieldGrp  -q -v2 outputRange`;
+	float $byFrame = `floatFieldGrp  -q -v1 outputByFrame`;
+	int $framePadding = `intFieldGrp -q -v1 framePadding`;
+
+	int $xRes = `intFieldGrp -q -v1 outputResolution`;
+	int $yRes = `intFieldGrp -q -v2 outputResolution`;
+
+
+	//string $filename = "/Shared/projects/SolarQuest-GJ/sourceimages/Sun/SurfaceTexture/SunSurface"; //put just the path and first part of the filename here.
+	string $fileDir = `textFieldButtonGrp -q -text outputDirectory`;
+	string $filename = `textFieldGrp -q -text fileName`;
+	$filename = $fileDir + "/" + $filename;
+
+	//string $filetype = "png"; 
+	string $filetype = `optionMenuGrp -q -v fileType`;
+	string $outfile = ""; //don't enter anything in here.
+	string $framenumber =""; //or here. as they are both dynamic variables (in other words their values change during the script)
+
+	$aa = `checkBox -q -v antiAliasTextureSequenceOutputOption`;
+	$bm = `optionMenuGrp -q -v backgroundModeTextureSequenceOutputOption`;
+	if($bm == 0){
+		$bm = 1;
+	} else if($bm == 1){
+		$bm =2;	
+	} else if($bm == 2){
+		$bm = 3;
+	}
+	$fts = `checkBox -q -v fillTextureSeamsTextureSequenceOutputOption`;
+	$bsgl = `checkBox -q -v bakeShadingGroupLightingTextureSequenceOutputOption`;
+	$sp = `checkBox -q -v bakeUsingVirtualPlaneTextureSequenceOutputOption`;
+	$sh = `checkBox -q -v bakeShadowsTextureSequenceOutputOption`;
+	$bt = `checkBox -q -v bakeTransparencyTextureSequenceOutputOption`;
+	$ds = `checkBox -q -v doubleSidedTextureSequenceOutputOption`;
+	$uvr = `optionMenuGrp -q -v uvRangeTextureSequenceOutputOption`;
+	if($uvr == 0){
+		$uvr = 1;
+	} else if($uvr == 1){
+		$uvr =2;	
+	} else if($uvr == 2){
+		$uvr = 3;
+	}
+
+	print ("Ready to Output Texture Sequence." + "\n");
+	print ("////////////////////////////////" + "\n");
+	print ("Object: " + $obj + " Shader: " + $shader + "\n");
+	print ("StartFrame: " + $startframe + " EndFrame: " + $endframe + "\n");
+	print ("ByFrame: " + $byFrame + "\n");
+	print ("XRes : " + $xRes + " YRes: " + $yRes + "\n");
+	print ("Filename: " + $filename + "\n");
+	print ("FileType: " + $filetype + "\n");
+	print ("FramePadding: " + $framePadding + "\n");
+
+	int $totalFrames = ($endframe - $startframe) / $byFrame;
+	//starting from the first frame do the following while $i (index) is less or equal to the last frame. So as soon as $i becomes greater than the last frame stop processing. The $i ++ tells the index to increase by one each time - it's the same as adding 1 to $i each time.
+	for ($i = 0; $i <= $totalFrames; $i ++)
+	{
+		$framenumber = willPadFrame ($framePadding, $i); // this takes the currentframe as an integer and returns a padding number for writing out the filename with padded frame numbers. the 4 is to do padding with 4 numbers. ie. 0001
+		
+		//create the name of the output file.
+		$outfile = ($filename + "." + $framenumber + "." + $filetype);
+		
+		//set the current frame
+		currentTime ($startframe + ($i * $byFrame));
+		//print ("CurrentTime: " + ($startframe + ($i * $byFrame)) + "\n");
+		
+		//convert to file texture
+		/* //These settings don't work for the sun for some reason
+		string $texfile[] = `convertSolidTx 
+			-antiAlias 1 
+			-bm 1 
+			-fin $outfile 
+			-fts 1 
+			-sp 0 
+			-sh 0 
+			-alpha 0 
+			-doubleSided 0 
+			-componentRange 0 
+			-resolutionX $xRes 
+			-resolutionY $yRes 
+			-fileFormat $filetype 
+			$shader $obj
+			`;
+		*/
+		/* // These settings might work better for sun
+		string $texfile[] = `convertSolidTx 
+			-antiAlias 1 
+			-bm 3 
+			-fin $outfile 
+			-fts 0 
+			-sp 0 
+			-sh 1 
+			-alpha 0 
+			-doubleSided 0 
+			-componentRange 1 
+			-resolutionX $xRes 
+			-resolutionY $yRes 
+			-fileFormat $filetype 
+			$shader $obj
+			`;
+		*/
+		// http://download.autodesk.com/global/docs/maya2012/en_us/Commands/index.html
+		
+		string $texfile[] = `convertSolidTx 
+			-antiAlias $aa 
+			-bm $bm 
+			-fin $outfile 
+			-fts $fts 
+			-sp $sp 
+			-sh $sh 
+			-alpha $bt 
+			-doubleSided $ds 		
+			-componentRange 0
+			-resolutionX $xRes 
+			-resolutionY $yRes 
+			-fileFormat $filetype 
+			$shader $obj
+			`;
+			
+		//I've made a change here so you can clean up all the fileTexture nodes the convertSolidTx command creates when you run the comand.
+		//remove the "//" from the start of the next line if you wish to delete all the filetexture nodes that are created when you run the script - this won't delete the texture files, just the maya nodes - you'll need to manually create a file texture node after running the script to point your image sequence to if you do decide to clean up the automatically created filetexture nodes.
+		//delete $texfile; 
+	}
+
+}
+
+//procedure to do frame padding. 
+global proc string willPadFrame (int $pad, int $frame)
+{
+	string $fstr = $frame;
+	string $fout = "";
+	string $pa = "";
+
+	for ($i = size($fstr); $i < $pad; $i++)
+	{
+	$pa += "0";
+	}
+	$fout = $pa + $fstr;
+	return $fout;
+}
+
+
+global proc outputTextureSequence()
+{
+	//global int $OTS_XRes;
+	//global int $OTS_YRes;
+
+	print ("Welcome to the Output Texture Sequence Manager" + "\n");
+	string $window = "ouputTextureSequenceWindow";//Global name for window
+	
+	if (`window -exists $window`)//Is my window there?
+		deleteUI $window;
+	
+	window
+		-title "Output Texture Sequence"
+		-widthHeight 400 300
+		-menuBar on
+		-menuBarVisible on
+		-minimizeButton on
+		-maximizeButton on
+		-sizeable on
+		-resizeToFitChildren on
+		-titleBar on
+		$window;
+		
+	string $masterLayout = `columnLayout
+		-adjustableColumn true
+		`;
+		
+	outputTextureSequenceLayout($masterLayout);
+	
+	showWindow $window;
+	
+}
+
+global proc outputTextureSequenceLayout(string $masterLayout)
+{
+			
+	frameLayout
+		-label "Pick an object and shader to render."
+		;		
+	
+	textFieldButtonGrp
+		-ed true
+		-label "Object"
+		-text  ""
+		//-cal 1 "center"
+		-buttonLabel "Pick"
+		-bc "assignObjectToTextureSequenceOutput"
+		getObject;
+        	
+    	textFieldButtonGrp
+    		-ed true
+    		-label "Shader"
+    		-text  ""
+    		//-cal 1 "center"
+    		-buttonLabel "Pick"
+    		-bc "assignTextureSequenceShader"
+    		getShader;
+    			
+
+
+        //-------------------------------
+        string $timeLayout = `frameLayout
+			-l "Frame Range"
+			-bv true
+			-la "center"
+			-li 10
+			-lv true
+			-mw 10
+			-mh 10		
+			
+			//-parent $masterLayout;
+			-parent $masterLayout`;
+		
+        //Set the start and end time
+        float $s=`playbackOptions -q -min`;
+        float $e=`playbackOptions -q -max`;
+	intFieldGrp 
+		-numberOfFields 2
+		-label "Frame Range"    			
+		-value1 $s
+		-value2 $e 
+		outputRange;
+		
+	floatFieldGrp 
+		-numberOfFields 1
+		-label "By Frame"    			
+		-value1 1
+		outputByFrame;
+				
+	string $resLayout = `frameLayout
+		-l "Resolution"
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-parent $masterLayout`;		
+        
+	intFieldGrp 
+		-numberOfFields 2
+		-label "Resolution"    			
+		-value1 1024
+		-value2 1024 
+		outputResolution;   	
+		
+	//-------------------------------
+	frameLayout
+		-l "Options"
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $masterLayout;	
+		/*
+		-antiAlias 1 
+		-bm 3 
+		-fin $outfile 
+		-fts 0 
+		-sp 0 
+		-sh 1 
+		-alpha 0 
+		-doubleSided 0 
+		-componentRange 1 
+		-resolutionX $xRes 
+		-resolutionY $yRes 
+		-fileFormat $filetype 
+		$shader $obj
+		*/
+	
+	checkBox
+		-l "Anti-alias"
+		-v false
+		antiAliasTextureSequenceOutputOption
+		;		
+			
+	optionMenuGrp 
+		-label "Background mode:"		
+		//-cal 1 "right" 
+		//-cw2 140 170 
+		backgroundModeTextureSequenceOutputOption;
+		menuItem -label "Shader default";
+		menuItem -label "Custom color" -en 0;
+		menuItem -label "Extend edge color" -en 0;	
+		
+	checkBox
+		-l "Fill texture seams"
+		-v false
+		fillTextureSeamsTextureSequenceOutputOption
+		;
+		
+	checkBox
+		-l "Bake shading group lighting"
+		-v false
+		bakeShadingGroupLightingTextureSequenceOutputOption
+		;
+		
+	checkBox
+		-l "Bake using virtual plane"
+		-v false
+		bakeUsingVirtualPlaneTextureSequenceOutputOption
+		;
+		
+	checkBox
+		-l "Bake shadows"
+		-v false
+		bakeShadowsTextureSequenceOutputOption
+		;
+	
+	checkBox
+		-l "Bake transparency"
+		-v false
+		bakeTransparencyTextureSequenceOutputOption
+		;
+		
+	checkBox
+		-l "Double Sided"
+		-v false
+		doubleSidedTextureSequenceOutputOption
+		;
+	/*	
+	radioButtonGrp 
+		-numberOfRadioButtons 3
+		-label "UV range:"
+		-labelArray3 "Default" "Entire range" "User specified"
+		uvRangeTextureSequenceOutputOption
+		;
+	*/	
+	optionMenuGrp 
+		-label "UV range:"		
+		//-cal 1 "right" 
+		//-cw2 140 170 
+		uvRangeTextureSequenceOutputOption;
+		menuItem -label "Default";
+		menuItem -label "Entire range" -en 0;
+		menuItem -label "User specified" -en 0;
+				
+	//-------------------------------
+	frameLayout
+		-l "Output"
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-parent $masterLayout;
+		
+
+	//string $outputDir = `internalVar -userImagesDir`;
+	textFieldButtonGrp
+		-ed true
+		-label "Output Directory:"
+		//-text  $outputDir
+		-text ""
+		//-cal 1 "center"
+		-buttonLabel "Browse"
+		-bc "getTextureSequenceOutputDirectory"
+		outputDirectory;
+				
+	textFieldGrp
+		-ed true
+		-label "File Name:"
+		-text  "Texture1"
+		//-cal 1 "center" 
+			fileName;   
+
+	optionMenuGrp 
+		-label "File Type:"		
+		-cal 1 "right" 
+		-cw2 140 170 
+		//-cc  ("updateTabParameter\""+ $parent+"\"")  knifeShape;
+		//-cc "updateFileType"
+		fileType;
+		menuItem -label "png";
+		menuItem -label "jpg" -en 0;
+		menuItem -label "tif" -en 0;
+		menuItem -label "psd" -en 0;
+		 			 	
+				
+	intFieldGrp 
+		-numberOfFields 1
+		-label "Frame Padding:"    			
+		-value1 4
+		framePadding;
+				
+	button
+		-label "Render Texture Sequence"
+		-parent $masterLayout
+		-command "processTextureSequence";
+		
+	
+}
+
+global proc getTextureSequenceOutputDirectory()
+{
+    string $result[] = `fileDialog2 -fileMode 3 -dialogStyle 2 -okCaption "OK"`;
+        textFieldButtonGrp
+            -e
+            -text  $result[0]
+        outputDirectory;
+    			
+
+}
+
+global proc assignTextureSequenceShader()
+{
+	/*
+	string $sel[]=`ls -sl`;
+	print $sel;
+	textFieldButtonGrp -e -tx $sel[0] getShader;
+	string $rel[] = `listRelatives -s $sel[0]`;
+	print ("Relatives : " + "\n");
+	print $rel;
+	string $shader = findObjOfType($rel, "shader");
+	if($shader == "null"){
+		print("Item selected is not a Shader." + "\n");
+	} else {
+		textFieldButtonGrp 
+		-e -text $shader
+		getShader;	
+				
+	}
+	*/
+	string $sel[]=`ls -sl`;
+	$sel[0] = $sel[0] + "SG";
+	textFieldButtonGrp -e -tx $sel[0] getShader;
+
+}
+
+
+global proc assignObjectToTextureSequenceOutput()
+{
+	string $sel[]=`ls -sl`;
+	print $sel;
+	textFieldButtonGrp -e -tx $sel[0] getObject;
+
+}
+
+
+    

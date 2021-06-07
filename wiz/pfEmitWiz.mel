@@ -1,0 +1,3320 @@
+
+//=================================
+// pfEmitter v1.0 (09/2012)
+// by Glen Johnson
+// 
+// The script is freeware / donationware. Non-commercial redistribution is permitted as long as this header remains included and unmodified.
+// Your feedback is always appreciated - if you find the script useful or if you have questions, comments, suggestions, requests, 
+// bug-reports, if you created an updated version, to check for updates or to make a donation please contact me at:
+//
+// http://www.plasticarm.com / http://www.homerunpictures.com
+// 
+//==================================
+// INSTALLATION: Copy the script into your Maya script-directory and start it with the pfEmit; command.
+//
+// COMPATIBILITY NOTE: Tested with Maya 2012
+//
+// DESCRIPTION: 
+//
+// TODO: 
+//	Trail Goal doesn't work right yet.
+//	Quadradic and cubic falloff doesn't work right yet.
+//	Velocity calculations need some work.
+global proc pfEmitWiz()
+{
+//pfEmit();
+}
+
+global proc pfEmit () 
+{
+	print ("*****************************************************************************************" + "\n");
+	print ("*******************************  Starting the pfEmitter  ********************************" + "\n");
+	print ("*****************************************************************************************" + "\n");
+	
+	string $window = "pfEmitWindow";//Global name for window
+	
+	if (`window -exists $window`)//Is my window there?
+		deleteUI $window;
+	
+	window
+		-title "pfEmitter"
+		-widthHeight 400 300
+		-menuBar on
+		-menuBarVisible on
+		-minimizeButton on
+		-maximizeButton on
+		-sizeable on
+		-resizeToFitChildren on
+		-titleBar on
+		$window;
+	
+	pfEmitLayout();
+		
+	
+	showWindow $window;
+	
+	updateReadyCreateStatus();
+}
+
+global proc pfEmitLayout()
+{
+
+	//columnLayout -adjustableColumn true;
+	string $masterLayout = `columnLayout	
+			-adjustableColumn true			
+			`;
+			
+	string $pfemitLayout = `frameLayout			
+			-ann "The pfEmitter will automatically find particles and fluids in your scene. <br> It will select the first visible particle and fluid objects that it finds."
+			-label "pfEmitter"
+			-bgc 0.988 0.533 0.180	
+			-cll true
+			-cl false
+			-la center
+			-mw 10
+			-mh 10
+			`;
+			
+		frameLayout
+			-ann "The pfEmitter will automatically find particles and fluids in your scene. <br> It will select the first visible particle and fluid objects that it finds."
+			-label "Select a Particle and a Fluid to emit into."			
+			-parent $pfemitLayout
+			;
+			
+	string $defaultParticle = findDefaultParticle();
+	string $defaultFluid = findDefaultFluid(); 
+
+	
+	textFieldButtonGrp
+		-ed true
+		-label "Particle"
+		//-text  "nParticle1"
+		-text  $defaultParticle
+		-ann "This will be used to emit into the selected fluid. This can be a particle or an nParticle object."
+		-cal 1 "center"
+		-buttonLabel "Select"
+		-bc "assignParticle"
+		-cc "updateReadyCreateStatus"
+		getParticle;
+        	
+	textFieldButtonGrp
+		-ed true
+		-label "Fluid"
+		//-text "fluidShape1"
+		-text  $defaultFluid
+		-ann "This is the fluid for the particles to emit into."
+		-cal 1 "center"
+		-buttonLabel "Select"
+		-bc "assignFluid"
+		-cc "updateReadyCreateStatus"
+		getFluid;
+
+	//-------------------------------
+	frameLayout
+		-l "Expression"	
+		-ann "These functions create and manage the expressions for the pfEmitter."
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl false
+		-parent $pfemitLayout;		
+
+	button
+		-label "Create Expression"
+		-ann "Click this button after the particle and fluid objects are selected.<br> It will automatically generate a particle expression to drive the fluid emissions."
+		//-bgc 0.4 0.5 0.4
+		-command "createExp"
+		-en false
+		createExpression;	
+		
+	button
+		-label "Delete Expression"
+		-ann "This will delete expressions on the selected particle and fluid objects."
+		//-bgc 1.0 0.0 0.06
+		-command "deleteExp"
+		-en false
+		deleteExpression;
+		
+	button
+		-label "Delete Attributes"
+		-ann "This will delete all the attributes on the particle that were created when the \"Create Expression\" button was clicked."
+		//-bgc 1.0 0.0 0.06
+		-command "deletePFEmitAttributes"
+		-en false
+		deletePFEmitAttributes;	
+		
+	button
+		-label "Turn Evaluation Off"
+		-ann "This will either stop or start the evaluation of the pfEmission expression."			
+		-command "togglePFEmitEvaluation"
+		togglePFEmitEvaluation;
+	
+	//____________EXTRA SETUP____________
+	string $testLayout = `frameLayout
+		-l "Extra Setup"
+		-ann "These are extra functions to help in seting up and using pfEmit."
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $pfemitLayout`;
+		
+	button
+		-label "Make Default Particle and Fluid Objects"
+		-ann "This will generate a simple setup that can be used for the pfEmitter."
+		-command "makeDefaultParticleFluid";
+		
+	button
+		-label "Make Particle Unrenderable"
+		-ann "This will turn off all the renderalbe attributes on the selected particle in case you don't want the particle to render."
+		-command "makeParticleUnrenderable";
+		
+	button
+		-label "Set Lifespan Mode to LifespanPP"
+		-ann "This will change the selected particle's lifespan mode to LifespanPP.<br> This is useful for this script because particles that exit the fluid will automatically be killed."
+		-command "setLifespanModeToLifespanPP";	
+		
+	button
+		-label "Create Fluid Auto Resize Emitter Helper"
+		-ann "This will create a fluid emitter attached to the selected particle's emitter.<br> This is useful because if you use auto resize for your fluids your fluid will be able to resize to the generated emitter."
+		-command "createFluidAutoResizeEmitter";
+
+	button
+		-label "Share Fields"
+		-ann ""
+		-command "sharePFEmitFields";
+		
+	button
+		-label "Share Colliders"
+		-ann ""
+		-en false
+		-command "sharePFEmitColliders";	
+		
+	button
+		-label "Clear Trails"
+		-ann "This will clear the array of trails if trails are checked."
+		-command "clearTrails";	
+		 
+	
+	//____________FLUID TRANSMISSION SETUP____________
+	string $fluidTransmissionLayout = `frameLayout
+		-l "Fluid to Fluid Transmission"
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-bgc 0.424 0.624 0.745
+		-parent $masterLayout`;
+		
+	textFieldButtonGrp
+		-ed true
+		-label "Master Fluid"
+		-text  "fluidShape1"
+		//-text  $defaultParticle
+		-ann ""
+		-cal 1 "center"
+		-buttonLabel "Select"
+		-bc "assignMasterFluid"
+		//-cc "updateReadyCreateStatus"
+		getMasterFluid;
+        	
+	textFieldButtonGrp
+		-ed true
+		-label "Slave Fluid"
+		-text "fluidShape2"
+		//-text  $defaultFluid
+		-ann ""
+		-cal 1 "center"
+		-buttonLabel "Select"
+		-bc "assignSlaveFluid"
+		//-cc "updateReadyCreateStatus"
+		getSlaveFluid;
+		
+			//-------------------------------
+		frameLayout
+			-l "Expression"	
+			-ann ""
+			-bv true
+			-la "center"
+			-li 10
+			-lv true
+			-mw 10
+			-mh 10		
+			
+			-cll true
+			-cl false
+			-parent $fluidTransmissionLayout;		
+		
+		checkBox
+			-l "Specify Grid Search Range"
+			-v false
+			fluidTransmissionSpecifyGridSearchRangeOption
+			;
+		
+		button
+			-label "Create Expression"
+			-ann ""			
+			-command "createFluidTransmissionExpression"
+			//-en false
+			createFluidTransmissionExpression;	
+			
+		button
+			-label "Delete Expression"
+			-ann ""
+			-command "deleteFluidTransmissionExpression"
+			//-en false
+			deleteFluidTransmissionExpression;
+			
+		button
+			-label "Delete Attributes"
+			-ann ""
+			-command "deleteFluidTransmissionAttributes"
+			//-en false
+			deleteFluidTransmissionAttributes;	
+			
+		button
+			-label "Turn Evaluation Off"
+			-ann "This will either stop or start the evaluation of the fluid transmission expression."			
+			-command "toggleFluidTransmissionEvaluation"
+			toggleFluidTransmissionEvaluation;
+			
+		frameLayout
+			-l "Extra Setup"	
+			-ann ""
+			-bv true
+			-la "center"
+			-li 10
+			-lv true
+			-mw 10
+			-mh 10	
+			-cll true
+			-cl true
+			
+			-parent $fluidTransmissionLayout;		
+	
+		button
+			-label "Create Default Fluid Setup"
+			-ann ""			
+			-command "createDefaultFluidSetup"
+			createDefaultFluidSetup;
+			
+		button
+			-label "Connect Fluid Resolutions"
+			-ann ""			
+			-command "connectFluidResolutions"
+			connectFluidResolutions;
+			
+		button
+			-label "Share All Fields"		
+			-command "shareAllFields"
+			shareAllFields;	
+			
+		button
+			-label "Empty Slave Fluid"		
+			-command "emptySlaveFluid"
+			emptySlaveFluid;
+			
+			
+		string $fluidTransferLayout = `frameLayout
+			-l "Fluid Transfer"
+			-ann ""
+			-bv true
+			-la "center"
+			-li 10
+			-lv true
+			-mw 10
+			-mh 10		
+			
+			-cll true
+			-cl true
+			-parent $fluidTransmissionLayout`;
+			
+			checkBoxGrp
+				-ncb 1
+				-l "Transfer in World Space: "				
+				-v1 false
+				-vr
+				transferInWorldSpace
+				;
+
+			optionMenuGrp -l "Source Type"
+				sourceFluidTransferType;
+					menuItem -label "velocity";
+					menuItem -label "density" -en 0;
+					menuItem -label "temperature" -en 0;
+					menuItem -label "fuel" -en 0;
+					menuItem -label "color" -en 0;
+					menuItem -label "falloff" -en 0;
+			
+			optionMenuGrp -l "Target Type"
+				targetFluidTransferType;
+					menuItem -label "velocity";
+					menuItem -label "density" -en 0;
+					menuItem -label "temperature" -en 0;
+					menuItem -label "fuel" -en 0;
+					menuItem -label "color" -en 0;
+					menuItem -label "falloff" -en 0;		
+				
+			floatSliderButtonGrp 
+				-cal 1 "left" 
+				-cw3 140 70 100
+				-l "Transfer Percent:" 
+				-minValue 0		
+				-maxValue 100
+				-value 100 
+				-precision 3
+				-fieldMinValue 0.0001 
+				-fieldMaxValue 100
+				-fs 0.05
+				-sliderStep 1
+				-step 1
+				-buttonLabel "Transfer"
+				-buttonCommand "doTransferFluidColor"
+				-field true	
+				-ann ""
+				 doTransferFluidColor;
+				 
+			button
+				-l "Copy Fluid Properties"
+				-c ("pfCopyFluidSourceTypeToTargetType();")
+				-ann "The source fluid and taget fluid must be of the same exact resolution and must be in same place in the world."
+				pfCopyFluidSourceTypeToTargetTypeButton
+				;
+				
+				 
+			progressBar
+				-min 0
+				-max 100
+				//-s 1
+				fluidTransferProgressBar
+				;
+				
+			text
+				-l ""
+				fluidTransferTimeRemaining
+				;
+		
+	//cacheFluidsLayout();	
+		
+		
+		
+	//____________OTHER FUNCTIONS____________
+	string $otherLayout = `frameLayout
+		-l "Other Functions"
+		-ann "Other useful functions to help with pfEmitter."
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true		
+		-parent $masterLayout`;
+		
+	string $fluidColorFillLayout = `frameLayout
+			-l "Fluid Color Fill"
+			-ann ""
+			-bv true
+			-la "center"
+			-li 10
+			-lv true
+			-mw 10
+			-mh 10		
+			
+			-cll true
+			-cl true
+			-parent $otherLayout`;
+			
+			colorSliderGrp 
+				-label "Fill Color"
+				-rgb 0 0 1
+				fillFluidColor
+				;
+				
+			button
+				-label "Fill Fluid With Color"		
+				-command "fillFluidWithColor"
+				fillFluidWithColor;
+	
+	button
+		-label "Convert between 2d and 3d fluid"
+		-ann "This will change a 2d fluid to a 3d fluid or a 3d fluid to a 2d fluid."			
+		-command "convert2d3dFluid"
+		-parent $otherLayout
+		convert2d3dFluid;
+	
+	button
+		-label "Copy Fluid Attributes"
+		-ann ""
+		-en false
+		-parent $otherLayout
+		-command "copyFluidAttributes";
+	
+	button
+		-label "Copy Particle Attributes"
+		-ann ""
+		-en false
+		-parent $otherLayout
+		-command "copyParticleAttributes";
+	
+	floatSliderButtonGrp 
+		-cal 1 "left" 
+		-cw3 140 70 100
+		-l "Fill Fluid Up:" 
+		-minValue 0		
+		-maxValue 100
+		-value 50 
+		-precision 3
+		-fieldMinValue 0.0001 
+		-fieldMaxValue 100
+		-fs 0.05
+		-sliderStep 1
+		-step 1
+		//-changeCommand "setPlaybackBy"
+		-buttonLabel "Fill"
+		-buttonCommand "fillFluidUp"
+		-field true	
+		-ann "This adds fluid to selected fluid container by percentage."
+		-parent $otherLayout
+		 fillFluidUp;	
+		 
+	/*	 
+	floatSliderButtonGrp 
+		-cal 1 "left" 
+		-cw3 140 70 100
+		-l "Playback By" 
+		-minValue 0.001		
+		-maxValue 1
+		-value 1 
+		-precision 3
+		-fieldMinValue 0.0001 
+		-fieldMaxValue 100
+		-fs 0.05
+		-sliderStep 1
+		-step 1
+		-changeCommand "setPlaybackBy"
+		-buttonLabel "Reset"
+		-buttonCommand "resetPlaybackBy"
+		-field true	
+		-ann "This sets the playbackBy setting in the preferences window.<br> Set this to something lower than 1 if your particles are moving to fast to get nice smooth trails."
+		 playbackBy;
+	*/	 
+	//____________ABOUT____________
+	string $aboutLayout = `frameLayout
+		-l "About"
+		-ann "Information about the pfEmitter."
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true		
+		-parent $masterLayout`;
+	text 		 
+		-align "center"
+		-ww true
+		-l "Hover mouse over areas of the interface for more information about how to get started using pfEmit."
+		;
+	text 		 
+		-align "center"
+		-l "For more information visit my site at..."
+		;
+	text 		
+		-align "center"
+		-hl true
+		-l "<a href=\"http://www.plasticarm.com\">www.plasticarm.com</a>"
+		;
+	
+}
+
+global proc string findDefaultParticle()
+{
+//Find a particle to pick for default.		
+string $allParticles[] = `ls -et particle -v`;
+//print("Found Particles : ");
+//print $allParticles;
+if(`size $allParticles` < 1){
+	$allParticles = `ls -et nParticle -v`;
+	//print $allParticles;
+}
+if(`size $allParticles` < 1){
+	//$pfEmitFoundParticle = false;
+	//print("No particles or nParticles were found!" + "/n");
+	//$allParticles[0] = "nParticleShape1";
+} 
+
+int $checked = checkNodeType($allParticles[0], "nParticle", "particle");
+if($checked == 1){
+	//print("Auto Particle Checked Out" + "\n");
+	//updateReadyCreateStatus();
+}
+//print("\n");
+//select $allParticles[0];
+//headsUpMessage -s -time 5.0 -vo 20 "This is the selected particle to emit from.";
+return $allParticles[0];
+	
+}
+
+global proc string findDefaultFluid()
+{
+	//Find a fluid to pick for default.
+	string $allFluids[] = `ls -et fluidShape -v`;
+	//print("Found Fluids : ");
+	//print $allFluids;
+	if(`size $allFluids` < 1){
+		//print("No fluids were found!" + "/n");
+		//$allFluids[0] = "fluid1";
+	} 
+	int $checked = checkNodeType($allFluids[0], "fluidShape", "");
+	if($checked == 1){
+		//print("Auto Fluid Checked Out" + "\n");
+		//updateReadyCreateStatus();
+	}
+	//print("\n");
+	//select $allFluids[0];
+	//headsUpMessage -s -time 5.0 "This is the selected fluid to emit into.";
+	return $allFluids[0];
+		
+}
+
+global proc int checkNodeType(string $obj, string $nodeType1, string $nodeType2)
+	{
+	if($obj == ""){
+		return 0;
+	}
+	string $objNodeType = `nodeType $obj`;
+	if($objNodeType == $nodeType1 || $objNodeType == $nodeType2 ){
+		return 1;
+	} else {
+		return 0;
+	}
+
+}
+
+global proc string findObjsOfType(string $objs[], string $nodeType1, string $nodeType2)
+{
+	int $i = 0;
+	for ($i = 0; $i < `size $objs`; $i++){
+		string $objNodeType = `nodeType $objs[$i]`;
+		if($objNodeType == $nodeType1 || $objNodeType == $nodeType2 ){
+			return $objs[$i];
+		} else {
+			return "null";
+		}
+	}
+
+}
+
+global proc assignParticle()
+{
+	string $sel[]=`ls -sl`;
+	string $part = findObjsOfType($sel, "particle", "nParticle");
+	
+	if(`size $sel`==0){
+		error "Nothing is Selected. Select a particle or nParticle.";
+	}
+	
+	if($part == "null"){
+		string $rel[] = `listRelatives -s $sel[0]`;
+		//print ("Relatives : " + "\n");
+		//print $rel;
+		$part = findObjsOfType($rel, "particle", "nParticle");
+		if($part == "null"){
+			textFieldButtonGrp 
+			-e -text $sel[0]
+			getParticle;
+			updateReadyCreateStatus();
+			print("Item selected is not a particle or nParticle." + "\n");
+		} else {
+			textFieldButtonGrp 
+			-e -text $part
+			getParticle;
+			
+			updateReadyCreateStatus();
+			//print("Particle Checked Out" + "\n");			
+			
+		}
+	}
+
+}
+
+global proc assignFluid()
+{
+	string $sel[]=`ls -sl`;
+	string $fluid = findObjsOfType($sel, "fluid", "fluidShape");
+	
+	if(`size $sel`==0){
+		error "Nothing is selected. Select a fluid.";
+	}
+	
+	if($fluid == "null"){
+		string $rel[] = `listRelatives -s $sel[0]`;
+		print ("Relatives : " + "\n");
+		print $rel;
+		$fluid = findObjsOfType($rel, "fluid", "fluidShape");
+		if($fluid == "null"){
+			textFieldButtonGrp 
+			-e -text $sel[0]
+			getFluid;
+			updateReadyCreateStatus();
+			print("Item selected is not a fluid." + "\n");
+		} else {
+			textFieldButtonGrp 
+			-e -text $fluid
+			getFluid;
+			
+			updateReadyCreateStatus();
+			//print("Fluid Checked Out" + "\n");			
+			
+		}
+	}
+	
+}
+
+global proc updateReadyCreateStatus()
+{
+	string $particle = `textFieldButtonGrp -q -text getParticle`;
+	string $fluid = `textFieldButtonGrp -q -text getFluid`;
+	
+	int $checkedParticle = checkNodeType($particle, "nParticle", "particle");
+	int $checkedFluid = checkNodeType($fluid, "fluid", "fluidShape");
+	if($checkedParticle == 0 || $checkedFluid == 0){
+		print("Not Ready to Create Expression!" + "\n");
+		button
+			-e
+			-label "Create Expression"
+			-ann "Click this button after the particle and fluid objects are selected.<br> It will automatically generate a particle expression to drive the fluid emissions."
+			-en false
+			createExpression;
+		button
+			-e
+			-en false
+			deleteExpression;
+			
+		button
+			-e
+			-en false
+			deletePFEmitAttributes;
+			
+	} else {
+		print("Ready to Create Expression!" + "\n");
+		
+		button
+			-e
+			-label " * Create Expression * "
+			-ann "You are ready to create the pfEmit expression.<br> Click to create the expression."
+			//-bgc 0.2 0.8 0.05
+			-en true
+			createExpression;
+		button
+			-e
+			-en true
+			deleteExpression;
+			
+		button
+			-e
+			-en true
+			deletePFEmitAttributes;
+	}
+
+}
+
+
+//________________This is for writing the expression___________________
+global proc createExp()
+{
+	string $particle = `textFieldButtonGrp -q -text getParticle`;
+	string $myFluid = `textFieldButtonGrp -q -text getFluid`;
+	//print ("MyFluid: " + $myFluid + "\n");
+	
+	//string $part = `textFieldButtonGrp -q -text getParticle`;
+	//string $partShape[] = `listRelatives -s $part`;
+	//string $partShape[] = `textFieldButtonGrp -q -text getParticle`;
+	string $partShape[];
+	$partShape[0] = $particle;
+	string $myParticle = $partShape[0];
+	string $emitter[] = `listConnections -t pointEmitter $particle`;
+	//print ("MyParticle: " + $myParticle + "\n");
+	
+	//_____________ADD ATTRIBUTES TO THE PARTICLE SHAPE_______________
+	
+	if (attributeExists ("inheritVelocity", $partShape[0])==0){
+	
+	// Global Attributes
+	addAttr -ln connectedFluid -dt "string" -h 0 $partShape[0];
+		setAttr ($partShape[0] + ".connectedFluid") -type "string" $myFluid;
+	addAttr -ln antiAliasFluidEmission -at bool -k 1 -dv 1 $partShape[0];
+	addAttr -ln antiAliasSampleRadius -at double -k 1 -min -100 -max 100 -smn 0 -smx 2 -dv 1 $partShape[0];
+	addAttr -ln altiAliasFalloff -at double -k 1 -min -100 -max 100 -smn 0 -smx 10 -dv 2 $partShape[0];
+	addAttr -ln evaluatePFEmission -at bool -k 1 -dv 1 $partShape[0];
+	
+	// Velocity Attributes
+	addAttr -ln velocityEmissionAttributes -multi $partShape[0];
+	addAttr -ln inheritVelocity -at bool -k 1 -dv 0 $partShape[0];
+	addAttr -ln velocityInfluence -at double -k 1 -min -100 -max 100 -smn 0 -smx 2 -dv 1 $partShape[0];
+	addAttr -ln velocityDecayRate -at enum -en "none=0:linear=1:quadradic=2:cubic=3" $partShape[0];
+	addAttr -ln velocityLifespan -at double -k 1 -min 0 -max 10000 -smx 100 -dv 1 $partShape[0];
+	addAttr -ln randomVelocity -at double -k 1 -min 0 -max 10000 -smx 1 -dv 0 $partShape[0];
+	addAttr -ln velocityEmissionMethod -at enum -en "add=0:replace=1" $partShape[0];	
+		setAttr ($partShape[0] + ".velocityEmissionMethod" ) 1 ;
+	
+	// Density Attributes
+	addAttr -ln densityEmissionAttributes -multi $partShape[0];
+	addAttr -ln initialDensity -at double -k 1 -min 0 -max 100 -smx 2 -dv 1.5 $partShape[0];
+	addAttr -ln goalDensity -at double -k 1 -min 0 -max 100 -smx 2 -dv 0 $partShape[0];
+	addAttr -ln densityDecayRate -at enum -en "none=0:linear=1:quadradic=2:cubic=3" $partShape[0];
+		setAttr ($partShape[0] + ".densityDecayRate" ) 1 ;
+	addAttr -ln reverseDensityDecay -at bool -k 1 -dv 0 $partShape[0];
+	addAttr -ln oscillateDensityDecay -at bool -k 1 -dv 0  $partShape[0];
+	addAttr -ln densityLifespan -at double -k 1 -min 0 -max 10000 -smx 100 -dv 50 $partShape[0];
+	addAttr -ln randomDensity -at double -k 1 -min 0 -max 10000 -smx 1 -dv 0 $partShape[0];
+	addAttr -ln densityEmissionMethod -at enum -en "add=0:replace=1" $partShape[0];
+		setAttr ($partShape[0] + ".densityEmissionMethod" ) 1 ;
+	addAttr -ln multiplyDensityByParticleRadius -nn XParticleRadius -at bool -k 1 -dv 0 $partShape[0];
+	
+	// Temperature Attributes
+	addAttr -ln temperatureEmissionAttributes -multi $partShape[0];
+	addAttr -ln initialTemperature -at double -k 1 -min 0 -max 100 -smx 2 -dv 1 $partShape[0];
+	addAttr -ln goalTemperature -at double -k 1 -min 0 -max 100 -smx 2 -dv 0 $partShape[0];
+	addAttr -ln temperatureDecayRate -at enum -en "none=0:linear=1:quadradic=2:cubic=3" $partShape[0];
+		setAttr ($partShape[0] + ".temperatureDecayRate" ) 1 ;
+	addAttr -ln reverseTemperatureDecay -at bool -k 1 -dv 0  $partShape[0];
+	addAttr -ln oscillateTemperatureDecay -at bool -k 1 -dv 0  $partShape[0];
+	addAttr -ln temperatureLifespan -at double -k 1 -min 0 -max 10000 -smx 100 -dv 50   $partShape[0];
+	addAttr -ln randomTemperature -at double -k 1 -min 0 -max 10000 -smx 1 -dv 0  $partShape[0];
+	addAttr -ln temperatureEmissionMethod -at enum -en "add=0:replace=1" $partShape[0];
+		setAttr ($partShape[0] + ".temperatureEmissionMethod" ) 1 ;
+	addAttr -ln multiplyTemperatureByParticleRadius -nn XParticleRadius -at bool -k 1 -dv 0 $partShape[0];
+	
+	// Fuel Attributes
+	addAttr -ln fuelEmissionAttributes -multi $partShape[0];
+	addAttr -ln initialFuel -at double -k 1 -min 0 -max 100 -smx 2 -dv 0 $partShape[0];
+	addAttr -ln goalFuel -at double -k 1 -min 0 -max 100 -smx 2 -dv 0 $partShape[0];
+	addAttr -ln fuelDecayRate -at enum -en "none=0:linear=1:quadradic=2:cubic=3" $partShape[0];
+		setAttr ($partShape[0] + ".fuelDecayRate" ) 1 ;
+	addAttr -ln reverseFuelDecay -at bool -k 1 -dv 0 $partShape[0];
+	addAttr -ln oscillateFuelDecay -at bool -k 1 -dv 0 $partShape[0];
+	addAttr -ln fuelLifespan -at double -k 1 -min 0 -max 1000 -smx 100 -dv 10 $partShape[0];
+	addAttr -ln randomFuel -at double -k 1 -min 0 -max 10000 -smx 1 -dv 0 $partShape[0];
+	addAttr -ln fuelEmissionMethod -at enum -en "add=0:replace=1" $partShape[0];
+		setAttr ($partShape[0] + ".fuelEmissionMethod" ) 1 ;
+	addAttr -ln multiplyFuelByParticleRadius -nn XParticleRadius -at bool -k 1 -dv 0 $partShape[0];
+	
+	// Color Attributes
+	addAttr -ln colorEmissionAttributes -multi $partShape[0];
+	addAttr -ln emitColor -at bool -k 1 -dv 0 $partShape[0];
+	
+	// Trail Attributes
+	addAttr -ln trailEmissionAttributes -multi $partShape[0];
+	addAttr -ln trails -at bool -k 1 -dv 0 $partShape[0];
+	addAttr -ln goalTrail -at double -k 1 -min 0 -max 100 -smx 2 -dv 0 $partShape[0];
+	addAttr -ln trailDecayRate -at enum -en "none=0:linear=1:quadradic=2:cubic=3" $partShape[0];
+		setAttr ($partShape[0] + ".trailDecayRate" ) 1 ;
+	addAttr -ln trailLifespan -at double -k 1 -min 0 -max 1000 -smx 100 -dv 10 $partShape[0];
+	addAttr -ln randomTrail -at double -k 1 -min 0 -max 10000 -smx 1 -dv 0 $partShape[0];
+	addAttr -ln trailEmissionMethod -at enum -en "add=0:replace=1" $partShape[0];
+		setAttr ($partShape[0] + ".trailEmissionMethod" ) 1 ;
+	
+	//Particle Cluster Attributes
+	addAttr -ln particleClusterAttributes -multi $partShape[0];
+	addAttr -ln particleClusters -at bool -k 1 -dv 0 $partShape[0];
+	addAttr -ln particleClusterSize -at long -k 1 -min 0 -max 100 -smx 10 -dv 1 $partShape[0];
+	addAttr -ln randomClusterSize -at double -k 1 -min 0 -max 100 -smx 10 -dv 0 $partShape[0];
+	addAttr -ln clusterSpread -at double -k 1 -min 0 -max 100 -smx 10 -dv 0 $partShape[0];
+	addAttr -ln clusterRandomVelocity -at double -k 1 -min 0 -max 100 -smx 10 -dv 0 $partShape[0];
+	
+	//Extra Emitter Attributes
+	addAttr -ln extraEmitterAttributes -multi $partShape[0];
+	addAttr -ln randomizeRate -at double -k 1 -min 0 -max 100 -smx 10 -dv 0 $partShape[0];
+	addAttr -ln randomizeDirection -at double -k 1 -min 0 -max 100 -smx 10 -dv 0 $partShape[0];
+	addAttr -ln initEmitRate -at double -h 1 $partShape[0];
+	addAttr -ln initEmitDirX -at double -h 1 $partShape[0];
+	addAttr -ln initEmitDirY -at double -h 1 $partShape[0];
+	addAttr -ln initEmitDirZ -at double -h 1 $partShape[0];
+	
+	float $initEmitRate = 0;
+	float $initEmitDirX = 0;
+	float $initEmitDirY = 0;
+	float $initEmitDirZ = 0;
+		
+	if(`size $emitter` > 0){
+		$initEmitRate = `getAttr ($emitter[0] + ".rate")`;
+		$initEmitDirX = `getAttr ($emitter[0] + ".directionX")`;
+		$initEmitDirY = `getAttr ($emitter[0] + ".directionY")`;
+		$initEmitDirZ = `getAttr ($emitter[0] + ".directionZ")`;
+		setAttr ($partShape[0] + ".initEmitRate") $initEmitRate;
+		setAttr ($partShape[0] + ".initEmitDirX") $initEmitDirX;
+		setAttr ($partShape[0] + ".initEmitDirY") $initEmitDirY;
+		setAttr ($partShape[0] + ".initEmitDirZ") $initEmitDirZ;
+	}
+	
+	// PP Attributes
+	addAttr -ln VelRan0  -dt doubleArray -h 1 $partShape[0];
+	addAttr -ln VelRan  -dt doubleArray  $partShape[0];
+		setAttr -e-keyable true ($partShape[0] + ".VelRan");
+	addAttr -ln DensRan0  -dt doubleArray -h 1 $partShape[0];
+	addAttr -ln DensRan  -dt doubleArray  $partShape[0];
+		setAttr -e-keyable true ($partShape[0] + ".DensRan");
+	addAttr -ln TempRan0  -dt doubleArray -h 1 $partShape[0];
+	addAttr -ln TempRan  -dt doubleArray  $partShape[0];
+		setAttr -e-keyable true ($partShape[0] + ".TempRan");
+	addAttr -ln FuelRan0  -dt doubleArray -h 1  $partShape[0];
+	addAttr -ln FuelRan  -dt doubleArray  $partShape[0];
+		setAttr -e-keyable true ($partShape[0] + ".FuelRan");
+	
+	// Other Attributes
+	//addAttr -ln otherPFEmitAttributes -multi $partShape[0];
+	//addAttr -ln particleAgeMethod -at bool -k 1 -dv 0 $partShape[0];
+	
+	}	
+	
+	
+	//___________CREATE THE EXPRESION_____________________
+	
+	// delete the previous expression, if there is such
+	string $exp=`dynExpression -q -s -rad $partShape[0]`;
+	int $ok=1;
+		if (`size $exp`>0){
+		// confirm to cleanup
+		string $result=`confirmDialog -t "Warning!" -ma center
+		-m ("You are about to delete ALL Runtime After Dynamics"
+		+" expressions from this particle.\n"
+		+" Are you sure?") -b "Yes" -b "No" -db "No" -cb "No"`;
+			if ($result=="Yes"){
+				dynExpression -s "" -rad $partShape[0];
+				dynExpression -s "" -rbd $partShape[0];
+			$ok=1;
+			}
+			else
+			$ok=0;
+		}
+	
+	string $quotes="\"";
+	string $particleVar = "string $particle = " + $quotes + $myParticle + $quotes;
+	string $fluidVar = "string $fluid = " + $quotes + $myFluid + $quotes;
+	string $emitterVar = "string $emitter = " + $quotes + $emitter[0] + $quotes;
+	string $endLine = "\"\n\"";
+	string $trailVar = "$" + $particle + "TrailData";
+	
+	//_______________________________________________
+	
+	if (attributeExists ("TLAge0", $partShape[0])==0){
+		addAttr -ln TLAge0  -dt doubleArray -h 1 $partShape[0];
+	}
+	if (attributeExists ("TLAge", $partShape[0])==0){
+		addAttr -ln TLAge  -dt doubleArray  $partShape[0];
+	}
+	setAttr -e-keyable true ($partShape[0] + ".TLAge");
+	
+	if (attributeExists ("TLBirth0", $partShape[0])==0){
+		addAttr -ln TLBirth0  -dt doubleArray -h 1 $partShape[0];
+	}
+	
+	if (attributeExists ("TLBirth", $partShape[0])==0){
+		addAttr -ln TLBirth  -dt doubleArray  $partShape[0];
+	}
+	setAttr -e-keyable true ($partShape[0] + ".TLAge");
+	
+	if (attributeExists ("Cluster0", $partShape[0])==0){
+		addAttr -ln Cluster0  -dt doubleArray -h 1  $partShape[0];
+	}
+	if (attributeExists ("Cluster", $partShape[0])==0){
+		addAttr -ln Cluster  -dt doubleArray  $partShape[0];
+	}
+	setAttr -e-keyable true ($partShape[0] + ".Cluster");
+	
+	
+	// the actual expression
+	dynExpression -s (
+	"//Particle Fluid Emitter Expression \n"
+	+"//-----------------------------------------------\n"
+	+"global float " + $trailVar + "[];\n"
+	+"\n"
+	+"$eval = evaluatePFEmission;\n"
+	+"if($eval){\n"
+	+"	doPFEmit();\n"
+	+"}\n"
+	+"\n"
+	+"global proc doPFEmit()\n"
+	+"{\n"
+	+ $particleVar + " ;\n"
+	+ $fluidVar + " ;\n"
+	+"\n"
+	+"// Don't evaluate if we are playing from the cache \n"
+	+"$playFromCache = `getAttr ($fluid + \".playFromCache\")`;\n"
+	+"if($playFromCache == true){\n"
+	+"	//print(\"Playing From Cache\" + \"\\n\");\n"
+	+"	return;\n"
+	+"}\n"
+	+"float $initDens = initialDensity;\n"
+	+"float $initTemp = initialTemperature;\n"
+	+"float $initFuel = initialFuel;\n"
+	+"\n"
+	+"float $goalDens = goalDensity;\n"
+	+"float $goalTemp = goalTemperature;\n"
+	+"float $goalFuel = goalFuel;\n"
+	+"float $goalTrail = goalTrail;\n"
+	+"\n"
+	+"float $fDensDis = densityLifespan;\n"
+	+"float $fTempDis = temperatureLifespan;\n"
+	+"float $fFuelDis = fuelLifespan;\n"
+	+"\n"
+	+"int $densEmitMeth = densityEmissionMethod;\n"
+	+"int $tempEmitMeth = temperatureEmissionMethod;\n"
+	+"int $fuelEmitMeth = fuelEmissionMethod;\n"
+	+"\n"
+	+"int $densDecayRate = densityDecayRate;\n"
+	+"int $tempDecayRate = temperatureDecayRate;\n"
+	+"int $fuelDecayRate = fuelDecayRate;\n"
+	+"\n"
+	+"int $revDens = reverseDensityDecay;\n"
+	+"int $revTemp = reverseTemperatureDecay;\n"
+	+"int $revFuel = reverseFuelDecay;\n"
+	+"\n"
+	+"int $mirDens = oscillateDensityDecay;\n"
+	+"int $mirTemp = oscillateTemperatureDecay;\n"
+	+"int $mirFuel = oscillateFuelDecay;\n"
+	+"\n"
+	+"float $densRan = randomDensity;\n"
+	+"float $tempRan = randomTemperature;\n"
+	+"float $fuelRan = randomFuel;\n"
+	+"\n"
+	+"float $velInf = velocityInfluence;\n"
+	+"int $velDecayRate = velocityDecayRate;\n"
+	+"float $fVelDis = velocityLifespan;\n"
+	+"float $velRan = randomVelocity;\n"
+	+"int $velEmitMeth = velocityEmissionMethod;\n"
+	+"\n"
+	+"$multDensPr = multiplyDensityByParticleRadius;\n"
+	+"$multTempPr = multiplyTemperatureByParticleRadius;\n"
+	+"$multFuelPr = multiplyFuelByParticleRadius;\n"
+	+"float $minRanDis = 0.25;\n"
+	+"float $ranRate = randomizeRate;\n"
+	+"float $ranDir = randomizeDirection;\n"
+	+"\n"
+	+"//print (\"InitDens: \" + $initDens);\n"
+	+"\n"
+	+"$emitColor = emitColor;\n"
+	+"float $partColor[];\n"
+	+"$trails = trails;\n"
+	+"$useFluidSettings = false;\n"
+	+"$antiAlias = antiAliasFluidEmission;\n"
+	+"$inheritVelocity = inheritVelocity;\n"
+	+"$pCluster = particleClusters;\n"
+	+"float $pClusterSize = particleClusterSize;\n"
+	+"float $ranClusterSize = randomClusterSize;\n"
+	+"float $cSpread = clusterSpread;\n"
+	+"float $cRanVel = clusterRandomVelocity;\n"
+	+"\n"
+	+"float $currentTime = `currentTime -q`;\n"
+	+"//print(\"CurrentFrame: \" + $currentTime + \"\\n\");\n"
+	+"if($currentTime == 1){\n"
+	+"	clear " + $trailVar + " ;\n"
+	+"}\n"
+	+"\n"
+	+"int $i, $vX, $vY, $vZ;\n"
+	+"float $pos[], $partDens[], $partVel[], $sampDens[], $sampTemp[], $sampFuel[], $fluidVel[], $transfVel, $transfDens, $transfTemp, $transfFuel, $particleCol[], $transColor[];\n"
+	+"float $partAge[];\n"
+	+"float $partTLAge[];\n"
+	+"float $partSize[];\n"
+	+"float $velRanPP[], $densRanPP[], $tempRanPP[], $fuelRanPP[];\n"
+	+"float $clus[];\n"
+	+"float $px, $py, $pz;\n"
+	+"vector $voxel;\n"
+	+"\n"
+	+"float $trailTransfDens[], $trailTransfTemp[], $trailTransfFuel[], $tX[], $tY[], $tZ[];\n"
+	+"\n"
+	+"// get the resolution of the fluid-container and the current particle-count\n"
+	+"float $res[] = `getAttr ($fluid + \".resolution\")`;\n"
+	+"int $xRes = $res[0];\n"
+	+"int $yRes = $res[1];\n"
+	+"int $zRes = $res[2];\n"
+	+"\n" 
+	+"int $pCount = `particle -ct -q $particle`;\n"
+	+"\n"
+	+"// Clear the trail array if this is a new simulation \n"
+	+"if($pCount <= 1){\n"
+	+"	float $partBirth[] = `getParticleAttr -at TLBirth ($particle + \".pt[0]\")`;\n"
+	+"	$partAge = `getParticleAttr -at age ($particle + \".pt[0]\")`;\n"
+	+"	if($partBirth[0] == 0){\n"
+	+"		clear " + $trailVar + " ;\n"
+	+"		if($ranRate > 0 || $ranDir > 0){\n"
+	+"			resetInitEmitterValues();\n"
+	+"			setInitEmitterValues();\n"
+	+"		}\n"
+	+"	}\n"
+	+"}\n"
+	+"\n"
+	
+	+"// Add Clusters of particles \n"
+	+"if($pCluster){\n"
+	+"string $emitCmd = (\"emit -object \" + $particle);\n"
+	+"$newParticles = false;\n"
+	+"float $clusterCount = 0;\n"
+	+"for($i = 0;$i< $pCount; $i++){\n"
+	+"	// retrieve age for every particle \n"
+	+"	$partAge = `getParticleAttr -at age ($particle + \".pt[\" + $i + \"]\")`;\n"
+	+"	// retrieve coordinates for every particle \n"
+	+"	$pos = `getParticleAttr -at worldPosition ($particle + \".pt[\" + $i + \"]\")`;\n" 
+	+"	// retrieve cluster data for every particle \n"
+	+"	$clus = `getParticleAttr -at Cluster ($particle + \".pt[\" + $i + \"]\")`;\n"
+	+"	// retrieve velocity for every particle \n"
+	+"	$partVel = `getParticleAttr -at velocity ($particle + \".pt[\" + $i + \"]\")`;\n"
+	+"	//print(\"Clus: \" + $clus[0] + \"\\n\");\n"
+	+"	if($partAge[0] < 0.25 && $clus[0] == 0){\n"
+	+"		int $c = 0;\n"
+	+"		if($cSpread > 0){\n"
+	+"			$minRanDis = $cSpread;\n"
+	+"		} else {\n"
+	+"			$minRanDis = $minRanDis * ((sqrt($pClusterSize)) * 2);\n"
+	+"		}\n"
+	+"		\n"
+	+"		if($ranClusterSize > 0){\n"
+	+"			$pClusterSize = trunc(rand($pClusterSize - $ranClusterSize,$pClusterSize + $ranClusterSize));\n"
+	+"		}\n"
+	+"		//print(\"MinRanDis: \" + $minRanDis + \"\\n\");\n"
+	+"		for($c=0; $c < $pClusterSize; $c++){\n"
+	+"			// This writes the commands that will emit all the cluster particles \n"
+	+"			//vector $ranPos = sphrand(<<$ppos[0],$ppos[1],$ppos[2]>>);\n"
+	+"			//vector $ranPos = <<rand($pos[0]),rand($pos[1]),rand($pos[2])>>;\n"
+	+"			float $ranX = rand($pos[0] - $minRanDis, $pos[0] + $minRanDis);\n"
+	+"			float $ranY = rand($pos[1] - $minRanDis, $pos[1] + $minRanDis);\n"
+	+"			float $ranZ = rand($pos[2] - $minRanDis, $pos[2] + $minRanDis);\n"
+	+"			vector $ranPos = <<$ranX,$ranY,$ranZ>>;\n"
+	+"			$emitCmd += \" -pos \"+ $ranPos;\n"
+	+"			$emitCmd += \" -at velocity \";\n"
+	+"			$ranX = rand($partVel[0] - $cRanVel, $partVel[0] + $cRanVel);\n"
+	+"			$ranY = rand($partVel[1] - $cRanVel, $partVel[1] + $cRanVel);\n"
+	+"			$ranZ = rand($partVel[2] - $cRanVel, $partVel[2] + $cRanVel);\n"
+	+"			//vector $vel = sphrand($partVel[0]);\n"
+	+"			vector $vel = <<($partVel[0] + $ranX),($partVel[1] + $ranY),($partVel[2] + $ranZ)>>;\n"
+	+"			//print(\"PartVel: \" + $partVel[0] + \" Vel: \" + $vel + \"\\n\");\n"
+	+"			$emitCmd += \" -vv \" + $vel;\n"
+	+"			$emitCmd += \" -at Cluster -fv 1 \" + \"\\n\";\n"
+	+"			//print( $emitCmd + \"\\n\");\n"
+	+"			$clusterCount++;\n"
+	+"			$newParticles = true;\n"
+	+"		}\n"
+	+"		select ($particle + \".pt[\" + $i + \"]\");\n"
+	+"		setParticleAttr -at Cluster -fv 1;\n"
+	+"	}\n"
+	+"	if($clus[0] == 1){\n"
+	+"		$clusterCount++;\n"
+	+"		//print(\"ClusterAge: \" + $partAge[0] + \"\\n\");\n"
+	+"	}\n"
+	+"}\n"
+	+"if($newParticles){\n"
+	+"	// Execute the emission of the cluster particle commands \n"
+	+"	eval( $emitCmd );\n"
+	+"}\n"
+	+"int $pCount = `particle -ct -q $particle`;\n"
+	+"//headsUpMessage (\"Particle Count : \" + $pCount);\n"
+	+"float $pDiff = $pCount - $clusterCount;\n"
+	+"//print(\"ParticleCount: \" + $pDiff + \" ClusterCount: \" + $clusterCount + \"\\n\");\n"
+	+"}\n"
+	
+	+"\n"
+	+"//Start Calculating----------------\n"
+	+"for ($i = 0;$i< $pCount; $i++){\n"
+	+"\n"
+	+"// retrieve coordinates for every particle\n"
+	+"$pos = `getParticleAttr -at worldPosition ($particle + \".pt[\" + $i + \"]\")`;\n" 
+	+"\n"
+	+"// retrieve age for every particle\n"
+	+"$partAge = `getParticleAttr -at age ($particle + \".pt[\" + $i + \"]\")`;\n"
+	+"$partTLAge = `getParticleAttr -at TLAge ($particle + \".pt[\" + $i + \"]\")`;\n"
+	+"\n"
+	+"// retrieve random values for every particle\n"
+	+"$velRanPP = `getParticleAttr -at VelRan($particle + \".pt[\" + $i + \"]\")`;\n"
+	+"$densRanPP = `getParticleAttr -at DensRan($particle + \".pt[\" + $i + \"]\")`;\n"
+	+"$tempRanPP = `getParticleAttr -at TempRan($particle + \".pt[\" + $i + \"]\")`;\n"
+	+"$fuelRanPP = `getParticleAttr -at FuelRan($particle + \".pt[\" + $i + \"]\")`;\n"
+	+"\n"
+	+"// retrieve size for every particle if this is an nParticle object \n"
+	+"string $nodeType = `nodeType $particle`;\n"
+	+"if($nodeType == \"nParticle\"){\n"
+	+"	$partSize = `getParticleAttr -at radiusPP ($particle + \".pt[\" + $i + \"]\")`;\n"
+	+"} else { \n"
+	+"	$partSize[0] = 1;\n"
+	+"}\n"
+	+"\n"
+	+"// retrieve the voxel which we have to emit into \n"
+	+"$px = $pos[0];\n"
+	+"$py = $pos[1];\n"
+	+"$pz = $pos[2];\n"
+	+"$voxel = `fluidVoxelInfo -os false -cb -voxel $px $py $pz $fluid`;\n" 
+	+"$vX = $voxel.x;\n"
+	+"$vY = $voxel.y;\n"
+	+"$vZ = $voxel.z;\n"
+	+"\n"
+	+"//print($px + \" | \" + $py + \" | \" + $pz + \" | \" + \"\\n\");\n"
+	+"// is the particle actually inside the fluid-container?\n" 
+	+"if($vX < $xRes && $vX > 0 && $vY < $yRes && $vY > 0 && $vZ < $zRes && $vZ>0){\n"
+	+"\n"
+	+"// Calculate the Velocity \n"
+	+"if($inheritVelocity){\n"
+	+"	// retrieve the current velocity of the particle AND of the voxel \n"
+	+"	$partVel = `getParticleAttr -at velocity ($particle + \".pt[\" + $i + \"]\")`;\n"
+	+"	$fluidVel = `getFluidAttr -at velocity -xi $vX -yi $vY -zi $vZ $fluid`;\n"
+	+"	// Caculate the falloff of the velocity if there is falloff\n"
+	+"	$partVel[0] = fallOff($partVel[0], 0, $partTLAge[0], $fVelDis, $velDecayRate, $velRanPP[0], 0, 0, $i);\n"
+	+"	$partVel[1] = fallOff($partVel[1], 0, $partTLAge[0], $fVelDis, $velDecayRate, $velRanPP[0], 0, 0, $i);\n"
+	+"	$partVel[2] = fallOff($partVel[2], 0, $partTLAge[0], $fVelDis, $velDecayRate, $velRanPP[0], 0, 0, $i);\n"
+	+"	\n"
+	+"	// Add or Replace the particle velocity to the fluid velocity \n" 
+	+"	if($velEmitMeth == 0){\n"
+	+"		$fluidVel[0] = $fluidVel[0] + $partVel[0] ;\n" 
+	+"		$fluidVel[1] = $fluidVel[1] + $partVel[1] ;\n"
+	+"		$fluidVel[2] = $fluidVel[2] + $partVel[2] ;\n"
+	+"	} else {\n"
+	+"		$fluidVel[0] = $partVel[0] - $fluidVel[0] ;\n" 
+	+"		$fluidVel[1] = $partVel[1] - $fluidVel[1] ;\n"
+	+"		$fluidVel[2] = $partVel[2] - $fluidVel[2] ;\n"
+	+"	}\n"
+	+"	// distribute evenly between the velocities of the particle and the voxel. Should we really be doing this? old value was 2 \n"
+	+"	//$fluidVel[0] = $fluidVel[0] / 2 ;\n" 
+	+"	//$fluidVel[1] = $fluidVel[1] / 2 ;\n"
+	+"	//$fluidVel[2] = $fluidVel[2] / 2 ;\n"
+	+"	$fluidVel[0] = $fluidVel[0] * $velInf ;\n" 
+	+"	$fluidVel[1] = $fluidVel[1] * $velInf ;\n"
+	+"	$fluidVel[2] = $fluidVel[2] * $velInf ;\n"
+	+"	\n"
+	+"	// Set that velocity for the current voxel \n"
+	+"	setFluidAttr -at velocity -vv $fluidVel[0] $fluidVel[1] $fluidVel[2] -xi $vX -yi $vY -zi $vZ $fluid;\n" 
+	+"}\n"
+	+"\n"
+	+"// Caculate the falloff of Density, Temperature, and Fuel \n"
+	+"$transfDens = fallOff($initDens, $goalDens, $partTLAge[0], $fDensDis, $densDecayRate, $densRanPP[0], $mirDens, $revDens, $i);\n"
+	+"$transfTemp = fallOff($initTemp, $goalTemp, $partTLAge[0], $fTempDis, $tempDecayRate, $tempRanPP[0], $mirTemp, $revTemp, $i);\n"
+	+"$transfFuel = fallOff($initFuel, $goalFuel, $partTLAge[0], $fFuelDis, $fuelDecayRate, $fuelRanPP[0], $mirFuel, $revFuel, $i);\n"
+	+"\n"
+	+"// Multiply by radius of particle \n"
+	+"if($multDensPr){\n"
+	+"	$transfDens = $transfDens * $partSize[0];\n"
+	+"}\n"
+	+"if($multTempPr){\n"
+	+"	$transfTemp = $transfTemp * $partSize[0];\n"
+	+"}\n"
+	+"if($multFuelPr){\n"
+	+"	$transfFuel = $transfFuel * $partSize[0];\n"
+	+"}\n"
+	+"\n"
+	+"// Do the actual emitting of the Density, Temperature, and Fuel \n"
+	+"float $densEmitted = emitIntoFluid($fluid, $transfDens, $densEmitMeth, \"density\", $densRan, $vX, $vY, $vZ);\n"
+	+"float $tempEmitted = emitIntoFluid($fluid, $transfTemp, $tempEmitMeth, \"temperature\", $tempRan, $vX, $vY, $vZ);\n"
+	+"float $fuelEmitted = emitIntoFluid($fluid, $transfFuel, $fuelEmitMeth, \"fuel\", $fuelRan, $vX, $vY, $vZ);\n"
+	+"if($antiAlias){\n"
+	+"	antiAliasVoxelEmission(\"density\", $densEmitted, $densEmitMeth, $px, $py, $pz);\n"
+	+"	antiAliasVoxelEmission(\"temperature\", $tempEmitted, $tempEmitMeth, $px, $py, $pz);\n"
+	+"	antiAliasVoxelEmission(\"fuel\", $fuelEmitted, $fuelEmitMeth, $px, $py, $pz);\n"
+	+"}\n"
+	+"\n"
+	+"// If our particle has run out of energy kill it. \n"
+	+"if($transfDens < 0.01 && $transfTemp < 0.01 && $transfFuel < 0.01){\n"
+	+"	if($revDens == 0 && $revTemp == 0 && $revFuel == 0 && $mirDens == 0 && $mirTemp == 0 && $mirFuel == 0 ){\n"
+	+"		killDeadParticle($particle, $i);\n"
+	+"	}\n"
+	+"}\n"
+	+"\n"
+	+"} else {\n"
+	+"	if($revDens == 0 && $revTemp == 0 && $revFuel == 0 && $mirDens == 0 && $mirTemp == 0 && $mirFuel == 0 ){\n"
+	+"		//Kill the particle\n"
+	+"		killDeadParticle($particle, $i);\n"
+	+"	}\n"
+	+"\n"
+	+"}\n"
+	+"\n"
+	+"// Add the data to the trail array \n"
+	+"if($trails){\n"
+	+"	$trailTransfDens[`size $trailTransfDens`] = $transfDens;\n"
+	+"	$trailTransfTemp[`size $trailTransfTemp`]  = $transfTemp;\n"
+	+"	$trailTransfFuel[`size $trailTransfFuel`]  = $transfFuel;\n"
+	+"	$tX[`size $tX`]  = $px;\n"
+	+"	$tY[`size $tY`]  = $py;\n"
+	+"	$tZ[`size $tZ`]  = $pz;\n"
+	+"}\n"
+	+"\n"
+	+"// Set the Age of each particle to correspond to the timeline \n"
+	+"select ($particle + \".pt[\" + $i + \"]\");\n"
+	+"float $tlAge[] = `getParticleAttr -at TLAge ($particle + \".pt[\" + $i + \"]\")`;\n"
+	+"float $tlBirth[] = `getParticleAttr -at TLBirth ($particle + \".pt[\" + $i + \"]\")`;\n"
+	+"// If the particles tlBirth = 0 then this is right when the particle was born. \n"
+	+"if($tlBirth[0] == 0){\n"
+	+"	setParticleAttr -at TLBirth -fv $currentTime;\n"
+	+"	$tlBirth[0] = $currentTime;\n"
+	+"	// Give the particle some random values to hold on to. \n"
+	+"	float $newVelRan = getRandomValue(0,$velRan);\n"
+	+"	float $newDensRan = getRandomValue($initDens,$densRan);\n"
+	+"	float $newTempRan = getRandomValue($initTemp,$tempRan);\n"
+	+"	float $newFuelRan = getRandomValue($initFuel,$fuelRan);\n"
+	+"	setParticleAttr -at VelRan -fv $newVelRan;\n"
+	+"	setParticleAttr -at DensRan -fv $newDensRan;\n"
+	+"	setParticleAttr -at TempRan -fv $newTempRan;\n"
+	+"	setParticleAttr -at FuelRan -fv $newFuelRan;\n"
+	+"}\n"
+	+"float $newTLAge = $currentTime - $tlBirth[0];\n"
+	+"setParticleAttr -at TLAge -fv $newTLAge;\n"
+	+"if($i == 0){\n"
+	+"	//print(\"BirthTime: \" + $tlBirth[0] + \" TLAge : \" + $tlAge[0] + \" Transf: \" + $transfDens + \"\\n\");\n"
+	+"}\n"
+	+"\n"
+	+"if($emitColor){\n"
+	+"	$partColor = `getParticleAttr -at rgbPP ($particle + \".pt[\" + $i + \"]\")`;\n"
+	+"	setFluidAttr -at color -vv $partColor[0] $partColor[1] $partColor[2] -xi $vX -yi $vY -zi $vZ $fluid;\n"
+	+"	if($antiAlias){\n"
+	+"		//antiAliasVoxelEmission(\"color\", $densEmitted, $densEmitMeth, $px, $py, $pz);\n"
+	+"}\n"
+	+"}\n"
+	+"\n"
+	+"if($ranRate > 0 || $ranDir > 0){\n"
+	+"	randomizeEmitter();\n"
+	+"}\n"
+	+"}\n"
+	+"\n"
+	+"// After we have emitted from all the particles... handle the trails. \n"
+	+"if($trails){\n"
+	+"	startTrails($particle,$trailTransfDens,$trailTransfTemp,$trailTransfFuel, $tX, $tY, $tZ);\n"	
+	+"}\n"
+	+"\n"
+	+"}\n"
+	
+	+"//_______________________________________________\n"
+	+"global proc float emitIntoFluid(string $fluid, float $transf, int $emitMeth, string $emitType, float $ran, float $vX, float $vY, float $vZ)\n"
+	+"{\n"
+	+"// Do the actual emitting of the Density, Temperature, and Fuel \n"
+	+"// Emit the density into the current voxel. First method Adds second method Replaces \n"
+	+"float $samp[];\n"
+	+"if($transf > 0){\n"
+	+"	if($emitMeth == 0){\n"
+	+"		setFluidAttr -at $emitType -ad -fv $transf -fr $ran -xi $vX -yi $vY -zi $vZ $fluid;\n" 
+	+"	} else {\n"
+	+"		$samp = `getFluidAttr -at $emitType -xi $vX -yi $vY -zi $vZ $fluid`;\n"
+	+"		$transf = $transf - $samp[0];\n"
+	+"		if($transf < 0){\n"
+	+"			$transf = 0;\n"
+	+"		}\n"
+	+"		setFluidAttr -at $emitType -ad -fv $transf -fr $ran -xi $vX -yi $vY -zi $vZ $fluid;\n" 
+	+"	}\n"
+	+"} else {\n"
+	+"	$transf = 0;\n"
+	+"}\n"
+	+"return $transf;\n"
+	+"}\n"
+	+"\n"
+	
+	+"//_______________________________________________\n"
+	+"global proc killDeadParticle(string $particle, int $i)\n"
+	+"{\n"
+	+"//Kill the particle\n"
+	+"select ($particle + \".pt[\"+$i +\"]\");\n"
+	+"setParticleAttr -at lifespanPP -fv 0;\n"
+	+"}\n"
+	+"\n"
+	
+	+"//_______________________________________________\n"
+	+"global proc float fallOff(float $initVal, float $goalVal, float $partAge, float $fDis, int $decayRate, float $ran, int $mir, int $rev, int $i)\n"
+	+"{\n"
+	+"float $falloffVal;\n"
+	+"float $falloffDir = $initVal - $goalVal;\n"
+	+"if($falloffDir < 0){\n"
+	+"	$falloffDir = -1;\n"
+	+"} else { \n"
+	+"	$falloffDir = 1;\n"
+	+"}\n"
+	+"	if($decayRate ==0){\n"
+	+"// no decay \n"
+	+"		$falloffVal = $initVal;\n"
+	+"	} else if($decayRate == 1){\n"
+	+"// linear decay \n"
+	+"		$falloffVal = $initVal - (((($partAge) / $fDis) * $initVal) * $falloffDir);\n"
+	+"		//$falloffVal = $initVal - ($partAge / $fDis);\n"
+	+"	//print($falloffVal + \" = \" + $initVal + \" - ((( \" + $partAge +  \" * 30) / \" + $fDis + \" ) * \" + $initVal + \" )\" + \"\\n\");\n"
+	+"	} else if($decayRate == 2){\n"
+	+"// quadradic decay \n"
+	+"		//$falloffVal = $initVal - ((($partAge) / $fDis) * ($initVal * 2));\n"
+	+"		//$falloffVal = $initVal / ((($partAge) / $fDis) * ($initVal * $partAge));\n"
+	+"		//$falloffVal = $initVal * ((1-(($partAge) / $fDis)) * $partAge);\n"
+	+"		//$falloffVal = ($initVal / (($partAge) / $fDis)) / $fDis;\n"
+	+"		$falloffVal = $initVal - (sqrt (($partAge) / $fDis));\n"
+	+"	} else if($decayRate == 3){\n"
+	+"// cubic decay \n"
+	+"		//$falloffVal = $initVal - ((($partAge) / $fDis) * ($initVal * 4));\n"
+	+"		//$falloffVal = $initVal - ((($partAge) / $fDis) * ($initVal * 4));\n"
+	+"		$falloffVal = ($initVal / (($partAge) / $fDis)) / $fDis;\n"
+	+"	}\n"
+	+"\n"
+	
+	+"// Add Randomness for each step in time - this is obsolete \n"
+	+"//if($ran > 0){\n"
+	+"//	float $ranUp = $falloffVal + $ran;\n"
+	+"//	float $ranDown = $falloffVal - $ran;\n"
+	+"//	float $ranVal = (rand($ranDown, $ranUp));\n"
+	+"//	$falloffVal = $ranVal;\n"
+	+"//}\n"
+	
+	+"// Add Randomness \n"
+	+"$falloffVal += $ran;\n"
+	
+	+"\n"
+	+"// Reverse Emission \n"
+	+"if($rev == 1 && $mir == 0){\n"
+	+"	if($initVal > $goalVal){\n"
+	+"		$falloffVal = $initVal - $falloffVal;\n"
+	+"		if($falloffVal > $initVal){\n"
+	+"			$falloffVal = $initVal;\n"
+	+"		}\n"
+	+"	} else { \n"
+	+"		$falloffVal = $goalVal - $falloffVal;\n"
+	+"		if($falloffVal > $goalVal){\n"
+	+"			$falloffVal = $goalVal;\n"
+	+"		}\n"
+	+"	}\n"	
+	+"}\n"
+	+"\n"
+	+"// oscillate Emission \n"
+	+"if($mir == 1){\n"
+	+"	if($rev == 1){\n"
+	+"		$falloffVal = $initVal - (abs(((($initVal - $falloffVal) % ($initVal * 2)) - $initVal)));\n"
+	+"	} else { \n"
+	+"		$falloffVal = abs((((($falloffVal + $initVal) % ($initVal * 2)) - $initVal))* $falloffDir);\n"
+	+"	}\n"
+	+"}\n"
+	
+	+"return $falloffVal;\n"
+	+"\n"
+	+"}\n"
+	+"\n"
+	
+	+"//_______________________________________________\n"
+	+"global proc float getRandomValue(float $initVal, float $ran)\n"
+	+"{\n"
+	+"if($ran > 0){\n"
+	+"	float $ranUp = $ran;\n"
+	+"	float $ranDown = 0 - $ran;\n"
+	+"	float $ranVal = rand($ranDown, $ranUp);\n"
+	+"	float $newRan = $ranVal;\n"
+	+"	return $newRan;\n"
+	+"} else { \n"
+	+"return 0;\n"
+	+"}\n"
+	+"}\n"
+	+"\n"
+	
+	+"//_______________________________________________\n"
+	+"global proc float [] getEmitVoxel( float $pos[], string $fluid)\n"
+	+"{\n"
+	+"float $px, $py, $pz;\n"
+	+"vector $voxel;\n"
+	+"float $v[];\n"
+	+"// retrieve the voxel which we have to emit into \n"
+	+"$px = $pos[0];\n"
+	+"$py = $pos[1];\n"
+	+"$pz = $pos[2];\n"
+	+"$voxel = `fluidVoxelInfo -os false -cb -voxel $px $py $pz $fluid`;\n" 
+	+"$v[0] = $voxel.x;\n"
+	+"$v[1] = $voxel.y;\n"
+	+"$v[2] = $voxel.z;\n"
+	+"//print (\"Voxel: \" + $v[0] + \" | \" + $v[1] + \" | \" + $v[2] + \"\\n\");\n"
+	+"return $v;\n"
+	+"\n"
+	+"}\n"
+	+"\n"
+	
+	+"//_______________________________________________\n"
+	+"global proc antiAliasVoxelEmission(string $emitType, float $transf,int $transfMeth, int $px, int $py, int $pz)\n"
+	+"{\n"
+	+ $fluidVar + " ;\n"
+	+"float $sampRadius = antiAliasSampleRadius;\n"
+	+"float $aaFalloff = altiAliasFalloff;\n"
+	+"int $adjVox[] = `fluidVoxelInfo -cb -voxel $px $py $pz -radius $sampRadius $fluid`;\n"
+	+"int $i = 0;\n"
+	+"int $p = 0;\n"
+	+"float $dis;\n"
+	+"float $samp[];\n"
+	+"float $vi[];\n"
+	+"for ($i=0; $i< `size $adjVox` ; $i++){\n"
+	+"	if($i == $p){\n"
+	+"		$vi[0] = $adjVox[$i];\n"
+	+"	} else if ($i == $p + 1){\n"
+	+"		$vi[1] = $adjVox[$i];\n"
+	+"	} else if ($i == $p + 2){\n"
+	+"		$vi[2] = $adjVox[$i];\n"
+	+"		float $cpx[] = `fluidVoxelInfo -cb -os false -voxelCenter -xi $vi[0] -yi $vi[1] -zi $vi[2] $fluid`;\n"
+	+"		float $pt1 = $px - $cpx[0];\n"
+	+"		float $pt2 = $py - $cpx[1];\n"
+	+"		float $pt3 = $pz - $cpx[2];\n"
+	+"		float $dis = sqrt($pt1*$pt1+$pt2*$pt2+$pt3*$pt3);\n"
+	+"		//$dis = sqrt((pow (2, ($px - $cpx[0]))) + (pow (2,($py - $cpx[1]))) + (pow (2,($pz - $cpx[2]))));\n"
+	+"		//print(\"Dis: \" + $dis + \"\\n\");\n"
+	+"		$transf = $transf - ($dis * $aaFalloff);\n"
+	
+	+"		if($transfMeth == 0){\n"
+	+"			setFluidAttr -at $emitType -ad -fv $transf -xi $vi[0] -yi $vi[1] -zi $vi[2] $fluid;\n" 
+	+"		} else {\n"
+	+"			$samp = `getFluidAttr -at $emitType -xi $vi[0] -yi $vi[1] -zi $vi[2] $fluid`;\n"
+	+"			$transf = $transf - $samp[0];\n"
+	+"			if($transf < 0){\n"
+	+"				$transf = 0;\n"
+	+"			}\n"
+	+"			setFluidAttr -at $emitType -ad -fv $transf -xi $vi[0] -yi $vi[1] -zi $vi[2] $fluid;\n" 
+	+"		}\n"
+	+"		//spaceLocator -p $cpx[0] $cpx[1] $cpx[2];\n"
+	+"		$p = $p + 3;\n"	
+	+"	}\n"
+	+"\n"
+	+"}\n"
+	+"}\n"
+	+"\n"
+	
+	+"//_______________________________________________\n"
+	+"global proc startTrails(string $particle, float $transfDens[], float $transfTemp[], float $transfFuel[], float $vX[], float $vY[], float $vZ[])\n"
+	+"{\n"
+	+"string $conFluid = `getAttr ($particle + \" .connectedFluid\")`;\n"
+	+"//print (\"conFluid: \" + $conFluid + \"\\n\");\n"
+	+"//string $conFluid = \"fluidShape1\";\n"
+	+"float $initDens = initialDensity;\n"
+	+"float $initTemp = initialTemperature;\n"
+	+"float $initFuel = initialFuel;\n"
+	+"float $tX, $tY, $tZ;\n"
+	+"float $tAll[];\n"
+	+"int $i = 0;\n"
+	+"float $trailArray[];\n"
+	+"// Dump the trailVar into trailArray \n"
+	+"//print(\"Dump: \");\n"
+	+"for($i = 0; $i < `size " + $trailVar + "`; $i++){\n"
+	+"	$trailArray[$i] = " + $trailVar + "[$i];\n"
+	+"	//print($trailArray[$i] + \" | \");\n"
+	+"}\n"
+	+"//print (\" || \" + \"\\n\");\n"
+	+"//print(\"SizeTrailVar: \" + `size " + $trailVar + "` + \"SizeTrailArray: \" + `size $trailArray` + \"\\n\");\n"
+	+"clear " + $trailVar + " ;\n"
+	
+	+"// Emit the trails \n"
+	+"int $p = 0;\n"
+	+"float $pos[];\n"
+	+"float $emitDens;\n"
+	+"float $emitTemp;\n"
+	+"float $emitFuel;\n"
+	+"float $poX;\n"
+	+"float $poY;\n"
+	+"float $poZ;\n"
+	+"for($i = 0; $i < `size $trailArray`; $i++){\n"
+	+"//print(\"I: \" + $i + \" P: \" + $p + \"\\n\");\n"
+	+"	if($i == $p){\n"
+	+"		$trailArray[$i] = trailFallOff($trailArray[$i], 0); // Calculate falloff \n"
+	+"		$emitDens = $trailArray[$i];\n"
+	+"		//print(\"EmitDens: \" + $trailArray[$i] + \" | \");\n"
+	+"	} else if($i == $p + 1){\n"
+	+"		$trailArray[$i] = trailFallOff($trailArray[$i], 1); // Calculate falloff \n"
+	+"		$emitTemp = $trailArray[$i];\n"
+	+"		//print(\"EmitTemp: \" + $trailArray[$i] + \" | \");\n"
+	+"	} else if($i == $p + 2){\n"
+	+"		$trailArray[$i] = trailFallOff($trailArray[$i], 2); // Calculate falloff \n"
+	+"		$emitFuel = $trailArray[$i];\n"
+	+"		//print(\"EmitFuel: \" + $trailArray[$i] + \" | \");\n"
+	+"	}else if($i == $p + 3){\n"
+	+"		$poX = $trailArray[$i];\n"
+	+"		$pos[0] = $poX;\n"
+	+"		//print(\"poX: \" + $trailArray[$i] + \" | \");\n"
+	+"	}else if($i == $p + 4){\n"
+	+"		$poY = $trailArray[$i];\n"
+	+"		$pos[1] = $poY;\n"
+	+"		//print(\"poY: \" + $trailArray[$i] + \" | \");\n"
+	+"	}else if($i == $p + 5){\n"
+	+"		$poZ = $trailArray[$i];\n"
+	+"		$pos[2] = $poZ;\n"
+	+"		//print(\"poZ: \" + $trailArray[$i] + \" | \" + \"\\n\");\n"
+	+"		$p = $p + 6;\n"
+	+"		//makeSpaceLocator($poX, $poY, $poZ);\n"
+	+"		// Find out which voxel goes with which particle position. \n"
+	+"		$tAll = getEmitVoxel($pos, $conFluid);\n"
+	+"		$poX = $tAll[0];\n"
+	+"		$poY = $tAll[1];\n"
+	+"		$poZ = $tAll[2];\n"
+	+"		// Do the fluid emission. \n"
+	+"		//print(\"Emit: \" + $emitDens + \" | \" + $emitTemp + \" | \" + $emitFuel + \" | \" + $poX + \" | \" + $poY + \" | \" + $poZ + \"\\n\");\n"
+	+"		emitTrailIntoFluid($conFluid, \"density\", $emitDens, $poX, $poY, $poZ);\n"
+	+"		emitTrailIntoFluid($conFluid, \"temperature\", $emitTemp, $poX, $poY, $poZ);\n"
+	+"		emitTrailIntoFluid($conFluid, \"fuel\", $emitFuel, $poX, $poY, $poZ);\n"
+	+"		// Put the values we are keeping back into the trailVar \n"
+	+"		float $minVal = 1;\n"
+	+"		if($emitDens >= $minVal || $emitTemp >= $minVal || $emitFuel >= $minVal){\n"
+	+"			" + $trailVar + "[$i - 5] = $trailArray[$i - 5];\n"
+	+"			" + $trailVar + "[$i - 4] = $trailArray[$i - 4];\n"
+	+"			" + $trailVar + "[$i - 3] = $trailArray[$i - 3];\n"
+	+"			" + $trailVar + "[$i - 2] = $trailArray[$i - 2];\n"
+	+"			" + $trailVar + "[$i - 1] = $trailArray[$i - 1];\n"
+	+"			" + $trailVar + "[$i] = $trailArray[$i];\n"
+	+"		}\n"
+	+"	}\n"
+	+"}\n"
+	
+	+"// Add the new values to the end of the array \n"
+	+"for ( $i = 0; $i < `size $transfDens`; $i++){\n"
+	+"	" + $trailVar + "[`size " + $trailVar + "`] = $transfDens[$i];\n"
+	+"	" + $trailVar + "[`size " + $trailVar + "`] = $transfTemp[$i];\n"
+	+"	" + $trailVar + "[`size " + $trailVar + "`] = $transfFuel[$i];\n"
+	+"	" + $trailVar + "[`size " + $trailVar + "`] = $vX[$i];\n"
+	+"	" + $trailVar + "[`size " + $trailVar + "`] = $vY[$i];\n"
+	+"	" + $trailVar + "[`size " + $trailVar + "`] = $vZ[$i];\n"
+	+"}\n"
+	+"\n"
+	
+	+"//print(\"TrailArraySize: \"+`size " + $trailVar + "` + \"\\n\");\n"
+	+"//print(\"TrailArray[\"+`size $trailArray` +\"](\" + $trailArray[(`size $trailArray` - 1)] + \") = \" + $transfDens + \"\\n\");\n"
+	+"//for ($i = 0; $i < `size $trailArray`; $i++){\n"
+	+"	//print(\"TA: \" + $trailArray[$i] + \"TransfDens: \" + $transfDens + \"\\n\");\n"
+	+"//}\n"
+	
+	+"}\n"
+	
+	+"//_______________________________________________\n"
+	+"global proc float trailFallOff(float $transf, int $trailType )\n"
+	+"{\n"
+	+"float $trailFalloff;\n"
+	+"int $tDecayRate = trailDecayRate;\n"
+	+"float $goalVal = goalTrail;\n"
+	+"float $tLife = trailLifespan;\n"
+	+"float $tRan = randomTrail;\n"
+	+"float $initDens = initialDensity;\n"
+	+"float $initTemp = initialTemperature;\n"
+	+"float $initFuel = initialFuel;\n"
+	+"float $initVal;\n"
+	
+	+"// Set the initial val depending on if this is a trail of density, temperature, or fuel \n"
+	+"if($trailType == 0){\n"
+	+"	$initVal = $initDens;\n"
+	+"} else if($trailType == 1){\n"
+	+"	$initVal = $initTemp;\n"
+	+"} else if($trailType == 2){\n"
+	+"	$initVal = $initFuel;\n"
+	+"}\n"
+	
+	+"float $falloffDir = $initVal - $goalVal;\n"
+	+"if($falloffDir < 0){\n"
+	+"	$falloffDir = -1;\n"
+	+"} else { \n"
+	+"	$falloffDir = 1;\n"
+	+"}\n"
+	
+	+"if($tDecayRate ==0){\n"
+	+"// no decay \n"
+	+"	$trailFalloff = $initVal;\n"
+	+"} else if($tDecayRate == 1){\n"
+	+"// linear decay \n"
+	+"	$trailFalloff = $transf - ((($initVal / $tLife) * $initVal) * $falloffDir);\n"
+	+"} else if($tDecayRate == 2){\n"
+	+"// quadradic decay \n"
+	+"	$trailFalloff = $transf - (($transf / ($initVal / $tLife)) * $falloffDir);\n"
+	+"} else if($tDecayRate == 3){\n"
+	+"// cubic decay \n"
+	+"	$trailFalloff = $transf - ((($initVal / $tLife) * $initVal) * $falloffDir);\n"
+	+"}\n"
+	+"\n"
+	+"//print(\"TrailFalloff: \" + $trailFalloff + \" | \");\n"
+	+"// Add Randomness \n"
+	+"if($tRan > 0){\n"
+	+"	float $ranUp = $trailFalloff + $tRan;\n"
+	+"	float $ranDown = $trailFalloff - $tRan;\n"
+	+"	float $ranVal;\n"
+	+"	$ranVal = rand($ranDown, $ranUp);\n"
+	+"	$trailFalloff = $ranVal;\n"
+	+"}\n"
+	
+	+"if($goalVal > 0){\n"
+	+"	if($goalVal > $initVal){\n"
+	+"		if($trailFalloff > $goalVal){\n"
+	+"			$trailFalloff = $goalVal;\n"
+	+"		}\n"
+	+"	} else {\n"
+	+"		if($trailFalloff < $goalVal){\n"
+	+"			$trailFalloff = $goalVal;\n"
+	+"		}\n"
+	+"	}\n"
+	+"}\n"
+	
+	+"return $trailFalloff;\n"
+	+"}\n"
+	+"\n"
+	
+	+"//_______________________________________________\n"
+	+"global proc emitTrailIntoFluid(string $fluid, string $emitType, float $transf, float $vX, float $vY, float $vZ)\n"
+	+"{\n"
+	+"float $sampVox[];\n"
+	+"int $emitMeth = trailEmissionMethod;\n"
+	+"// emit into the current voxel. First method Adds second method Replaces \n"
+	+"if($transf > 0){\n"
+	+"	if($emitMeth == 0){\n"
+	+"		setFluidAttr -at $emitType -ad -fv $transf -xi $vX -yi $vY -zi $vZ $fluid;\n" 
+	+"	} else {\n"
+	+"		$sampVox = `getFluidAttr -at $emitType -xi $vX -yi $vY -zi $vZ $fluid`;\n"
+	+"		$transf = $transf - $sampVox[0];\n"
+	+"		if($transf < 0){\n"
+	+"			$transf = 0;\n"
+	+"		}\n"
+	+"		//$transf = abs ($transf - $sampVox[0]);\n"
+	+"		//print(\"Transf: \" + $transf + \" SampVox: \" + $sampVox[0] + \"\\n\");\n"
+	+"		setFluidAttr -at $emitType -ad -fv $transf -xi $vX -yi $vY -zi $vZ $fluid;\n" 
+	+"	}\n"
+	+"}\n"
+	+"}\n"
+	
+	+"//_______________________________________________\n"
+	+"global proc randomizeEmitter()\n"
+	+"{\n"
+	+ $emitterVar + " ;\n"
+	+"float $ranRate = randomizeRate;\n"
+	+"float $ranDir = randomizeDirection;\n"
+	+"float $emitRate = `getAttr ($emitter + \".rate\")`;\n"
+	+"float $initEmitRate = initEmitRate;\n"
+	+"float $emitDirX = `getAttr ($emitter + \".directionX\")`;\n"
+	+"float $emitDirY = `getAttr ($emitter + \".directionY\")`;\n"
+	+"float $emitDirZ = `getAttr ($emitter + \".directionZ\")`;\n"
+	+"float $initEmitDirX = initEmitDirX;\n"
+	+"float $initEmitDirY = initEmitDirY;\n"
+	+"float $initEmitDirZ = initEmitDirZ;\n"
+	+";\n"
+	+"$emitRate = rand($initEmitRate - $ranRate, $initEmitRate + $ranRate);\n"
+	+"if($emitRate < 0){\n"
+	+"	$emitRate = 0;\n"
+	+"}\n"
+	+"setAttr ($emitter + \".rate\") $emitRate;\n"
+	+";\n"
+	+"$emitDirX = rand($initEmitDirX - $ranDir, $initEmitDirX + $ranDir);\n"
+	+"$emitDirY = rand($initEmitDirY - $ranDir, $initEmitDirY + $ranDir);\n"
+	+"$emitDirZ = rand($initEmitDirZ - $ranDir, $initEmitDirZ + $ranDir);\n"
+	+"setAttr ($emitter + \".directionX\") $emitDirX;\n"
+	+"setAttr ($emitter + \".directionY\") $emitDirY;\n"
+	+"setAttr ($emitter + \".directionZ\") $emitDirZ;\n"
+	+";\n"
+	+"}\n"
+	
+	+"global proc setInitEmitterValues()\n"
+	+"{\n"
+	+ $particleVar + " ;\n"
+	+ $emitterVar + " ;\n"
+	+"float $emitRate = `getAttr ($emitter + \".rate\")`;\n"
+	+"float $emitDirX = `getAttr ($emitter + \".directionX\")`;\n"
+	+"float $emitDirY = `getAttr ($emitter + \".directionY\")`;\n"
+	+"float $emitDirZ = `getAttr ($emitter + \".directionZ\")`;\n"
+	+"// Set the attributes \n"
+	+"setAttr ($particle + \".initEmitRate\") $emitRate;\n"
+	+"setAttr ($particle + \".initEmitDirX\") $emitDirX;\n"
+	+"setAttr ($particle + \".initEmitDirY\") $emitDirY;\n"
+	+"setAttr ($particle + \".initEmitDirZ\") $emitDirZ;\n"
+	+";\n"
+	+"}\n"
+	
+	+"global proc resetInitEmitterValues()\n"
+	+"{\n"
+	+ $particleVar + " ;\n"
+	+ $emitterVar + " ;\n"
+	+"float $emitRate = `getAttr ($particle + \".initEmitRate\")`;\n"
+	+"float $emitDirX = `getAttr ($particle + \".initEmitDirX\")`;\n"
+	+"float $emitDirY = `getAttr ($particle + \".initEmitDirY\")`;\n"
+	+"float $emitDirZ = `getAttr ($particle + \".initEmitDirZ\")`;\n"
+	+"// Set the attributes \n"
+	+"setAttr ($emitter + \".rate\") $emitRate;\n"
+	+"setAttr ($emitter + \".directionX\") $emitDirX;\n"
+	+"setAttr ($emitter + \".directionY\") $emitDirY;\n"
+	+"setAttr ($emitter + \".directionZ\") $emitDirZ;\n"
+	+";\n"
+	+"}\n"
+	
+	+"//_______________________________________________\n"
+	+"global proc makeSpaceLocator(float $px, float $py, float $pz)\n"
+	+"{\n"
+	+"spaceLocator -p $px $py $pz;\n"
+	+"}\n"
+	+"//-----------------------------------------------\n"
+	) -rad $partShape[0]; // end of the expression
+	
+	//Confirm that the expression was created.
+	string $exp=`dynExpression -q -s -rad $partShape[0]`;
+	if(`size $exp`>0){
+		print ("Expression on " + $partShape[0] + " Created Successfully!" + "\n");
+		print ("Look under extra attributes in " + $partShape[0] + "'s attribute editor for the new particle/fluid emission attributes. " + "\n");
+		headsUpMessage  -o $partShape[0] ("Look under extra attributes in " + $partShape[0] + "'s attribute editor for the new particle/fluid emission attributes. ");
+	}
+	select $partShape[0];
+	
+	string $notes = 
+		"How to use pfEmit.<br>"
+	+	"*******************************<br>"
+	+	"VELOCITY EMISSION ATTRIBUTES : <br>"	
+	+	"<br>"
+	+	"-	Check \[\]Inherit Velocity to have the fluid inherit the velocity from the particle that is emitting the fluid. <br>"
+	+	"<br>"
+	+	"-	You can decay the amount of velocity transfered to the fluid over time. "
+	+	"Velocity Decay Rate has choices between linear, quadadic, and cubic.<br>"
+	+	"<br>"
+	+	"-	Velocity Lifespan is how long in frames the velocity will continue to emit into the fluid.<br>"
+	+	"<br>"
+	+	"-	You can randomize the velocity by using Random Velocity.<br>"
+	+	"<br>"
+	+	"-	The Add method of emission will just add the new value to each voxel.<br>"
+	+	"-	The Replace method of emission will subtract any existing values already emitted into the voxel before emitting new values into the voxel. This creates a smoother, more controlled emission.<br>"
+	+	"<br>"
+	+	"(TYPE) EMISSION ATTRIBUTES : <br>"
+	+	"<br>"
+	+	"-	Set Initial (Type) to the amount of fluid (type) you want to start out with initially.<br>"
+	+	"<br>"
+	+	"-	Set Goal (Type) to the amount of fluid (type) you want to reach over lifespan.<br>"
+	+	"<br>"
+	+	"-	(Type) Decay Rate has choices between linear, quadadic, and cubic.<br>"
+	+	"<br>"
+	+	"-	You can reverse the decay by checking \[\]Reverse (Type) Decay<br>"
+	+	"<br>"
+	+	"-	You can oscillate the decay by checking \[\]Oscillate (Type) Decay<br>"
+	+	"<br>"
+	+	"-	Set (Type) Lifespan to how many frames you want the fluid emission to take to reach the goal (type).<br>"
+	+	"<br>"
+	+	"-	Set Random (Type) to add randomness to the fluid emission of that type.<br>"
+	+	"<br>"
+	+	"-	The Add method of emission will just add the new value to each voxel.<br>"
+	+	"-	The Replace method of emission will subtract any existing values already emitted into the voxel before emitting new values into the voxel. This creates a smoother, more controlled emission.<br>"
+	+	"<br>"
+	+	"-	\[\]XParticleRadius will multiple the fluid (type) emission by the radius of each nParticle if nParticles with variable sizes are used.<br>"
+	+	"<br>"
+	+	"TRAIL EMISSION ATTRIBUTES : <br>"
+	+	"<br>"
+	+	"-	Check \[\]Trails to emit trails from each particle. <br>"
+	+	"<br>"
+	+	"-	Goal Trail is the overall value of fluid you want to reach by the end of the trail falloff. <br>"
+	+	"<br>"
+	+	"-	Trail lifespan is how many frames you want the trail to last.<br>"
+	+	"<br>"
+	+	"-	Random Trail will add randomness to the trails.<br>"
+	+	"<br>"
+	+	"-	Trail Emission Method is like the above emission methods.<br>"
+	+	"<br>"
+	+	"PARTICLE CLUSTER ATTRIBUTES : <br>"
+	+	"<br>"
+	+	"-	Check \[\]Particle Clusters to emit clusters of particles around each particle as the particle is emitted from the source emitter. <br>"
+	+	"<br>"
+	+	"-	Particle Cluster Size is the number of particles you want to add to each particle emitted from the source emitter. <br>"
+	+	"<br>"
+	+	"-	Random Cluster Size will randomize the number of particles in each cluster. <br>"
+	+	"<br>"
+	+	"-	Cluster Spread will spead apart your cluster particles by the specified amount. <br>"
+	+	"<br>"
+	+	"-	Cluster Random Velocity will randomize the velocity of each particle in the cluster. <br>"
+	+	"<br>"
+	+	"OTHER TIPS ON USE : <br>"
+	+	"<br>"
+	+	"-	There is extra help setting things up under \"Extra Setup\" in the pfEmitter window. <br>"
+	+	"<br>"
+	+	"-	Set particle lifespan mode to lifespanPP only to kill particles as they exit the fluid shape container.<br>"
+	+	"<br>"
+	+	"-	The use of trails will significanly slow down simulations.<br>"
+	+	"<br>"
+	+	"-	If your particles are moving to fast to get nice smooth trails set your playback rate to less than 1 per frame.<br>"
+	+	"<br>"
+	;
+	
+	if(!`attributeQuery -n $partShape[0] -ex "notes"`){
+		addAttr -ln notes -dt "string" -h 1 $partShape[0];	
+	} 
+	setAttr ($partShape[0] + ".notes") -type "string" $notes;
+
+}
+
+global proc deleteExp ()
+{
+		
+	string $part = `textFieldButtonGrp -q -text getParticle`;
+	/*
+	string $partShape[] = `listRelatives -s $part`;
+	if($partShape[0] = 0){
+		$partShape[0] = $part;
+	}
+	*/
+	
+	// delete the previous expression, if there is such
+	string $exp=`dynExpression -q -s -rad $part`;
+	int $ok=1;
+		if (`size $exp`>0){
+		// confirm to cleanup
+		string $result=`confirmDialog -t "Warning!" -ma center
+		-m ("You are about to delete ALL Runtime After Dynamics"
+		+" expressions from this particle.\n"
+		+" Are you sure?") -b "Yes" -b "No" -db "No" -cb "No"`;
+			if ($result=="Yes"){
+				dynExpression -s "" -rad $part;
+				//dynExpression -s "" -rbd $part;
+			$ok=1;
+			}
+			else
+			$ok=0;
+		}
+	
+	print ("Runtime After Dynamics Expressions on " + $part + " Deleted!" + "\n");
+
+}
+
+global proc deletePFEmitAttributes()
+{
+	// This deletes all the extra attributes created for the expression.	
+	string $part = `textFieldButtonGrp -q -text getParticle`;
+	string $partShape[] = `listRelatives -s $part`;
+	if($partShape[0] = 0){
+		$partShape[0] = $part;
+	}
+	
+	//Delete all the extra attributes in the particle shape
+	
+	string $partString = $part;
+	//print("PartString: " + $partString + "\n");
+	string $allAttr[] = {	
+	"evaluatePFEmission","antiAliasFluidEmission",
+	
+	"antiAliasSampleRadius","altiAliasFalloff",
+	
+	"pfEmitAttributes","velocityEmissionAttributes","densityEmissionAttributes","temperatureEmissionAttributes",
+	"fuelEmissionAttributes","otherPFEmitAttributes","particleClusterAttributes","extraEmitterAttributes","colorEmissionAttributes",
+	
+	"inheritVelocity","velocityInfluence","velocityEmissionMethod","reverseVelocityDecay","oscillateVelocityDecay","constantVelocity","velocityDecayRate",
+	"velocityLifespan","randomVelocity",
+	
+	"initialDensity","densityEmissionMethod","constantDensity","reverseDensityDecay","oscillateDensityDecay","densityDecayRate","densityLifespan",
+	"randomDensity","multiplyDensityByParticleRadius","goalDensity",
+	
+	"initialTemperature","temperatureEmissionMethod","constantTemperature","reverseTemperatureDecay","oscillateTemperatureDecay","temperatureDecayRate",
+	"temperatureLifespan","randomTemperature","multiplyTemperatureByParticleRadius","goalTemperature",
+	
+	"initialFuel","fuelEmissionMethod","reverseFuelDecay","oscillateFuelDecay","constantFuel","fuelDecayRate","fuelLifespan",
+	"randomFuel","multiplyFuelByParticleRadius","goalFuel",
+	
+	"emitColor",
+	
+	"trails","trailData","trailMatrix","trailEmissionAttributes","trailDecayRate","trailLifespan","randomTrail","trailEmissionMethod",
+	"goalTrail",
+	
+	"useParticleLifespan","particleAgeMethod","connectedFluid",
+	
+	"particleClusters","particleClusterSize","clusterSpread","clusterRandomVelocity","randomClusterSize",
+	
+	"Cluster0","Cluster","TLAge0","TLAge","TLBirth0","TLBirth","VelRan0","VelRan","DensRan0","DensRan","TempRan0","TempRan",
+	"FuelRan0","FuelRan",
+	
+	"randomizeRate","randomizeDirection","initEmitRate","initEmitDirX","initEmitDirY","initEmitDirZ"
+	
+	};
+	
+	doDeleteAttr($allAttr, $partString);
+	if(!`attributeQuery -n $partShape[0] -ex "notes"`){
+		setAttr ($partShape[0] + ".notes") -type "string" "All of the pfEmit attributes have been deleted.";
+	}
+	
+	headsUpMessage ("Attributes on " + $partString + " Deleted!" + "\n");
+	print ("Attributes on " + $partString + " Deleted!" + "\n");
+	
+}
+	
+global proc doDeleteAttr(string $attr[], string $obj)
+	{
+	int $i;
+	for($i=0; $i< `size $attr`; $i++){
+		string $quotes = "\"";
+		string $quote = `encodeString $quote`;
+		string $attrVar = $quote + $attr[$i] + $quote;
+		string $objVar = $quote + $obj + $quote;
+		string $delAttr = "deleteAttr -at " + $attr[$i] + " " + "\"" + $obj + "\"" + ";" + "\n";
+		if(attributeExists ($attrVar, $objVar)==1 ){
+			//print("Found Attribute: " + $attr[$i] + "\n");
+			eval ( $delAttr );
+		}
+	}
+}
+
+global proc togglePFEmitEvaluation()
+{
+string $particle = `textFieldButtonGrp -q -text getParticle`;
+string $fluid = `textFieldButtonGrp -q -text getFluid`;
+$eval = `getAttr ($particle + ".evaluatePFEmission")`;
+if($eval){
+	setAttr ($particle + ".evaluatePFEmission") false;
+	button
+		-e
+		-label "Turn Evaluation On"	
+		togglePFEmitEvaluation;
+	print($particle + "to " + $fluid + " emission will not evaluate on " + $particle + "." + "\n");
+} else {
+	setAttr ($particle + ".evaluatePFEmission") true;
+	button
+		-e
+		-label "Turn Evaluation Off"	
+		togglePFEmitEvaluation;
+	print($particle + "to " + $fluid + " emission will evaluate on " + $particle + "." + "\n");
+}
+	
+}
+
+global proc makeParticleUnrenderable()
+{
+
+string $part = `textFieldButtonGrp -q -text getParticle`;
+string $partShape[] = `listRelatives -s $part`;
+
+setAttr ($partShape[0] + ".visibleInReflections") 0; 
+setAttr ($partShape[0] + ".visibleInRefractions") 0; 
+setAttr ($partShape[0] + ".castsShadows") 0; 
+setAttr ($partShape[0] + ".receiveShadows") 0; 
+setAttr ($partShape[0] + ".motionBlur") 0; 
+setAttr ($partShape[0] + ".primaryVisibility") 0; 
+
+}
+
+global proc setLifespanModeToLifespanPP()
+{
+
+string $part = `textFieldButtonGrp -q -text getParticle`;
+setAttr ($part + ".lifespanMode") 3; 
+
+}
+
+global proc makeDefaultParticleFluid()
+{
+
+create3DFluid 10 10 10 10 10 10;
+string $newEmitter[] = `emitter -pos 0 0 0 -type volume -r 100 -sro 0 -nuv 0 -cye none -cyi 1 -spd 1 -srn 0 -nsp 1 -tsp 0 -mxd 0 -mnd 0 -dx 1 -dy 0 -dz 0 -sp 0 -vsh cube -vof 0 0 0 -vsw 360 -tsr 0.5 -afc 1 -afx 1 -arx 0 -alx 0 -rnd 0 -drs 0 -ssz 0` ;
+string $newParticle[] = `nParticle`;
+connectDynamic -em $newEmitter[0] $newParticle[0];
+string $defaultParticle = findDefaultParticle();
+string $defaultFluid = findDefaultFluid(); 
+
+textFieldButtonGrp 
+	-e -text $defaultParticle
+	getParticle;
+	
+textFieldButtonGrp 
+	-e -text $defaultFluid
+	getFluid;	
+	
+updateReadyCreateStatus();
+
+}
+
+global proc clearTrails()
+{
+
+string $particle = `textFieldButtonGrp -q -text getParticle`;
+string $clearTrailData = "$" + $particle + "TrailData";
+string $es = `encodeString $clearTrailData`;
+eval clear $es;
+
+}
+
+global proc createFluidAutoResizeEmitter()
+{
+string $particle = `textFieldButtonGrp -q -text getParticle`;
+string $fluid = `textFieldButtonGrp -q -text getFluid`;
+string $emitter[] = `listConnections -t pointEmitter $particle`;
+print("Creating " + `size $emitter` + " fluid emitters for " + $particle + "." + "\n");
+int $i = 0;
+for($i=0; $i < `size $emitter`; $i++){
+	if($i == 0){
+		print("Emitter: " + $emitter[$i] + "\n");
+		float $ePos[] = `getAttr ($emitter[$i] + ".translate")`;
+		string $newFE[] = `fluidEmitter -rate 100 -pos $ePos[0] $ePos[1] $ePos[2]`;
+		setAttr ($newFE[0] + ".densityMethod") 0;
+		setAttr ($newFE[0] + ".heatMethod") 0;
+		setAttr ($newFE[0] + ".fuelMethod") 0;
+		parent $newFE[0] $emitter[$i];
+		connectDynamic -em $newFE $fluid;
+	}
+}
+setAttr ($fluid + ".autoResize") 1;
+setAttr ($fluid + ".resizeToEmitter") 1;
+
+}
+
+global proc sharePFEmitFields()
+{
+string $fluid = `textFieldButtonGrp -q -text getFluid`;
+string $particle = `textFieldButtonGrp -q -text getParticle`;
+
+string $pfields[] = `listConnections -d off -t field $particle`;
+string $ffields[] = `listConnections -d off -t field $fluid`;
+int $i;
+for($i=0; $i< `size $pfields`; $i++){
+	connectDynamic -f $pfields[$i] $fluid;
+}
+if(`size $ffields` > 0){
+	string $result=`confirmDialog -t "Question!" -ma center
+	-m ($particle + "'s fields have been shared with "+ $fluid + ". Do you want to share the fluid's ( "
+	+ $fluid + " ) fields with the particle ( " + $particle + " )"
+	) -b "Yes" -b "No" -db "No" -cb "No"`;
+	if ($result=="Yes"){
+		
+		for($i=0; $i< `size $ffields`; $i++){
+			connectDynamic -f $ffields[$i] $particle;
+		}	
+	} else {
+		
+	}
+}
+}
+
+global proc setPlaybackBy()
+{
+float $by = `floatSliderButtonGrp -q -v playbackBy`;
+playbackOptions -by $by;
+
+}
+
+global proc resetPlaybackBy()
+{
+floatSliderButtonGrp
+	-e
+	-v 1
+	playbackBy;
+	
+playbackOptions -by 1;
+
+}
+
+
+
+// Fluid Transmission__________________________________________________________________________________
+
+global proc assignMasterFluid()
+{
+string $sel[]=`ls -sl`;
+string $fluid = findObjsOfType($sel, "fluid", "fluidShape");
+
+if(`size $sel`==0){
+	error "Nothing is selected. Select a fluid.";
+}
+
+if($fluid == "null"){
+	string $rel[] = `listRelatives -s $sel[0]`;
+	print ("Relatives : " + "\n");
+	print $rel;
+	$fluid = findObjsOfType($rel, "fluid", "fluidShape");
+	if($fluid == "null"){
+		textFieldButtonGrp 
+		-e -text $sel[0]
+		getMasterFluid;			
+		print("Item selected is not a fluid." + "\n");
+	} else {
+		textFieldButtonGrp 
+		-e -text $fluid
+		getMasterFluid;					
+	}
+}	
+}
+
+global proc assignSlaveFluid()
+{
+string $sel[]=`ls -sl`;
+string $fluid = findObjsOfType($sel, "fluid", "fluidShape");
+
+if(`size $sel`==0){
+	error "Nothing is selected. Select a fluid.";
+}
+
+if($fluid == "null"){
+	string $rel[] = `listRelatives -s $sel[0]`;
+	print ("Relatives : " + "\n");
+	print $rel;
+	$fluid = findObjsOfType($rel, "fluid", "fluidShape");
+	if($fluid == "null"){
+		textFieldButtonGrp 
+		-e -text $sel[0]
+		getSlaveFluid;			
+		print("Item selected is not a fluid." + "\n");
+	} else {
+		textFieldButtonGrp 
+		-e -text $fluid
+		getSlaveFluid;			
+	}
+}	
+}
+
+
+
+//________________This is for writing the expression___________________
+global proc createFluidTransmissionExpression()
+{
+string $mFluid = `textFieldButtonGrp -q -text getMasterFluid`;
+string $sFluid = `textFieldButtonGrp -q -text getSlaveFluid`;
+$gridSearchRange = `checkBox -q -v fluidTransmissionSpecifyGridSearchRangeOption`;
+
+//_____________ADD ATTRIBUTES TO THE MASTER FLUID SHAPE_______________
+string $ySearchRange = (
+	"	for($yi=0;$yi<$yRes;$yi++){ \n"
+);
+string $gsrVar = "";
+string $ySearchArg = "";
+if($gridSearchRange){
+	//"$gridSearchRange = gridSearchRange;\n"
+	$gsrVar = (	
+	"float $yLow = yLow;\n"
+	+"float $yHigh = yHigh;\n"
+	+"\n"
+	);
+	$ySearchRange = (
+	"	for($yi=$yLow;$yi<$yHigh;$yi++){ \n"	
+	);
+	$ySearchArg = (
+	"if($svi[1] < $yLow || $svi[1] > $yHigh){\n"
+	+"	return;\n"
+	+"}\n"
+	);
+	
+}
+if (attributeExists ("slaveFluid", $mFluid)==0){
+
+// Global Attributes
+addAttr -ln slaveFluid -dt "string" -h 0 $mFluid;
+setAttr ($mFluid + ".slaveFluid") -type "string" $sFluid;
+
+addAttr -ln sampleEveryNVoxel -at long -k 1 -min 1 -max 1000 -smx 10 -smn 0 -dv 0 $mFluid;
+addAttr -ln useVoxelWorldPosition -at bool -k 1 -dv 0 $mFluid;
+addAttr -ln shareFluidSpace -at bool -k 1 -dv 1 $mFluid;
+
+if($gridSearchRange){
+	//addAttr -ln gridSearchRange -at bool -dv true $mFluid;		
+	//addAttr -ln yRange -at compound -nc 2 $mFluid;
+	addAttr -ln yLow -at "float" -k 1 $mFluid;
+	addAttr -ln yHigh -at "float" -k 1 $mFluid;	
+}
+
+// Velocity Attributes
+addAttr -ln velocityTransmissionAttributes -multi $mFluid;
+addAttr -ln transferAllVelocity -at bool -k 1 -dv 0 $mFluid;
+addAttr -ln velocityTransfers -at enum -en "none=0:velocity=1:density=2:temperature=3:fuel=4:color=5" $mFluid;
+	setAttr ($mFluid + ".velocityTransfers" ) 0 ;
+addAttr -ln velocityTransferAmount -nn transferAmount -at double -k 1 -min 0 -max 100 -smx 1 -dv 1 $mFluid;
+addAttr -ln matchVelocity -at bool -k 1 -dv 1 $mFluid;
+addAttr -ln velocityTransferMethod -at enum -en "add=0:replace=1" $mFluid;
+	setAttr ($mFluid + ".velocityTransferMethod" ) 1 ;
+//addAttr -ln velocityTransferRange -nn transferRange -at double2 -nc 2 $mFluid;
+addAttr -ln velocityTransferLowerThan -nn lowerThan -at double -k 1 -min 0 -max 100 -smx 1 -dv 0.5 $mFluid;
+addAttr -ln velocityTransferHigherThan -nn higherThan -at double -k 1 -min 0 -max 100 -smx 1 -dv 0.1 $mFluid;
+
+// Density Attributes
+addAttr -ln densityTransmissionAttributes -multi $mFluid;
+addAttr -ln densityTransfers -at enum -en "none=0:velocity=1:density=2:temperature=3:fuel=4:color=5" $mFluid;
+	setAttr ($mFluid + ".densityTransfers" ) 2 ;
+addAttr -ln densityTransferAmount -nn transferAmount -at double -k 1 -min 0 -max 100 -smx 1 -dv 0.5 $mFluid;
+addAttr -ln matchDensity -at bool -k 1 -dv 0 $mFluid;
+addAttr -ln densityTransferMethod -at enum -en "add=0:replace=1" $mFluid;
+	setAttr ($mFluid + ".densityTransferMethod" ) 1 ;
+addAttr -ln densityTransferLowerThan -nn lowerThan -at double -k 1 -min 0 -max 100 -smx 1 -dv 0.25 $mFluid;
+addAttr -ln densityTransferHigherThan -nn higherThan -at double -k 1 -min 0 -max 100 -smx 1 -dv 0.1 $mFluid;
+
+// Temperature Attributes
+addAttr -ln temperatureTransmissionAttributes -multi $mFluid;
+addAttr -ln temperatureTransfers -at enum -en "none=0:velocity=1:density=2:temperature=3:fuel=4:color=5" $mFluid;
+	setAttr ($mFluid + ".temperatureTransfers" ) 3 ;
+addAttr -ln temperatureTransferAmount -nn transferAmount -at double -k 1 -min 0 -max 100 -smx 1 -dv 0.5 $mFluid;
+addAttr -ln matchTemperature -at bool -k 1 -dv 0 $mFluid;
+addAttr -ln temperatureTransferMethod -at enum -en "add=0:replace=1" $mFluid;
+	setAttr ($mFluid + ".temperatureTransferMethod" ) 1 ;
+addAttr -ln temperatureTransferLowerThan -nn lowerThan -at double -k 1 -min 0 -max 100 -smx 1 -dv 0.25 $mFluid;
+addAttr -ln temperatureTransferHigherThan -nn higherThan -at double -k 1 -min 0 -max 100 -smx 1 -dv 0.1 $mFluid;
+
+// Fuel Attributes
+addAttr -ln fuelTransmissionAttributes -multi $mFluid;
+addAttr -ln fuelTransfers -at enum -en "none=0:velocity=1:density=2:temperature=3:fuel=4:color=5" $mFluid;
+addAttr -ln fuelTransferAmount -nn transferAmount -at double -k 1 -min 0 -max 100 -smx 1 -dv 0.5 $mFluid;
+addAttr -ln matchFuel -at bool -k 1 -dv 0 $mFluid;
+addAttr -ln fuelTransferMethod -at enum -en "add=0:replace=1" $mFluid;
+	setAttr ($mFluid + ".fuelTransferMethod" ) 1 ;
+addAttr -ln fuelTransferLowerThan -nn lowerThan -at double -k 1 -min 0 -max 100 -smx 1 -dv 0.25 $mFluid;
+addAttr -ln fuelTransferHigherThan -nn higherThan -at double -k 1 -min 0 -max 100 -smx 1 -dv 0.1 $mFluid;
+
+// Color Attributes
+addAttr -ln colorTransmissionAttributes -multi $mFluid;
+addAttr -ln colorTransfers -at enum -en "none=0:velocity=1:density=2:temperature=3:fuel=4:color=5" $mFluid;
+addAttr -ln colorTransferAmount -nn transferAmount -at double -k 1 -min 0 -max 100 -smx 1 -dv 0.5 $mFluid;
+addAttr -ln matchColor -at bool -k 1 -dv 0 $mFluid;
+addAttr -ln colorTransferMethod -at enum -en "add=0:replace=1" $mFluid;
+	setAttr ($mFluid + ".colorTransferMethod" ) 1 ;
+addAttr -ln colorTransferLowerThan -nn lowerThan -at double -k 1 -min 0 -max 100 -smx 1 -dv 0.25 $mFluid;
+addAttr -ln colorTransferHigherThan -nn higherThan -at double -k 1 -min 0 -max 100 -smx 1 -dv 0.1 $mFluid;
+
+}	
+
+
+/*
+// We have to check the resolutions of the fluids. The master fluid can not have a resolution larger than the slave fluid.
+int $mbres = `getAttr ($mFluid + ".baseResolution")`;
+int $sbres = `getAttr ($sFluid + ".baseResolution")`;
+float $msize[] = `getAttr ($mFluid + ".dimensions")`;
+float $ssize[] = `getAttr ($sFluid + ".dimensions")`;
+float $mres[] = `getAttr ($mFluid + ".resolution")`;
+float $sres[] = `getAttr ($sFluid + ".resolution")`;
+if($mbres != $sbres || $msize[0] != $ssize[0] || $msize[1] != $ssize[1] || $msize[2] != $ssize[2]){
+	string $result=`confirmDialog -t "Warning!" -ma center
+	-m ("Fluid Resolutions are incompatible: "
+	+ $sFluid + " must be resampled to match " + $mFluid +".\n"
+	+" Do you want to resample " + $sFluid + "?") -b "Yes" -b "No" -db "No" -cb "No"`;
+	if ($result=="Yes"){
+		setAttr ($sFluid + ".baseResolution") $mbres;
+		setAttr ($sFluid + ".dimensionsW") $msize[0];	
+		setAttr ($sFluid + ".dimensionsH") $msize[1];
+		setAttr ($sFluid + ".dimensionsD") $msize[2];
+		setAttr ($sFluid + ".resolutionW") $mres[0];	
+		setAttr ($sFluid + ".resolutionH") $mres[1];
+		setAttr ($sFluid + ".resolutionD") $mres[2];
+		$ok=1;
+	} else {
+		string $result=`confirmDialog -t "Warning!" -ma center
+		-m ("Fluid Resolutions are incompatible: "
+		+ " You could alternativly turn on UseVoxelWorldPosition.\n"
+		+" Do you want to turn on UseVoxelWorldPostion? ") -b "Yes" -b "No" -db "No" -cb "No"`;
+		if ($result=="Yes"){
+			setAttr ($mFluid + ".useVoxelWorldPosition") 1 ;
+			$ok=1;
+		} else {			
+			$ok=0;
+			print("Expression Creation Aborted!" + "\n");
+			return;
+		}
+	}
+}
+*/
+
+//___________CREATE THE EXPRESION_____________________
+
+//deleteFluidTransmissionExpression();
+
+string $quotes="\"";
+string $masterFluidVar = "string $mFluid = " + $quotes + $mFluid + $quotes;
+string $slaveFluidVar = "string $sFluid = " + $quotes + $sFluid + $quotes;
+string $endLine = "\"\n\"";
+
+//_______________________________________________
+
+// The actual expression
+expression -s (
+"doFluidTransmission();\n"
++"global proc doFluidTransmission()\n"
++"{\n"
++ $masterFluidVar + " ;\n"
++ $slaveFluidVar + " ;\n"
++"\n"
++"$useVoxWP = useVoxelWorldPosition;\n"
++"int $sampNVox = sampleEveryNVoxel;\n"
++"$transfAllVel = transferAllVelocity;\n"
++"int $velTransf = velocityTransfers;\n"
++"float $velAmount = velocityTransferAmount;\n"
++"float $velLow = velocityTransferLowerThan;\n"
++"float $velHigh = velocityTransferHigherThan;\n"
++"int $matchVel = matchVelocity;\n"
++"int $velTransfMeth = velocityTransferMethod;\n"
++"\n"
++"int $densTransf = densityTransfers;\n"
++"float $densAmount = densityTransferAmount;\n"
++"float $densLow = densityTransferLowerThan;\n"
++"float $densHigh = densityTransferHigherThan;\n"
++"int $densTransfMeth = densityTransferMethod;\n"
++"int $matchDens = matchDensity;\n"
++"\n"
++"int $tempTransf = temperatureTransfers;\n"
++"float $tempAmount = temperatureTransferAmount;\n"
++"float $tempLow = temperatureTransferLowerThan;\n"
++"float $tempHigh = temperatureTransferHigherThan;\n"
++"int $tempTransfMeth = temperatureTransferMethod;\n"
++"int $matchTemp = matchTemperature;\n"
++"\n"
++"int $fuelTransf = fuelTransfers;\n"
++"float $fuelAmount = fuelTransferAmount;\n"
++"float $fuelLow = fuelTransferLowerThan;\n"
++"float $fuelHigh = fuelTransferHigherThan;\n"
++"int $fuelTransfMeth = fuelTransferMethod;\n"
++"int $matchFuel = matchFuel;\n"
++"\n"
++"int $colorTransf = colorTransfers;\n"
++"float $colorAmount = colorTransferAmount;\n"
++"float $colorLow = colorTransferLowerThan;\n"
++"float $colorHigh = colorTransferHigherThan;\n"
++"int $colorTransfMeth = colorTransferMethod;\n"
++"int $matchColor = matchColor;\n"
++"\n"
++ $gsrVar
++"float $voxPos[];\n"
++"\n"
++"// get the resolution of the master fluid-container \n"
++"float $res[] = `getAttr ($mFluid + \".resolution\")`;\n"
++"int $xRes = $res[0];\n"
++"int $yRes = $res[1];\n"
++"int $zRes = $res[2];\n"
++"// get the resolution of the slave fluid-container \n"
++"float $sres[] = `getAttr ($sFluid + \".resolution\")`;\n"
++"// If the resolutions don't match we need to use the world positions of the voxels to get the indexes. \n"
++"if($res[0] != $sres[0] || $res[1] != $sres[1] || $res[2] != $sres[2]){\n"
++"	setAttr ($mFluid + \".useVoxelWorldPosition\") 1;\n"
++"	$useVoxWP = true;\n"
++"	$xRes = $sres[0];\n"
++"	$yRes = $sres[1];\n"
++"	$zRes = $sres[2];\n"
++"}\n"
++"\n" 
++"int $xi = 0;\n"
++"int $yi = 0;\n"
++"int $zi = 0;\n"
++"//print(\"xRes : \" + $xRes + \"yRes : \" + $yRes + \"zRes : \" + $zRes + \"\\n\");\n"
++"$ok = false;\n"
+
++"for($xi=0;$xi < $xRes; $xi++){ \n"
++"	for($yi=0;$yi<$yRes;$yi++){ \n"
++"		for($zi=0;$zi < $zRes; $zi++ ){ \n"
++"			$ok = `fluidVoxelInfo -inBounds $xi $yi $zi $mFluid`;\n"
++"			if(!$ok){\n"
++"				continue;\n"
++"			}\n"
++"			if($useVoxWP){\n"
++"				$voxPos = `fluidVoxelInfo -os false -voxelCenter -cb -xi $xi -yi $yi -zi $zi $mFluid`;\n"
++"			} else {\n"
++"				$voxPos = {0,0,0};\n"
++"			}\n"
++"			if($transfAllVel){\n"
++"				transferAllVelocity($xi, $yi, $zi);\n"
++"			}\n"
++"			if($velTransf > 0){ \n"
++"				setFluidAttribute(\"velocity\", $velTransf, $matchVel, $velTransfMeth, $velAmount, $velLow, $velHigh, $xi, $yi, $zi, $voxPos);\n"
++"			}\n"
++"			if($densTransf > 0){ \n"
++"				setFluidAttribute(\"density\", $densTransf, $matchDens, $densTransfMeth, $densAmount, $densLow, $densHigh, $xi, $yi, $zi, $voxPos);\n"
++"			}\n"
++"			if($tempTransf > 0){ \n"
++"				setFluidAttribute(\"temperature\", $tempTransf, $matchTemp, $tempTransfMeth, $tempAmount, $tempLow, $tempHigh,$xi, $yi, $zi, $voxPos);\n"
++"			}\n"
++"			if($fuelTransf > 0){ \n"
++"				setFluidAttribute(\"fuel\", $fuelTransf, $matchFuel, $fuelTransfMeth, $fuelAmount, $fuelLow, $fuelHigh,$xi, $yi, $zi, $voxPos);\n"
++"			}\n"
++"			if($colorTransf > 0){ \n"
++"				setFluidAttribute(\"color\", $colorTransf, $matchColor, $colorTransfMeth, $colorAmount, $colorLow, $colorHigh,$xi, $yi, $zi, $voxPos);\n"
++"			}\n"
++"			$zi += $sampNVox;\n"
++"		}\n"
++"		$yi += $sampNVox;\n"
++"	}\n"
++"	$xi += $sampNVox;\n"
++"}\n"
++"\n"
+
++"}\n"
++"global proc setFluidAttribute(string $sourceType, int $type, int $match, int $transfMeth, float $amount, float $low, float $high, float $xi, float $yi, float $zi, float $voxPos[])\n"
++"{\n"
++ $masterFluidVar + " ;\n"
++ $slaveFluidVar + " ;\n"
++ $gsrVar
++"$shareSpace = shareFluidSpace;\n"
++"$useVoxWP = useVoxelWorldPosition;\n"
++"int $sampNVox = sampleEveryNVoxel;\n"
++"int $svi[];\n"
++"$ok = false;\n"
++"\n"
++"string $attrType;\n"
++"if($type == 1){ \n"
++"	$attrType = \"velocity\";\n"
++"} else if ($type == 2){\n"
++"	$attrType = \"density\";\n"
++"} else if ($type == 3){\n"
++"	$attrType = \"temperature\";\n"
++"} else if ($type == 4){\n"
++"	$attrType = \"fuel\";\n"
++"} else if ($type == 5){\n"
++"	$attrType = \"color\";\n"
++"}\n"
+
++" // Either use the same voxel index as the master fluid or get the index from the position of the mFluid voxel. \n"
++"if($useVoxWP){\n"
++"	$svi = `fluidVoxelInfo -os false -cb -voxel $voxPos[0] $voxPos[1] $voxPos[2] $sFluid`;\n"
++"} else { \n"
++"	$svi[0] = $xi;\n"
++"	$svi[1] = $yi;\n"
++"	$svi[2] = $zi;\n"
++"	$ok = `fluidVoxelInfo -inBounds $xi $yi $zi $sFluid`;\n"
++"	//If we can't find the voxel by index then we need to look for it by position \n"
++"	if(!$ok){\n"
++"		$svi = `fluidVoxelInfo -os false -cb -voxel $voxPos[0] $voxPos[1] $voxPos[2] $sFluid`;\n"
++"	}\n"
++"}\n"
++ $ySearchArg
++"float $val[];\n"
++"if($sourceType == \"velocity\" || $sourceType == \"color\"){\n"
++"	$val = `getFluidAttr -at $sourceType -xi $xi -yi $yi -zi $zi $mFluid`;\n"
++"} else { \n"
++"	$val = `getFluidAttr -at $sourceType -xi $xi -yi $yi -zi $zi $mFluid`;\n"
++"	$val[1] = $val[0]; // Use the same values as val0 \n"
++"	$val[2] = $val[0];\n"
++"	//print(\"Val : \" + $val[0] + \" X: \" + $xi + \" Y: \" + $yi + \" Z: \" + $zi + \"\\n\");\n"
++"}\n"
+
++"// If we are matching the source \n"
++"if($match == 1){\n"
++"	if($sourceType == \"velocity\" || $sourceType == \"color\"){\n"
++"		//$val = `getFluidAttr -at $sourceType -xi $xi -yi $yi -zi $zi $mFluid`;\n"
++"	} else { \n"
++"		$amount = $val[0];\n"
++"	}\n"
++"}\n"
+
++"// If we are using the replace method then we have to sample the slave fluid to subtract what's already in there. \n"
++"float $samp[];\n"
++"if($transfMeth == 0){ \n"
++"	//$amount = $amount;\n"
++"} else { \n"
++"	$samp = `getFluidAttr -at $attrType -xi $svi[0] -yi $svi[1] -zi $svi[2] $sFluid`;\n"
++"	$amount = $amount - $samp[0];\n"
++"}\n"
+
++"// This is the most important part. If the value of the master fluid is within our specified range... then emit fluid into our slave fluid \n"
++"if($val[0] < $low && $val[0] > $high){ \n"
++"	if($type == 1 || $type == 5){ \n"
++"		setFluidAttr -at $attrType -vv $val[0] $val[1] $val[2] -xi $svi[0] -yi $svi[1] -zi $svi[2] $sFluid;\n"
++"		fillInAdjVoxels($attrType,$val,$svi);\n"
++"	} else { \n"
++"		setFluidAttr -at $attrType -ad -fv $amount -xi $svi[0] -yi $svi[1] -zi $svi[2] $sFluid;\n" 
++"		$val[0] = $amount;\n"
++"		fillInAdjVoxels($attrType,$val,$svi);\n"
++"	} \n"
++"} else if (!$shareSpace && $val[0] < $low){\n"
++"	if($type == 1 || $type == 5){ \n"
++"		setFluidAttr -at $attrType -vv $val[0] $val[1] $val[2] -xi $svi[0] -yi $svi[1] -zi $svi[2] $sFluid;\n"
++"		fillInAdjVoxels($attrType,$val,$svi);\n"
++"	} else { \n"
++"		setFluidAttr -at $attrType -ad -fv -1 -xi $svi[0] -yi $svi[1] -zi $svi[2] $sFluid;\n" 
++"		$val[0] = -1;\n"
++"		fillInAdjVoxels($attrType,$val,$svi);\n"
++"	} \n"
++"}\n"
+
++"}\n"
+
++"global proc fillInAdjVoxels(string $attrType, float $val[], int $index[])\n"
++"{\n"
++"int $sampNVox = sampleEveryNVoxel;\n"
++"if($sampNVox == 0){\n"
++"	return;\n"
++"}\n"
++"//print(\"SourceIndex : \" + $index[0] + \" | \" + $index[1] + \" | \" + $index[2] + \" | \" + \"\\n\");\n"
++"//print(\"_____________________________________________________________________________\" + \"\\n\");\n"
++ $masterFluidVar + " ;\n"
++ $slaveFluidVar + " ;\n"
++"int $xir = $index[0];\n"
++"int $yir = $index[1];\n"
++"int $zir = $index[2];\n"
++"int $i = 0;\n"
++"int $xi = 0;\n"
++"int $yi = 0;\n"
++"int $zi = 0;\n"
++"for($xi=1; $xi < $sampNVox; $xi++){\n"
++"	$index[0] = $index[0] + $xi;\n"
++"	for($yi=1; $yi < $sampNVox; $yi++){\n"
++"		$index[1] = $index[1] + $yi;\n"
++"		for($zi=1; $zi < $sampNVox; $zi++){\n"
++"			$index[2] = $index[2] + $zi;\n"
++"			//print(\"Index: \" + $index[0] + \" | \" + $index[1] + \" | \" + $index[2] + \" | \" + \" || \");\n"
++"			//print(\"ArrayIndex: \" + $xi + \" | \" + $yi + \" | \" + $zi + \" | \" + \"\\n\");\n"
++"			$ok = `fluidVoxelInfo -inBounds $index[0] $index[1] $index[2] $sFluid`;\n"
++"			if($ok){\n"
++"				if($attrType == \"velocity\" || $attrType == \"color\"){\n"
++"					setFluidAttr -at $attrType -vv $val[0] $val[1] $val[2] -xi $index[0] -yi $index[1] -zi $index[2] $sFluid;\n"
++"				} else {\n"
++"					setFluidAttr -at $attrType -ad -fv $val[0] -xi $index[0] -yi $index[1] -zi $index[2] $sFluid;\n"
++"				}\n"
++"			}\n"
++"			$index[2] = $zir;\n"
++"		}\n"
++"		$index[1] = $yir;\n"
++"	}\n"
++"	$index[0] = $xir;\n"
++"}\n"
++"}\n"
+
++"global proc transferAllVelocity(float $xi, float $yi, float $zi)\n"
++"{\n"
++ $masterFluidVar + " ;\n"
++ $slaveFluidVar + " ;\n"
++"float $sourceVel[] = `getFluidAttr -at velocity -xi $xi -yi $yi -zi $zi $mFluid`;\n"
++"setFluidAttr -at velocity -vv $sourceVel[0] $sourceVel[1] $sourceVel[2] -xi $xi -yi $yi -zi $zi $sFluid;\n"
++"}\n"
+
+) -o $mFluid -n ($mFluid + "To" + $sFluid + "Transmission"); // end of the expression
+
+//Confirm that the expression was created.
+string $exp=`expression -q -s -n ($mFluid + "To" + $sFluid + "Transmission")`;
+if(`size $exp`>0){
+	print ("Expression on " + $mFluid + " Created Successfully!" + "\n");
+	print ("Look under extra attributes in " + $mFluid + "'s attribute editor for the new fluid transmission attributes. " + "\n");
+	//headsUpMessage  -o $partShape[0] ("Look under extra attributes in " + $partShape[0] + "'s attribute editor for the new particle/fluid emission attributes. ");
+}
+select $mFluid;
+
+string $notes = 
+	"How to use fluid to fluid transmission.<br>"
++	"*******************************<br>"
++	"VELOCITY EMISSION ATTRIBUTES : <br>"	
++	"<br>"
++	"-	Check \[\]Use Voxel World Position to find the correspoding voxel to emit into based on world position. <br>"
++	"<br>"
++	"-	You can decay the amount of velocity transfered to the fluid over time. "
+;
+
+if(!`attributeQuery -n $mFluid -ex "notes"`){
+    addAttr -ln notes -dt "string" -h 1 $mFluid;	
+} 
+setAttr ($mFluid + ".notes") -type "string" $notes;
+
+}
+
+global proc deleteFluidTransmissionExpression ()
+{
+	
+string $mFluid = `textFieldButtonGrp -q -text getMasterFluid`;
+string $sFluid = `textFieldButtonGrp -q -text getSlaveFluid`;
+
+// delete the previous expression, if there is such
+string $exp=`expression -q -s ($mFluid + "To" + $sFluid + "Transmission")`;
+int $ok=1;
+if (`size $exp`>0){
+	// confirm to cleanup
+	string $result=`confirmDialog -t "Warning!" -ma center
+	-m ("You are about to delete: "
+	+ $mFluid + "To" + $sFluid + "Transmission"
+	+" expression from this fluid.\n"
+	+" Are you sure?") -b "Yes" -b "No" -db "No" -cb "No"`;
+	if ($result=="Yes"){
+		delete ($mFluid + "To" + $sFluid + "Transmission");			
+		$ok=1;
+	} else {
+		$ok=0;
+	}
+}
+
+print ("Expression: " + $mFluid + "To" + $sFluid + "Transmission" + " on Fluid: " + $mFluid + " Deleted!" + "\n");
+
+}
+
+global proc deleteFluidTransmissionAttributes()
+{
+// This deletes all the extra attributes created for the expression.	
+string $mFluid = `textFieldButtonGrp -q -text getMasterFluid`;
+string $rel[] = `listRelatives -s $mFluid`;
+if($rel[0] = 0){
+	$rel[0] = $mFluid;
+}
+
+//Delete all the extra attributes in the particle shape
+
+string $fluidString = $mFluid;
+string $allAttr[] = {
+"slaveFluid","sampleEveryNVoxel","useVoxelWorldPosition",
+
+"velocityTransmissionAttributes","densityTransmissionAttributes","temperatureTransmissionAttributes",
+"fuelTransmissionAttributes","colorTransmissionAttributes",
+
+"shareFluidSpace","transferAllVelocity",
+
+"velocityTransfers","velocityTransferAmount","velocityTransferLowerThan","velocityTransferHigherThan","matchVelocity",
+"velocityTransferMethod","velocityTransferRange",
+
+"densityTransfers","densityTransferAmount","densityTransferLowerThan","densityTransferHigherThan","matchDensity","densityTransferMethod",
+
+"temperatureTransfers","temperatureTransferAmount","temperatureTransferLowerThan","temperatureTransferHigherThan","matchTemperature","temperatureTransferMethod",
+
+"fuelTransfers","fuelTransferAmount","fuelTransferLowerThan","fuelTransferHigherThan","matchFuel","fuelTransferMethod",
+
+"colorTransfers","colorTransferAmount","colorTransferLowerThan","colorTransferHigherThan","matchColor","colorTransferMethod",
+
+"foo"
+};
+
+doDeleteAttr($allAttr, $fluidString);
+if(!`attributeQuery -n $mFluid -ex "notes"`){
+	setAttr ($mFluid + ".notes") -type "string" "All of the fluidTransmission attributes have been deleted.";
+}
+
+print ("Fluid Transmission Attributes on " + $mFluid + " Deleted!" + "\n");
+
+}
+
+
+global proc toggleFluidTransmissionEvaluation()
+{
+string $mFluid = `textFieldButtonGrp -q -text getMasterFluid`;
+string $sFluid = `textFieldButtonGrp -q -text getSlaveFluid`;
+$ae=`expression -q -ae ($mFluid + "To" + $sFluid + "Transmission")`;
+//print("ExpressionEvaluation: " + $ae + "\n");
+if($ae){
+	expression -edit -alwaysEvaluate 0 ($mFluid + "To" + $sFluid + "Transmission");
+	button
+		-e
+		-label "Turn Evaluation On"
+		-ann "This will start the evaluation of the fluid transmission expression."			
+		-command "toggleFluidTransmissionEvaluation"
+		toggleFluidTransmissionEvaluation;
+	print($mFluid + "To" + $sFluid + "Transmission will not evaluate on " + $mFluid + "." + "\n");	
+		
+} else {
+	expression -edit -alwaysEvaluate 1 ($mFluid + "To" + $sFluid + "Transmission");
+	button
+		-e
+		-label "Turn Evaluation Off"
+		-ann "This will stop the evaluation of the fluid transmission expression."			
+		-command "toggleFluidTransmissionEvaluation"
+		toggleFluidTransmissionEvaluation;		
+	print($mFluid + "To" + $sFluid + "Transmission will evaluate on " + $mFluid + "." + "\n");
+}	
+	
+}
+
+global proc emptySlaveFluid()
+{
+string $mFluid = `textFieldButtonGrp -q -text getMasterFluid`;
+string $sFluid = `textFieldButtonGrp -q -text getSlaveFluid`;
+
+// get the resolution of the master fluid-container
+float $res[] = `getAttr ($sFluid + ".resolution")`;
+int $xRes = $res[0];
+int $yRes = $res[1];
+int $zRes = $res[2];
+
+int $xi = 0;
+int $yi = 0;
+int $zi = 0;
+
+for($xi=0;$xi < $xRes; $xi++){ 
+	for($yi=0;$yi < $yRes; $yi++){ 
+		for($zi=0;$zi < $zRes; $zi++){
+			setFluidAttr -at density -ad -fv -1 -xi $xi -yi $yi -zi $zi $sFluid; 
+		}
+	}
+}
+print("Emptied Slave Fluid." + "\n");
+
+}
+
+global proc connectFluidResolutions()
+{
+string $mFluid = `textFieldButtonGrp -q -text getMasterFluid`;
+string $sFluid = `textFieldButtonGrp -q -text getSlaveFluid`;	
+connectAttr -f ($mFluid + ".baseResolution") ($sFluid + ".baseResolution");
+
+}
+
+global proc createDefaultFluidSetup()
+{
+string $mFluid = `create3DFluid 10 10 10 10 10 10`;
+string $sFluid = `create3DFluid 10 10 10 10 10 10`;
+
+string $newEmitter[] = `fluidEmitter -pos 0 0 0 -type omni -der 1 -her 1 -fer 1 -fdr 2 -r 100.0 -cye none -cyi 1 -mxd 1 -mnd 0`;
+connectDynamic -em $newEmitter[0] $mFluid;
+
+textFieldButtonGrp 
+	-e
+	-text $mFluid
+	getMasterFluid;
+	
+textFieldButtonGrp 
+	-e
+	-text $sFluid
+	getSlaveFluid;	
+
+}
+
+global proc shareAllFields()
+{
+string $mFluid = `textFieldButtonGrp -q -text getMasterFluid`;
+string $sFluid = `textFieldButtonGrp -q -text getSlaveFluid`;
+
+string $fields[] = `listConnections -d off -t field $mFluid`;	
+string $sfields[] = `listConnections -d off -t field $sFluid`;
+int $i;
+for($i=0; $i< `size $fields`; $i++){
+	connectDynamic -f $fields[$i] $sFluid;
+}
+if(`size $sfields` > 0){
+	string $result=`confirmDialog -t "Question!" -ma center
+	-m ("Do you want to share the slave fluid's ( "
+	+ $sFluid + " ) fields with the master fluid ( " + $mFluid + " )"
+	) -b "Yes" -b "No" -db "No" -cb "No"`;
+	if ($result=="Yes"){
+		
+		for($i=0; $i< `size $sfields`; $i++){
+			connectDynamic -f $sfields[$i] $mFluid;
+		}	
+	} else {
+		
+	}
+}
+}
+
+// Other Usefull Functions___________________________________
+
+global proc convert2d3dFluid()
+{
+
+string $sel[] = `ls -sl -dag -lf`;
+if(`size $sel` < 1){
+	print ("You must select a fluid to convert." + "\n");
+	return;
+}
+
+$is2d = `getAttr ($sel[0] + ".is2d")`;
+if($is2d){
+	eval setAttr($sel[0] + ".is2d ") 0;
+	float $fluidRes = `getAttr ($sel[0] + ".dimensionsW")`;
+	eval setAttr($sel[0] + ".dimensionsD") $fluidRes;
+	print ("Converted 2d fluid to 3d fluid." + "\n");
+} else {	
+	eval setAttr($sel[0] + ".is2d ") 1;
+	eval setAttr($sel[0] + ".dimensionsD") 0.25;
+	print ("Converted 3d fluid to 2d fluid." + "\n");
+}
+
+}
+
+global proc fillFluidUp()
+{
+string $sel[] = `ls -sl`;
+if(`size $sel` < 1){
+	print("You must select a fluid to fill up." + "\n");
+	return;
+}
+print("Fill 'er Up!" + "\n");
+float $amount = `floatSliderButtonGrp  -q -v fillFluidUp`;
+float $res[] = `getAttr ($sel[0] + ".resolution")`;
+int $xi = 0;
+int $yi = 0;
+int $zi = 0;
+$amount = $amount / $res[1];
+for($xi=0;$xi < $res[0]; $xi++){
+	for($yi=0;$yi < $res[1]; $yi++ ){ 
+		for($zi=0;$zi < $res[2]; $zi++ ){ 
+			setFluidAttr -at density -fv 0 -xi $xi -yi $yi -zi $zi $sel[0];
+			setFluidAttr -at temperature -fv 0 -xi $xi -yi $yi -zi $zi $sel[0];
+		}
+	}
+}
+
+for($xi=0;$xi < $res[0]; $xi++){
+	for($yi=0;$yi < $amount; $yi++ ){ 
+		for($zi=0;$zi < $res[2]; $zi++ ){ 
+			setFluidAttr -at density -fv 1 -xi $xi -yi $yi -zi $zi $sel[0];
+			setFluidAttr -at temperature -fv 1 -xi $xi -yi $yi -zi $zi $sel[0];
+		}
+	}
+}
+
+}
+
+// CUSTOM CACHE__________________________
+
+global proc createCustomCacheAttributes()
+{
+	string $sel[] = `ls -sl`;
+	/*
+	1 = "3" - RenderSettings, TimeSlider, StartEnd
+	2 = "1" - StartFrame
+	3 = "2" - EndFrame
+	4 = "OneFile" - FileDistribution
+	5 = "1" - ?
+	6 = "" - ?
+	7 = "0" - ?
+	8 = "" - ?
+	9 = "0" - ?
+	10 = "add" or "replace"
+	11 = "0" ?
+	12 = "1" - ByFrame
+	13 = "1" - SaveEvery _ Evaluations
+	14 = "0" - usePrefix ?
+	15 = "1" - inheritModifications ?
+	16 = "mcc" - CacheFormat
+	17 = "1" - Cache Density
+	18 = "1" - Cache Velocity
+	19 = "1" - Cache Temperature
+	20 = "1" - Cache Fuel
+	21 = "1" - Cache Color
+	22 = "1" - Cache Texture Coordinates
+	23 = "1" - Cache Falloff
+
+	doCreateFluidCache 5 { "3", "1", "2", "OneFile", "1", "","0", "","0", "add", "0", "1", "1", "0", "1", "mcc", "1", "1", "1", "1", "1", "1", "1" }  /
+	doCreateFluidCache 5 { "3", "2", "3", "OneFile", "1", "","0", "","0", "add", "0", "0.5", "2", "0", "1", "mcc", "1", "1", "1", "1", "1", "1", "1" } ;
+	doCreateFluidCache 5 { "3", "5", "9", "OneFilePerFrame", "1", "","0", "","0", "add", "0", "2", "1", "0", "1", "mcc", "1", "1", "1", "1", "1", "1", "1" } ;
+	doCreateFluidCache 5 { "3", "5", "9", "OneFilePerFrame", "1", "","0", "","0", "replace", "0", "2", "1", "1", "1", "mcc", "1", "1", "1", "1", "1", "1", "1" } ;
+
+	deleteCacheFile 2 { "delete", "fluidShape1Cache1,fluidShape1Cache2,fluidShape1Cache3,fluidShape1Cache4,fluidShape1Cache5" } ;
+
+	cacheFile -attachFile -fileName "fluidShape3" -directory "/Shared/projects/SolarQuest-GJ/data/CME_PFEmitThinSpray2"  -cnm "fluidShape3_density" -cnm "fluidShape3_velocity" -cnm "fluidShape3_resolution" -cnm "fluidShape3_offset" -ia fluidShape3.inDensity -ia fluidShape3.inVelocity -ia fluidShape3.inResolution -ia fluidShape3.inOffset;
+	*/
+	int $i;
+	string $cacheDir = `workspace -q -rd`;
+	$cacheDir = $cacheDir + "cache/fluids/";
+	
+	for($i = 0; $i < `size $sel` ; $i++){
+		
+		addAttr -ln cacheDirectory -dt "string" $sel[$i];
+			setAttr ($sel[$i] + ".cacheDirectory") -type "string" $cacheDir;
+		addAttr -ln cacheName -dt "string" $sel[$i];
+			setAttr ($sel[$i] + ".cacheName") -type "string" $sel[$i];
+			
+		addAttr -ln usePrefix -at bool -dv 0 $sel[$i];
+		//addAttr -ln usePrefix -at long -dv 0 $sel[$i];
+		
+		addAttr -ln cacheTimeRange -at enum -en "renderSettings=1:timeSlider=2:startEnd=3" $sel[$i];
+			setAttr ($sel[$i] + ".cacheTimeRange") 3;
+		addAttr -ln cacheStartFrame -nn "Start Frame" -at long -dv 1 $sel[$i];
+		addAttr -ln cacheEndFrame -nn "End Frame" -at long -dv 100 -min 0 -max 100000000 $sel[$i];
+		addAttr -ln cacheByFrame -nn "By Frame" -at "float" -dv 1 $sel[$i];
+		addAttr -ln saveEveryNEvaluations -nn "Save Every N Evaluatinos" -at "float" -dv 1 $sel[$i];
+		
+		addAttr -ln fileDistribution -at enum -en "oneFile=1:oneFilePerFrame=2" $sel[$i];
+		addAttr -ln addReplaceCache -at enum -en "add=0:replace=1" $sel[$i];
+		
+		addAttr -ln cacheDensity -at bool -dv 1 $sel[$i];
+		addAttr -ln cacheVelocity -at bool -dv 1 $sel[$i];
+		addAttr -ln cacheTemperature -at bool -dv 1 $sel[$i];
+		addAttr -ln cacheFuel -at bool -dv 1 $sel[$i];
+		addAttr -ln cacheColor -at bool -dv 1 $sel[$i];
+		addAttr -ln cacheTextureCoordinates -at bool -dv 1 $sel[$i];
+		addAttr -ln cacheFalloff -at bool -dv 1 $sel[$i];
+		
+		addAttr -ln inheritModifications -at bool -dv 0 $sel[$i];	
+	}
+
+}
+
+global proc createCacheForSelected(){
+string $sel[] = `ls -sl`;
+string $ar;
+string $fd;
+int $up;
+int $im;
+int $cd;
+int $cv;
+int $ct;
+int $cf;
+int $cc;
+int $ctc;
+int $cfo;
+int $i;
+for($i = 0; $i < `size $sel` ; $i++){
+	string $cacheDirectory = `getAttr ($sel[$i] + ".cacheDirectory")`;
+	string $cacheName = `getAttr ($sel[$i] + ".cacheName")`;
+	$usePrefix = `getAttr ($sel[$i] + ".usePrefix")`;
+	if($usePrefix){
+		$up = 1;
+	} else {
+		$up = 0;
+	}
+	
+	int $cacheTimeRange = `getAttr ($sel[$i] + ".cacheTimeRange")`;
+		string $ctr = $cacheTimeRange;
+	int $cacheStartFrame = `getAttr ($sel[$i] + ".cacheStartFrame")`;
+	int $cacheEndFrame = `getAttr ($sel[$i] + ".cacheEndFrame")`;
+	int $cacheByFrame = `getAttr ($sel[$i] + ".cacheByFrame")`;
+	int $saveEveryNEvaluations = `getAttr ($sel[$i] + ".saveEveryNEvaluations")`;
+	
+	int $fileDistribution = `getAttr ($sel[$i] + ".fileDistribution")`;
+		if($fileDistribution == 1){
+			$fd = "OneFile";
+		} else {
+			$fd = "OneFilePerFrame";
+		}
+	int $addReplaceCache = `getAttr ($sel[$i] + ".addReplaceCache")`;
+		if($addReplaceCache == 0){
+			$ar = "add";
+		} else {
+			$ar = "replace";
+		}
+	
+	$cacheDensity = `getAttr ($sel[$i] + ".cacheDensity")`;
+		if($cacheDensity){$cd = 1;} else {$cd = 0;}
+	$cacheVelocity = `getAttr ($sel[$i] + ".cacheVelocity")`;
+		if($cacheVelocity){$cv = 1;} else {$cv = 0;}
+	$cacheTemperature = `getAttr ($sel[$i] + ".cacheTemperature")`;
+		if($cacheTemperature){$ct = 1;} else {$ct = 0;}
+	$cacheFuel = `getAttr ($sel[$i] + ".cacheFuel")`;
+		if($cacheFuel){$cf = 1;} else {$cf = 0;}
+	$cacheColor = `getAttr ($sel[$i] + ".cacheColor")`;
+		if($cacheColor){$cc = 1;} else {$cc = 0;}
+	$cacheTextureCoordinates = `getAttr ($sel[$i] + ".cacheTextureCoordinates")`;
+		if($cacheTextureCoordinates){$ctc = 1;} else {$ctc = 0;}
+	$cacheFalloff = `getAttr ($sel[$i] + ".cacheFalloff")`;
+		if($cacheFalloff){$cfo = 1;} else {$cfo = 0;}
+	
+	$inheritModifications = `getAttr ($sel[$i] + ".inheritModifications")`;
+	if($inheritModifications){
+		$im = 1;
+	} else {
+		$im = 0;
+	}
+	
+	int $p;
+	for($p=0;$p<`size $sel`;$p++){
+		if($sel[$p] != $sel[$i]){
+			hide $sel[$p];
+		}
+		
+	}
+	//hide `ls -type "fluidShape"`;	
+	select -r $sel[$i];
+	showHidden $sel[$i];
+	print("Caching: " + $sel[$i] + "\n");
+	//doCreateFluidCache 5 { $cacheTimeRange, $cacheStartFrame, $cacheEndFrame, $fd, "1", "","0", "","0", $ar, "0", $cacheByFrame, $saveEveryNEvaluations, $usePrefix, $inheritModifications, "mcc", $cacheDensity, $cacheVelocity, $cacheTemperature, $cacheFuel, $cacheColor, $cacheTextureCoordinates, $cacheFalloff }; 	
+	//doCreateFluidCache 5 { "2", "1", "10", "OneFilePerFrame", "1", "","0", "","0", "add", "0", "1", "1", "0", "1", "mcc", "1", "1", "1", "1", "1", "1", "1" } ;
+	doCreateFluidCache 5 { $ctr, $cacheStartFrame, $cacheEndFrame, $fd, "1", "","0", "","0", $ar, "0", $cacheByFrame, $saveEveryNEvaluations, $up, $im, "mcc", $cd, $cv, $ct, $cf, $cc, $ctc, $cfo } ;
+	print("Done Caching: " + $sel[$i] + "\n");
+}
+$render = `checkBox -q -v cacheRenderWhenCacheIsCompleteOption`;
+if($render){
+	render -b;
+}
+}
+
+global proc cacheFluidsLayout(string $parent)
+{
+	string $cachingLayout = `frameLayout
+		-l "Cache"
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true		
+		-parent $parent`;		
+		
+	button
+		-label "Create Custom Cache Attributes"
+		-ann ""			
+		-command "createCustomCacheAttributes"
+		createCustomCacheAttributes;
+		
+	button
+		-label "Delete Custom Cache Attributes"
+		-ann ""			
+		-command "deleteCustomCacheAttributes"
+		deleteCustomCacheAttributes;	
+	
+	text
+		-l "Fluids to Cache:"
+		;
+		
+	textScrollList
+		-w 80
+		-h 60
+		-ams true
+		-dkc "removeSelectedFluidFromCacheList"
+		getCacheList
+		;
+	
+		
+	string $cacheListLayout = `rowLayout
+		-numberOfColumns 3
+		`;
+		
+		button
+			-label "Select Fluids"
+			-ann ""
+			-command "assignFluidsToCacheList"
+			assignFluidsToCacheList
+			;
+			
+		button
+			-label "Clear List"
+			-ann ""
+			-command "clearFluidsCacheList"
+			clearFluidsCacheList;			
+			
+		button
+			-label "Cache Selected"
+			-ann ""			
+			-command "createCacheForSelected"
+			createCacheForSelected;			
+			
+		setParent..;
+		
+		checkBox
+			-l "Render When Cache is Complete."
+			-v true
+			cacheRenderWhenCacheIsCompleteOption
+			;
+		
+}
+
+global proc deleteCustomCacheAttributes()
+{
+string $sel[] = `ls -sl`;
+
+string $allAttr[] = {	
+"cacheDirectory","cacheName","usePrefix","cacheTimeRange","cacheStartFrame","cacheEndFrame",
+"cacheByFrame","saveEveryNEvaluations","fileDistribution","addReplaceCache",
+"cacheDensity","cacheVelocity","cacheTemperature","cacheFuel","cacheColor",
+"cacheTextureCoordinates","cacheFalloff","inheritModifications"
+};
+
+doDeleteAttr($allAttr, $sel[0]);
+print ("Custom Cache Attributes on " + $sel[0] + " Deleted!" + "\n");
+
+}
+
+global proc assignFluidsToCacheList()
+{
+string $sel[] = `ls -sl`;
+if(`size $sel`==0){
+	error "Nothing is selected. Select some fluids to cache.";
+} else {
+	int $i;
+	for($i = 0; $i<`size $sel`; $i++){
+	textScrollList
+		-e
+		-append $sel[$i]
+		getCacheList;
+	}
+	
+}
+	
+}
+
+global proc clearFluidsCacheList()
+{
+textScrollList
+	-e
+	-ra
+	getCacheList;
+}
+
+global proc removeSelectedFluidFromCacheList()
+{
+string $sel[] = `textScrollList -q -si getCacheList`;
+int $i;
+for($i = 0; $i<`size $sel`; $i++){
+textScrollList
+	-e
+	-ri $sel[$i]
+	getCacheList;
+}
+}
+
+global proc doTransferFluidColor()
+{
+print("Starting Fluid to Fluid Transfer... \n");
+waitCursor -state on; // Turn waitcursor on for duplication process
+progressBar
+	-e				
+	-pr 0
+	fluidTransferProgressBar
+	;
+	
+string $mFluid = `textFieldButtonGrp -q -text getMasterFluid`;
+string $sFluid = `textFieldButtonGrp -q -text getSlaveFluid`;
+$useVoxWP = `checkBoxGrp -q -v1 transferInWorldSpace`;
+
+float $res[] = `getAttr ($mFluid + ".resolution")`;
+int $xRes = $res[0];
+int $yRes = $res[1];
+int $zRes = $res[2];
+
+// get the resolution of the slave fluid-container 
+float $sres[] = `getAttr ($sFluid + ".resolution")`;
+// If the resolutions don't match we need to use the world positions of the voxels to get the indexes. 
+if($res[0] != $sres[0] || $res[1] != $sres[1] || $res[2] != $sres[2]){
+	$useVoxWP = true;
+	$xRes = $sres[0];
+	$yRes = $sres[1];
+	$zRes = $sres[2];
+}
+
+int $xi = 0;
+int $yi = 0;
+int $zi = 0;
+float $voxPos[];
+//print("xRes : " + $xRes + "yRes : " + $yRes + "zRes : " + $zRes + "\n");
+$ok = false;
+int $progress = 0;
+int $i = 0;
+int $voxelCount = $xRes * $yRes * $zRes;
+float $timeA;
+float $timeB;
+for($xi=0;$xi < $xRes; $xi++){
+	for($yi=0;$yi < $yRes; $yi++){ 
+		for($zi=0;$zi < $zRes; $zi++ ){ 
+			timer -s -n "fluidTransferTimer";
+			$ok = `fluidVoxelInfo -inBounds $xi $yi $zi $mFluid`;
+			
+			
+			if(!$ok){
+				continue;
+			}
+			if($useVoxWP){
+				$voxPos = `fluidVoxelInfo -os false -voxelCenter -cb -xi $xi -yi $yi -zi $zi $mFluid`;
+			} else {
+				$voxPos = {0,0,0};
+			}		
+			
+			setFluidColor($xi, $yi, $zi, $voxPos, $useVoxWP);
+			
+			$i++;
+			$progress = 100 - (($i / $voxelCount) * 100);
+			progressBar
+				-e
+				-max $voxelCount				
+				-s 1
+				fluidTransferProgressBar
+				;
+			
+			float $endTime = `timer -e -n "fluidTransferTimer"`;
+			float $timeRemaining = estimateTimeRemaining(0, $endTime, $progress);
+			string $tr = "Time Remaining: " + $timeRemaining;
+			text
+				-e
+				-l $tr
+				fluidTransferTimeRemaining
+				;
+
+		}
+	}
+
+}
+print("Fluid Transfer Complete.\n");
+waitCursor -state off; // Turn waitcursor on for duplication process
+}
+
+global proc setFluidColor(float $xi, float $yi, float $zi, float $voxPos[], int $useVoxWP)
+{
+string $mFluid = `textFieldButtonGrp -q -text getMasterFluid`;
+string $sFluid = `textFieldButtonGrp -q -text getSlaveFluid`;
+string $sourceType = `optionMenuGrp -q -v sourceFluidTransferType`;
+string $targetType = `optionMenuGrp -q -v targetFluidTransferType`;
+float $amount = `floatSliderButtonGrp -q -v doTransferFluidColor`;
+					 
+int $svi[];
+$ok = false;
+
+// Either use the same voxel index as the master fluid or get the index from the position of the mFluid voxel.
+if($useVoxWP == 1){
+	$svi = `fluidVoxelInfo -os false -cb -voxel $voxPos[0] $voxPos[1] $voxPos[2] $sFluid`;
+} else { 
+	$svi[0] = $xi;
+	$svi[1] = $yi;
+	$svi[2] = $zi;
+	$ok = `fluidVoxelInfo -inBounds $xi $yi $zi $sFluid`;
+	//If we can't find the voxel by index then we need to look for it by position 
+	if(!$ok){
+		$svi = `fluidVoxelInfo -os false -cb -voxel $voxPos[0] $voxPos[1] $voxPos[2] $sFluid`;
+	}
+}
+
+//$svi = `fluidVoxelInfo -os false -cb -voxel $voxPos[0] $voxPos[1] $voxPos[2] $sFluid`;
+
+float $val[];
+$val = `getFluidAttr -at $sourceType -xi $xi -yi $yi -zi $zi $mFluid`;
+int $i;
+for($i=0;$i<`size $val`;$i++){
+	$val[$i] = $val[$i] * ($amount * 0.01);
+}
+if($targetType == "velocity" || $targetType == "color"){
+	setFluidAttr -at $targetType -vv $val[0] $val[1] $val[2] -xi $svi[0] -yi $svi[1] -zi $svi[2] $sFluid;
+} else {
+	setFluidAttr -at $targetType -fv $val[0] -xi $svi[0] -yi $svi[1] -zi $svi[2] $sFluid;
+}
+//print("Transfering: " + $sourceType + " To: " + $targetType + " At: " + $svi[0] + " || " + $svi[1] + " || " + $svi[2] + " Amount: " + $amount + "\n");
+}
+
+global proc float estimateTimeRemaining(float $timeA, float $timeB, float $perRemaining)
+{
+float $avgTime = $timeB - $timeA;
+float $timeRemaining = $avgTime * $perRemaining;
+
+return $timeRemaining;
+				
+}
+
+global proc fillFluidWithColor()
+{
+float $color[] = `colorSliderGrp -q -rgb fillFluidColor`;
+string $sel[] = `ls -sl`;
+
+
+float $res[] = `getAttr ($sel[0] + ".resolution")`;
+int $xRes = $res[0];
+int $yRes = $res[1];
+int $zRes = $res[2];
+
+int $xi = 0;
+int $yi = 0;
+int $zi = 0;
+
+for($xi=0;$xi < $xRes; $xi++){
+	for($yi=0;$yi < $yRes; $yi++){ 
+		for($zi=0;$zi < $zRes; $zi++ ){ 
+				setFluidAttr -at color -vv $color[0] $color[1] $color[2] -xi $xi -yi $yi -zi $zi $sel[0];	
+
+		}
+	}
+
+}
+
+}
+
+global proc pfCopyFluidSourceTypeToTargetType()
+{
+string $mFluid = `textFieldButtonGrp -q -text getMasterFluid`;
+string $sFluid = `textFieldButtonGrp -q -text getSlaveFluid`;
+string $sourceType = `optionMenuGrp -q -v sourceFluidTransferType`;
+string $targetType = `optionMenuGrp -q -v targetFluidTransferType`;
+
+float $sourceVals[] = `getFluidAttr -at $sourceType $mFluid`;
+select -r $sFluid;
+
+float $res[] = `getAttr ($sFluid + ".resolution")`;
+int $xRes = $res[0];
+int $yRes = $res[1];
+int $zRes = $res[2];
+
+int $xi = 0;
+int $yi = 0;
+int $zi = 0;
+
+int $i;
+for($xi=0;$xi < $xRes; $xi++){
+	for($yi=0;$yi < $yRes; $yi++){ 
+		for($zi=0;$zi < $zRes; $zi++ ){
+			//setFluidAttr -at $targetType -fv $sourceVals;
+			setFluidAttr -at $targetType -fv $sourceVals[$i] -xi $xi -yi $yi -zi $zi $sFluid;
+			$i++;
+		}
+	}
+
+}
+/*
+int $i;
+for($i=0;$i<`size $sourceVals`;$i=$i+3){	
+	setFluidAttr -at $targetType -fv $sourceVals[$i] $sourceVals[($i + 1)] $sourceVals[($i + 2)];
+}
+*/
+}
+

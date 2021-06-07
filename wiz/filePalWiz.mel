@@ -1,0 +1,667 @@
+
+global proc filePalWiz()
+{
+
+}
+
+//@ WIZ FILE PALLET LAYOUT
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	wizFilePalletLayout [-obj string] [-typ linear] <br>
+	Valid Types : <br>
+		frameLayout <br>
+		tabLayout <br>
+		fileList <br>
+	
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-type(-typ) <br>
+	-name(-n) <br>
+	-add(-add) <br>
+	-delete(-d) <br>
+	-parent(-p) <br>
+	-main(-m) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	wizFilePalletLayout("-root filePal -n someObject -p someLayout");
+	wizFilePalletLayout("-root filePal -n someList -type fileList -p someLayout");
+	
+	</code>
+*********************************************************************/
+global proc string[] wizFilePalletLayout( string $flags )
+{
+	wizlog ("[@] wizFilePalletLayout");
+	string $root = "filePal";
+	string $name = "main";
+	string $newName;
+	//string $type = "frameLayout";
+	string $type;
+	string $p;
+	int $main;
+	int $edit;
+	string $ov[];
+	int $add;
+	int $del;
+	
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-m" : case "-main" :
+			$main = 1;
+			break ;
+			
+			case "-n" : case "-name" :
+			$name = $tok[($i + 1)];
+			break ;
+				
+			case "-typ" : case "-type" :
+			$type = $tok[($i + 1)];
+			break ;
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+			case "-p" : case "-parent" :
+			$p = $tok[($i + 1)];
+			break ;
+			
+			case "-a" : case "-add" :
+			$add = 1;			
+			break ;
+						
+			case "-d" : case "-delete" :
+			$del = 1;
+			break ;
+			
+			case "-r" : case "-root" :
+			$root = $tok[($i + 1)];
+			break ;
+			
+		}
+	}
+	
+	if (`size $p` > 0){
+		setParent $p;
+	}
+	wizlog ("	[#] Parent : " + $p + " [+]");
+	
+	//_________________________________________
+	// Add A Column Layout
+	string $columnLayout = ("WIZ_" + $name + "_columnLayout");
+	if (`columnLayout -ex ("WIZ_" + $name + "_columnLayout")` == 0){
+		$columnLayout = `columnLayout
+			-adj true
+			("WIZ_" + $name + "_columnLayout")
+			`;	
+	}
+	
+	//_________________________________________
+	// Add A Layout
+	
+	// combine the current namespace with a new namespace entered in prompt
+	if ($add){
+	
+		//_________________________________________
+		// Prompt For Name
+		string $newLayout;
+		string $t = "Layout Name";
+		string $m = "Name of New Layout";
+		string $prompt = `promptDialog
+			-t $t
+			-m $m
+			-ma "left"
+			-b "OK"
+			-b "Cancel"
+			-db "OK"
+			-cb "Cancel"
+			`;
+			
+		if ($prompt == "Cancel"){
+			return { "" };
+		} else {
+			$newLayout = `promptDialog -q -tx`;			
+		}	
+		
+		// Format the name in case the user entered in illegal stuff
+		$newLayout = substituteAllString($newLayout, " ", "");
+		$newLayout = removeIllegalCharactersFromName($newLayout);
+		$newLayout = removeSpecialCharactersFromName($newLayout);
+	
+		//_________________________________________
+		// Save The New Namespace
+		string $newOVName = ("WIZ_" + $name + "_" + $newLayout + "_" + $type + "_" + $root);
+		if (`optionVar -ex $newOVName`){
+			
+			wizlog ("-w 	[!] Sorry that name already exists : optionVar -q " + $newOVName + " [!]");
+			return { "" };
+		}
+
+		optionVar -sva ($p + "_filePal") ("WIZ_" + $name + "_" + $newLayout + "_" + $type + "_" + $root);
+
+		wizlog ("optionVar -sva " + $p + "_filePal WIZ_" + $name + "_" + $newLayout + "_" + $type + "_" + $root + ";");		
+		wizlog ("	[+] Adding Namespace : " + $newLayout + " [+]");
+		wizlog ("	[+] New Layout Type : " + $type + " [+]");
+		
+		$name = $newLayout;
+
+	}
+	
+	//_________________________________________
+	// Remove A Layout
+	if ($del){
+		wizlog ("	[-] Delete Namespace : " + $name + "_" + $type);
+
+		string $pName = $name;
+		string $tokPName[] = tokenizeString($pName, "_");
+		stringArrayRemoveAtIndex((`size $tokPName` - 1), $tokPName);
+		$pName = stringArrayToString($tokPName, "_");
+		
+		wizlog ("	[*] deleteUI -lay " + $p);
+		
+		deleteUI -lay $p;
+		
+		int $ovSize = `optionVar -as ($p + "_filePal")`;
+		
+		// Remove from optionVar
+		if ($ovSize > 1){
+			string $ovNames[] = `optionVar -q ("WIZ_" + $pName + "_filePal")`;
+			int $removeI = stringArrayFind(("WIZ_" + $name + "_" + $type + "_filePal"), 0, $ovNames);
+			if ($removeI >= 0){
+				wizlog ("	[-] Removing : " + $removeI + " From Array : WIZ_" + $pName + "_" + $root);
+				optionVar -rfa ("WIZ_" + $pName + "_" + $root) $removeI;
+			}			
+			wizlog (niceArrayList(("	[optionVar] : WIZ_" + $pName + "_" + $root), $ovNames));
+		} else {
+			wizlog ("	[-] Removing : WIZ_" + $pName + "_" + $type + "_" + $root);
+			optionVar -rm ("WIZ_" + $pName + "_" + $type + "_" + $root);
+		}
+		
+		return {""};
+	}
+		
+	
+	wizlog ("	[+] Name : " + $name + " [+] Type : " + $type);
+	
+	//_________________________________________
+	// Add type of layout specified
+		
+	// Make nice name for label
+	string $tokl[] = tokenizeString($name, "_");
+	string $lName = $tokl[(`size $tokl` - 1)];
+	$lName = capitalizeString ($lName);
+	
+	//_________________________________________
+	// Tab Layout
+	if ($type == "tabLayout" || $type == "tl"){
+	
+		wizlog ("	[+] File Pallet : Add Tab Layout : " + "WIZ_" + $name + "_tabLayout");
+		if (`tabLayout -q -ex ("WIZ_" + $name + "_tabLayout")` == 0){
+		
+			string $tabLayout = `tabLayout
+				-ann ("WIZ_" + $name + "_tabLayout")
+				-scrollable false
+				//-childResizable false
+				-imageVisible true
+				-tabsVisible true
+				-p $columnLayout
+				("WIZ_" + $name + "_tabLayout")
+				`;			
+				
+			//$p = ("WIZ_" + $name + "_tabLayout");	
+			wizFilePalMainMenu("-n " + $name + " -p " + $p + " -type main -pop");
+				
+		} 
+		
+		if (`columnLayout -q -ex ("WIZ_" + $name + "_columnLayout")` == 0){		
+			//_________________________________________
+			// Add a new column layout under parent tab layout
+			
+			string $tabColumnLayout = `columnLayout
+				-ann ("WIZ_" + $name + "_columnLayout")
+				-adj true
+				-p ("WIZ_" + $name + "_tabLayout")
+				("WIZ_" + $name + "_columnLayout")
+				`;					
+				
+			tabLayout
+				-e
+				-tl ("WIZ_" + $name + "_columnLayout") $lName
+				("WIZ_" + $name + "_tabLayout")
+				;
+				
+				
+			$p = $tabColumnLayout;	
+			
+			//_________________________________________
+			// MenuBar
+			wizFilePalMainMenu("-n " + $name + " -p " + $p + " -type main");
+		}	
+				
+		
+	}
+	
+	//_________________________________________
+	// Frame Layout
+	if ($type == "frameLayout" || $type == "fl"){
+		wizlog ("	[+] File Pallet : Add Frame Layout : " + "WIZ_" + $name + "_frameLayout");
+		if (`frameLayout -q -ex ("WIZ_" + $name + "_tabLayout")` == 0){
+				
+			string $frameLayout = wizFrameLayout(
+				"-l " + $lName	
+				+" -ann WIZ_" + $name + "_frameLayout"
+				+" -cl 1 "
+				+"-p " + $columnLayout
+				+" -n WIZ_" + $name + "_frameLayout"
+				);
+			
+		}
+
+		$p = ("WIZ_" + $name + "_frameLayout");
+		
+		//_________________________________________
+		// MenuBar
+		wizFilePalMainMenu("-n " + $name + " -p " + $p + " -type main");
+		
+	}
+	
+	//_________________________________________
+	// File List
+	if ($type == "fileList" || $type == "file"){
+		wizlog ("	[+] File Pallet : Add File List : " + "WIZ_" + $name + "_fileList");
+		textScrollListBookmarksLayout($lName);
+		
+	}
+		
+	//_________________________________________
+	// Check for optionVar strings
+	string $ovName = ("WIZ_" + $name + "_" + $type + "_" + $root);
+	if (`optionVar -ex $ovName`){
+		$ov = `optionVar -q $ovName`;	
+		wizlog (niceArrayList("	[optionVar] ", $ov));
+	}
+	
+	//_________________________________________
+	// Process optionVar strings to build iteratively
+	string $c;
+	for ($i=0;$i<`size $ov`;$i++){		
+		string $toko[] = tokenizeString($ov[$i], "_");
+		for ($oi=0;$oi<`size $toko`;$oi++){
+			switch ($toko[$oi]){
+				/*
+				case "n" : case "name" :
+				$c = $c + " -n " + $tok[($oi + 1)];
+				break ;
+				*/
+				
+				case "fl" : case "frameLayout" : 
+				$c = $c + " -type frameLayout";
+				break ;	
+				
+				case "f" : case "fileList" : 
+				$c = $c + " -type fileList";
+				break ;	
+				
+				
+		
+			}
+		
+		}
+		
+		stringArrayRemoveAtIndex(0, $toko);
+		stringArrayRemoveAtIndex((`size $toko` - 1), $toko);
+		stringArrayRemoveAtIndex((`size $toko` - 1), $toko);
+		string $addName = stringArrayToString($toko, "_");
+		
+		$c = $c + " -n " + $addName;
+		$c = $c + " -p " + $p;
+		wizlog ("	[+] New File Pallet Command : " + $c);
+		wizFilePalletLayout($c);
+		
+	}
+	
+	return {""};
+	
+}
+
+//@ WIZ FILE PAL MAIN MENU
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName("-obj someObject -q -sl");
+	
+	</code>
+*********************************************************************/
+global proc string[] wizFilePalMainMenu( string $flags )
+{
+	string $name, $type;
+	string $root = "filePal";
+	string $p;
+	int $edit;
+	int $popup;
+	
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-n" : case "-name" :
+			$name = $tok[($i + 1)];
+			break ;
+				
+			case "-typ" : case "-type" :
+			$type = $tok[($i + 1)];
+			break ;
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+			case "-p" : case "-parent" :
+			$p = $tok[($i + 1)];
+			break ;
+			
+			case "-pop" : case "-popupMenu" :
+			$popup = 1;
+			break ;
+			
+			case "-r" : case "-root" :
+			$root = $tok[($i + 1)];
+			break ;
+			
+		}
+	}
+
+	wizlog ("	[+] Menu : -name " + $name + " -parent " + $p);
+	
+	if ($type == "main"){
+	
+		if ($popup){
+			popupMenu
+				("WIZ_" + $name + "_popupMenu")
+				;
+		
+		} else {			
+			menuBarLayout
+				("WIZ_" + $name + "_menuBarLayout")
+				;		
+
+		}
+		
+		menu -l "Add-Remove";
+					
+			menuItem -sm true -l "Layout";
+		
+				menuItem -l "Add Frame Layout" -c ("wizFilePalletLayout(\"-p " + $p + " -n " + $name + " -add -type frameLayout -root " + $root + "\");");
+			
+				menuItem -l "Remove Frame Layout" -c ("wizFilePalletLayout(\"-p " + $p + " -n " + $name + " -d -type frameLayout -root " + $root + "\");");
+			
+				menuItem -l "Add Tab Layout" -c ("wizFilePalletLayout(\"-p " + $p + " -n " + $name + " -add -type tabLayout -root " + $root + "\");");
+			
+				menuItem -l "Remove Tab Layout" -c ("wizFilePalletLayout(\"-p " + $p + " -n " + $name + " -d -type tabLayout -root " + $root + "\");");
+			
+			setParent -menu..;
+			
+			menuItem -sm true -l "List";
+				
+				menuItem -l "Add File List" -c ("wizFilePalletLayout(\"-p " + $p + " -n " + $name + " -add -type fileList -root " + $root + "\");");
+			
+				menuItem -l "Remove File List" -c ("wizFilePalletLayout(\"-p " + $p + " -n " + $name + " -d -type fileList -root " + $root + "\");");
+			
+			setParent -menu..;
+		
+		setParent -menu..;
+	
+	}
+	return {""};
+		
+}
+
+//@ WIZ EXPORT CACHE FILE
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $abc[] = wizExportCacheFile("");
+	
+	string $abc[] = wizExportCacheFile("-sl");
+	
+	</code>
+*********************************************************************/
+global proc string[] wizExportCacheFile( string $flags )
+{
+	wizlog ("[@] wizExportCacheFile");
+	string $obj, $type;
+	string $sel[];
+	string $filename[];
+	int $edit;
+	int $all;
+	int $es; // wizExportSet
+	int $abc = 1;
+	int $sl = `checkBox -q -v wizCacheFile_exportSelection_checkBox`;
+	int $vg = `checkBox -q -v wizCacheFile_exportVisGeo_checkBox`;
+	string $ext = "abc";
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-typ" : case "-type" :
+			$type = $tok[($i + 1)];
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sl = 1;
+			$sel = `ls -l -sl`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+			case "-abc" : case "-alembic" :
+			$abc = 1;
+			$ext = "abc";
+			break ;
+			
+			case "-gpu" : case "-gpu" :
+			$gpu = 1;
+			$ext = "gpu";
+			break ;
+			
+			case "-all" :
+			$all = 1;
+			break ;
+			
+			case "-f" : case "-file" :
+			$filename = wizFlagArray($tok, $i);
+			break ;
+			
+			case "-vg" : case "-visibleGeometry" :
+			$vg = 1;
+			break ;
+			
+			case "-es" : case "-exportSets" :
+			$es = 1;
+			break ;
+			
+		}
+	}
+	
+	if ($vg){
+		string $visGeo[] = `ls -l -g -v`;
+		select -r $visGeo;
+		$sl = 1;
+	}
+	
+	if ($es){
+		$sl = 1;
+		$sel = `ls -l -sl`;
+		select -r $sel;
+	}
+	
+	if (`size $filename` == 0){
+		$filename = wizCraftGetFileOutputPaths("-pwfn -usd -ext " + $ext);
+	}
+	
+	//AbcExport -j "-frameRange 1 1 -frameRelativeSample -0.2 -frameRelativeSample 0 -frameRelativeSample 0.2 -uvWrite -dataFormat ogawa -root |PipeMesh1 -root |PipeBrush1Leaf -root |PipeBrush1Flower -file C:/Users/Glen/Documents/maya/projects/Assets/scenes/Models/SciFi/Components/Exterior/Structures/pfxTectTubesA/pfxTectTubesA189_files/pfxTectTubesA189.abc";
+
+	if ($abc){
+		string $j;
+		if ($sl){
+			$j = $j + "-sl -dataFormat ogawa ";
+			//$j = $j + "-root ";
+			
+			for ($i=0;$i<`size $sel`;$i++){
+					$j = $j + " -root " + $sel[$i];
+			}
+			
+			//$j = $j + (stringArrayToString($sel, " "));
+			$j = $j + " -wv ";
+		}
+		$j = $j + "-frameRange 0 0 ";
+		$j = $j + "-uvWrite ";
+		$j = $j + "-writeColorSets ";
+		$j = $j + "-stripNamespaces ";
+		$j = $j + "-file " + $filename[0];
+		wizlog ("AbcExport -j " + $j);
+		/*
+		if ((catchQuiet(AbcExport -j $j)) == 1){
+			wizlog ("[!] Error Exporting ABC File : \n" + "AbcExport -j " + $j);
+		} else {
+			wizlog ("[*] Success Exporting ABC File : \n" + "AbcExport -j " + $j);
+		}
+		*/
+		wizlog ("[*] Exporting ABC File : \n" + "AbcExport -j " + $j);
+		
+		AbcExport -j $j;
+		
+	}
+	
+	
+	wizlog ("	[#] Export Cache File : " + $filename[0]);
+	
+	return { $filename[0] };
+
+}
+
+global proc wizExportAbcCache()
+{
+	wizExportCacheFile("");
+}
+
+
+//@ WIZ IMPORT CACHE FILE
+//====================================================================
+/*****************************************************************//**
+	Use this to import multiple cache files.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $abc[] = wizImportCacheFile("");
+	
+	</code>
+*********************************************************************/
+global proc string[] wizImportCacheFile( string $flags )
+{
+	wizlog ("[@] wizImportCacheFile");
+	string $obj, $type;
+	string $sel[];
+	string $filename;
+	int $edit;
+	int $all;
+	int $abc;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			
+			case "-f" : case "-file" :
+			$filename = $tok[($i + 1)];
+			break ;
+			
+			
+			
+		}
+	}
+	
+	string $file[] = wizGetMultipleFiles();
+	
+	for ($i=0;$i<`size $file`;$i++){	
+		wizlog ("	[#] Importing Cache File : " + $file[$i]);
+		AbcImport $file[$i];  
+	}
+	
+	return $file;
+	
+
+}

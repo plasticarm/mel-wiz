@@ -1,0 +1,43 @@
+string exportFolder;
+int nfiles;
+void main(){
+	ModalDialog("First Select Export Folder. Click OK to start."," ");
+	// prompt for export folder
+	FolderDialog(exportFolder);
+	
+	nfiles=0;
+	/*
+	string exportFolder;
+
+	// prompt for export folder
+	FolderDialog(exportFolder);
+	
+	// prompt for import folder
+	string importFolder;
+	FolderDialog(importFolder);
+	
+	ForEachFileInFolder("","*.fbx","TestFunction");
+	//ForEachFileInFolder("","*.fbx","BakeMaps");
+	
+	*/
+	if(ModalDialogOkCancel("Now Select A File In The Import Folder"," ")){
+		//This function will call void ForAnyFile(string &in FileName) for each file in user defined folder - jpg and png are just for example
+		ForEachFileInFolder("","*.fbx","ForAnyFile");
+		ModalDialog(formatInt(nfiles,'l')+" files processed."," ");
+	}
+	
+} 
+
+void ForAnyFile(string &in FileName){
+	//print there just for example, use Scripts->View execution log
+	//print(FileName + "\n");
+	//nfiles++;
+	
+	string fn;
+	fn = GetFileName(FileName);
+	fn = RemoveExtension(fn);
+	print("FileName : " + fn + "\n");
+	nfiles++;
+	
+	print("ExportFolder : " + exportFolder + "\n");
+}

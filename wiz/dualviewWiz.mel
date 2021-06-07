@@ -1,0 +1,33 @@
+global proc dualviewWiz()
+{
+string $window = `window -title "Dual View"
+       -iconName "Short Name"
+       -widthHeight 800 800`;
+columnLayout -adjustableColumn true;
+       button -label "Do Nothing";
+      // button -label "Close" -command ("deleteUI -window " + $window);
+	   dualviewLayout();
+	   
+setParent ..;
+showWindow $window;
+
+}
+
+global proc dualviewLayout()
+{
+//paneLayout -configuration "vertical2"
+string $tabLayout = `tabLayout
+	-scrollable true
+	-childResizable true
+	-imageVisible true
+	-tabsVisible true
+	//-p $mainlayout
+	wizTab
+	`;
+	
+	columnLayout -adjustableColumn true HyperShade;
+	
+	scriptedPanel -type HyperShade;
+	
+	setParent ..;
+}

@@ -1,0 +1,2408 @@
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//|||||||||||||||||||||||||:::WIZ:::||||||||||||||||||||||||||||||||||
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//                         RAMPUTATION WIZ
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+/*====================================================================
+Author: Glen Johnson
+Email: plasticarm@gmail.com
+Website: plasticarm.com / hrpictures.com
+----------------------------------------------------------
+Summary:
+
+
+
+====================================================================*/
+//====================================================================
+//			GLOBAL VARS
+
+global int $WIZ_ramputationLayoutCount;
+$WIZ_ramputationLayoutCount = 0;
+
+
+//====================================================================
+
+//========================================================================================================
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//                     LAYOUTS
+///////////////////                  /////////////////////////////////////////////////////////////////////
+
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//========================================================================================================
+
+//# RAMPUTATIONS MAIN LAYOUT
+//====================================================================
+global proc ramputationsMainLayout( string $parent )
+{
+
+	string $layout = `frameLayout
+		-l "Ramputations"	
+		-ann "Randomizes and nests ramps and textures inside of ramps."
+		-bv true
+		-li 10
+		-lv true
+		-mw 0
+		-mh 0		
+		
+		-cll true
+		-cl true
+		-parent $parent
+        ramputationsMainFrameLayout
+		`;
+
+	
+	ramputationMainMenuBarLayout($layout);			
+			
+    //<ToDoWiz!> Make this into a tab layout
+    /*
+    string $mainColumnLayout = `columnLayout
+            -adj true
+            -p $layout
+            ramputationsMainColumnLayout
+            `;    
+    //-------------------------------------------------------
+	//########################<TAB>##########################
+	string $ramputationTabLayout = `tabLayout
+		-ann ""
+		-scrollable false
+		//-childResizable false
+		-imageVisible true
+		-tabsVisible true
+		-dcc "autoExpandCollapseWizSelectionFrames"
+		-sc "selectWizSelectionTab"
+		-cc ("wizTabCC(\"wizSelectionTab\");")
+		-p $mainColumnLayout
+		ramputationsMainTabLayout
+		`;
+        
+       */
+       
+	   
+    string $allRamputationsColumnLayout = `columnLayout
+        //-adj true
+        -p $layout
+        ramputationsAllRampFunctionsColumnLayout
+        `;
+        
+	addNewRamputationLayout($layout);
+	
+    
+    
+		
+}
+
+//# ADD NEW RAMPUTATION LAYOUT
+//====================================================================
+global proc addNewRamputationLayout( string $parent )
+{
+	global int $WIZ_ramputationLayoutCount;
+    $WIZ_ramputationLayoutCount++;
+	string $rName = ("ramputations" + $WIZ_ramputationLayoutCount);
+	randomizeRampsLayout($rName, $parent);
+}
+
+//# RANDOMIZE RAMPS LAYOUT
+//====================================================================
+global proc randomizeRampsLayout( string $name, string $parent)
+{
+
+/************ IMPORTANT **********************************************
+The labels of the controls are used in setting the names of the 
+attributes created when creating a ramputation asset. So the names
+must be convertible to an attribute name.
+The textScrollList var name must come from the annotation because
+a textScrollList has no label.
+*********************************************************************/
+
+	string $layout = `frameLayout
+		-l ($name)	
+		-ann ""
+		-bv true
+		-li 10
+		-lv true
+		-mw 0
+		-mh 0		
+		
+		-cll true
+		-cl true
+		-parent $parent
+		($name + "FrameLayout")
+		`;
+
+    /*    <ToDoWiz!> This is part of the tab layout. not finished
+    string $mainColumnLayout = `columnLayout
+            -adj true
+            -p $parent
+            ($name + "MainColumnLayout")
+            `;   
+        
+        */
+		
+    //-------------------------------------------------------
+	//########################<TAB>##########################
+	string $ramputationTabLayout = `tabLayout
+		-ann ""
+		-scrollable false
+		//-childResizable false
+		-imageVisible true
+		-tabsVisible true
+		-dcc "autoExpandCollapseWizSelectionFrames"
+		-sc "selectWizSelectionTab"
+		-cc ("wizTabCC(\"wizSelectionTab\");")
+		-p $layout
+		($name + "MainTabLayout")
+		`;
+
+        
+        string $rampSelectionColumnLayout = `columnLayout
+            //-adj true
+            -p $ramputationTabLayout
+            ($name + "SelectionColumnLayout")
+            `;
+        
+    
+        //____________________________________________
+		//Randomize Ramps List        
+        
+        
+                     
+            intSliderGrp 
+                -l "New Ramp Count" 
+                -minValue 1		
+                -value 3 
+                -field true	
+                -ann ""
+                -cal 1 "left"
+                -cw3 150 50 90
+                -adj 3
+                ($name + "NewRampCountIntSliderGrp")	
+                ;	
+                
+            textFieldGrp
+                -l "New Ramp Name"
+                -tx "Ramputation"
+                -cal 1 "left"
+                ($name + "NewRampPrefixTextFieldGrp")
+                ;
+                
+            float $addButCol[] = getWizColor("doButtonColor");   
+    
+            button 
+                -l "Make New Ramps"
+                -bgc $addButCol[0] $addButCol[1] $addButCol[2]
+                -c ("randomizeRampsMakeNewRamps(\"" + $name + "\");")
+                ;
+            
+        
+        string $rampListsLayout = `rowLayout
+            -nc 2
+            //-cal 1 "left"
+            //-cal 2 "right"
+            -cw 1 200
+            -cw 2 200
+            ($name + "_RandomizeRampsRampListsRowLayout")
+            `;
+            
+            string $rrrrtsl = objectSelectionTextScrollListFrameLayout("Ramps To Randomize", $rampListsLayout, ($name + "_RampsToRandomize_textScrollList"));
+            textScrollList
+				-e
+				-ann "Ramps To Randomize"
+				$rrrrtsl
+				;
+				
+			/*	
+            string $rrrrtslAnn = (
+            "Put the ramps in descending order.\n"
+            +"Ramp 1 Goes Into To Ramp 2...\n"
+            +"Ramp 2 Goes Into To Ramp 3...\n"
+            +"*Biggest Russian Doll On Bottom*"
+            );
+            
+            string $rrtsl = `textScrollList
+                -e
+                -ann $rrrrtslAnn
+                ($name + "RampsRampsToRandomize_textScrollList")
+                `;
+
+print ("RRTSL : " + $rrtsl + "\n");              
+           
+			
+		string $conDownAnn = ("If this is unchecked connections can be made amoungst ramps in any order possibly creating looping connections.\n"
+		+"You will get Warnings!\n"
+		+ $rrrrtslAnn);
+		    */    
+		//Ramp Input Pool
+		string $rampPoolTSL = objectSelectionTextScrollListFrameLayout("Input Pool", $rampListsLayout, ($name + "_InputPool_textScrollList"));		
+		
+		textScrollList
+				-e
+				-ann "Input Pool"
+				$rampPoolTSL
+				;
+				
+        setParent..;        
+                    
+            checkBox
+                -l "Include Randomize Ramps In Input Pool"
+                -v true
+                -ann ""
+                ($name + "_IncludeRandomizeRampsInInputPool_checkBox")
+                ;
+                        
+            checkBox
+                -l "Only Connect Down List"
+                -v true
+                //-ann $conDownAnn
+                ($name + "_OnlyConnectDownList_checkBox")
+                ;
+          
+        setParent $rampSelectionColumnLayout;
+        
+    //######################<END-TAB>########################
+	//-------------------------------------------------------
+
+    //-------------------------------------------------------
+	//########################<TAB>##########################
+        string $randomSettingsColumnLayout = `columnLayout
+            //-adj true
+            -p $ramputationTabLayout
+            ($name + "_RandomSettingsColumnLayout")
+            `;
+            
+        //____________________________________________
+        // Random Type  
+		checkBox
+			-l "Random Type"
+			-v true
+			($name + "_RandomType_checkBox")
+			;
+			
+		string $uvOptionsRowLayout = `rowLayout
+			-nc 9
+			`;
+			checkBox -l "URamp Type" -v 1 ($name + "_URampType_checkBox");
+			checkBox -l "VRamp Type" -v 1 ($name + "_VRampType_checkBox");
+			checkBox -l "Diagonal Ramp Type" -v 0 ($name + "_DiagonalRampType_checkBox");
+			checkBox -l "Radial Ramp Type" -v 0 ($name + "_RadialRampType_checkBox");
+			checkBox -l "Circular Ramp Type" -v 0 ($name + "_CircularRampType_checkBox");
+			checkBox -l "Box Ramp Type" -v 1 ($name + "_BoxRampType_checkBox");
+			checkBox -l "UV Ramp Type" -v 1 ($name + "_UVRampType_checkBox");
+			checkBox -l "Four Corner Ramp Type" -v 0 ($name + "_FourCornerRampType_checkBox");
+			checkBox -l "Tartan Ramp Type" -v 1 ($name + "_TartanRampType_checkBox");	
+		setParent ..;
+		
+        separator -height 10 -style "in";
+        //____________________________________________
+        // Random Interpolation
+		checkBox
+			-l "Random Interpolation"
+			-v true
+			($name + "_RandomInterpolation_checkBox")
+			;
+			
+		string $interpolationTypeRowLayout = `rowLayout
+			-nc 9
+			`;
+			checkBox -l "None Interpolation" -v 1 ($name + "_NoneInterpolation_checkBox");
+			checkBox -l "Linear Interpolation" -v 1 ($name + "_LinearInterpolation_checkBox");
+			checkBox -l "Exponential Up Interpolation" -v 0 ($name + "_ExponentialUpInterpolation_checkBox");
+			checkBox -l "Exponential Down Interpolation" -v 0 ($name + "_ExponentialDownInterpolation_checkBox");
+			checkBox -l "Smooth Interpolation" -v 0 ($name + "_SmoothInterpolation_checkBox");
+			checkBox -l "Bump Interpolation" -v 1 ($name + "_BumpInterpolation_checkBox");
+			checkBox -l "Spike Interpolation" -v 1 ($name + "_SpikeInterpolation_checkBox");
+            
+		setParent ..;	
+        
+		separator -height 10 -style "in";	
+        //____________________________________________
+        // Random Color Entry List
+		checkBox
+			-l "Random Color Entry List Count"
+			-v true
+			($name + "_RandomColorEntryListCount_checkBox")
+			;
+		
+		intSliderGrp 
+			-l "Min Color Entry Lists" 
+			-minValue 1		
+			-maxValue 100
+			-value 3 
+			-fieldMinValue 1 
+			-fieldMaxValue 10000000
+			-field true	
+			-ann ""
+			-cal 1 "left"
+			-cw3 150 50 90
+			-adj 3
+			($name + "_MinColorEntryLists_intSliderGrp")		
+			;
+		
+		intSliderGrp 
+			-l "Max Color Entry Lists" 
+			-minValue 1		
+			-maxValue 100
+			-value 10 
+			-fieldMinValue 1 
+			-fieldMaxValue 10000000
+			-field true	
+			-ann ""
+			-cal 1 "left"
+			-cw3 150 50 90
+			-adj 3
+			($name + "_MaxColorEntryLists_intSliderGrp")		
+			;	
+	
+        
+		//____________________________________________
+        // Random Positions
+		checkBox
+			-l "Random Positions"
+			-v true
+			($name + "_RandomPositions_checkBox")
+			;
+	
+		floatSliderGrp
+			-l "Round Positions To"
+			-v 0.01
+			-f true
+			-pre 3
+			($name + "_RoundPositionsTo_floatSliderGrp")
+			;
+			
+		//Random Color Options
+		string $randomColors[] = { "Random Colors", "Random Values", "Color Ramp Mix", "Value Ramp Mix", "Random Ramps", "Ramps And Black", "Black And White" };
+		string $rcomg = wizOptionMenuGrpMenuItems("Random Color Type", ($name + "_RandomColorType_optionMenuGrp"), $randomColors);
+		
+        separator -height 10 -style "in";
+        //____________________________________________
+		
+/************ IMPORTANT **********************************************
+The noise attributes are not in use yet!
+*********************************************************************/
+        // Wave and Noise
+        //U Wave
+        checkBox
+			-l "Random U Wave"
+			-v false
+			($name + "_RandomUWave_checkBox")
+			;
+            
+        string $minMaxUWaveSliders = (
+        "-l1 Min U Wave -l2 Max U Wave "
+        +"-min 0 -max 1 "
+        +"-fs1 " + $name + "_MinUWave_floatSliderGrp "
+        +"-fs2 " + $name + "_MaxUWave_floatSliderGrp "
+        +"-v1 1 -v2 10 "
+        +"-cw3 100 50 50 -adj 3 -f 1 "
+        + $name + "_MinMaxUWave");
+        
+        wizMinMaxFloatSliders($minMaxUWaveSliders);
+        
+        //V Wave
+        checkBox
+            -l "Randomize V Wave"
+            -v false
+            ($name + "_RandomVWave_checkBox")
+            ;
+          
+// <!PROBLEM!>//_________________________________________
+//  These are not named individually
+		  
+        string $minMaxVWaveSliders = (
+        "-l1 Min V Wave -l2 Max V Wave "
+        +"-min 0 -max 1 "
+        +"-fs1 " + $name + "_MinVWave_floatSliderGrp "
+        +"-fs2 " + $name + "_MaxVWave_floatSliderGrp "
+        +"-v1 1 -v2 10 "
+        +"-cw3 100 50 50 -adj 3 -f 1 "
+        + $name + "_MinMaxVWave");
+        
+        wizMinMaxFloatSliders($minMaxVWaveSliders);
+        
+        //Noise
+        checkBox
+            -l "Noise"
+            -v false
+            ($name + "_Noise_checkBox")
+            ;
+ // <!PROBLEM!>//_________________________________________
+//  These are not named individually           
+        string $minMaxNoiseSliders = (
+        "-l1 Min Noise -l2 Max Noise "
+        +"-min 0 -max 1 "
+        +"-fs1 " + $name + "_MinNoise_floatSliderGrp "
+        +"-fs2 " + $name + "_MaxNoise_floatSliderGrp "
+        +"-v1 1 -v2 10 "
+        +"-cw3 100 50 50 -adj 3 -f 1 "
+        + $name + "_MinMaxNoise");
+        
+        wizMinMaxFloatSliders($minMaxNoiseSliders);
+        
+        //Noise
+        checkBox
+            -l "Random Noise Freq"
+            -v false
+            ($name + "_RandomNoiseFreq_checkBox")
+            ;
+			
+// <!PROBLEM!>//_________________________________________
+//  These are not named individually            
+        string $wizMinMaxFloatSliders = (
+        "-l1 Min Noise Freq -l2 Max Noise Freq"
+        +"-min 0 -max 1 "
+        +"-fs1 " + $name + "_MinNoiseFreq_floatSliderGrp "
+        +"-fs2 " + $name + "_MaxNoiseFreq_floatSliderGrp "
+        +"-v1 1 -v2 10 "
+        +"-cw3 100 50 50 -adj 3 -f 1 "
+        + $name + "_MinMaxNoiseFreq");
+        
+        wizMinMaxFloatSliders($minMaxNoiseSliders);                
+        
+        separator -height 10 -style "in";
+        
+        //____________________________________________
+        
+        setParent $randomSettingsColumnLayout;
+        
+	//######################<END-TAB>########################
+	//-------------------------------------------------------
+    
+	//-------------------------------------------------------
+	//########################<TAB>##########################
+	    string $placeTextureColumnLayout = `columnLayout
+            -adj true
+            -p $ramputationTabLayout
+            ($name + "PlaceTextureSettingsColumnLayout")
+            `;
+        //____________________________________________
+		//Randomizing Place2dTextures
+		randomizeRampsRandomizePlace2dTextureLayout($name, $placeTextureColumnLayout);		
+	
+    setParent $placeTextureColumnLayout;
+    //######################<END-TAB>########################
+	//-------------------------------------------------------
+
+    //-------------------------------------------------------
+	//########################<TAB>##########################
+	    string $outputTextureColumnLayout = `columnLayout
+            -adj true
+            -p $ramputationTabLayout
+            ($name + "OutputTextureSettingsColumnLayout")
+            `;
+    //____________________________________________
+    // Output
+    
+        //Ramps To Output
+        string $outputRamps = objectSelectionTextScrollListFrameLayout("Output To File", $outputTextureColumnLayout, ($name + "_OutputToFile_textScrollList"));		
+            
+        textFieldGrp
+            -l "Output Prefix"
+            -tx "Ramputation"
+            -cal 1 "left"
+            ($name + "_OutputPrefix_textFieldGrp")
+            ;
+            
+        textFieldButtonGrp 
+            -l "Output Directory"
+            -tx ""            
+            -bl "Browse"
+            -bc ("string $dir = wizGetDirectory(); textFieldButtonGrp -e -tx $dir " + $name + "_OutputDirectory_textFieldButtonGrp`;")
+            ($name + "_OutputDirectory_textFieldButtonGrp")
+            ;
+         
+        checkBox
+            -l "Auto Save With File"
+            -v false
+            ($name + "_AutoSaveWithFile_checkBox")
+            ;
+            
+        button
+            -l "Save To File Texture"
+            -c ("wizSaveCurrentRamputationRampsToFileTexture(\"" + $name + "\");")
+            ;	
+	
+    setParent $outputTextureColumnLayout;
+    //######################<END-TAB>########################
+	//-------------------------------------------------------
+
+    string $mainFunctionButtonsColumnLayout = `columnLayout
+            //-adj true
+            -p $layout
+            ($name + "MainFunctionButtonsColumnLayout")
+            `;
+
+        //____________________________________________
+		checkBox
+			-l "Reset Ramps"
+			-v true
+			($name + "_ResetRamps_checkBox")
+			;		
+			
+        separator -height 10 -style "in";
+        
+        //____________________________________________
+        float $butCol[] = getWizColor("goButtonColor");
+        
+		button 
+			-l "Randomize Selected Ramps"
+            -bgc $butCol[0] $butCol[1] $butCol[2]
+			-c ("randomizeSelectedRamps(`ls -sl`, \"" +  $name + "\");")
+            -dgc dragWizButton
+            -dpc dropWizButton
+			;	
+			
+    //-----------------------------
+    wizSeparator();
+    //-----------------------------
+    
+        textFieldGrp
+            -l "Save Ramp Prefix"
+            -tx "Ramputation"
+            -cal 1 "left"
+            ($name + "_SaveRampPrefix_textFieldGrp")
+            ;
+            
+        textFieldButtonGrp 
+            -l "Save Directory"
+            -tx ""            
+            -bl "Browse"
+            -bc ("string $dir = wizGetDirectory(); textFieldButtonGrp -e -tx $dir " + $name + "_SaveDirectory_textFieldButtonGrp`;")
+            ($name + "_SaveDirectory_textFieldButtonGrp")
+            ;
+            
+        button
+            -l "Save Ramps"
+            -c ("wizSaveCurrentRamputationRamps(\"" + $name + "\");")
+            ;
+            
+        intSliderGrp 
+			-l "Auto Build Iterations" 
+			-min 1		
+			-v 10 
+			-f true	
+			-ann ""
+			-cal 1 "left"
+			-cw3 150 50 90
+			-adj 3
+			($name + "_AutoBuildIterations_intSliderGrp")		
+			;
+          
+        button
+            -l "Increment And Save"
+            -ann "This increment and save the current file"
+            -c ("incrementAndSaveWiz();")
+            ;
+           
+        float $abCol[] = getWizColor("exportButtonColor");
+        
+        button
+            -l "Auto Build"
+            -ann "This will randomize the ramps and increment and save the current file each iteration"
+            -bgc $abCol[0] $abCol[1] $abCol[2]
+            -c ("wizRamputationAutoBuild(\"" + $name + "\");")
+            ;
+            
+		 button
+            -l "Create Ramputation Asset"
+            -ann ""
+            -c ("createRamputationAsset(\"" + $name + "\");")
+            ;
+			
+        setParent $mainFunctionButtonsColumnLayout;
+        
+        tabLayout
+            -e
+            -tl $rampSelectionColumnLayout "Ramps" 
+            -tl $randomSettingsColumnLayout "Randomization" 
+            -tl $placeTextureColumnLayout "Place Texture" 
+            -tl $outputTextureColumnLayout "Output"
+            $ramputationTabLayout
+            ;
+            
+        
+}
+
+//# RANDOMIZE RAMPS RANDOMIZE PLACE 2D TEXTURE LAYOUT
+//====================================================================
+global proc randomizeRampsRandomizePlace2dTextureLayout(string $name, string $parent )
+{
+/*
+	string $layout = `frameLayout
+		-l "Randomize Place 2d Textures"	
+		-ann ""
+		-bv true
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-p $parent
+		`;
+		*/
+		//string $fs2 = wizMinMaxFloatSlider("-l SomeLabel -min 0 -max 10 -pc1 posControl1 -pc2 posControl2 -v1 1 -v2 10 -pol 1 minMaxFloatSlider2");
+		
+		
+		//string $fs2 = `wizMinMaxFloatSlider -l1 Min U -l2 Min V -min 0 -max 10 -pc1 posControl1 -pc2 posControl2 -v1 1 -v2 10 -cw3 150 50 90 -adj 3 -pre 2 -f 1 minMaxFloatSlider2`;
+		checkBox
+				-l "Random Place2dTexture"
+				-v true
+				($name + "_RandomPlace2dTexture_checkBox")
+				;
+		
+		rowLayout
+			-nc 2
+			;
+			
+			checkBox
+				-l "Random Mirror U"
+				-v true
+				($name + "_RandomMirrorU_checkBox")
+				;
+			
+			checkBox
+				-l "Random Mirror V"
+				-v true
+				($name + "_RandomMirrorV_checkBox")
+				;
+				
+		setParent..;
+		rowLayout
+			-nc 2
+			;
+			
+			checkBox
+				-l "Random Wrap U"
+				-v false
+				($name + "_RandomWrapU_checkBox")
+				;
+				
+			checkBox
+				-l "Random Wrap V"
+				-v false
+				($name + "_RandomWrapV_checkBox")
+				;
+		setParent..;
+
+		checkBox
+			-l "Random Stagger"
+			-v true
+			($name + "_RandomStagger_checkBox")
+			;
+			
+		checkBox
+			-l "Random Repeat U"
+			-v true
+			($name + "_RandomRepeatU_checkBox")
+			;
+		
+		checkBox
+			-l "Round Repeat U To Int"
+			-v true
+			($name + "_RoundRepeatUToInt_checkBox")
+			;	
+			
+		wizMinMaxFloatSliders("-l1 Min Repeat U -l2 Max Repeat U -min 0 -max 10 -fs1 " + $name + "_MinRepeatU_floatSliderGrp -fs2 " + $name + "_MaxRepeatU_floatSliderGrp -v1 1 -v2 4 -cw3 30 50 50 -adj 3 -pre 2 -f 1 minMaxRepeatUFloatSlider1");
+		
+		checkBox
+			-l "Random Repeat V"
+			-v true
+			($name + "_RandomRepeatV_checkBox")
+			;
+			
+		checkBox
+			-l "Round Repeat V To Int"
+			-v true
+			($name + "_RoundRepeatVToInt_checkBox")
+			;	
+			
+		wizMinMaxFloatSliders("-l1 Min Repeat V -l2 Max Repeat V -min 0 -max 10 -fs1 " + $name + "_MinRepeatV_floatSliderGrp -fs2 " + $name + "_MaxRepeatV_floatSliderGrp -v1 1 -v2 4 -cw3 30 50 50 -adj 3 -pre 2 -f 1 minMaxRepeatVFloatSlider2");
+		
+		setParent..;
+        
+       
+}
+
+
+//========================================================================================================
+//""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//                     MENUS
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+//========================================================================================================
+
+
+//@ RAMPUTATION MAIN MENU BAR LAYOUT
+//====================================================================
+global proc ramputationMainMenuBarLayout( string $parent)
+{
+
+	string $mainMenuBarLayout = `menuBarLayout
+			ramputationsMainMenuBarLayout`;
+		menu -l "Actions" -to true;
+			menuItem -l "New Ramputation" -c ("addNewRamputationLayout(\"" + $parent + "\");");
+			ramputationActionsMenuItems();			
+		menu -l "Assets" -to true;	
+			ramputationAssetsMenuItems();			
+		menu -l "Ramps" -to true;	
+			ramputationRampsMenuItems();			
+		menu -l "Textures" -to true;	
+			ramputationTexturesMenuItems();
+			
+}
+
+global proc ramputationActionsMenuItems()
+{
+	
+	menuItem -l "Randomize All"	-c ("randomizeAllRamputations();");		
+	menuItem -l "Auto Build All" -c ("randomizeAllRamputations();");	
+	menuItem -l "Auto Build All Ramputation Assets" -c ("");	
+	menuItem -l "Copy Ramputation Attributes" -c ("copyRamputationAttributesToSelected(`ls -sl`);");	
+	menuItem -cb true -l "Increment And Save Each Auto Build" ramputationsIncrementAndSaveEachAutoBuildMenuItem;
+
+}
+
+global proc ramputationAssetsMenuItems()
+{
+	menuItem -l "Make Buttons For Ramputation Assets" -c ("addButtonsForRamputationAssets();");	
+	menuItem -l "Randomize Ramputation Asset" -c ("rmbRandomizeRamputation(\"\");");	
+	menuItem -l "Randomize All Ramputation Assets" -c ("rmbRandomizeAllRamputationAssets(\"\");");	
+	menuItem -l "New Ramps" -c ("rmbRamputationMakeNewRamps(\"\");");	
+	menuItem -l "Add To Ramdomize Ramps" -c ("rmbRamputationAddSelectedToRampsToRandomize(\"\");");	
+	menuItem -l "Add To Pool" -c ("rmbRamputationAddSelectedToPool(\"\");");	
+	menuItem -l "Copy Ramputation Attributes" -c ("copyRamputationAttributesToSelected(`ls -sl`);");
+		
+}
+
+global proc ramputationRampsMenuItems()
+{
+	menuItem -l "Reset Ramps" -c ("rmbRamputationResetRamps(\"\");");
+	menuItem -l "Add Overrides" -c ("rmbAddPerRampOverrideAttributes(\"\");");
+	menuItem -l "Copy Ramputation Attributes" -c ("copyRamputationAttributesToSelected(`ls -sl`);");		
+}
+
+global proc ramputationTexturesMenuItems()
+{
+	texturePoolMenuItems();
+	menuItem -cb true -l "Render Textures With Texture Output Paths On Auto Build" ramputationsRenderTexturesWithTextureOutputPathsOnAutoMenuItem;
+	menuItem -l "Set Textures To Fit Into Ramp Spaces" -c ("setSelectedTexturesToFitIntoRampSpaces(\"\");");
+	menuItem -l "Set File Texture Selection To Randomize" -c ("setFileTextureSelectionsToRandomize(\"\");");
+	
+		
+}
+
+//========================================================================================================
+//########################################################################################################
+//********************************************************************************************************
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//                     FUNCTIONS
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//********************************************************************************************************
+//########################################################################################################
+//========================================================================================================
+
+//====================================================================
+//@ RANDOMIZE SELECTED RAMPS
+//====================================================================
+global proc randomizeSelectedRamps( string $sel[] , string $name )
+{
+	// This is for the gui interface controls
+    string $rr[] = `textScrollList -q -ai ($name + "RampsRampsToRandomize_textScrollList")`;
+    if (`size $rr` == 0){
+        $sel = `ls -sl`;
+    } else {
+        $sel = $rr;
+    }
+    if (`size $sel` == 0 || `checkBox -q -v ($name + "RampsOnlyConnectDownList_checkBox")`){
+        //Get the ramps we want to randomize from list
+		$sel = `textScrollList -q -ai ($name + "RampsRampsToRandomize_textScrollList")`;
+	}
+	
+	int $resetOverride;
+    //Randomize the ramps    
+	for ($i=0;$i<`size $sel`;$i++){
+		// <!IMPORTANT!> If the current ramp has overrides enabled...
+		if (`attributeExists "useOverrides" $sel[$i]` && `getAttr ($sel[$i] + ".useOverrides")`){
+			setRamputationSourceValues($sel[$i], "override");
+			$resetOverride = 1;
+		} else if ($resetOverride == 1){
+			setRamputationSourceValues($sel[$i], $name);
+			$resetOverride = 0;
+		}
+			
+		//setRamputationSourceValues($sel[$i], $name);
+		
+		randomizeSelectedRamp($sel[$i], $name);
+	}
+}
+
+
+//@ RMB RANDOMIZE RAMPUTATION
+//====================================================================
+// This randomizes ramps through ramputation assets
+global proc rmbRandomizeRamputation( string $object )
+{
+	//This randomizes all ramps in the ramputation asset
+	string $sel[] = `ls -typ dagContainer -sl`;
+	for ($i=0;$i<`size $sel`;$i++){
+		setRamputationSourceValues($sel[$i], "ramputationAsset");		
+		global string $WIZRMP_ranRamps[], $WIZRMP_rampPool[];
+		
+		int $resetOverride;
+		for ($p=0;$p<`size $WIZRMP_ranRamps`;$p++){
+			// <!IMPORTANT!> If the current ramp has overrides enabled and the ramputation asset also has overrides enabled...
+			if (`attributeExists "useOverrides" $WIZRMP_ranRamps[$p]` && `getAttr ($WIZRMP_ranRamps[$p] + ".useOverrides")` && `getAttr ($sel[$i] + ".useOverrides")`){
+				print ("Using Overrides For : " + $WIZRMP_ranRamps[$p] + "\n");
+				setRamputationSourceValues($WIZRMP_ranRamps[$p], "override");
+				$resetOverride = 1;
+			} else if ($resetOverride == 1){
+				setRamputationSourceValues($sel[$i], "ramputationAsset");
+				$resetOverride = 0;
+			}
+			
+			randomizeSelectedRamp($WIZRMP_ranRamps[$p], "ramputationAsset");
+			
+		}
+	}
+	select -r $sel;
+}
+
+//--------------------------------------------------------------------
+//////////////////////////////////////////////////////////////////////
+//			ALL RAMPUTATIONS
+//////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------
+
+//@ RANDOMIZE ALL RAMPUTATIONS
+//====================================================================
+global proc randomizeAllRamputations()
+{
+	global int $WIZ_ramputationLayoutCount;
+     
+	for ($i=0;$i<($WIZ_ramputationLayoutCount + 1);$i++){
+        print ("Randomizing : " + "ramputations" + $i + "\n");
+        if (`textScrollList -q -ex ("ramputations" + $i + "RampsRampsToRandomize_textScrollList")`){
+			setRamputationSourceValues("", ("ramputations" + $i));
+            randomizeSelectedRamps(`ls -sl`, ("ramputations" + $i));
+        }
+
+        if (wizProgressCancelled() == 1) return;
+	}
+    rmbRandomizeAllRamputationAssets("");
+
+	
+}
+
+//@ RANDOMIZE ALL RAMPUTATION ASSETS
+//====================================================================
+global proc rmbRandomizeAllRamputationAssets( string $object )
+{
+	string $ra[] = getAllWizAssetsOfType("ramputationAsset");
+	for ($i=0;$i<`size $ra`;$i++){
+		print ("Randomizing : " + $ra[$i] + "\n");
+		setRamputationSourceValues($ra[$i], "ramputationAsset");
+		global string $WIZRMP_ranRamps[], $WIZRMP_rampPool[];
+		
+		int $resetOverride;
+		for ($p=0;$p<`size $WIZRMP_ranRamps`;$p++){
+			//print ("Randomizing : " + $WIZRMP_ranRamps[$p] + "\n");
+			
+			// <!IMPORTANT!> If the current ramp has overrides enabled...
+			if (`attributeExists "useOverrides" $WIZRMP_ranRamps[$p]` && `getAttr ($WIZRMP_ranRamps[$p] + ".useOverrides")` && `getAttr ($ra[$i] + ".useOverrides")`){
+				setRamputationSourceValues($WIZRMP_ranRamps[$p], "override");
+				$resetOverride = 1;
+			} else if ($resetOverride == 1){
+				setRamputationSourceValues($ra[$i], "ramputationAsset");
+				$resetOverride = 0;
+			}
+			
+			randomizeSelectedRamp($WIZRMP_ranRamps[$p], "ramputationAsset");
+		}
+		        
+	}
+}
+
+//--------------------------------------------------------------------
+//////////////////////////////////////////////////////////////////////
+//			ADD TO RAMPS TO RANDOMIZE
+//////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------
+
+//@ RMB RAMPUTATION ADD SELECTED TO RAMPS TO RANDOMIZE
+//=======================================================
+global proc rmbRamputationAddSelectedToRampsToRandomize( string $object )
+{
+	string $asset[] = `ls -typ dagContainer -sl`;
+	string $ramp[] = `ls -typ ramp -sl`;
+	container -e -includeTransform -force -addNode $ramp $asset[0];
+}
+
+//--------------------------------------------------------------------
+//////////////////////////////////////////////////////////////////////
+//			ADD TO RAMP POOL
+//////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------
+
+//@ RMB ADD SELECTION TO RAMP POOL
+//====================================================================
+global proc rmbRamputationAddSelectedToPool( string $object )
+{
+	global string $WIZRMP_ranRamps[], $WIZRMP_rampPool[];
+	
+	//Get the currently selected asset and the selected textures
+	string $asset[] = `ls -typ dagContainer -sl`;
+	string $tex[] = `ls -tex -sl`;
+
+	for($i=0;$i<`size $asset`;$i++){
+		// Get the list of textures in pool from asset
+		string $poolListString = `getAttr ($asset[$i] + ".inputPool")`;
+		string $curPool[] = tokenizeString($poolListString, " ");
+		
+		// Add the selected textures to ramp pool array
+		$curPool = stringArrayCatenate($tex, $curPool);
+		//$curPool = appendStringArray($curPool, $tex, `size $tex`);
+		
+		// Remove duplicates
+		$WIZRMP_rampPool = stringArrayRemoveDuplicates($curPool);
+		
+		
+		// Put the pool back together in asset string
+		setAttr ($asset[$i] + ".inputPool") -typ "string" (stringArrayToString($WIZRMP_rampPool, " "));
+	
+	}
+
+	
+}
+
+//--------------------------------------------------------------------
+//////////////////////////////////////////////////////////////////////
+//			MAKE NEW RAMPS
+//////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------
+
+//@ RMB RAMPUTATION MAKE NEW RAMPS
+//=======================================================
+// This makes new ramps through ramputation asset
+global proc rmbRamputationMakeNewRamps( string $object )
+{
+	randomizeRampsMakeNewRamps("ramputationAsset");
+		
+}
+
+
+//@ RANDOMIZE RAMPS MAKE NEW RAMPS
+//=======================================================
+global proc string[] randomizeRampsMakeNewRamps( string $name )
+{
+	// Get the name and count of the ramps to create
+	string $asset[];
+    /*
+	if ($name == "ramputationAsset"){
+		$asset = `ls -typ dagContainer -sl`;
+		setRamputationSourceValues($asset[0], $name);
+		
+	} else {
+		setRamputationSourceValues("", $name);
+	}
+*/
+    string $newRamp[];
+    int $newRampCount = `intSliderGrp -q -v ($name + "NewRampCountIntSliderGrp")`;
+	string $newRampName = `textFieldGrp -q -tx ($name + "NewRampPrefixTextFieldGrp")`;
+    
+    //Make the new ramps
+    for ($i=0;$i<$newRampCount;$i++){
+		$newRamp[`size $newRamp`] = wizCreateNewRampTexture(($newRampName + "Ramp" + $i));
+	}
+	
+	// Add the new ramps to either the asset or the textScrollList
+	if ($name == "ramputationAsset"){
+		container -e -includeTransform -force -addNode $newRamp $asset[0];
+	} else {
+		addSelectedObjectsToTextScrollList($newRamp, ($name + "_RampsToRandomize_textScrollList"));
+	}
+	
+    return $newRamp;
+}
+
+//--------------------------------------------------------------------
+//////////////////////////////////////////////////////////////////////
+//			RESET RAMPS
+//////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------
+
+//@ RMB RAMPUTATION RESET RAMPS
+//=======================================================
+
+global proc rmbRamputationResetRamps( string $object )
+{
+	string $sel[] = `ls -typ dagContainer -sl`;
+	for ($i=0;$i<`size $sel`;$i++){
+		setRamputationSourceValues($sel[$i], "ramputationAsset");		
+		global string $WIZRMP_ranRamps[], $WIZRMP_rampPool[];
+		
+		for ($p=0;$p<`size $WIZRMP_ranRamps`;$p++){
+			resetTextureRampColorEntryLists($WIZRMP_ranRamps[$p]);
+		}
+	}
+	
+		
+}
+
+//@ RMB RAMPUTATION RESET RAMPS
+//=======================================================
+
+global proc rmbAddPerRampOverrideAttributes( string $object )
+{
+	string $sel[] = `ls -typ ramp -sl`;
+	addPerRampOverrideAttributesForSelectedRamps($sel);
+	
+		
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         SOURCE VALUES
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//@ SET RAMPUTATION SOURCE VALUES
+//====================================================================
+/*======================| SUMMARY |===================================
+	This is used to set the randomization settings if the 
+	user is using an asset to randomize or the gui
+/*=======================| USAGE |====================================	
+	- FOR GUI
+	setRamputationSourceValues("", $name);
+	
+	or
+	
+	- FOR ASSET
+	string $asset[] = `ls -typ dagContainer -sl`;
+	setRamputationSourceValues($asset[0], "ramputationAsset");
+	
+====================================================================*/
+global proc setRamputationSourceValues( string $sel, string $name )
+{
+	//_________________________________________
+	// RAMP SETTINGS
+	if (`objExists $sel` == 0){
+        return;
+    }
+	//Ramp settings
+	global int $WIZRMP_ranType, $WIZRMP_ranInt, $WIZRMP_ranColEnt, $WIZRMP_minRanEnt,
+	$WIZRMP_maxRanEnt, $WIZRMP_ranPos, $WIZRMP_resetRamps, $WIZRMP_incldRRamps,
+	$WIZRMP_onlyConDown;
+	//use ramp types
+	global int $WIZRMP_uRampType, $WIZRMP_vRampType, $WIZRMP_diagonalRampType,
+	$WIZRMP_radialRampType, $WIZRMP_circularRampType, $WIZRMP_boxRampType,
+	$WIZRMP_uvRampType, $WIZRMP_fourCornerRampType, $WIZRMP_tartanRampType;
+	//use ramp interpolation types
+	global int $WIZRMP_noneIntrp, $WIZRMP_linearIntrp, $WIZRMP_exponentialUpIntrp,
+	$WIZRMP_exponentialDownIntrp, $WIZRMP_smoothIntrp, $WIZRMP_bumpIntrp, $WIZRMP_spikeIntrp;
+	
+	global float $WIZRMP_roundPositionsTo;
+	
+	global int $WIZRMP_useRampType[], $WIZRMP_useIntrpType[];
+	// The ramps and ramp pools
+	global string $WIZRMP_ranRamps[], $WIZRMP_rampPool[];
+	// Color Type
+	global string $WIZRMP_ranColType;
+	
+	//_________________________________________
+	// PLACE 2D TEXTURE SETTINGS
+		
+	//Place2dTexture settings
+	global int $WIZRMP_ranPlaceTex, $WIZRMP_mirU, $WIZRMP_mirV, $WIZRMP_wrapU, $WIZRMP_wrapV,
+	$WIZRMP_stagger, $WIZRMP_repeatU, $WIZRMP_repeatURound, $WIZRMP_repeatV, $WIZRMP_repeatVRound;
+	global float $WIZRMP_minRepeatU, $WIZRMP_maxRepeatU, $WIZRMP_minRepeatV,
+	$WIZRMP_maxRepeatV;
+	
+	//_________________________________________
+	// AUTO BUILD SETTINGS
+	global int $WIZRMP_autoBuildIterations;
+	global string $WIZRMP_saveRampName, $WIZRMP_saveRampDir;
+	
+	//_________________________________________
+	// NEW RAMPS
+	global string $WIZRMP_newRampName;
+	global int $WIZRMP_newRampCount;
+	
+    /*############ PROBLEM ###############################################
+    GET RID OF ALL THE OR PREFIX THING
+	#####################################################################*/
+
+	string $or = "";
+	if ($name == "override"){
+		wizlog ("	[#] Using Overrides [#]");
+        if (`attributeExists "randomType" $sel` == 0){
+            $or = "or_";
+        }
+		print ("OverRide : " + $sel + "." + $or + "randomType" + "\n");
+		//$or = "or_";
+	}
+	
+	
+    //$WIZRMP_newRampCount = `intSliderGrp -q -v ($name + "RampsNewRampCount_intSliderGrp")`;
+	//$WIZRMP_newRampName = `textFieldGrp -q -tx ($name + "RampsNewRampPrefix_textFieldGrp")`;
+	// If a ramputation asset is being used
+
+	if ($name == "ramputationAsset" || $name == "override" ){
+		///////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//	This if statement just for older ramputations. Hopefully it will be extinct soon 8/25/2014
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
+		
+		if (`attributeExists ($or + "randomPlace2dTextureEnabled") $sel` == 0){
+			///////////////////////////////////////////////////////////////////////////////////////////////////////////
+			//	This is the new naming convention
+			//////////////////////////////////////////////////////////////////////////////////////////////////////////
+			
+			$WIZRMP_ranType = `getAttr ($sel + "." + $or + "randomType")`;
+			
+			//$WIZRMP_ranType = `getAttr ($sel + "." + $or + "randomType")`;
+			wizlog ("	[#] Type : " + $WIZRMP_ranType + " [#]");
+			$WIZRMP_ranInt = `getAttr ($sel + "." + $or + "randomInterpolation")`;
+			$WIZRMP_ranColEnt = `getAttr ($sel + "." + $or + "randomColorEntryListCount")`;
+			$WIZRMP_minRanEnt = `getAttr ($sel + "." + $or + "minColorEntryLists")`;
+			$WIZRMP_maxRanEnt = `getAttr ($sel + "." + $or + "maxColorEntryLists")`;
+			$WIZRMP_ranPos = `getAttr ($sel + "." + $or + "randomPositions")`;
+			$WIZRMP_resetRamps = `getAttr ($sel + "." + $or + "resetRamps")`;
+			$WIZRMP_incldRRamps = `getAttr ($sel + "." + $or + "includeRandomizeRampsInInputPool")`;
+			//$WIZRMP_onlyConDown = `getAttr ($sel + "." + $or + "randomType")`;
+			$WIZRMP_roundPositionsTo = `getAttr ($sel + "." + $or + "roundPositionsTo")`;
+			
+			$WIZRMP_uRampType = `getAttr ($sel + "." + $or + "urampType")`;
+			$WIZRMP_vRampType = `getAttr ($sel + "." + $or + "vrampType")`;
+			$WIZRMP_diagonalRampType = `getAttr ($sel + "." + $or + "diagonalRampType")`;		
+			$WIZRMP_radialRampType = `getAttr ($sel + "." + $or + "radialRampType")`;
+			$WIZRMP_circularRampType = `getAttr ($sel + "." + $or + "circularRampType")`;
+			$WIZRMP_boxRampType = `getAttr ($sel + "." + $or + "boxRampType")`;
+			$WIZRMP_uvRampType = `getAttr ($sel + "." + $or + "uvrampType")`;
+			$WIZRMP_fourCornerRampType = `getAttr ($sel + "." + $or + "fourCornerRampType")`;
+			$WIZRMP_tartanRampType = `getAttr ($sel + "." + $or + "tartanRampType")`;
+			
+			$WIZRMP_noneIntrp = `getAttr ($sel + "." + $or + "noneInterpolation")`;
+			$WIZRMP_linearIntrp = `getAttr ($sel + "." + $or + "linearInterpolation")`;
+			$WIZRMP_exponentialUpIntrp = `getAttr ($sel + "." + $or + "exponentialUpInterpolation")`;		
+			$WIZRMP_exponentialDownIntrp = `getAttr ($sel + "." + $or + "exponentialDownInterpolation")`;
+			$WIZRMP_smoothIntrp = `getAttr ($sel + "." + $or + "smoothInterpolation")`;
+			$WIZRMP_bumpIntrp = `getAttr ($sel + "." + $or + "bumpInterpolation")`;
+			$WIZRMP_spikeIntrp = `getAttr ($sel + "." + $or + "spikeInterpolation")`;
+			
+			if ($name == "ramputationAsset"){
+				// Dont use overrides for these attributes
+				string $nl[] = `container -q -nl $sel`;		
+				$WIZRMP_ranRamps = `ls -typ ramp $nl`;
+				string $rampPoolString = `getAttr ($sel + "." + $or + "inputPool")`;		
+				$WIZRMP_rampPool = tokenizeString($rampPoolString, " ");
+				$WIZRMP_rampPool = stringArrayRemoveEmptyIndices($WIZRMP_rampPool);		
+			}
+			
+			$WIZRMP_ranColType = `getAttr -as ($sel + "." + $or + "randomColorType")`;
+			
+			$WIZRMP_ranPlaceTex = `getAttr ($sel + "." + $or + "randomPlace2dTexture")`;
+			$WIZRMP_mirU = `getAttr ($sel + "." + $or + "randomMirrorU")`;
+			$WIZRMP_mirV = `getAttr ($sel + "." + $or + "randomMirrorV")`;
+			$WIZRMP_wrapU = `getAttr ($sel + "." + $or + "randomWrapU")`;
+			$WIZRMP_wrapV = `getAttr ($sel + "." + $or + "randomWrapV")`;
+			$WIZRMP_stagger = `getAttr ($sel + "." + $or + "randomStagger")`;
+			$WIZRMP_repeatURound = `getAttr ($sel + "." + $or + "roundRepeatUToInt")`;
+			$WIZRMP_repeatU = `getAttr ($sel + "." + $or + "randomRepeatU")`;
+			$WIZRMP_repeatVRound = `getAttr ($sel + "." + $or + "roundRepeatVToInt")`;
+			$WIZRMP_repeatV = `getAttr ($sel + "." + $or + "randomRepeatV")`;
+			
+			$WIZRMP_minRepeatU = `getAttr ($sel + "." + $or + "minRepeatU")`;
+			$WIZRMP_minRepeatV = `getAttr ($sel + "." + $or + "minRepeatV")`;
+			$WIZRMP_maxRepeatU = `getAttr ($sel + "." + $or + "maxRepeatU")`;
+			$WIZRMP_maxRepeatV = `getAttr ($sel + "." + $or + "maxRepeatV")`;
+			
+			if ($name == "ramputationAsset"){
+				// Dont use overrides for these attributes
+				//$WIZRMP_autoBuildIterations = `getAttr ($sel + "." + $or + "autoBuildIterations")`;
+				//$WIZRMP_saveRampName = `getAttr ($sel + "." + $or + "saveRampName")`;
+				//$WIZRMP_saveRampDir = `getAttr ($sel + "." + $or + "saveDirectory")`;
+				
+				//$WIZRMP_newRampCount = `getAttr ($sel + "." + $or + "newRampCount")`;
+				//$WIZRMP_newRampName = `getAttr ($sel + "." + $or + "newRampName")`;
+			}
+			
+		} else {					
+			///////////////////////////////////////////////////////////////////////////////////////////////////////////
+			//	This is just for older ramputations. Used for ramputations prior to 8/25/2014
+			//////////////////////////////////////////////////////////////////////////////////////////////////////////
+					
+			$WIZRMP_ranType = `getAttr ($sel + "." + $or + "randomType")`;
+			$WIZRMP_ranInt = `getAttr ($sel + "." + $or + "randomInterpolation")`;
+			$WIZRMP_ranColEnt = `getAttr ($sel + "." + $or + "randomColorEntryListCount")`;
+			$WIZRMP_minRanEnt = `getAttr ($sel + "." + $or + "minRandomColorEntryLists")`;
+			$WIZRMP_maxRanEnt = `getAttr ($sel + "." + $or + "maxRandomColorEntryLists")`;
+			$WIZRMP_ranPos = `getAttr ($sel + "." + $or + "randomPositions")`;
+			$WIZRMP_resetRamps = `getAttr ($sel + "." + $or + "resetRamps")`;
+			$WIZRMP_incldRRamps = `getAttr ($sel + "." + $or + "includeRampsToRandomizeInInputRampPool")`;
+			$WIZRMP_onlyConDown = `getAttr ($sel + "." + $or + "randomType")`;
+			$WIZRMP_roundPositionsTo = `getAttr ($sel + "." + $or + "roundPositionsTo")`;
+			
+			$WIZRMP_uRampType = `getAttr ($sel + "." + $or + "uramp")`;
+			$WIZRMP_vRampType = `getAttr ($sel + "." + $or + "vramp")`;
+			$WIZRMP_diagonalRampType = `getAttr ($sel + "." + $or + "diagonal")`;		
+			$WIZRMP_radialRampType = `getAttr ($sel + "." + $or + "radial")`;
+			$WIZRMP_circularRampType = `getAttr ($sel + "." + $or + "circular")`;
+			$WIZRMP_boxRampType = `getAttr ($sel + "." + $or + "box")`;
+			$WIZRMP_uvRampType = `getAttr ($sel + "." + $or + "uvType")`;
+			$WIZRMP_fourCornerRampType = `getAttr ($sel + "." + $or + "fourCorner")`;
+			$WIZRMP_tartanRampType = `getAttr ($sel + "." + $or + "tartan")`;
+			
+			$WIZRMP_noneIntrp = `getAttr ($sel + "." + $or + "none")`;
+			$WIZRMP_linearIntrp = `getAttr ($sel + "." + $or + "linear")`;
+			$WIZRMP_exponentialUpIntrp = `getAttr ($sel + "." + $or + "exponentialUp")`;		
+			$WIZRMP_exponentialDownIntrp = `getAttr ($sel + "." + $or + "exponentialDown")`;
+			$WIZRMP_smoothIntrp = `getAttr ($sel + "." + $or + "smooth")`;
+			$WIZRMP_bumpIntrp = `getAttr ($sel + "." + $or + "bump")`;
+			$WIZRMP_spikeIntrp = `getAttr ($sel + "." + $or + "spike")`;
+			
+			if ($name == "ramputationAsset"){
+				// Dont use overrides for these attributes
+				string $nl[] = `container -q -nl $sel`;		
+				$WIZRMP_ranRamps = `ls -typ ramp $nl`;
+				string $rampPoolString = `getAttr ($sel + "." + $or + "rampPool")`;		
+				$WIZRMP_rampPool = tokenizeString($rampPoolString, " ");
+				$WIZRMP_rampPool = stringArrayRemoveEmptyIndices($WIZRMP_rampPool);		
+			}
+			
+			$WIZRMP_ranColType = `getAttr -as ($sel + "." + $or + "randomColorType")`;
+			
+			$WIZRMP_ranPlaceTex = `getAttr ($sel + "." + $or + "randomPlace2dTextureEnabled")`;
+			$WIZRMP_mirU = `getAttr ($sel + "." + $or + "randomMirrorU")`;
+			$WIZRMP_mirV = `getAttr ($sel + "." + $or + "randomMirrorV")`;
+			$WIZRMP_wrapU = `getAttr ($sel + "." + $or + "randomWrapU")`;
+			$WIZRMP_wrapV = `getAttr ($sel + "." + $or + "randomWrapV")`;
+			$WIZRMP_stagger = `getAttr ($sel + "." + $or + "randomStagger")`;
+			$WIZRMP_repeatURound = `getAttr ($sel + "." + $or + "roundUToInt")`;
+			$WIZRMP_repeatU = `getAttr ($sel + "." + $or + "randomRepeatU")`;
+			$WIZRMP_repeatVRound = `getAttr ($sel + "." + $or + "roundVToInt")`;
+			$WIZRMP_repeatV = `getAttr ($sel + "." + $or + "randomRepeatV")`;
+			
+			$WIZRMP_minRepeatU = `getAttr ($sel + "." + $or + "minRepeatU")`;
+			$WIZRMP_minRepeatV = `getAttr ($sel + "." + $or + "minRepeatV")`;
+			$WIZRMP_maxRepeatU = `getAttr ($sel + "." + $or + "maxRepeatU")`;
+			$WIZRMP_maxRepeatV = `getAttr ($sel + "." + $or + "maxRepeatV")`;
+			
+			if ($name == "ramputationAsset"){
+				// Dont use overrides for these attributes
+				$WIZRMP_autoBuildIterations = `getAttr ($sel + "." + $or + "autoBuildIterations")`;
+				$WIZRMP_saveRampName = `getAttr ($sel + "." + $or + "saveRampName")`;
+				$WIZRMP_saveRampDir = `getAttr ($sel + "." + $or + "saveDirectory")`;
+				
+				//$WIZRMP_newRampCount = `getAttr ($sel + "." + $or + "newRampCount")`;
+				//$WIZRMP_newRampName = `getAttr ($sel + "." + $or + "newRampName")`;
+			}
+			///////////////////////////////////////////////////////////////////////////////////////////////////////////
+			//	This is just for older ramputations. Hopefully it will be extinct soon ^^^^^^^^^^^
+			//////////////////////////////////////////////////////////////////////////////////////////////////////////
+			
+			
+		}
+	} else {
+		// if the gui is being used
+		$WIZRMP_ranType = `checkBox -q -v ($name + "_RandomType_checkBox")`;
+		$WIZRMP_ranInt = `checkBox -q -v ($name + "_RandomInterpolation_checkBox")`;
+		$WIZRMP_ranColEnt = `checkBox -q -v ($name + "_RandomColorEntryListCount_checkBox")`;
+		$WIZRMP_minRanEnt = `intSliderGrp -q -v ($name + "_MinColorEntryLists_intSliderGrp")`;
+		$WIZRMP_maxRanEnt = `intSliderGrp -q -v ($name + "_MaxColorEntryLists_intSliderGrp")`;
+		$WIZRMP_ranPos = `checkBox -q -v ($name + "_RandomPositions_checkBox")`;
+		$WIZRMP_resetRamps = `checkBox -q -v ($name + "_ResetRamps_checkBox")`;
+		$WIZRMP_incldRRamps = `checkBox -q -v ($name + "_IncludeRandomizeRampsInInputPool_checkBox")`;
+		$WIZRMP_onlyConDown = `checkBox -q -v ($name + "_OnlyConnectDownList_checkBox")`;	
+		$WIZRMP_roundPositionsTo = `floatSliderGrp -q -v ($name + "_RoundPositionsTo_floatSliderGrp")`;
+		
+		$WIZRMP_uRampType = `checkBox -q -v ($name + "_URampType_checkBox")`;
+		$WIZRMP_vRampType = `checkBox -q -v ($name + "_VRampType_checkBox")`;
+		$WIZRMP_diagonalRampType = `checkBox -q -v ($name + "_DiagonalRampType_checkBox")`;	
+		$WIZRMP_radialRampType = `checkBox -q -v ($name + "_RadialRampType_checkBox")`;
+		$WIZRMP_circularRampType = `checkBox -q -v ($name + "_CircularRampType_checkBox")`;
+		$WIZRMP_boxRampType = `checkBox -q -v ($name + "_BoxRampType_checkBox")`;
+		$WIZRMP_uvRampType = `checkBox -q -v ($name + "_UVRampType_checkBox")`;
+		$WIZRMP_fourCornerRampType = `checkBox -q -v ($name + "_FourCornerRampType_checkBox")`;
+		$WIZRMP_tartanRampType = `checkBox -q -v ($name + "_TartanRampType_checkBox")`;
+		
+		$WIZRMP_noneIntrp = `checkBox -q -v ($name + "_NoneInterpolation_checkBox")`;
+		$WIZRMP_linearIntrp = `checkBox -q -v ($name + "_LinearInterpolation_checkBox")`;
+		$WIZRMP_exponentialUpIntrp = `checkBox -q -v ($name + "_ExponentialUpInterpolation_checkBox")`;		
+		$WIZRMP_exponentialDownIntrp = `checkBox -q -v ($name + "_ExponentialDownInterpolation_checkBox")`;
+		$WIZRMP_smoothIntrp = `checkBox -q -v ($name + "_SmoothInterpolation_checkBox")`;
+		$WIZRMP_bumpIntrp = `checkBox -q -v ($name + "_BumpInterpolation_checkBox")`;
+		$WIZRMP_spikeIntrp = `checkBox -q -v ($name + "_SpikeInterpolation_checkBox")`;
+		
+		$WIZRMP_ranRamps = `textScrollList -q -ai ($name + "_RampsToRandomize_textScrollList")`;
+		$WIZRMP_rampPool = `textScrollList -q -ai ($name + "_InputPool_textScrollList")`;
+		$WIZRMP_ranColType = `optionMenuGrp -q -v ($name + "_RandomColorType_optionMenuGrp")`;
+		
+		$WIZRMP_ranPlaceTex = `checkBox -q -v ($name + "_RandomPlace2dTexture_checkBox")`;
+		$WIZRMP_mirU = `checkBox -q -v ($name + "_RandomMirrorU_checkBox")`;
+		$WIZRMP_mirV = `checkBox -q -v ($name + "_RandomMirrorV_checkBox")`;
+		$WIZRMP_wrapU = `checkBox -q -v ($name + "_RandomWrapU_checkBox")`;
+		$WIZRMP_wrapV = `checkBox -q -v ($name + "_RandomWrapV_checkBox")`;
+		$WIZRMP_stagger = `checkBox -q -v ($name + "_RandomStagger_checkBox")`;
+		$WIZRMP_repeatURound = `checkBox -q -v ($name + "_RoundRepeatUToInt_checkBox")`;
+		$WIZRMP_repeatU = `checkBox -q -v ($name + "_RandomRepeatU_checkBox")`;
+		$WIZRMP_repeatVRound = `checkBox -q -v ($name + "_RoundRepeatVToInt_checkBox")`;
+		$WIZRMP_repeatV = `checkBox -q -v ($name + "_RandomRepeatV_checkBox")`;
+		
+		$WIZRMP_minRepeatU = `floatSliderGrp -q -v ($name + "_MinRepeatU_floatSliderGrp")`;
+		$WIZRMP_minRepeatV = `floatSliderGrp -q -v ($name + "_MinRepeatV_floatSliderGrp")`;
+		$WIZRMP_maxRepeatU = `floatSliderGrp -q -v ($name + "_MaxRepeatU_floatSliderGrp")`;
+		$WIZRMP_maxRepeatV = `floatSliderGrp -q -v ($name + "_MaxRepeatV_floatSliderGrp")`;
+		
+		//$WIZRMP_autoBuildIterations = `intSliderGrp -q -v ($name + "_AutoBuildIterations_intSliderGrp")`;
+	
+	}
+	
+		
+	
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         RANDOMIZE RAMP
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//@ RANDOMIZE SELECTED RAMP
+//=======================================================
+global proc randomizeSelectedRamp( string $sel , string $name)
+{
+	
+    if (`objExists $sel` == 0){
+        return;
+    }
+	//Ramp settings
+	global int $WIZRMP_ranType, $WIZRMP_ranInt, $WIZRMP_ranColEnt, $WIZRMP_minRanEnt,
+	$WIZRMP_maxRanEnt, $WIZRMP_ranPos, $WIZRMP_resetRamps, $WIZRMP_incldRRamps,
+	$WIZRMP_onlyConDown;
+	//use ramp types
+	global int $WIZRMP_uRampType, $WIZRMP_vRampType, $WIZRMP_diagonalRampType,
+	$WIZRMP_radialRampType, $WIZRMP_circularRampType, $WIZRMP_boxRampType,
+	$WIZRMP_uvRampType, $WIZRMP_fourCornerRampType, $WIZRMP_tartanRampType;
+	//use ramp interpolation types
+	global int $WIZRMP_noneIntrp, $WIZRMP_linearIntrp, $WIZRMP_exponentialUpIntrp,
+	$WIZRMP_exponentialDownIntrp, $WIZRMP_smoothIntrp, $WIZRMP_bumpIntrp, $WIZRMP_spikeIntrp;	
+
+	global int $WIZRMP_ranPlaceTex;
+
+	int $ranType = $WIZRMP_ranType;
+	int $ranInt = $WIZRMP_ranInt;
+	int $ranColEnt = $WIZRMP_ranColEnt;
+	int $minRanEnt = $WIZRMP_minRanEnt;
+	int $maxRanEnt = $WIZRMP_maxRanEnt;
+	int $ranPos = $WIZRMP_ranPos;
+	
+	if ($ranType){		
+		wizlog ("	[#] Randomizing Type [#]");
+		//Get a random type from the types of ramps checked
+		int $useType[];
+		$useType[0] = $WIZRMP_uRampType;
+		$useType[1] = $WIZRMP_vRampType;
+		$useType[2] = $WIZRMP_diagonalRampType;
+		$useType[3] = $WIZRMP_radialRampType;
+		$useType[4] = $WIZRMP_circularRampType;
+		$useType[5] = $WIZRMP_boxRampType;
+		$useType[6] = $WIZRMP_uvRampType;
+		$useType[7] = $WIZRMP_fourCornerRampType;
+		$useType[8] = $WIZRMP_tartanRampType;
+		int $useTypeIndex[];
+		for ($i=0;$i<`size $useType`;$i++){
+			if ($useType[$i] == 1){
+				$useTypeIndex[`size $useTypeIndex`] = $i;
+			}
+		}
+		int $useTypeCount = intArrayCount( 1 , $useType);
+			
+		int $type = int(floor(`rand 0 $useTypeCount `));
+		wizlog ("Type : " + $useTypeIndex[$type] + "\n");
+		setAttr ($sel + ".type") $useTypeIndex[$type];
+	}
+
+	if ($ranInt){		
+        //Get a random interpolation type from the types of ramps checked
+		int $useType[];
+		$useType[0] = $WIZRMP_noneIntrp;
+		$useType[1] = $WIZRMP_linearIntrp;
+		$useType[2] = $WIZRMP_exponentialUpIntrp;
+		$useType[3] = $WIZRMP_exponentialDownIntrp;
+		$useType[4] = $WIZRMP_smoothIntrp;
+		$useType[5] = $WIZRMP_bumpIntrp;
+		$useType[6] = $WIZRMP_spikeIntrp;
+
+		int $useTypeIndex[];
+		for ($i=0;$i<`size $useType`;$i++){
+			if ($useType[$i] == 1){
+				$useTypeIndex[`size $useTypeIndex`] = $i;
+			}
+		}
+		int $useTypeCount = intArrayCount( 1 , $useType);
+        
+		int $interpolation = randInt(0, $useTypeCount);
+		setAttr ($sel + ".interpolation") $useTypeIndex[$interpolation];
+        
+	}
+
+	if ($ranColEnt){		
+		randomizeRampColorEntryList($sel, $name);
+	}
+	
+	if ($WIZRMP_ranPlaceTex){
+		randomizeRampPlace2dTexture($sel, $name);
+	}
+	
+	
+}
+
+//@ RANDOMIZE RAMP COLOR ENTRY LIST
+//=======================================================
+global proc randomizeRampColorEntryList( string $sel, string $name)
+{
+	global int $WIZRMP_ranType, $WIZRMP_ranInt, $WIZRMP_ranColEnt, $WIZRMP_minRanEnt,
+	$WIZRMP_maxRanEnt, $WIZRMP_ranPos, $WIZRMP_resetRamps, $WIZRMP_incldRRamps,
+	$WIZRMP_onlyConDown;
+	global int $WIZRMP_uRampType, $WIZRMP_vRampType, $WIZRMP_diagonalRampType,
+	$WIZRMP_radialRampType, $WIZRMP_circularRampType, $WIZRMP_boxRampType,
+	$WIZRMP_uvRampType, $WIZRMP_fourCornerRampType, $WIZRMP_tartanRampType;
+	global int $WIZRMP_noneIntrp, $WIZRMP_linearIntrp, $WIZRMP_exponentialUpIntrp,
+	$WIZRMP_exponentialDownIntrp, $WIZRMP_smoothIntrp, $WIZRMP_bumpIntrp, $WIZRMP_spikeIntrp;	
+	global int $WIZRMP_useRampType[], $WIZRMP_useIntrpType[];
+	global string $WIZRMP_ranRamps[], $WIZRMP_rampPool[];
+	global string $WIZRMP_ranColType;
+	global float $WIZRMP_roundPositionsTo;
+	//If we are only connecting ramps up our pool list, then figure out which one
+	//in the list we are on
+	
+	string $ranRamps[] = $WIZRMP_ranRamps;
+	//print ("Ramp To Randomize : \n - " + stringArrayToString($ranRamps, "\n - ") + "\n");
+	
+	//Get a random amount of colorEntryLists to create
+	int $min = $WIZRMP_minRanEnt;
+	int $max = $WIZRMP_maxRanEnt;
+	int $entListCount = int(floor(`rand $min ($max + 1) `));
+	
+	//Reset the ramps before adding any more colorEntryLists?
+	int $mi[];
+	clear($mi);
+	int $newMi = 0;
+	float $pos = 0;
+	float $posInc = $WIZRMP_roundPositionsTo;
+	
+	if ($WIZRMP_resetRamps){
+		resetTextureRampColorEntryLists($sel);
+		$mi = `getAttr -mi ($sel + ".colorEntryList")`;	
+	} else {
+		$mi = `getAttr -mi ($sel + ".colorEntryList")`;		
+		//Remove extra indices
+		if (`size $mi` > $entListCount){
+			for ($i=$entListCount;$i<`size $mi`;$i++){
+
+				catch(`removeMultiInstance -break true ($sel + ".colorEntryList[" + $mi[$i] + "]")`);
+				
+			}
+		}		
+		
+		//Sort the indices so we know that the last indice is the highest number
+		$mi = sort($mi);
+		
+		//The newMi will be the new indice to create
+		$newMi = $mi[(`size $mi` - 1)];	
+		$newMi++;
+	}
+	if ($WIZRMP_ranPos == 0){
+		//Calculate an even position spacing
+		float $evenSpacing = 1.0 / $entListCount;
+		$posInc = `constrainValue $posInc 1.0 $posInc $evenSpacing`;
+		
+	}
+	
+	//print ("Number Of Indices : " + `size $mi` + "\n");
+	//print ("Number of Indices To Create : " + $entListCount + "\n");
+	int $fitIntoRampSpace = 0;
+	float $lastPos = 0;
+	string $lastTex;
+	
+	float $minPos = 0;
+	float $allPos[];
+	for ($i=(`size $mi` - 1);$i<$entListCount;$i++){
+		//print (wizDiv("s") + "\n");
+		//Randomize Position
+		if ($WIZRMP_ranPos){
+			/*
+			if ($minPos >= 1){
+				break;	
+			}
+			*/
+			$pos = `rand 0.0 1.0`;
+			// Round off the position
+			$pos = `constrainValue (0.0 + $posInc) (1.0 - $posInc) $posInc $pos`;
+			//It would be nice if we didn't have to search for the pos from an array of positions but eh.. 
+			int $found = floatArrayFind( $pos, 0, $allPos);
+			if ($found > -1){
+				continue;	
+			}
+			/*
+			if ($pos <= ($posInc + $minPos)){
+				$pos = $pos + $posInc;	
+			}
+			*/
+			//print ("Min Pos : " + $minPos + " IncPos : " + $posInc + " Pos : " + $pos + "\n");
+			
+			//$minPos = $pos + $posInc;
+		} else {
+			$pos = $pos + $posInc;
+		}
+		
+		$allPos[`size $allPos`] = $pos;
+		
+
+		catch(`setAttr ($sel + ".colorEntryList[" + $newMi + "].position") $pos`);
+			//$pos = $pos + $posInc;		
+	
+		
+		string $rampPool[] = $WIZRMP_rampPool;
+		//print ("Ramp Pool : \n - " + stringArrayToString($rampPool, "\n - ") + "\n");
+		if ($WIZRMP_incldRRamps){
+			//$rampPool = appendStringArray($rampPool, $ranRamps, `size $ranRamps`);
+			if (`size $rampPool` == 0){
+				$rampPool = $ranRamps;
+			} else {
+				$rampPool = stringArrayCatenate($rampPool, $ranRamps);
+			}
+		}
+		//print ("Ramp Pool : \n - " + stringArrayToString($rampPool, "\n - ") + "\n");
+		
+		//Flip coin to either choose to connect a ramp or a color
+		int $chooseRamp = randBool();
+		
+		//Choose which ramp we will connect
+		int $ranRampIndex;		
+		int $rampChoiceMax = 0;
+		
+		// Check to avoid infinit cycles
+		if ($WIZRMP_onlyConDown){
+			$ranRampIndex = stringArrayFind($sel, 0, $rampPool);
+            if ($ranRampIndex == -1){
+                $ranRampIndex = 0;
+            }
+			$rampChoiceMax = $ranRampIndex;
+		} else {
+			$rampChoiceMax = `size $rampPool`;
+		}
+				
+		int $rampChoice = int(floor(`rand 0 $rampChoiceMax`));
+        //If we've selected the same ramp to connect as the ramp we are connecting to then use a color
+		if ($rampPool[$rampChoice] == $sel){
+            $chooseRamp = 0;
+        }
+        
+        if ($chooseRamp == 1){
+        	// We need to get the namespace for the ramp pool objects in case it's referenced
+        	string $ns = getNameSpaceFromObject($sel);
+        	if (`objExists $rampPool[$rampChoice]` == 0){
+        		
+        		$rampPool[$rampChoice] = $ns + $rampPool[$rampChoice];
+        	}
+        	//print ("Ramp Pool Object Name : " + $rampPool[$rampChoice] + "\n");
+        	//print ("Namespace : " + $ns + $rampPool[$rampChoice] + "\n");
+        	//$rampPool[$rampChoice] = $ns + $rampPool[$rampChoice];
+        	
+        	if (`attributeExists "randomizeTextureSelection" $rampPool[$rampChoice]`){
+        		randomizeTextureSelection($rampPool[$rampChoice]);	
+        	}
+        }
+		//print ("Current Ramp : [" + $ranRampIndex + "] : " + $sel + "\n");
+		//print ("Connecting Ramp : [" + $rampChoice + "] : " + $rampPool[$rampChoice] + "\n");
+		//Randomize Color/Value
+		float $col[];
+		//print ("Random Color Type : " + $WIZRMP_ranColType + "\n");
+
+			if ($WIZRMP_ranColType == "Random Colors" || $WIZRMP_ranColType == "randomColors"){
+				//wizlog ("	[#] Random Colors [#]");
+				$col = wizGetRandomColor("rgb");
+				//print ("Set Color : Type Color : " + "setAttr \"" + $sel + ".colorEntryList[" + $newMi + "].color\" -typ double3 " + $col[0] + " " + $col[1] + " " + $col[2] + ";\n");
+			
+				catch(`setAttr ($sel + ".colorEntryList[" + $newMi + "].color") -type double3 $col[0] $col[1] $col[2]`);
+				
+			} else if ($WIZRMP_ranColType == "Random Values" || $WIZRMP_ranColType == "randomValues"){
+				$col = wizGetRandomColor("value");
+				//print ("Set Color : Type Value : " + "setAttr \"" + $sel + ".colorEntryList[" + $newMi + "].color\" -typ double3 " + $col[0] + " " + $col[1] + " " + $col[2] + ";\n");
+			
+				catch(`setAttr ($sel + ".colorEntryList[" + $newMi + "].color") -type double3 $col[0] $col[1] $col[2]`);	
+				
+			} else if ($WIZRMP_ranColType == "Color Ramp Mix" || $WIZRMP_ranColType == "colorRampMix"){
+				if ($chooseRamp){
+					//wizSmartConnectRamps("-sp " + (stringArrayToString($rampPool, " ")) + " -si " + $rampChoice + " -tar " + $sel + " -ti " + $newMi);
+					
+					catch(`connectAttr -f ($rampPool[$rampChoice] + ".outColor")($sel + ".colorEntryList[" + $newMi + "].color")`);
+					
+					
+				} else {
+					$col = wizGetRandomColor("rgb");
+					catch(`setAttr ($sel + ".colorEntryList[" + $newMi + "].color") -type double3 $col[0] $col[1] $col[2]`);
+				}
+				
+			} else if ($WIZRMP_ranColType == "Value Ramp Mix" || $WIZRMP_ranColType == "valueRampMix"){
+				if ($chooseRamp){
+					catch(`connectAttr -f ($rampPool[$rampChoice] + ".outColor")($sel + ".colorEntryList[" + $newMi + "].color")`);
+					//wizSmartConnectRamps("-sp " + (stringArrayToString($rampPool, " ")) + " -si " + $rampChoice + " -tar " + $sel + " -ti " + $newMi);
+				} else {
+					$col = wizGetRandomColor("value");
+					catch(`setAttr ($sel + ".colorEntryList[" + $newMi + "].color") -type double3 $col[0] $col[1] $col[2]`);		
+				}
+				
+			} else if ($WIZRMP_ranColType == "Random Ramps" || $WIZRMP_ranColType == "randomRamps"){
+				
+				catch(`connectAttr -f ($rampPool[$rampChoice] + ".outColor")($sel + ".colorEntryList[" + $newMi + "].color")`);
+				
+				//wizSmartConnectRamps("-sp " + (stringArrayToString($rampPool, " ")) + " -si " + $rampChoice + " -tar " + $sel + " -ti " + $newMi);
+									
+			} else if ($WIZRMP_ranColType == "Ramps And Black" || $WIZRMP_ranColType == "rampsAndBlack"){
+				if ($chooseRamp){
+					catch(`connectAttr -f ($rampPool[$rampChoice] + ".outColor")($sel + ".colorEntryList[" + $newMi + "].color")`);	
+					//wizSmartConnectRamps("-sp " + (stringArrayToString($rampPool, " ")) + " -si " + $rampChoice + " -tar " + $sel + " -ti " + $newMi);	
+				} else {
+					$col = { 0.0, 0.0, 0.0 };
+					catch(`setAttr ($sel + ".colorEntryList[" + $newMi + "].color") -type double3 $col[0] $col[1] $col[2]`);
+				}			
+			} else if ($WIZRMP_ranColType == "Black And White" || $WIZRMP_ranColType == "blackAndWhite"){			
+					$col[0] = randBool();
+					catch(`setAttr ($sel + ".colorEntryList[" + $newMi + "].color") -type double3 $col[0] $col[0] $col[0]`);
+		
+			}
+		
+		//print ("Set Color : " + "setAttr \"" + $sel + ".colorEntryList[" + $newMi + "].color\" -typ double3 " + $col[0] + " " + $col[1] + " " + $col[2] + ";\n");
+		
+		//setAttr ($sel + ".colorEntryList[" + $newMi + "].color") -type double3 $col[0] $col[1] $col[2];
+		//Increment entry list indices
+		$newMi++;
+	}
+	
+	//Fit the textures into ramp spaces
+	int $iSorted[] = getRampIndicesSortedByPosition($sel);
+	for ($i=0;$i<`size $iSorted`;$i++){
+		string $con[] = `listConnections -d false -s true ($sel + ".colorEntryList[" + $iSorted[$i] + "].color")`;
+		if (`size $con` > 0){
+			if (`attributeExists "fitIntoRampSpaces" $con[0]` == 1){	
+				print ("Fit Texture : " + $con[0] + " : Into Ramp Space\n");
+				int $doFit = `getAttr ($con[0] + ".fitIntoRampSpaces")`;
+				if ($doFit == 1){
+					int $rampType = `getAttr ($sel + ".type")`;
+					if ($rampType < 3){
+						int $nextIndex = $iSorted[($i + 1)];
+						if (`size $iSorted` < $nextIndex){
+							$nextIndex = $iSorted[$i];
+						}
+						fitTextureIntoRampSpace($sel, $con[0], $iSorted[$i], $iSorted[($i + 1)]);
+	
+					}
+				}
+			}
+		}
+	}
+	
+}
+
+global proc wizSmartConnectRamps( string $flags )
+{
+	string $target;
+	string $pool[];
+	int $si, $ti;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-tar" : case "-target" :
+			$target = $tok[($i + 1)];
+			break ;
+				
+			case "-sp" : case "-sourcePool" :
+			$pool = wizFlagArray($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$pool = `ls -sl`;
+			break ;			
+			
+			case "-si" : case "-sourceIndex" :
+			$si = int($tok[($i + 1)]);
+			break ;
+			
+			case "-ti" : case "-targetIndex" :
+			$ti = int($tok[($i + 1)]);
+			break ;
+			
+			
+		}
+	}
+	int $cycles;
+	while (true){
+	
+		/*
+		if (catch(`connectAttr -f ($pool[$si] + ".outColor")($target + ".colorEntryList[" + $ti + "].color")`) == 1){
+			wizlog ("	[!] Cycle Check Connection Error : Attemp : " + $cycles + " [!] - " + $si);
+			wizlog ("	[*] connectAttr -f " + $pool[$si] + ".outColor " + $target + ".colorEntryList[" + $ti + "].color;");
+			
+		}
+*/
+		
+		connectAttr -f ($pool[$si] + ".outColor")($target + ".colorEntryList[" + $ti + "].color");
+		
+		
+		if (`cycleCheck ($target + ".colorEntryList[" + $ti + "].color")` == 1 || `cycleCheck ($pool[$si] + ".outColor")` == 1){
+			wizlog ("	[!] Cycle Check Error : Attemp : " + $cycles + " [!] - " + $si);
+			wizlog ("	[*] connectAttr -f " + $pool[$si] + ".outColor " + $target + ".colorEntryList[" + $ti + "].color;");			
+			$si = randInt(0, (`size $pool` - 1));
+			wizlog ("	[#] Changing Index To : " + $si);
+		} else {
+		
+			wizlog ("	[*****] No Cycle Check Error [*****] ");
+			wizlog ("	[*] connectAttr -f " + $pool[$si] + ".outColor " + $target + ".colorEntryList[" + $ti + "].color;");
+			wizlog ("	[*] Cycle Check Error Resolved In : " + $cycles + " Attempts");
+			break ;
+			//return ;
+		}
+		
+		
+		
+		if ($cycles >= 50){
+			wizlog ("	[!] Cycle Check Quit After " + $cycles + " Cycles");
+			break ;
+		}
+	
+		$cycles++;
+		
+	}
+					
+					
+
+}
+
+//@ RANDOMIZE RAMP PLACE2DTEXTURE
+//=================================================================
+global proc randomizeRampPlace2dTexture( string $sel , string $name)
+{
+	global int $WIZRMP_ranPlaceTex, $WIZRMP_mirU, $WIZRMP_mirV, $WIZRMP_wrapU, $WIZRMP_wrapV,
+	$WIZRMP_stagger, $WIZRMP_repeatU, $WIZRMP_repeatURound, $WIZRMP_repeatV, $WIZRMP_repeatVRound;
+	global float $WIZRMP_minRepeatU, $WIZRMP_minRepeatV, $WIZRMP_maxRepeatU,
+	$WIZRMP_maxRepeatV;
+	
+	string $con[] = `listConnections -s on -d off $sel`;
+	string $pt[] = `ls -type place2dTexture -type place3dTexture $con`;
+	$pt = stringArrayRemoveDuplicates($pt);
+	
+	if ($WIZRMP_mirU){
+		setAttr ($pt[0] + ".mirrorU") `randBool`;		
+	}
+	if ($WIZRMP_mirV){
+		setAttr ($pt[0] + ".mirrorV") `randBool`;		
+	}
+	if ($WIZRMP_wrapU){
+		setAttr ($pt[0] + ".wrapU") `randBool`;		
+	}
+	if ($WIZRMP_wrapV){
+		setAttr ($pt[0] + ".wrapV") `randBool`;		
+	}
+	if ($WIZRMP_stagger){
+		setAttr ($pt[0] + ".stagger") `randBool`;		
+	}
+	if ($WIZRMP_repeatU){
+		float $minReU = $WIZRMP_minRepeatU;		
+		float $maxReU = $WIZRMP_maxRepeatU;
+		float $ranReU = `rand $minReU $maxReU`;
+		if ($WIZRMP_repeatURound){
+			$ranReU = floor(`rand $minReU ($maxReU + 1)`);
+		}
+		//int $locked = `getAttr -l ($pt[0] + ".repeatU")`;
+		int $ok = catchQuiet (`setAttr ($pt[0] + ".repeatU") $ranReU`);	
+		if ($ok == 0){
+			setAttr ($pt[0] + ".repeatU") $ranReU;	
+		}
+		//if (!$locked){
+		//	setAttr ($pt[0] + ".repeatU") $ranReU;	
+		//}
+	}
+	if ($WIZRMP_repeatV){
+		float $minReV = $WIZRMP_minRepeatV;
+		float $maxReV = $WIZRMP_maxRepeatV;
+		float $ranReV = `rand $minReV $maxReV`;
+		if ($WIZRMP_repeatVRound){
+			$ranReV = floor(`rand $minReV ($maxReV + 1)`);
+		}
+		//int $locked = `getAttr -l ($pt[0] + ".repeatV")`;
+		int $ok = catchQuiet (`setAttr ($pt[0] + ".repeatV") $ranReV`);	
+		if ($ok == 0){
+			setAttr ($pt[0] + ".repeatV") $ranReV;
+		}
+		//if (!$locked){
+		//	setAttr ($pt[0] + ".repeatV") $ranReV;		
+		//}
+	}
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         AUTO BUILD
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//WIZ RAMPUTATION AUTO BUILD
+//=================================================================
+/*======================| SUMMARY |===================================
+    This is for building one ramputation automatically
+/*=======================| USAGE |==================================*/	
+global proc wizRamputationAutoBuild(string $name)
+{
+	global int $WIZRMP_autoBuildIterations;
+    int $iCount = $WIZRMP_autoBuildIterations;
+    int $outputTextures = `menuItem -q -cb ramputationsRenderTexturesWithTextureOutputPathsOnAutoMenuItem`;
+    int $incAndSave = `menuItem -q -cb ramputationsIncrementAndSaveEachAutoBuildMenuItem`;
+    
+    for ($i=0;$i<$iCount;$i++){
+        randomizeSelectedRamps(`ls -sl`, $name);
+        rmbRandomizeRamputation("");
+        if ($outputTextures == 1){
+            wizIncrementAllOutputTexturesAndRender();
+        }
+        refresh;
+        refreshAE;
+        if ($incAndSave == 1){
+            incrementAndSaveWiz();
+        }
+    }
+}
+
+//WIZ RAMPUTATION AUTO BUILD ALL
+//=================================================================
+/*======================| SUMMARY |===================================
+    This is for building ALL ramputations automatically
+/*=======================| USAGE |==================================*/	
+global proc wizAutoBuildAllRamputations()
+{
+	
+    global int $WIZ_ramputationLayoutCount;
+       
+    int $iCount = `intSliderGrp -q -v ramputationsAllRampsAutoBuildIterations_intSliderGrp`;
+    int $outputTextures = `menuItem -q -cb ramputationsRenderTexturesWithTextureOutputPathsOnAutoMenuItem`;
+    int $incAndSave = `menuItem -q -cb ramputationsIncrementAndSaveEachAutoBuildMenuItem`;
+        
+    wizProgressWindowStart("Ramputation", "Starting", 1);
+    int $max = $iCount;
+    wizProgressWindowMinMax(0,$max);
+    
+    for ($i=0;$i<$iCount;$i++){
+	    randomizeAllRamputations();
+        rmbRandomizeAllRamputationAssets("");
+        if ($outputTextures == 1){
+            wizIncrementAllOutputTexturesAndRender();
+        }
+	    refresh;
+	    refreshAE;
+        
+        saveScenePosterImage();
+        wizProgressWindowUpdate("Processing... ", 1);
+        if (wizProgressCancelled() == 1) return;
+        
+        /*<ToDoWiz!> 
+        for ($p=0;$p<$WIZ_ramputationLayoutCount;$p++){
+
+            if (`checkBox -q -v ("ramputations" + $p + "AutoSaveFileTextureWithFile_checkBox")`){
+                wizSaveCurrentRamputationRampsToFileTexture(("ramputations" + $p));
+                
+            }
+        
+        }
+        */
+        if ($incAndSave == 1){
+            incrementAndSaveWiz();
+        
+        }
+    }
+    wizProgressWindowEnd();
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         SAVING
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//WIZ SAVE CURRENT RAMPUATION RAMPS
+//=================================================================
+global proc wizSaveCurrentRamputationRamps( string $name)
+{
+	global string $WIZRMP_saveRampName, $WIZRMP_saveRampDir;
+	global string $WIZRMP_ranRamps[];
+	
+    string $name = $WIZRMP_saveRampName;
+    string $dir = $WIZRMP_saveRampDir;
+    string $filename = $dir + "/" + $name + "1" + ".mb";
+    string $ramps[] = $WIZRMP_ranRamps;
+    wizIncrementAndExportSelectedObjects($filename, $ramps);
+   
+    
+}
+
+//@ WIZ SAVE CURRENT RAMPUTATION RAMPS TO FILE TEXTURE
+//====================================================================
+global proc string wizSaveCurrentRamputationRampsToFileTexture( string $name )
+{
+    string $ramps[] = `textScrollList -q -ai ($name + "OutputRampsToFile_textScrollList")`;
+    string $prefix = `textFieldGrp -q -tx ($name + "RampFileOutputPrefix_textFieldGrp")`;
+    string $dir = `textFieldButtonGrp -q -tx ($name + "RampFileOutputDirectory_textFieldButtonGrp")`;
+    //int $imageFormat = `getAttr "defaultRenderGlobals.imageFormat"`; 
+    int $curImageFormat = `getAttr "defaultRenderGlobals.imageFormat"`;    
+    setAttr "defaultRenderGlobals.imageFormat" 32;
+    
+    for ($i=0;$i<`size $ramps`;$i++){
+        
+        string $filePath = $dir + $prefix + $i + ".png";
+        string $vfp = getIncrementedFileVersionName($filePath);
+        wizTestTextureAndSaveToFile({$ramps[$i]}, ("-f " + $vfp + " -w 1024 -h 1024"));
+        
+        setAttr "defaultRenderGlobals.imageFormat" $curImageFormat;
+    
+    }
+    return "ok";
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         RAMPUTATION ASSET
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+// @ CREATE RAMPUTATION ASSET
+//====================================================================
+global proc createRamputationAsset( string $name )
+{
+	string $ranRamps[] = `textScrollList -q -ai ($name + "_RampsToRandomize_textScrollList")`;
+	string $rampPool[] = `textScrollList -q -ai ($name + "_InputPool_textScrollList")`;
+		
+	string $assetName = ("Ramputation");
+    string $addContents[] = stringArrayCatenate($ranRamps, $rampPool);
+
+    //Create an asset to control the duplication values
+    string $asset = `container -n $assetName -type dagContainer -ind "inputs" -includeHierarchyBelow -includeShapes -includeTransform -force -addNode $addContents`;
+	addWizAssetTypeAttributeToSelectedAsset($asset, "ramputationAsset");
+	
+    //Add the assetWiz command to the asset
+    setAttr -type "string" ($asset + ".rmbCommand") "assetWiz";
+	
+    // Add the attribute for turning the override on or off.
+
+	addAttr -ln "useOverrides" -at bool $asset;
+	setAttr -e -keyable true ($asset + ".useOverrides");
+	setAttr ($asset + ".useOverrides") true;
+
+		
+	print ("Ramputations Layout : " + $name + "FrameLayout" + "\n");
+	createObjAttributesFromGUIObjectsInLayout($asset, ($name + "FrameLayout"), "");
+	
+	string $iconDir = getWizIconsDirectory();
+	string $iconFile = $iconDir + "RampPatternNetworkIcon1.png";
+	setAttr -type "string" ($asset + ".iconName") $iconFile;
+	
+}
+
+
+//@ COPY RAMPUTATION ATTRIBUTES TO SELECTED
+//====================================================================
+global proc copyRamputationAttributesToSelected( string $sel[] )
+{
+	//string $asset[] = `ls -typ dagContainer $sel`;
+	//string $ramp[] = `ls -typ ramp $sel`;
+	string $attr[] = `listAttr -ud $sel[0]`;
+	if (`objectType -i ramp $sel[0]` == 0 && `objectType -i dagContainer $sel[0]` == 0){
+		warning ("A Ramp or Ramputation Asset Must Be Selected!\n");
+		return;	
+	}
+	for ($i=1;$i<`size $sel`;$i++){
+		if (`objectType -i ramp $sel[$i]` || `objectType -i dagContainer $sel[$i]`){
+			for ($a=0;$a<`size $attr`;$a++){
+				copyAttr -v -at $attr[$a] $sel[0] $sel[$i];
+			}
+		}
+	}
+	
+}
+
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         OVERRIDES
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+
+//@ CREATE PER RAMP OVERRIDES FOR SELECTED RAMPS
+//====================================================================
+global proc addPerRampOverrideAttributesForSelectedRamps( string $sel[] )
+{
+	string $asset[] = `ls -typ dagContainer -sl`;
+	string $ramp[] = `ls -typ ramp -sl`;
+	
+	
+	for ($i=0;$i<`size $ramp`;$i++){
+		// Add the attribute for turning the override on or off.
+		if (`attributeExists "useOverrides" $ramp[$i]` == 0){
+			addAttr -ln "useOverrides" -at bool $ramp[$i];
+			setAttr -e -keyable true ($sel[$i] + ".useOverrides");
+			setAttr ($ramp[$i] + ".useOverrides") true;
+		} else {
+			setAttr ($ramp[$i] + ".useOverrides") true;
+		}
+		
+		// If we have an asset selected copy the attributes from the asset to the ramps
+		string $attr[];		
+		if (`size $asset` > 0){	
+			createObjAttributesFromGUIObjectsInLayout($ramp[$i], "ramputations1FrameLayout", "");
+			$attr = `listAttr -ud $asset[0]`;
+			
+			for ($p=0;$p<`size $attr`;$p++){
+				// First copy the attribute, then rename the attribute with the prefix or_
+				print ("Copy Attributes : " + "copyAttr -v -ksc -at " + $attr[$p] + " " + $asset[0] + " " + $ramp[$i] + ";" + "\n");
+				copyAttr -v -ksc -at $attr[$p] $asset[0] $ramp[$i];
+				//rename ($sel[$i] + "." + $attr[$p]) ("or_" + $attr[$p]);
+			}
+		
+		} else {
+			print ("No Ramputation Asset Selected Using Default Values : \n");
+				
+			createObjAttributesFromGUIObjectsInLayout($ramp[$i], "ramputations1FrameLayout", "");
+		}
+	}
+}
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                   FIT TEXTURE INTO RAMP SPACES
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//@ SET SELECTED TEXTURES TO FIT INTO RAMP SPACES
+//====================================================================
+global proc setSelectedTexturesToFitIntoRampSpaces( string $object )
+{
+	string $sel[] = `ls -tex -sl`;
+	for ($i=0;$i<`size $sel`;$i++){
+		if (`attributeExists "fitIntoRampSpaces" $sel[$i]` == 0){
+			addAttr -ln "fitIntoRampSpaces" -at bool $sel[$i];			
+		} 
+		setAttr ($sel[$i] + ".fitIntoRampSpaces") true;
+		
+	}
+}
+
+/*
+	string $sel[] = `ls -tex -sl`;
+	
+	string $dupName = "RampFitCopy_" + $sel[0];
+	string $dup[] = `duplicate -n $dupName -upstreamNodes $sel[1]`;
+	
+*/
+global proc fitTextureIntoRampSpace( string $ramp, string $tex, int $mi1, int $mi2)
+{
+	float $pos1 = `getAttr ($ramp + ".colorEntryList[" + $mi1 + "].position")`;
+	float $pos2 = `getAttr ($ramp + ".colorEntryList[" + $mi2 + "].position")`;
+	int $endRamp;
+	if ($mi1 == $mi2){
+		$endRamp = 1;
+	}
+
+	//print ("Fitting : " + $tex + " : Into : " + $ramp + " : At Indice : " + $mi1 + " : To : " + $mi2 + "\n");
+	int $rampType = `getAttr ($ramp + ".type")`;
+	string $rampPT = getTexturesPlace2dTextureNode($ramp);
+	
+	string $con[] = `listConnections -s on -d off $tex`;
+	string $pt = getTexturesPlace2dTextureNode($tex);
+
+	float $cov[] = `getAttr ($pt + ".coverage")`;
+	float $tf[] = `getAttr ($pt + ".translateFrame")`;
+	float $rf = `getAttr ($pt + ".rotateFrame")`;
+	float $ruv[] = `getAttr ($pt + ".repeatUV")`;
+	
+	
+	string $dupName = "RampFitCopy_" + $tex;
+	string $dup[] = `duplicate -n $dupName -upstreamNodes $tex`;
+	string $dupTex[] = `ls -tex $dup`;
+	string $dupPT[] = `ls -typ place2dTexture $dup`;
+	
+	
+	string $p2mp1 = `shadingNode -n ($dup[0] + "P2minusP1PlusMinusAverage") -asUtility plusMinusAverage`;	
+	string $rX10 = `shadingNode -n ($dup[0] + "RRepeatTime100RepeatMultiplyDivide") -asUtility multiplyDivide`;
+	string $pXr = `shadingNode -n ($dup[0] + "PtimeRRepeatMultiplyDivide") -asUtility multiplyDivide`;
+	setAttr ($p2mp1 + ".operation") 2;
+	
+	//p2dt.repeat = ($mi2.pos - $mi1.pos) * ($ramp.repeat * 10);
+	
+	/*############ PROBLEM ###############################################
+	FOR SOME REASON THIS CRASHES MAYA WHEN CONNECTING COLOR AND POSITION
+	#####################################################################*/
+
+	/*
+	//$mi2.pos - $mi1.pos
+	if ($endRamp == 0){
+		connectAttr -f ($ramp + ".colorEntryList[" + $mi2 + "].position") ($p2mp1 + ".input2D[0].input2Dx");
+	} else {
+		setAttr ($p2mp1 + ".input2D[0].input2Dx") 1;
+	}
+	connectAttr -f ($ramp + ".colorEntryList[" + $mi1 + "].position") ($p2mp1 + ".input2D[1].input2Dx");
+	
+	//$ramp.repeat * 100	
+	connectAttr -f ($rampPT + ".repeatU") ($rX10 + ".input1X");
+	connectAttr -f ($rampPT + ".repeatV") ($rX10 + ".input1Y");	
+	setAttr ($rX10 + ".input2X") 10;
+	setAttr ($rX10 + ".input2Y") 10;
+	
+	//($mi2.pos - $mi1.pos) * ($ramp.repeat * 10)
+	connectAttr -f ($p2mp1 + ".output2Dx") ($pXr + ".input1X");
+	connectAttr -f ($p2mp1 + ".output2Dx") ($pXr + ".input1Y");
+	
+	connectAttr -f ($rX10 + ".outputX") ($pXr + ".input2X");
+	connectAttr -f ($rX10 + ".outputY") ($pXr + ".input2Y");	
+	
+	connectAttr -f ($pXr + ".outputX") ($dupPT[0] + ".repeatU");
+	connectAttr -f ($pXr + ".outputY") ($dupPT[0] + ".repeatV");
+	*/
+	
+	float $pos1 = `getAttr ($ramp + ".colorEntryList[" + $mi1 + "].position")`;
+	float $pos2 = `getAttr ($ramp + ".colorEntryList[" + $mi2 + "].position")`;
+	float $reU = `getAttr ($rampPT + ".repeatU")`;
+	float $reV = `getAttr ($rampPT + ".repeatV")`;
+	
+	float $pReU = ($pos2 - $pos1) * ($reU * 10);
+	float $pReV = ($pos2 - $pos1) * ($reV * 10);
+	setAttr ($dupPT[0] + ".repeatU") $pReU;
+	setAttr ($dupPT[0] + ".repeatV") $pReV;
+	
+	string $con[] = `listConnections -p true -d false -s true ($ramp + ".colorEntryList[" + $mi1 + "].color")`;
+	if (`size $con` > 0){
+		catchQuiet(`disconnectAttr ($con[0]) ($ramp + ".colorEntryList[" + $mi1 + "].color")`);
+	}
+	
+	//print ("connectAttr \"" + $dupTex[0] + ".outColor\" \"" + $ramp + ".colorEntryList[" + $mi1 + "].color\";");
+	connectAttr ($dupTex[0] + ".outColor") ($ramp + ".colorEntryList[" + $mi1 + "].color");
+
+	//Connect the texture to the ramp index
+	
+	
+	switch ($rampType){
+		case 0 : 
+		break;
+		
+		case 1 :
+		setAttr ($dupPT[0] + ".rotateFrame") ($rf + 90);
+		break;
+		
+		case 2 :
+		setAttr ($dupPT[0] + ".rotateFrame") ($rf + 45);
+		break;
+		
+	}
+}
+
+global proc removeAllRampFitTextureCopies()
+{
+	string $rampFitCopy[] = `ls ("*RampFitCopy*")`;
+	if(`size $rampFitCopy` == 0){
+		return;	
+	}
+	delete $rampFitCopy;
+	
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                      GENERIC RAMP FUNCTIONS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+
+//@ RESET TEXTURE RAMP COLOR ENTRY LISTS
+//=================================================================
+global proc resetTextureRampColorEntryLists( string $sel )
+{
+	int $mi[] =	`getAttr -mi ($sel + ".colorEntryList")`;
+	string $con[] = `listConnections -p true -d false -s true ($sel + ".colorEntryList[0].color")`;
+	if (`size $con` > 0){
+
+			catch(`disconnectAttr ($con[0]) ($sel + ".colorEntryList[0].color") `);
+		
+
+	}
+
+	for ($i=1;$i<`size $mi`;$i++){
+
+		catch(`removeMultiInstance -break true ($sel + ".colorEntryList[" + $mi[$i] + "]")`);
+
+		
+		
+	}
+	
+
+	catch(`setAttr ($sel + ".colorEntryList[0].position") 0`);
+
+	if (`getAttr -l ($sel + ".colorEntryList[1].color")` == 0){ // Make shure it's not locked
+		setAttr ($sel + ".colorEntryList[0].color") -type double3 0.0 0.0 0.0;
+	}
+	//If the last remaining indice is not 0 then remove it
+	if ($mi[0] != 0){
+
+		catch(`removeMultiInstance -break true ($sel + ".colorEntryList[" + $mi[0] + "]")`);
+
+	}
+		
+
+	catch(`setAttr ($sel + ".colorEntryList[1].position") 1`);
+
+	catch(`setAttr ($sel + ".colorEntryList[1].color") -type double3 1.0 1.0 1.0`);
+
+	removeAllRampFitTextureCopies();
+}
+
+//GET ALL DOWNSTREAM RAMP INPUT TEXTURES
+//=======================================================
+/*
+	string $sel[] = `ls -sl`;
+	string $ramp = $sel[0];
+	getAllDownstreamRampInputTextures($ramp);
+*/
+global proc string[] getAllDownstreamRampInputTextures( string $ramp )
+{
+	int $mi[] =	`getAttr -mi ($ramp + ".colorEntryList")`;
+	string $singleTab = "-";
+	string $tab = "-";
+	string $conRamp[];
+	$conRamp[0] = $ramp;
+	string $allCon[];
+	//print (wizDiv("se") + "\n" + "All Downstream Ramp Input Textures: \n" + wizDiv("s"));
+	while (true){
+		string $levConRamp[];
+		for ($i=0;$i<`size $conRamp`;$i++){
+			int $mi[] =	`getAttr -mi ($conRamp[$i] + ".colorEntryList")`;
+			
+			for ($c=0;$c<`size $mi`;$c++){
+				string $con[] = `listConnections -s on -d off ($conRamp[$i] + ".colorEntryList[" + $mi[$c] + "].color")`;
+				if (`size $con` > 0){
+					//print ($tab + stringArrayToString($con, ("\n" + $tab)) + "\n");
+					$levConRamp = stringArrayCatenate($levConRamp, $con);
+					$allCon = stringArrayCatenate($allCon, $con);
+				}
+			}
+			
+		}
+		$tab = $tab + $singleTab;
+		if (`size $levConRamp` == 0){
+			break;
+		}
+		clear $conRamp;
+		$conRamp = $levConRamp;
+		clear $levConRamp;
+	}
+	//print (wizDiv("end") + "\n");
+	return $allCon;
+}
+
+
+//@ GET TEXTURE PLACE 2D TEXTURE NODE
+//====================================================================
+global proc string getTexturesPlace2dTextureNode( string $tex )
+{
+	string $con[] = `listConnections -s on -d off $tex`;
+	string $pt[] = `ls -type place2dTexture -type place3dTexture $con`;
+	$pt = stringArrayRemoveDuplicates($pt);
+	return $pt[0];
+}
+
+//--------------------------------------------------------------------
+//////////////////////////////////////////////////////////////////////
+//			NEW RAMPS
+//////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------
+
+
+//WIZ CREATE NEW RAMP TEXTURE
+//=================================================================
+global proc string wizCreateNewRampTexture( string $name )
+{
+    string $newRamp = `shadingNode -asTexture ramp -n $name`;
+    string $pt = `shadingNode -asUtility place2dTexture -n ($name + "Place2dTexture")`;
+    connectAttr ($pt + ".outUV") ($newRamp + ".uv");
+    connectAttr ($pt + ".outUvFilterSize") ($newRamp + ".uvFilterSize");
+    return $newRamp;    
+}
+
+//@ GET RAMP INDICES SORTED BY POSITION
+//====================================================================
+/*======================| SUMMARY |===================================
+
+/*=======================| USAGE |====================================	
+string $sel[] = `ls -sl`;
+int $sorted[] = getRampIndicesSortedByPosition($sel[0]);
+
+====================================================================*/
+
+global proc int[] getRampIndicesSortedByPosition( string $ramp )
+{
+	int $mi[] =	`getAttr -mi ($ramp + ".colorEntryList")`;
+	float $allPos[];
+	for ($i=0;$i<`size $mi`;$i++){
+		$allPos[$i] = `getAttr ($ramp + ".colorEntryList[" + $i + "].position")`;
+		
+	}
+	int $sorted[] = sortIntArrayByFloatArray($mi, $allPos);
+	return $sorted;
+}
+
+global proc addButtonsForRamputationAssets()
+{
+    string $ra[] = getAllWizAssetsOfType("ramputationAsset");
+    setParent ramputationsMainFrameLayout;
+    float $butCol[] = getWizColor("goButtonColor");
+	for ($i=0;$i<`size $ra`;$i++){
+        button
+            -l ("Randomize " + $ra[$i])
+            -bgc $butCol[0] $butCol[1] $butCol[2]
+            -c ("select -r " + $ra[$i] + "; rmbRandomizeRamputation(\"\");")
+            ;
+    }
+    setParent ramputationsMainFrameLayout;
+}
+
+global proc removeButtonsForRamputationAssets()
+{
+    string $ra[] = getAllWizAssetsOfType("ramputationAsset");
+    setParent ramputationsMainFrameLayout;
+    float $butCol[] = getWizColor("goButtonColor");
+	for ($i=0;$i<`size $ra`;$i++){
+        button
+            -l ("Randomize " + $ra[$i])
+            -bgc $butCol[0] $butCol[1] $butCol[2]
+            -c ("select -r " + $ra[$i] + "; rmbRandomizeRamputation(\"\");")
+            ;
+    }
+    setParent ramputationsMainFrameLayout;
+}
+

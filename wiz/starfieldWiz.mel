@@ -1,0 +1,1260 @@
+/*
+RA - DA - Mag - ColorIndex
+Use Cells
+10,11,12,15
+
+
+or 0 based
+8,9,10,13
+
+*/
+global proc starfieldWiz()
+{
+	
+	
+}
+
+//LAYOUTS
+//===============================================================================================
+//STARFIELD WIZ LAYOUT
+//-------------------------------------------
+global proc starfieldWizLayout(string $parent)
+{	
+	string $layout = wizStandardFrameLayout($parent, "Starfield Wiz", "starfieldWizFrameLayout");
+	frameLayout -e -ec ("generateStarfieldLayout(\"starfieldWizFrameLayout\");") starfieldWizFrameLayout;
+
+}
+
+//GENERATE STARFIELD LAYOUT
+//-------------------------------------------
+global proc generateStarfieldLayout(string $parent)
+{
+	string $columnLayout = 	"generateStarfieldColumnLayout";
+	if(`columnLayout -q -ex $columnLayout`){
+		//Get the colorIndexRemapValue node 
+		string $remapIndexColor = createStarColorIndexRemapValue();
+		string $gradientControl = wizGradientControl($parent, $remapIndexColor, "color");
+		//Skip the rest
+		return;
+	} else {
+		columnLayout -p $parent $columnLayout;	
+	}
+	
+	starfieldWizMenuBarLayout($columnLayout);	
+	
+	//Star Data Type
+	string $starDataType[] = { "csv data", "random generated" };	
+	string $starDataTypeOMG = wizOptionMenuGrpMenuItems("Star Data Type", "generateStarfieldStarDataTypeOptionMenuGrp", $starDataType);	
+	optionMenuGrp -e -en false $starDataTypeOMG;		
+	
+	/*
+	//Data Source
+	string $starfieldDataSource = wizStandardFileTextFieldButtonGroup("Starfield Data CSV", "starfieldDataCSVTextFieldButtonGrp");
+	textFieldButtonGrp -e -cal 1 "left" $starfieldDataSource;
+	*/
+	
+	string $starfieldDataSource = wizTextFieldButtonGrp(
+		"-l Starfield Data CSV "
+		+"-bl Select "
+		+"-bc af "
+		+"-n starfieldDataCSVTextFieldButtonGrp");
+	
+	string $starfieldDataFolderSource = wizTextFieldButtonGrp(
+		"-l Starfield Data Folder "
+		+"-bl Select "
+		+"-bc ad "
+		+"-n starfieldDataCSVDataFolderButtonGrp");
+		
+	/*
+	checkBox -l "Format Data" -v true -ann "Is The Data Already Formatted Properly?" generateStarfieldFormatDataCheckBox;
+	
+	checkBox -l "Output Positions To File" -v true -ann "" generateStarfield_outputPositionsToFile_checkBox;
+	
+	checkBox -l "Tom's Method" -v true generateStarfield_tomsMethod_checkBox;
+	
+//	checkBox -l "Galactic Coordinates" -v true -ann "For using galactic coordinate system" generateStarfieldGalacticCoordinatesCheckBox;
+	*/
+	
+	wizCheckBox(
+		"-l Format Data "
+		+"-ann Is The Data Already Formatted Properly? "
+		+"-v 1 "
+		+"-n generateStarfieldFormatDataCheckBox");
+	
+	wizCheckBox(
+		"-l Output Positions To File "
+		+"-ann Is The Data Already Formatted Properly? "
+		+"-v 1 "
+		+"-n generateStarfield_outputPositionsToFile_checkBox");
+		
+	wizCheckBox(
+		"-l Tom's Method "
+		+"-ann ? "
+		+"-v 1 "
+		+"-n generateStarfield_tomsMethod_checkBox");
+
+		/*
+	wizCheckBox(
+		"-l Galactic Coordinates "
+		+"-ann For using galactic coordinate system "
+		+"-v 1 "
+		+"-n generateStarfieldGalacticCoordinatesCheckBox");	
+	*/
+	radioButtonGrp
+		-nrb 3
+		-l "Coordinate System"
+		-ann "[1] Right Ascention, Declination, Magnitude [2] Galactic Coordinates using RA DEC MAG [3] XYZ Positions"
+		-la3 "RA DEC" "Galactic" "XYZ"
+		-sl 1
+		generateStarfield_coordinateSystem_radioButtonGrp
+		;
+		
+	/*	
+	checkBox
+		-l "Use RA DEC MAG Input Columns"
+		-v false
+		generateStarfield_useRADECMAGInputColumns_checkBox
+		;
+	*/
+	
+	wizCheckBox(
+		"-l Use RA DEC MAG Input Columns "
+		+"-ann For using Mag Dec Ra info "
+		+"-v 0 "
+		+"-n generateStarfield_useRADECMAGInputColumns_checkBox");
+		
+	wizIntFieldGrp(
+		"-l RA Column "
+		+"-nf 1 "
+		+"-v1 1 "
+		+"-n generateStarfield_raColumn_intFieldGrp"
+		);
+		
+	wizIntFieldGrp(
+		"-l DEC Column "
+		+"-nf 1 "
+		+"-v1 2 "
+		+"-n generateStarfield_decColumn_intFieldGrp"
+		);
+	
+	wizIntFieldGrp(
+		"-l MAG Column "
+		+"-nf 1 "
+		+"-v1 3 "
+		+"-n generateStarfield_magColumn_intFieldGrp"
+		);
+		
+	wizIntFieldGrp(
+		"-l Color Column "
+		+"-nf 1 "
+		+"-v1 3 "
+		+"-n generateStarfield_raDecColColumn_intFieldGrp"
+		);	
+		
+	wizCheckBox(
+		"-l Use XYZ Input Columns "
+		+"-v 0 "
+		+"-n generateStarfield_useXYZInputColumns_checkBox"
+		);
+		
+	wizIntFieldGrp(
+		"-l X Column "
+		+"-nf 1 "
+		+"-v1 1 "
+		+"-n generateStarfield_xColumn_intFieldGrp"
+		);
+		
+	wizIntFieldGrp(
+		"-l Y Column "
+		+"-nf 1 "
+		+"-v1 2 "
+		+"-n generateStarfield_yColumn_intFieldGrp"
+		);
+	
+	wizIntFieldGrp(
+		"-l Z Column "
+		+"-nf 1 "
+		+"-v1 3 "
+		+"-n generateStarfield_zColumn_intFieldGrp"
+		);
+		
+		
+	wizIntFieldGrp(
+		"-l Color Column "
+		+"-nf 1 "
+		+"-v1 3 "
+		+"-n generateStarfield_xyzColColumn_intFieldGrp"
+		);
+		
+	wizSeparator();
+	
+	wizIntFieldGrp(
+		"-l Total Columns "
+		+"-nf 1 "
+		+"-v1 3 "
+		+"-n generateStarfield_totalColumns_intFieldGrp"
+		);
+	
+	wizSeparator();
+	
+	wizCheckBox(
+		"-l nParticle Stars "
+		+"-v 1 "
+		+"-ann For using galactic coordinate system "
+		+"-n generateStarfield_NParticleStars_checkBox"
+		);
+		
+	
+	/*
+	//Duplication Method
+	string $dupMethodChangeCommand = ("int $dupMethod = `optionMenuGrp -q -sl generateStarfieldDuplicationMethodOptionMenuGrp`;"
+	+"if(`optionMenuGrp -q -sl generateStarfieldDuplicationMethodOptionMenuGrp` == 3){"
+	+"	intSliderGrp -e -vis true generateStarfieldNewFileEveryNthStarIntSliderGrp;"
+	+"} else {"
+	+"	intSliderGrp -e -vis false generateStarfieldNewFileEveryNthStarIntSliderGrp;"
+	+"}");
+	*/
+	
+	
+	string $dupMethod = duplicationMethodOptionMenuGrp($parent, "generateStarfieldDuplicationMethodOptionMenuGrp");
+	//optionMenuGrp -e -cc $dupMethodChangeCommand $dupMethod;
+	
+	string $newFileEveryNthStar = `intSliderGrp 
+		-l "New File Every Nth Star"
+		//-vis false
+		-cal 1 "left"
+		-minValue 0		
+		-value 0 
+		-fmn 0
+		-fmx 9999999
+		-field true	
+		generateStarfieldNewFileEveryNthStarIntSliderGrp			
+		`;
+		
+	string $createEveryNth = `intSliderGrp 
+		-l "Create Every Nth Star"
+		-cal 1 "left"
+		-minValue 1		
+		-value 1 
+		-fmn 1
+		-fmx 9999999
+		-field true	
+		generateStarfieldCreateEveryNthStarIntSliderGrp			
+		`;
+		
+	//Button Commands
+	string $assignStarCommand = ("assignObjectToTextFieldButtonGrp(\"starfieldWizStarBaseTextFieldButtonGrp\");"
+	+"string $star = `textFieldButtonGrp -q -tx starfieldWizStarBaseTextFieldButtonGrp`;"
+	+"replaceTextScrollListWithSelectedObjects({$star},\"selectMasterListA\");"
+	+"if(isReferenceObject($star) == 1){"
+	+"	optionMenuGrp -e -sl 3 generateStarfieldDuplicationMethodOptionMenuGrp;"
+	+"}"
+	+"openConnectWiz();");
+	
+	string $assignColorAttrCommand = ("string $scolor[] = `textScrollList -q -si connectMasterListA`;"
+	+"textFieldButtonGrp -e -tx $scolor[0] starfieldWizStarColorAttributeTextFieldButtonGrp;");
+	
+	//Size
+	string $starSize = `floatSliderGrp
+		-l "Star Size"
+		-cal 1 "left"
+		-f true
+		-v 1
+		-min 0.0001
+		-max 10
+		-fmn 0.0001
+		-fmx 999999999
+		-pre 4
+		-en false
+		starfieldWizStarfieldStarSizeFloatSliderGrp
+		`;
+		
+	//Scale
+	string $scalefsg = `floatSliderGrp
+		-l "Scale"
+		-ann "A value of 1 will take a object that is 1 unit in size and create a realistic starfield"
+		-cal 1 "left"
+		-f true
+		-v 1
+		-min 1
+		-max 500
+		-fmn 1
+		-fmx 999999999
+		-pre 1
+		starfieldWizStarfieldScaleFloatSliderGrp
+		`;
+	
+	//Star Base Object
+	string $starBase = `textFieldButtonGrp
+		-l "Star Object"
+		-cal 1 "left"
+		-bl "Select"
+		-bc $assignStarCommand
+		starfieldWizStarBaseTextFieldButtonGrp
+		`;
+	
+	//Color Attribute
+	string $starColorAttr = `textFieldButtonGrp
+		-l "Star Color Attribute"
+		-cal 1 "left"
+		-bl "Select"
+		-bc $assignColorAttrCommand
+		starfieldWizStarColorAttributeTextFieldButtonGrp
+		`;
+	
+	//Create a remapValue node to handle the colorIndex conversion
+	string $remapIndexColor = createStarColorIndexRemapValue();
+	
+	//Gradient Control
+	string $gradientControl = wizGradientControl($parent, $remapIndexColor, "color");
+	
+	//Generate Starfield Button
+	string $button = wizStandardActionButton("Generate Starfield", "generateStarfield", "generateStarfieldButton");	
+	
+	string $particleButton = wizStandardActionButton("Generate Starfield Particles", "generateStarfieldParticles(\"-sl\");", "generateStarfieldParticlesButton");	
+	
+	string $generateStarfieldAndRenderButton = wizStandardActionButton("Generate Starfield And Render", "generateStarfieldAndRender", "generateStarfieldAndRenderButton");	
+	
+	//string $colorStars = wizStandardActionButton("Set nParticle ColorPP To Blue Magnitude", "generateStarfieldParticles(\"-cpp\");", "setParticleColorPPButton");	
+	
+	/*	
+	//Generate Starfield Button
+	string $generateStarfieldAndRenderButton = wizStandardActionButton("Generate Starfield And Render With Mental Ray", "generateStarfieldAndRenderWithMentalRay", "generateStarfieldAndRenderButton");	
+	
+	//Generate Starfield Button
+	string $generateStarfieldAndRenderButton = wizStandardActionButton("Generate Starfield And Render With Maya", "generateStarfieldAndRenderWithMaya", "generateStarfieldAndRenderButton");	
+	*/
+	//Layout for progress bar
+	columnLayout generateStarfieldProgressColumnLayout;	
+	
+	setParent..;
+
+}
+
+//MENUS
+//================================================================================================
+//FORMAT STARFIELD DATA MENU
+//--------------------------------------------
+global proc starfieldWizMenuBarLayout(string $parent)
+{
+	string $menuBarLayout = `menuBarLayout -p $parent starfieldWizMenuBarLayout`;
+	menu -l "Format Options";
+		formatStarfieldDataMenuItems();
+		
+	menu -l "Duplication Options";
+	menuItem -l "Duplication Method Options" -c ("openCurrentOptionsLayout(\"duplicationMethodOptions\");");
+	
+}
+
+//FORMAT STARFIELD DATA MENU
+//--------------------------------------------
+global proc formatStarfieldDataMenuItems()
+{
+	string $formatAndPrintCommand = ("string $starData[] = formatStarfieldData();"
+	+"printStarDataArrayFormattedStringArray($starData);");
+	
+	menuItem -l "CSV Options" -c ("openCurrentOptionsLayout(\"csvFormattingOptions\");");
+	menuItem -l "Format And Print Data" -c $formatAndPrintCommand;
+
+}
+
+//FUNCTIONS
+//=================================================================================================
+
+//CREATE COLOR INDEX REMAP VALUE
+//============================================
+global proc string createStarColorIndexRemapValue()
+{
+	string $remapColor = "StarColorIndexRemapValue";
+	if(`objExists $remapColor` == 1){
+		return $remapColor;
+	}
+	createNode -n $remapColor remapValue;
+	//Set the input min and max to the min and max of the ColorIndex value
+	//BLUE > -0.3
+	//YELLOW = 0.53
+	//RED > 1.15
+	setAttr ($remapColor + ".inputMin") -0.3;
+	setAttr ($remapColor + ".inputMax") 1.15;
+	
+	//Create a color position for yellow
+	setAttr ($remapColor + ".color[0].color_Color") -type double3 0 0 0 ;
+	setAttr ($remapColor + ".color[2].color_Color") -type double3 0.5 0.5 0.5;
+	setAttr ($remapColor + ".color[2].color_Position") 0.5;
+	setAttr ($remapColor + ".color[2].color_Interp") 1;
+	
+	//Set the colors to red yellow and blue
+	setAttr ($remapColor + ".color[2].color_Color") -type double3 1 1 0 ;
+	setAttr ($remapColor + ".color[0].color_Color") -type double3 0 0 1 ;
+	setAttr ($remapColor + ".color[1].color_Color") -type double3 1 0 0 ;
+	
+	return $remapColor;
+}
+
+//FORMAT STARFIELD DATA
+//===========================================================================================
+global proc string[] formatStarfieldData( string $dataFile )
+{
+	wizlog ("[@] formatStarfieldData");
+	
+	string $dbl = "-dmi FormatStarfieldDataDebugMenuItem -t Format Starfield Data"; string $dbm = "add"; int $dbc = 1;
+	menuItem -e -cb true FormatStarfieldDataDebugMenuItem;
+	
+	if (`size $dataFile` == 0){
+		$dataFile = `textFieldButtonGrp -q -tx starfieldDataCSVTextFieldButtonGrp`;
+	}
+	
+	string $csvData[] = getCSVDataByLine($dataFile);
+	
+	//Get rid of + and spaces
+	$csvData = substituteAllStringArray($csvData, "+", "");
+	$csvData = substituteAllStringArray($csvData, " ", "");
+	
+	int $col[];
+	
+	//Define what columns we want to get
+	string $formatted[];
+		
+	if (`radioButtonGrp -q -sl generateStarfield_coordinateSystem_radioButtonGrp` == 1){
+		// use ascention coordinates
+		if (`checkBox -q -v generateStarfield_useRADECMAGInputColumns_checkBox`){
+			$col[0] = `intFieldGrp -q -v1 generateStarfield_raColumn_intFieldGrp`;
+			$col[1] = `intFieldGrp -q -v1 generateStarfield_decColumn_intFieldGrp`;
+			$col[2] = `intFieldGrp -q -v1 generateStarfield_magColumn_intFieldGrp`;
+			$col[3] = `intFieldGrp -q -v1 generateStarfield_raDecColColumn_intFieldGrp`;
+			int $totalCol = `intFieldGrp -q -v1 generateStarfield_totalColumns_intFieldGrp`;
+			wizlog (" [RA] Column : " + $col[0] + " [DEC] Column : " + $col[1] + " [MAG] Column : " + $col[2] );
+			wizlog (" [Total Columns] : :" + $totalCol);
+			$formatted = getColumnsOfStringArray($csvData, $col, $totalCol);
+		} else {
+		
+			$col = { 8, 9, 10, 13 };
+			$formatted = getColumnsOfStringArray($csvData, $col, 15);
+		}
+	} else if (`radioButtonGrp -q -sl generateStarfield_coordinateSystem_radioButtonGrp` == 2){
+		// use galactic coordinatses
+		$col = { 0, 1, 2, 3 };		
+		$formatted = getColumnsOfStringArray($csvData, $col, 6);
+	} else if (`radioButtonGrp -q -sl generateStarfield_coordinateSystem_radioButtonGrp` == 3){
+		// xyz				
+		if (`checkBox -q -v generateStarfield_useXYZInputColumns_checkBox`){
+			$col[0] = `intFieldGrp -q -v1 generateStarfield_xColumn_intFieldGrp`;
+			$col[1] = `intFieldGrp -q -v1 generateStarfield_yColumn_intFieldGrp`;
+			$col[2] = `intFieldGrp -q -v1 generateStarfield_zColumn_intFieldGrp`;
+			$col[3] = `intFieldGrp -q -v1 generateStarfield_xyzColColumn_intFieldGrp`;
+			int $totalCol = `intFieldGrp -q -v1 generateStarfield_totalColumns_intFieldGrp`;
+			wizlog (" [X] Column : " + $col[0] + " [Y] Column : " + $col[1] + " [Z] Column : " + $col[2] );
+			wizlog (" [Total Columns] : :" + $totalCol);
+			$formatted = getColumnsOfStringArray($csvData, $col, $totalCol);
+		} else {
+			$col = { 0, 1, 2 };		
+			$formatted = getColumnsOfStringArray($csvData, $col, 8);	
+		}
+	} 	
+	
+	//string $formatted[] = formatStarfieldCSV($csvData);
+	debugListArray($dbl, " - Starfield Data - ", $formatted, $dbc, $dbm, "", 100);
+	
+	return $formatted;
+}
+
+//GENERATE STARFIELD
+//===========================================================================================
+//GENERATE STARFIELD
+//--------------------------------------------------
+global proc generateStarfieldAndRender()
+{
+	
+	generateStarfield();
+	wizBatchRender();
+
+}
+/*
+global proc generateStarfieldAndRenderWithMaya()
+{
+	generateStarfield();
+	mayaBatchRender;
+
+}
+*/
+
+global proc generateStarfield()
+{
+	string $wizProgressBar = putWizProgressBar("generateStarfieldProgressColumnLayout");
+	wizlog ("[@] generateStarfield");
+	
+	int $ok = 1;
+	
+	string $dataFiles[];
+	string $dataFile = `textFieldButtonGrp -q -tx starfieldDataCSVTextFieldButtonGrp`;
+	string $dataFolder = `textFieldButtonGrp -q -tx starfieldDataCSVDataFolderButtonGrp`;
+	string $namePrefix = "stars";
+	
+	if (`size $dataFolder` > 0){
+		$dataFiles = getAllFilesOfTypeInDirectory($dataFolder, "");
+		/*
+		string $namePrompt =`promptDialog 
+			-t "File Name"
+			-m "Name Of Output File:"
+			-tx "stars"
+			-ma "center"	
+			-b "OK" 
+			-db "OK"
+			`;
+
+		$namePrefix = `promptDialog -q -tx $namePrompt`;
+		*/
+		
+	} else {
+		$dataFiles[0] = $dataFile;
+		$ok = wizWarningDialog("Save File", "Save File Upon Completion Of Generating Starfield.", "Yes", "No");
+		//if(!$ok){ return;}	
+		refresh;
+		pause -sec 1;
+		
+		
+	
+	}
+	
+	for ($i=0;$i<`size $dataFiles`;$i++){	
+		
+		generateStarfieldMagRaDecColor($dataFiles[$i]);
+		if ($ok){
+			string $sn = `file -q -sn`;
+			if (`size $sn` == 0){
+				string $filePathSplice[] = wizSpliceFilePath($dataFiles[$i], "-fn");
+				file -rename ($dataFolder + "/" + $filePathSplice[0] + ".mb") ;
+			}
+			file -f -save ;
+			
+		}
+	
+		file -new;
+		
+		refresh -f;
+	    refreshAE;
+	    
+	}
+	
+}
+
+//GENERATE STARFIELD MAG RA DEC COLOR
+//--------------------------------------------------
+global proc generateStarfieldMagRaDecColor( string $dataFile )
+{
+	//<DEBUG>
+	string $dbl = "-dmi GenerateStarfieldDebugMenuItem -t Generate Starfield"; string $dbm = "add"; int $dbc = 1;
+	if (`menuItem -q -cb GenerateStarfieldDebugMenuItem` == 1){
+		menuItem -e -cb true NewStarfieldStarDebugMenuItem;
+		menuItem -e -cb true FormatStarfieldDataDebugMenuItem;
+	}
+	//<DEBUG>
+	
+	string $originalFile = `file -q -sn` ;
+	int $coorSys = `radioButtonGrp -q -sl generateStarfield_coordinateSystem_radioButtonGrp`;
+	int $xyz;
+	if ($coorSys == 3){
+		$xyz = 1;
+	}
+	
+	//Format the data
+	string $data[];
+	if (`checkBox -q -v generateStarfieldFormatDataCheckBox`){
+		wizlog ("	[#] Formatting Data [#]");
+		$data = formatStarfieldData($dataFile);
+	} else {
+		string $dataFile = `textFieldButtonGrp -q -tx starfieldDataCSVTextFieldButtonGrp`;
+		$data = getCSVDataByLine($dataFile);	
+	}
+	wizlog ("	[#] Formatting Complete [#]");
+	
+	int $genStarIndex = 0;
+	int $skipCount = 0;
+	if (`intSliderGrp -q -v generateStarfieldCreateEveryNthStarIntSliderGrp` > 1){
+		$genStarIndex = (`intSliderGrp -q -v generateStarfieldCreateEveryNthStarIntSliderGrp`) - 1;
+	}
+	int $numStars = (`size $data` / 4);
+	//debugListString ($dbl, { (" - Generating " + $numStars + " Stars") }, $dbc, $dbm);
+	wizlog (" [+] Generating " + $numStars + " Stars [+]");
+	
+	//debugListString($dbl,(tslDiv("")), $dbc, $dbm);
+	progressBar -e -pr 0 -min 0 -max $numStars wizProgressBar;
+	
+	//Create a layer for the stars
+	string $starfieldLayer = "StarfieldLayer";
+	if (`objExists $starfieldLayer` == 0){
+		createDisplayLayer -name $starfieldLayer -number 1 -empty;
+	}
+	
+	//If Reference file and creating new files
+	int $newFile = `intSliderGrp -q -v generateStarfieldNewFileEveryNthStarIntSliderGrp`;
+	int $starFileCount;
+	int $fileNum = 1;
+	string $starFiles[];
+	
+	string $starBase = `textFieldButtonGrp -q -tx starfieldWizStarBaseTextFieldButtonGrp`;
+	string $starBaseFile;
+	if (`optionMenuGrp -q -v generateStarfieldDuplicationMethodOptionMenuGrp` == "referenceCopy"){
+		$starBaseFile = `referenceQuery -f $starBase`;
+	
+	}
+	
+	if ($newFile > 0){	
+		incrementAndSaveFileByNumber($fileNum);
+	}
+	
+	string $allStars[];
+	
+	string $outData[];
+	//Create all the stars
+	int $rowSize = 4;
+	for ($i=0;$i<`size $data`;$i = $i + $rowSize){
+		if($genStarIndex > 0){
+			// for skipping stars to create fewer stars 
+			if($skipCount == $genStarIndex){
+				$skipCount = 0;					
+			} else {
+				$skipCount++;	
+				wizlog ("	[-] Skip Star [-]");
+				continue;
+			}
+		}	
+		
+		if ($newFile > 0){
+			
+			if ($starFileCount == $newFile){
+				wizlog ("	[+] New Star File [+]");
+					
+				//Save and then render
+				
+				file -f -save;
+				wizBatchRender();
+				
+				//Open the original file, increment file number, and continue adding stars
+				file -f -o $originalFile;
+				incrementAndSaveFileByNumber($fileNum);
+				$fileNum++;
+				
+				$starFileCount = 0;
+				
+			}
+		}
+		//_________________________________________
+		// Make the star
+		string $newStar;	
+		
+		float $ra;
+		float $dec;
+		float $mag;
+		float $colorIndex;
+		if (`radioButtonGrp -q -sl generateStarfield_coordinateSystem_radioButtonGrp` == 1){
+			//wizlog ("	[RA DEC MAG Format]");
+			
+			$ra = float($data[$i]);
+			$dec = float($data[($i + 1)]);
+			$mag = float($data[($i + 2)]);
+			$colorIndex = float($data[($i + 3)]);
+			
+			wizlog (" [Ra] " + $ra + " [Dec] " + $dec + " [Mag] " + $mag + " [Color] " + $colorIndex);
+			
+			$newStar = newStarfieldStarMagRaDecColor($mag, $ra, $dec, $colorIndex, $i);
+			float $spos[] = `getAttr ($newStar + ".center")`;
+			$outData[`size $outData`] = $spos[0] + ", " + $spos[1] + ", " + $spos[2];
+			
+		} else if (`radioButtonGrp -q -sl generateStarfield_coordinateSystem_radioButtonGrp` == 2){
+			//wizlog ("	[Galactic RA DEC MAG Format]");
+			$mag = float($data[$i]);
+			/*
+			$ra = float($data[($i + 1)]);
+			$dec = float($data[($i + 2)]);	
+			*/
+			$ra = float($data[($i + 2)]);
+			$dec = float($data[($i + 1)]);
+			
+			$colorIndex = float($data[($i + 3)]);
+			
+			wizlog (" [Ra] " + $ra + " [Dec] " + $dec + " [Mag] " + $mag + " [Color] " + $colorIndex);
+			
+			$newStar = newStarfieldStarMagRaDecColor($mag, $ra, $dec, $colorIndex, $i);
+			float $spos[] = `getAttr ($newStar + ".center")`;
+			$outData[`size $outData`] = $spos[0] + ", " + $spos[1] + ", " + $spos[2];
+		} else if (`radioButtonGrp -q -sl generateStarfield_coordinateSystem_radioButtonGrp` == 3){
+			//wizlog ("	[XYZ Format]");
+			// if we are using xyz coordinates
+			float $xCoor = float($data[$i]);
+			float $yCoor = float($data[($i + 1)]);
+			float $zCoor = float($data[($i + 2)]);
+			$newStar = newStarfieldStarXYZ($xCoor, $yCoor, $zCoor, $colorIndex, $i);
+			wizlog (" [X] " + $xCoor + " [Y] " + $yCoor + " [Z] " + $zCoor);
+			float $spos[] = `getAttr ($newStar + ".center")`;
+			$outData[`size $outData`] = $spos[0] + ", " + $spos[1] + ", " + $spos[2];
+		}
+
+		//debugList($dbl, { ("Mag: " + $mag + " Ra: " + $ra + " Dec: " + $dec + " Color: " + $colorIndex) }, $dbc, $dbm);
+		//wizlog ("Mag: " + $mag + " Ra: " + $ra + " Dec: " + $dec + " Color: " + $colorIndex);
+		/*
+		if ($newStar != ""){
+			$allStars[`size $allStars`] = $newStar;
+		}	
+		*/
+		
+		$allStars[`size $allStars`] = $newStar;
+		//editDisplayLayerMembers -noRecurse $starfieldLayer `ls -sl`;
+		progressBar -e -s 1 wizProgressBar;
+		
+		$starFileCount++;
+	}
+	
+	refresh -f;
+	refreshAE;
+	
+	float $allPos[];
+	if (`checkBox -q -v generateStarfield_outputPositionsToFile_checkBox`){
+		for ($i=0;$i<`size $allStars`;$i++){
+			float $spos[] = `getAttr ($allStars[$i] + ".center")`;
+			$allPos = appendFloatArray($allPos, $spos, `size $spos`);
+			
+		}
+		wizCSVFile("-p -c -col 3", (floatArrayToStringArray($allPos)));
+		
+		print ("float $data[] = { " + (stringArrayToString($outData, ", \n")) + " };");
+		
+	}
+	
+	
+	if (`checkBox -q -v generateStarfield_NParticleStars_checkBox` == 1){
+		select -r $allStars;
+		group -n "StarsGroup1";
+		select -r $allStars;
+		generateStarfieldParticles("-sl");
+		
+	}
+	
+	//Hide the original base star
+	string $starBase = `textFieldButtonGrp -q -tx starfieldWizStarBaseTextFieldButtonGrp`;
+	if (`objExists $starBase`){
+		hide $starBase;
+	}
+	
+	debugListString($dbl,(tslDiv("END")), $dbc, $dbm);
+	progressBar -e -pr $numStars wizProgressBar;
+	
+}
+
+global proc renderStarsAndStartNewFile()
+{
+	file -f -save;
+	
+}
+
+//NEW STARFIELD STAR MAG RA DEC COLOR
+//--------------------------------------------------
+global proc string newStarfieldStarMagRaDecColor( float $mag, float $ra, float $dec, float $colorIndex, int $id )
+{
+	//<DEBUG>
+	string $dbl = "-dmi NewStarfieldStarDebugMenuItem -t New Starfield Star"; string $dbm = "add"; int $dbc = 1;
+	//<DEBUG>
+
+	string $starBase = `textFieldButtonGrp -q -tx starfieldWizStarBaseTextFieldButtonGrp`;
+	
+	string $newStar;
+	if (`size $starBase` == 0 || `checkBox -q -v generateStarfield_NParticleStars_checkBox` == 1){
+		string $newStarLoc[] = `spaceLocator -p 0 0 0 -n ("starLocator_m" + $mag + "_ra" + $ra + "_dec" + $dec + "_col" + $colorIndex)`;
+		$newStar = $newStarLoc[0];
+	} else {
+		//Duplicate the star base object
+		select -r $starBase;
+		$newStar = duplicateObjectUsingDuplicationMethod($starBase, "generateStarfieldDuplicationMethodOptionMenuGrp");
+		
+	}
+
+	select -r $newStar;
+	debugList($dbl, { (" - New Star: " + $newStar) }, $dbc, $dbm);
+	
+	//_________________________________________
+	// Move into position
+	
+	//Calculate how far to move the star out in space
+	float $scale = `floatSliderGrp -q -v starfieldWizStarfieldScaleFloatSliderGrp`;	
+	
+	//This is the formula for getting the star the right size	
+	float $zmove = (((($mag + 2) * 1.6) * 50) * -$scale);
+	//debugList($dbl, { (" - ZMove: " + $zmove) }, $dbc, $dbm);
+
+	// Move into position
+	/*
+	//Put star into position
+	move -r 0 0 $zmove;
+	xform -ws -piv 0 0 0;
+	rotate -ws $dec $ra 0;
+	
+	//rotate -ws $dec 0 0;
+	//rotate -ws 0 $ra 0;
+	//rotate -r -os $dec 0 0 ;
+	//rotate -r -os 0 $ra 0 ;
+	*/
+	
+	
+	if (`checkBox -q -v generateStarfield_tomsMethod_checkBox`){
+		move -r 0 0 $zmove;
+		string $groupDec = `group -n ("DEC_" + $dec + "_" + $id)`; 
+		xform -os -piv 0 0 0;
+		select -r $groupDec ;
+		
+		string $groupRa = `group -n ("RA_" + $ra + "_" + $id)`;
+		xform -os -piv 0 0 0;
+		
+		select -r $groupDec;
+		rotate -r -os $dec 0 0;
+		
+		select -r $groupRa;
+		rotate -r -os 0 $ra 0;
+		
+		parent -w $newStar;
+		//delete $groupDec;
+		//delete $groupRa;
+	} else {
+		move -r 0 0 $zmove;
+		xform -ws -piv 0 0 0;
+		rotate -ws $dec $ra 0;
+		
+	}
+	
+	float $pos[] = `getAttr ($newStar + ".center")`;
+	wizlog (" [*] New Star [*] " + $pos[0] + " : " + $pos[1] + " : " + $pos[2] );
+	
+	//_________________________________________
+	// Color
+	
+	//Remap the value of the color index and get the resulting outColor
+	string $colorAttr = `textFieldButtonGrp -q -tx starfieldWizStarColorAttributeTextFieldButtonGrp`;
+	if ($colorAttr == ""){
+		//If no color attribute was specified then don't change the color
+		return $newStar;
+	}
+	setAttr "StarColorIndexRemapValue.inputValue" $colorIndex; 
+	float $color[] = `getAttr "StarColorIndexRemapValue.outColor"`;
+	setAttr ($newStar + "." + $colorAttr) -type double3 $color[0] $color[1] $color[2] ;
+	debugList($dbl, { (" - Star RGB Color: " + $color[0] + " " + $color[1] + " " + $color[2]) }, $dbc, $dbm);
+	
+
+	return $newStar;
+}
+
+//NEW STARFIELD STAR XYZ
+//--------------------------------------------------
+global proc string newStarfieldStarXYZ( float $x, float $y, float $z, float $colorIndex, int $id )
+{
+/*
+	if ($x == 0.00000 || $y == 0.00000 || $z == 0.00000){
+		return "";
+	}
+	*/
+	string $starBase = `textFieldButtonGrp -q -tx starfieldWizStarBaseTextFieldButtonGrp`;
+	
+	string $newStar;
+	if (`size $starBase` == 0 || `checkBox -q -v generateStarfield_NParticleStars_checkBox` == 1){
+		//Make a nParticle star
+		string $newStarLoc[] = `spaceLocator -p 0 0 0 -n ("starLocator_x" + $x + "_y" + $y + "_z" + $z + "_col" + $colorIndex)`;
+		$newStar = $newStarLoc[0];
+	} else {
+		//Duplicate the star base object
+		select -r $starBase;
+		$newStar = duplicateObjectUsingDuplicationMethod($starBase, "generateStarfieldDuplicationMethodOptionMenuGrp");
+		
+	}
+
+	//_________________________________________
+	// Move into position
+	
+	select -r $newStar;
+	
+	float $scale = `floatSliderGrp -q -v starfieldWizStarfieldScaleFloatSliderGrp`;
+	$x = $x * $scale;
+	$y = $y * $scale;
+	$z = $z * $scale;
+	xform -ws -t $x $y $z $newStar;
+	
+	//_________________________________________
+	// Color
+
+	//Remap the value of the color index and get the resulting outColor
+	string $colorAttr = `textFieldButtonGrp -q -tx starfieldWizStarColorAttributeTextFieldButtonGrp`;
+	if ($colorAttr == ""){
+		//If no color attribute was specified then don't change the color
+		return $newStar;
+	}
+	setAttr "StarColorIndexRemapValue.inputValue" $colorIndex; 
+	float $color[] = `getAttr "StarColorIndexRemapValue.outColor"`;
+	setAttr ($newStar + "." + $colorAttr) -type double3 $color[0] $color[1] $color[2] ;
+		
+	return $newStar;
+
+}
+
+/*\\\
+
+for ($x = 1; $x <= 46172; $x++)
+{
+	//Create plane for star//
+	polyPlane -w 1 -h 1 -sx 1 -sy 1 -ax 0 0 1 -cuv 2 -ch 1;
+	select -r pPlane1 ;
+	rename pPlane1 ("star" + $x);
+	//setAttr "pPlane1.translateX" 0;//
+	//setAttr "pPlane1.translateY" 0;//
+	//setAttr "pPlane1.translateZ" 0;//
+	//Move down -zaxis for magnitude adjustment//
+	
+	move -r 0 0 ((($m[$x] + 2) * 1.6) * -$scale) ;
+	
+	//Group for DEC rotate//
+	group; xform -os -piv 0 0 0;
+	
+	//Select node and rename//
+	select -r group1 ;
+	rename "group1" ("DECnode" + $x);
+	
+	//Group again for RA rotate//
+	group; xform -os -piv 0 0 0;
+	select -r group1 ;
+	rename "group1" ("RAnode" + $x);
+	
+	//Rotate for proper DEC//
+	select -r ("DECnode" + $x) ;
+	rotate -r -os $dec[$x] 0 0 ;
+	
+	//Rotate for proper RA//
+	select -r ("RAnode" + $x);
+	rotate -r -os 0 $ra[$x] 0 ;
+	
+	//select -r pPlane1 ;//
+	//rename |RAnode$x|DECnode$x|pPlane1 "star$x" ;//
+	//Go to next star//
+};
+
+////////////
+move -r 0 0 100;
+xform -ws -piv 0 0 0;
+rotate -ws 20 20 0 ;
+
+
+move -r 0 0 100;
+//Group for DEC rotate//
+group;
+xform -os -piv 0 0 0;
+//Select node and rename//
+select -r group1 ;
+rename "group1" ("DECnode");
+//Group again for RA rotate//
+group;
+xform -os -piv 0 0 0;
+select -r group1;
+rename "group1" ("RAnode");
+//Rotate for proper DEC//
+select -r ("DECnode") ;
+rotate -r -os 20 0 0 ;
+//Rotate for proper RA//
+select -r ("RAnode");
+rotate -r -os 0 20 0 ;
+
+
+
+
+
+
+
+*/
+
+//GENERATE STARFIELD NO COLOR (OLD)
+//--------------------------------------------------
+global proc generateStarfieldNoColor()
+{
+	//Looping with magnitude scale set for area of square to be 1/2 as distance increases, 5000 stars//
+	//Declare scale of star sphere//
+	float $scale = 50;
+	float $m[] = getStarData("m");
+	float $ra[] = getStarData("ra");
+	float $dec[] = getStarData("dec");;
+	string $stars[];
+	
+	for($i=1;$i<=`size $m`;$i++){
+		//Create plane for star//
+		string $starPlane = `polyPlane -w 1 -h 1 -sx 1 -sy 1 -ax 0 0 1 -cuv 2 -ch 1`;
+		string $starName = ("star" + $i);
+		rename $starPlane $starName;
+		$stars[`size $stars`] = $starName;
+		//Move down -zaxis for magnitude adjustment//
+		move -r 0 0 ((($m[$i] + 2) * 1.6) * -$scale) ;
+		//Group for DEC rotate//
+		group;
+		xform -os -piv 0 0 0;
+		//Select node and rename//
+		select -r group1 ;
+		rename "group1" ("DECnode" + $i);
+		//Group again for RA rotate//
+		group;
+		xform -os -piv 0 0 0;
+		select -r group1 ;
+		rename "group1" ("RAnode" + $i);
+		//Rotate for proper DEC//
+		select -r ("DECnode" + $i) ;
+		rotate -r -os $dec[$i] 0 0 ;
+		//Rotate for proper RA//
+		select -r ("RAnode" + $i);
+		rotate -r -os 0 $ra[$i] 0 ;
+		//select -r pPlane1 ;//
+		//rename |RAnode$x|DECnode$x|pPlane1 "star$x" ;//
+		//Go to next star//
+	}
+
+}
+
+//GET BY LINE STAR CSV DATA FILE (deprecated)
+//===============================================================
+global proc string[] getByLineStarCSVDataFile(string $file)
+{
+	string $dbl = "-dmi GetByLineStarCSVDataFileDebugMenuItem -t Starfield CSV Data"; string $dbm = "add"; int $dbc = 1;
+	
+	$fileId=`fopen $file "r"`;
+	string $formattedLines[];
+	int $lineCount = 0;
+	while( !`feof $fileId` ){
+		string $nextLine = `fgetline $fileId`;
+		$nextLine = stringInsertSpaceAfterCommas($nextLine);
+		debugList($dbl, { ($nextLine) }, $dbc, $dbm);
+		string $tok[] = tokenizeString($nextLine, ",");
+		if(`checkBox -q -v csvFormattingIgnoreFirstLineCheckBox` == 1 && $lineCount == 0){
+			//continue;
+		} else {
+			appendStringArray($formattedLines,$tok,`size $tok`);
+		}
+	
+		$lineCount++;
+	}
+	fclose $fileId;
+	
+	return $formattedLines;
+}
+
+//FORMAT STARFIELD CSV (deprecated)
+//===============================================================
+global proc string[] formatStarfieldCSV(string $data[])
+{
+	//The data that we want to strip out
+	string $m[];
+	string $ra[];
+	string $dec[];
+	string $color[];
+	
+	//These indicate which colume the specified data is found
+	int $raI = 8;
+	int $decI = 9;
+	int $mI = 11;
+	int $colorI = 14;
+	
+	//Keeping track of rows
+	int $rowI = 0;
+	int $endI = 14; //How many total columns there are in csv file
+	string $rowData[];
+	string $formattedData[];
+	for($i=0;$i<`size $data`;$i++){
+		$data[$i] = substituteAllString($data[$i], "+", "");
+		$rowI++;
+		if($rowI == $mI){
+			$m[`size $m`] = $data[$i];	
+			$rowData[`size $rowData`] = $data[$i];
+			continue;
+		}
+		if($rowI == $raI){
+			$ra[`size $ra`] = $data[$i];	
+			$rowData[`size $rowData`] = $data[$i];
+			continue;
+		}
+		if($rowI == $decI){
+			$dec[`size $dec`] = $data[$i];
+			$rowData[`size $rowData`] = $data[$i];
+			continue;
+		}
+		if($rowI == $colorI){
+			$color[`size $color`] = $data[$i];
+			$rowData[`size $rowData`] = $data[$i];
+		}
+		
+		if($rowI == $endI){
+			appendStringArray($formattedData, $rowData, `size $rowData`);
+			//$formattedData = $formattedData + stringArrayToString($rowData,",") + "\n";
+			$rowI = 0;	
+		}
+	}
+	return $formattedData;
+}
+
+//PRINT STAR DATA ARRAY FORMATTED STRING ARRAY
+//===============================================================
+global proc printStarDataArrayFormattedStringArray(string $data[])
+{
+	int $maxLine = 4;
+	int $lineCount = 0;
+	
+	print("float $stardata[] = {");
+	for($i=0;$i<`size $data`;$i++){
+		$lineCount++;
+		if($i==(`size $data` -1)){
+			print($data[$i]);
+		} else {
+			print($data[$i] + ",");
+		}
+		
+		if($lineCount == $maxLine && $i != (`size $data` - 1)){
+			print("\n");
+			$lineCount = 0;
+		}
+		
+	}
+	print("};" + "\n");
+
+}
+
+/*
+global proc float[] convertStarColorIndexToRGB(float $ci)
+{
+		//This doesn't work
+	float $thrd = $ci / 3;
+	float $rgb[] = { 0.0, 0.0, 0.0 };
+	//Blue
+	if($ci < 0.333){
+		$rgb[2] = 1;
+	}
+	//Yellow
+	if($ci > 0.333 && $ci < 0.666){
+		$rgb[1] = 1;	
+		$rgb[0] = 1;	
+	}
+	//Red
+	if($ci > 0.666){
+		$rgb[0] = 1;	
+	}
+	return $rgb[0];
+}
+*/
+
+global proc float[] getRGBColorFromPositionOnRamp(string $ramp, float $pos)
+{
+	int $indices[] = `getAttr -mi ($ramp + ".colorEntryList")`;
+	int $newI = findEmptyMultiIndiceIndex($indices);
+	setAttr ($ramp + ".colorEntryList[" + $newI + "].position") $pos;
+	float $rgb[] = `getAttr ($ramp + ".colorEntryList[" + $newI + "].color")`;
+	removeMultiInstance -break true ($ramp + ".colorEntryList[" + $newI + "]");	
+	return $rgb;
+}
+
+
+
+global proc generateStarfieldParticles( string $flags )
+{
+	wizlog ("[@] generateStarfieldParticles");
+	string $obj, $type;
+	string $name = "Starfield";
+	string $sel[];
+	int $edit;
+	int $cpp;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+			
+			case "-nm" : case "-name" :
+			$name = $tok[($i + 1)];
+			break ;
+			
+			case "-typ" : case "-type" :
+			$type = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+			case "-cpp" : case "-colorPerParticle" :
+			$cpp = 1;
+			break ;
+			
+		}
+	}
+	
+	wizlog("	[+] Generating : " + `size $sel` + " : Star Particles");
+	// make new particle system
+	
+	string $emitter[] = `emitter -pos 0 0 0 -type volume -r 100 -sro 0 -nuv 0 -cye none -cyi 1 -spd 1 -srn 0 -nsp 1 -tsp 0 -mxd 0 -mnd 0 -dx 1 -dy 0 -dz 0 -sp 0 -vsh cube -vof 0 0 0 -vsw 360 -tsr 0.5 -afc 1 -afx 1 -arx 0 -alx 0 -rnd 0 -drs 0 -ssz 0 `;
+
+	string $nParticle[] = `nParticle`;
+
+	connectDynamic -em $emitter[0] $nParticle[0];
+
+	// emit a new particle and place into position of each selection
+	
+	for ($i=0;$i<`size $sel`;$i++){
+		//float $spos[] = `xform -q -ws -t $sel[$i]`;
+		float $spos[] = `getAttr ($sel[$i] + ".center")`;
+		if ($spos[0] == 0.00000 || $spos[1] == 0.00000 || $spos[2] == 0.00000 || $spos[0] == -0.00000 || $spos[1] == -0.00000 || $spos[2] == -0.00000 ){
+			continue;
+		}
+		//wizlog ("emit -o " + $nParticle[0] + " -pos " + $spos[0] + " " + $spos[1] + " " +  $spos[2] + ";");	
+		emit -o $nParticle -pos $spos[0] $spos[1] $spos[2];	
+	}
+	
+	refresh -f;
+	refreshAE;
+	
+	select -r $nParticle;
+	
+	setNClothStartState;
+	//performSetNClothStartState 1;
+	
+	refresh -f;
+	refreshAE;
+
+}
+
+/*
+global proc starfieldWizColorPerParticle( string $flags )
+{
+	string $obj, $type;
+	string $sel[];
+	int $edit;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-typ" : case "-type" :
+			$type = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	
+
+
+}
+*/

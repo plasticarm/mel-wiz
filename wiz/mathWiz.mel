@@ -1,0 +1,369 @@
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//|||||||||||||||||||||||||:::WIZ:::||||||||||||||||||||||||||||||||||
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+/*====================================================================
+Author: Glen Johnson
+Email: plasticarm@gmail.com
+Website: plasticarm.com / hrpictures.com
+----------------------------------------------------------
+Summary:
+
+
+
+====================================================================*/
+
+global proc mathWiz()
+{
+	
+}
+
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//////////////////////////////////////////////////////////////////////
+//			LAYOUTS
+//////////////////////////////////////////////////////////////////////
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+global proc mathWizColumnLayout(string $parent)
+{
+	string $layout = `columnLayout
+		-adj 1
+		-columnOffset "both" 10
+		-p $parent
+		mathWizColumnLayout
+		`;
+		
+		mathWizLayout($layout);
+}
+
+global proc mathWizFrameLayout(string $parent)
+{
+	string $layout = `frameLayout
+		-l "Math Wiz"	
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $parent
+		mathWizFrameLayout
+		`;
+	
+		mathWizLayout($layout);
+}
+
+global proc mathWizLayout(string $parent)
+{
+	simpleFunctionsMenuBarLayout($parent);
+	simpleFunctionsLayout($parent);
+	mathWizFrameCalcutator($parent);
+}
+
+
+global proc simpleFunctionsLayout(string $parent)
+{
+	//rowLayout -nc 3;
+	
+	string $inputA = `floatSliderGrp -l "Input A:" -f true -cal 1 "left" -cw 1 40 -adj 2 -pre 4 -ss 0.1 -fmn -999999999999 -fmx 999999999999 mathInputFunctionAFloatSliderGrp`;
+	string $inputB = `floatSliderGrp -l "Input B:" -f true -cal 1 "left" -cw 1 40 -adj 2 -pre 4 -ss 0.1 -fmn -999999999999 -fmx 999999999999 mathInputFunctionBFloatSliderGrp`;
+	string $inputC = `floatSliderGrp -l "Input C:" -f true -cal 1 "left" -cw 1 40 -adj 2 -pre 4 -ss 0.1 -fmn -999999999999 -fmx 999999999999 mathInputFunctionCFloatSliderGrp`;	
+	string $inputD = `floatSliderGrp -l "Input D:" -f true -cal 1 "left" -cw 1 40 -adj 2 -pre 4 -ss 0.1 -fmn -999999999999 -fmx 999999999999 mathInputFunctionDFloatSliderGrp`;	
+	//setParent..;
+	
+	string $getA = "float $a = `floatSliderGrp -q -v mathInputFunctionAFloatSliderGrp`;";
+	string $getB = "float $b = `floatSliderGrp -q -v mathInputFunctionBFloatSliderGrp`;";
+	string $getC = "float $c = `floatSliderGrp -q -v mathInputFunctionCFloatSliderGrp`;";
+	string $getD = "float $d = `floatSliderGrp -q -v mathInputFunctionDFloatSliderGrp`;";
+	
+	string $multiplyCommand = ($getA + $getB + "float $multi = ($a * $b);"
+	+"floatFieldGrp -e -v1 $multi mathWizResultAFloatFieldGrp;");
+	
+	string $divCommand = ($getA + $getB + "float $div = ($a / $b);"
+	+"floatFieldGrp -e -v1 $div mathWizResultAFloatFieldGrp;");
+	
+	string $powCommand = ($getA + $getB + "float $pow = pow($a, $b);"
+	+"floatFieldGrp -e -v1 $pow mathWizResultAFloatFieldGrp;");
+	
+	string $expCommand = ($getA + "float $exp = exp($a);"
+	+"floatFieldGrp -e -v1 $exp mathWizResultAFloatFieldGrp;");
+	
+	string $hypotCommand = ($getA + $getB + "float $hypot = hypot($a, $b);"
+	+"floatFieldGrp -e -v1 $hypot mathWizResultAFloatFieldGrp;");
+	
+	string $eqbc = ("string $eq = `textFieldButtonGrp -q -tx solveStringEquationTextFieldButtonGrp`;"
+	+"float $eqResult = solveStringEquation($eq);"
+	+"floatFieldGrp -e -v1 $eqResult mathWizResultAFloatFieldGrp;");
+	
+	string $dc = ("if(`textFieldButtonGrp -q -tx solveStringEquationTextFieldButtonGrp` != \"\"){"
+	+ $eqbc
+	+"}");
+	floatSliderGrp -e -dc $dc $inputA;
+	floatSliderGrp -e -dc $dc $inputB;
+	floatSliderGrp -e -dc $dc $inputC;
+	
+	//Input Equation
+	string $equation = `textFieldButtonGrp
+		-l "Input Equation:"
+		-ann "Use Variables $a, $b, and $c To Reference The Above Input Fields"
+		-cal 1 "left"
+		-cw 1 80
+		-adj 2
+		-bl "Solve"
+		-bc $eqbc
+		solveStringEquationTextFieldButtonGrp
+		`;	
+	
+	rowLayout -nc 5;
+	
+	button -l "Multiply(a,b)"
+		-c $multiplyCommand
+		;
+		
+	button -l "Divide(a,b)"
+		-c $divCommand
+		;
+		
+	button -l "Pow(a,b)"
+		-c $powCommand
+		;
+		
+	button -l "Exp(a)"
+		-c $expCommand
+		;
+		
+	button -l "Hypot(a,b)"
+		-c $hypotCommand
+		;
+	
+	setParent..;
+	
+	string $result = `floatFieldGrp -l "Result A:" -cal 1 "left" -cw 1 45 -adj 2 -pre 8 mathWizResultAFloatFieldGrp`;
+
+}
+
+global proc mathWizFrameCalcutator( string $parent )
+{
+	string $layout = `frameLayout
+		-l "Frame Calculator"	
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $parent
+		mathWizFrameCalculatorFrameLayout
+		`;
+/*
+		wizFloatSliderGrp(
+			"-l "
+			*/
+}
+
+//""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+//////////////////////////////////////////////////////////////////////
+//			MENUS
+//////////////////////////////////////////////////////////////////////
+//""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+global proc simpleFunctionsMenuBarLayout(string $parent)
+{
+	string $menuBarLayout = `menuBarLayout	-p $parent simpleFunctionsMenuBarLayout`;
+	
+	string $inputSliderOptionsCommand = ("openCurrentOptionsLayout(\"floatSliderGrpOptions\");"
+	+"addFloatSliderGrpOptions(\"mathInputFunctionAFloatSliderGrp\");"
+	+"addFloatSliderGrpOptions(\"mathInputFunctionBFloatSliderGrp\");"
+	+"addFloatSliderGrpOptions(\"mathInputFunctionCFloatSliderGrp\");"
+	+"addFloatSliderGrpOptions(\"mathInputFunctionDFloatSliderGrp\");");
+	
+	menu -l "Options";
+		menuItem -l "Input Slider Options" -c $inputSliderOptionsCommand;
+	
+}
+
+global proc float solveStringEquation(string $eq)
+{
+
+	global float $WIZ_stringEquation;
+	string $eval = ("global float $WIZ_stringEquation;"
+	+"float $a = `floatSliderGrp -q -v mathInputFunctionAFloatSliderGrp`;"
+	+"float $b = `floatSliderGrp -q -v mathInputFunctionBFloatSliderGrp`;"
+	+"float $c = `floatSliderGrp -q -v mathInputFunctionCFloatSliderGrp`;"
+	+"float $d = `floatSliderGrp -q -v mathInputFunctionDFloatSliderGrp`;"
+	+"$WIZ_stringEquation = " + $eq + ";");
+	
+	eval($eval);
+	return $WIZ_stringEquation;
+
+}
+
+//()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()
+//////////////////////////////////////////////////////////////////////
+//			FUNCTIONS
+//////////////////////////////////////////////////////////////////////
+//()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()
+
+//NORMALIZE FLOAT ARRAY
+//==========================================================
+global proc float[] normalizeFloatArray(float $arr[])
+{
+	string $dbl = "-dmi NormalizeFloatArrayDebugMenuItem -t Normalize Float Array"; string $dbm = "add"; int $dbc = 1;
+	float $arrCopy[];
+	appendFloatArray($arrCopy, $arr, `size $arr`);
+	debugListArray($dbl, " - Array: ", (floatArrayToStringArray($arr)), $dbc, $dbm, "", 100);
+	
+	float $abs[] = absArray($arrCopy);
+	debugListArray($dbl, " - Abs Array: ", (floatArrayToStringArray($abs)), $dbc, $dbm, "", 100);
+	
+	float $sorted[] = sort($abs);
+	debugListArray($dbl, " - Sorted Array: ", (floatArrayToStringArray($sorted)), $dbc, $dbm, "", 100);
+	
+	float $norm[];
+	for($i=0;$i<`size $arr`;$i++){		
+		$norm[$i] = $arr[$i] / $sorted[(`size $sorted` - 1)];	
+		debugList($dbl, { (" - Normalized: " + $norm[$i]) }, $dbc, $dbm);
+		
+	}	
+	
+	return $norm;
+}
+
+//EVEN OR ODD
+//==========================================================
+global proc int evenOrOdd( int $num)
+{
+	//even returns 1, odd returns 0
+	if($num % 2 == 0){    
+	   //print("even = 1" + "\n");
+	   return 1;
+	} else {
+	    //print("odd = 0" + "\n");
+	    return 0;
+	}	
+}
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			INVERT
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//====================================================================
+//INVERT FLOAT
+//==========================================================
+global proc float invertFloat( float $float)
+{
+	float $num = $float;
+	if($num > 0){
+		$num = 0 - $num;	
+	} else {
+		$num = abs($num);	
+	}
+	return $num;
+}
+
+//INVERT INT
+//==========================================================
+global proc int invertInt(int $num)
+{
+	if($num > 0){
+		$num = 0 - $num;	
+	} else {
+		$num = abs($num);	
+	}
+	return $num;
+}
+/*
+global proc float floatDiff(float $a, float $b)
+{
+	float $diff;
+	if($b < 0){
+		$diff = $a
+	}
+}
+*/
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			RANDOM
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//====================================================================
+//RAND BOOL
+//==========================================================
+global proc int randBool()
+{
+	int $ranBool = int(floor(`rand 0 2`));
+	return $ranBool;
+}
+
+global proc int randomBoolean()
+{
+	int $ranBool = randBool();
+	return $ranBool;
+}
+
+//@ RAND INT
+//====================================================================
+/*=======================| USAGE |====================================	
+    If using randInt to get a random array index :
+        int $ranIndex = randInt(0, (`size $arr` - 1));
+====================================================================*/
+
+global proc int randInt( int $min, int $max )
+{
+    if ($min == $max){ return $min;}
+	int $ranInt = int(floor(`rand $min ($max + 1)`));
+    if ($ranInt > $max){
+        $ranInt = $max;
+    }
+	
+	return $ranInt;	
+}
+
+global proc int randomInt( int $min, int $max )
+{
+	int $ranInt = randInt($min, $max);
+	return $ranInt;
+}
+
+global proc int randIntBias( int $min, int $max, int $bias )
+{
+	int $ranA = randInt ($min, $max);
+	int $ranB = randInt ($bias, $ranA);
+	return $ranB;
+}
+
+global proc int randIntBiasWeight( int $min, int $max, int $bias, float $biasWeight )
+{
+	int $ranA = rand ($min, $max);
+	int $ranB = rand ($bias, $ranA);
+	int $return = int($ranB - (abs(($ranB - $bias)) * $biasWeight));
+	
+	return $return;
+}
+
+global proc float randFloatBias( float $min, float $max, float $bias )
+{
+	float $ranA = rand ($min, $max);
+	float $ranB = rand ($bias, $ranA);
+	return $ranB;
+}
+
+global proc float randFloatBiasWeight( float $min, float $max, float $bias, float $biasWeight )
+{
+	float $ranA = rand ($min, $max);
+	float $ranB = rand ($bias, $ranA);
+	float $return = $ranB - (abs(($ranB - $bias)) * $biasWeight);
+	
+	return $return;
+}
+
+

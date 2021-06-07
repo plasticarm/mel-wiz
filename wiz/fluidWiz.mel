@@ -1,0 +1,3815 @@
+global proc fluidWiz()
+{
+/*
+global string $fluidWizWindow;
+$fluidWizWindow = "fluidWiz";
+if(`window -exists $fluidWizWindow`){
+	deleteUI $fluidWizWindow;
+}
+
+window
+	-title "Fluid Wiz"
+	-widthHeight 400 200
+	-menuBar on
+	-menuBarVisible on
+	-minimizeButton on
+	-maximizeButton on
+	-sizeable on		
+	-resizeToFitChildren off
+	-titleBar on
+	$fluidWizWindow;
+	
+	string $masterLayout = `columnLayout
+		-adjustableColumn true
+		masterLayout
+		`;
+		
+	fluidToFluidContentsTransferLayout($masterLayout);
+	centerFluidOnObjectBoundingBoxLayout($masterLayout);
+	controlSelectedFluidsRampsLayout($masterLayout);
+	
+	showWindow $fluidWizWindow;
+*/
+}
+
+
+global proc fluidModule(string $parent)
+{
+		
+	string $fluidLayout = `frameLayout
+			-l "Fluids"	
+			-ann ""
+			-bv true
+			-la "center"
+			-li 10
+			-lv true
+			-mw 10
+			-mh 10		
+			
+			-cll true
+			-cl true
+			-parent $parent
+			`;
+			
+	fluidMenu($fluidLayout);
+		
+	string $pfEmitLayout = `frameLayout
+			-l "pfEmit"	
+			-ann ""
+			-bv true
+			-la "center"
+			-li 10
+			-lv true
+			-mw 10
+			-mh 10		
+			
+			-cll true
+			-cl true
+			-parent $fluidLayout
+			`;
+			
+	pfEmitLayout();
+	
+		
+	string $valveLayout = `frameLayout
+			-l "Valve"	
+			-ann ""
+			-bv true
+			-la "center"
+			-li 10
+			-lv true
+			-mw 10
+			-mh 10		
+			
+			-cll true
+			-cl true
+			-parent $fluidLayout
+			`;
+	valveLayout();
+	
+	fillSelectedFluidWithColorLayout($fluidLayout);
+	
+	fillWithFluidLayout($fluidLayout);
+	
+	fluidToFluidContentsTransferLayout($fluidLayout);
+	
+	centerFluidOnObjectBoundingBoxLayout($fluidLayout);
+	
+	cacheFluidsLayout($fluidLayout);
+	
+	miscFluidFunctionsLayout($fluidLayout);
+	
+	controlSelectedFluidsRampsLayout($fluidLayout);
+	
+	copyFluidAttributesExpressionLayout($fluidLayout);
+	
+	emitFalloffUsingOtherMethodLayout($fluidLayout);
+}
+
+
+//FIX TRANSFORMS LAYOUT
+//------------------------------
+global proc fillWithFluidLayout(string $parent)
+{
+	string $layout = `frameLayout
+		-l "Fill With Fluid"	
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-p $parent
+		`;
+	
+	
+	floatSliderGrp
+		-l "Quality"
+		-f true
+		-cal 1 "left"
+		-cw1 80
+		-v 0.25
+		-min 0
+		-max 1
+		-fmn 0.001
+		-fmx 100
+		-pre 3
+		fillWithFluidQualityFloatSliderGroup
+		;
+	
+	intSliderGrp
+		-l "Padding"
+		-v 2
+		-min 0
+		-max 10
+		-fmn -999999
+		-fmx 999999
+		-f true
+		-cw1 80
+		-cal 1 "left"
+		fillWithFluidPaddingIntSliderGroup
+		;
+		
+	checkBox -l "Smooth Falloff" -v true fillWithFluidSmoothFalloffCheckBox;
+	
+	intSliderGrp
+		-l "Falloff Step"
+		-v 2
+		-min 0
+		-max 50
+		-fmn -999999
+		-fmx 999999
+		-f true
+		-cw1 80
+		-cal 1 "left"
+		fillWithFluidFalloffStepIntSliderGroup
+		;
+		
+	checkBox -l "Fill With Color" -v true fillWithFluidFillWithColorCheckBox;
+	
+	checkBox -l "Set Up Only" -v false fillWithFluidSetUpOnlyCheckBox;
+	
+	button
+		-label "Fill With Fluid"
+		-command ("fillMeshWithFluid(`ls -sl`)")
+		;
+		
+	button
+		-label "Create Fluid Fit To Object"
+		-command ("createFluidFitToObject(`ls -sl`)")
+		;
+		
+	floatSliderButtonGrp
+		-l "Fill Fluid With Density Value"
+		-f true
+		-cal 1 "left"
+		-v 1
+		-pre 3
+		-bl "Fill"
+		-bc ("string $sel[] = `ls -sl`;float $density = `floatSliderButtonGrp -q -v fillFluidWithDensityValueFloatSliderGroup`;fillFluidWithDensityValue($sel, $density);")
+		fillFluidWithDensityValueFloatSliderGroup
+		;
+		
+	setParent..;
+}
+
+global proc fluidMenu( string $parent )
+{
+	string $fluidMenuBarLayout = `menuBarLayout
+		fluidMenuBarLayout
+		`;
+		
+	fluidMenuItems($fluidMenuBarLayout);
+	
+}
+
+global proc fluidMenuItems(string $fluidDisplayMenu)
+{
+	string $fluidNewMenu = `menu
+		-label "New"
+		-to true
+		`;
+		
+		menuItem
+			-label "Create New Fluid Like Selected Fluid"
+			-command "createNewFluidAndApplyPresetFromSelectedFluid"
+			-p $fluidNewMenu
+			;
+			
+		menuItem
+			-label "Select All Fluids Grouped Under Selected"
+			-command "selectAllFluidsGroupedUnderSelected"
+			-p $fluidNewMenu
+			;
+			
+		menuItem
+			-label "Fill Mesh With Fluid"
+			-command ("fillMeshWithFluid(`ls -sl`);")
+			;
+	
+	string $fluidDisplayMenu = `menu
+		-label "Display"
+		-to true
+		`;
+		
+		menuItem
+			-label "Model Editor"
+			-sm true
+			-p $fluidDisplayMenu
+			-to true
+			;
+			
+			menuItem 
+				-label "Show Fluids"
+				-command showFluidsInModelEditor
+				showFluidsInModelEditor
+				;
+			
+			menuItem 
+				-label "Hide Fluids"
+				-command hideFluidsInModelEditor
+				hideFluidsInModelEditor
+				;
+				
+		menuItem
+			-label "Bounding Boxes"
+			-sm true
+			-p $fluidDisplayMenu
+			-to true
+			;
+		
+			menuItem 
+				-label "Bounding Boxes OFF"
+				-command turnOffFluidBoundingBoxes
+				turnOffFluidBoundingBoxes
+				;
+				
+			menuItem 
+				-label "Bounding Boxes ON"
+				-command turnOnFluidBoundingBoxes
+				turnOnFluidBoundingBoxes
+				;
+				
+			menuItem 
+				-label "Bounding Box with Bottom Grid ON"
+				-command turnOnFluidBoundingBoxWithBottomGrid
+				turnOnFluidBoundingBoxWithBottomGrid
+				;
+			
+		menuItem
+			-label "Display Quality"
+			-sm true
+			-p $fluidDisplayMenu
+			-to true
+			;
+			
+			menuItem
+				-l "Show Only Bounding Box"
+				-c "showOnlyBoundingBoxFluidDisplay"
+				;
+				
+			menuItem
+				-l "Low"
+				-c "lowQualityFluidDisplay"
+				;
+				
+			menuItem
+				-l "Normal"
+				-c "normalQualityFluidDisplay"
+				;
+				
+			menuItem
+				-l "Better"
+				-c "betterQualityFluidDisplay"
+				;
+				
+			menuItem
+				-l "Super"
+				-c "superQualityFluidDisplay"
+				;
+				
+			menuItem
+				-l "Ultra"
+				-c "ultraQualityFluidDisplay"
+				;
+				
+			menuItem
+				-l "Insane"
+				-c "insaneQualityFluidDisplay"
+				;
+				
+		menuItem
+			-label "Evaluation"
+			-sm true
+			-p $fluidDisplayMenu
+			-to true
+			;
+			
+				
+			menuItem 
+				-label "Disable All Fluid Evaluation"
+				-command disableAllFluidEvaluation
+				disableAllFluidEvaluation
+				;
+			
+			menuItem 
+				-label "Enable All Fluid Evaluation"
+				-command enableAllFluidEvaluation
+				enableAllFluidEvaluation
+				;
+				
+			menuItem 
+				-label "Disable Selected Fluid Evaluation"
+				-command disableSelectedFluidEvaluation
+				disableSelectedFluidEvaluation
+				;
+			
+			menuItem 
+				-label "Enable Selected Fluid Evaluation"
+				-command enableSelectedFluidEvaluation
+				enableSelectedFluidEvaluation
+				;
+				
+			menuItem
+				-l "Freeze Selected Fluids"
+				-c ("freezeSelectedFluids(`ls -sl`);")
+				;
+				
+			menuItem
+				-l "Freeze Fluid State"
+				-c ("wizFreezeFluidState(\"-sl\");")
+				;	
+			
+	menu
+		-label "Dynamics"	
+		-to true		
+		;
+		
+		menuItem
+			-label "Connect Dynamics"
+			-command connectSelectedDynamics
+			connectSelectedDynamics
+			;
+			
+		menuItem
+			-label "Disconnect Dynamics"
+			-command disconnectSelectedDynamics
+			disconnectSelectedDynamics
+			;
+			
+	menu
+		-label "Attributes"	
+		-to true
+		;
+		
+		menuItem
+			-label "Connect All Fluid Attributes"
+			-command "connectAllFluidAttributes"
+			connectAllFluidAttributes
+			;
+			
+		menuItem
+			-label "Disconnect All Fluid Attributes"
+			-command "disconnectAllFluidAttributes"
+			disconnectAllFluidAttributes
+			;
+			
+		menuItem
+			-label "Create Fluid Preset And Apply To Selected Fluids"
+			-command "createFluidPresetAndApplyToSelectedFluids"
+			createFluidPresetAndApplyToSelectedFluids
+			;
+			
+		menuItem
+			-label "Create Temp Fluid Preset And Apply To Selected Fluids"
+			-command "createTempFluidPresetAndApplyToSelectedFluids"
+			createTempFluidPresetAndApplyToSelectedFluids
+			;
+			
+		menuItem
+			-label "Copy Selected Fluid Ramp Colors"
+			-command "copySelectedFluidRampAttributes"
+			copySelectedFluidRampAttributes
+			;
+		menuItem
+			-label "Connect Selected Fluid's Start Frame to Cache Start Frame"
+			-command "connectSelectedFluidsStartTimeToCacheStartTime"
+			connectSelectedFluidsStartTimeToCacheStartTime
+			;
+			
+		menuItem
+			-label "Connect Selected Fluid To Selected Cache File"
+			-command "connectSelectedCacheFileToSelectedFluid"
+			connectSelectedCacheFileToSelectedFluid
+			;
+			
+		menuItem
+			-label "Copy Fluids Gradients To Selected Fluids"
+			-command "copyGradientsFromSelectedFluids"
+			copyGradientsFromSelectedFluids
+			;
+			
+		menuItem
+			-label "Connect Fluid Resolution Attributes"
+			-command "connectFluidResAttributes"
+			connectFluidResAttributes
+			;
+			
+		menuItem
+			-label "Disconnect Fluid Resolution Attributes"
+			-command "disconnectFluidResAttributes"
+			disconnectFluidResAttributes
+			;
+			
+		menuItem
+			-label "Connect Selected Emitter To Selected Surface"
+			-command "connectSelectedFluidEmitterToSelectedSurface"
+			connectSelectedFluidEmitterToSelectedSurface
+			;
+			
+		menuItem
+			-label "Connect Selected Emitter To Selected Curve"
+			-command "connectSelectedFluidEmitterToSelectedCurve"
+			connectSelectedFluidEmitterToSelectedCurve
+			;
+			
+		menuItem
+				-l "Freeze Fluid State"
+				-c ("wizFreezeFluidState(\"-sl\");")
+				;		
+		menu -l "Cache"	-to true;
+		
+			menuItem -l "Freeze All Fluid Caches At Start Frame" -c ("wizFreezeCache(\"-af -sf\");");
+			menuItem -l "Freeze All Fluid Caches At Source Start" -c ("wizFreezeCache(\"-af -ss\");");
+			menuItem -l "Freeze All Fluid Caches At Source End" -c ("wizFreezeCache(\"-af -se\");");
+			menuItem -l "Freeze Selected Fluid Caches At Start Frame" -c ("wizFreezeCache(\"-sl -sf\");");
+			menuItem -l "Freeze Selected Fluid Caches At Source Start" -c ("wizFreezeCache(\"-sl -ss\");");
+			menuItem -l "Freeze Selected Fluid Caches At Source End" -c ("wizFreezeCache(\"-sl -se\");");
+
+			
+}
+
+global proc fluidCacheQueJobLayout( string $parent )
+{
+	string $layout = `frameLayout
+		-l "Fluid Cache Que Job"	
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-p $parent
+		`;
+	
+	
+		
+	textFieldButtonGrp
+		-l "Cache directory"
+		-cal 1 "left"
+		-cw1 80	
+		-bl "Select"
+		-bc ("assignDirectoryToTextFieldButtonGrp(\"autoCacheCacheDirectoryTextFieldButtonGrp\",0);")
+		fluidCacheQueJobCacheDirectoryTextFieldButtonGrp
+		;
+	
+	textFieldGrp
+		-l "Cache name"
+		-cal 1 "left"
+		-cw1 80	
+		fluidCacheQueJobCacheNameTextFieldGrp
+		;
+		
+	checkBox -l "Use as prefix" -v true fluidCacheQueJobUseAsPrefixCheckBox;
+	
+	//Cache format: mcc / mcx
+	//File distribution: One file per frame / One file / (One file per object)
+	//Cache time range: Render settings / Time slider / Start/end
+	
+	floatFieldGrp
+		-l "Start/end"
+		-nf 2
+		-cal 1 "left"
+		-cw1 80
+		fluidCacheQueJobStartEndFloatFieldGrp
+		;
+		
+	floatFieldGrp
+		-l "Evaluate every _ frames:"
+		-nf 1
+		-cal 1 "left"
+		-cw1 80
+		fluidCacheEvaluateEveryFramesFloatFieldGrp
+		;
+		
+	floatFieldGrp
+		-l "Save every _ evaluations:"
+		-nf 1
+		-cal 1 "left"
+		-cw1 80
+		fluidCacheSaveEveryEvaluationsFloatFieldGrp
+		;		
+	
+	checkBox
+		-l "Density:"
+		-v true
+		fluidCacheCacheDensityCheckBox
+		;
+		
+	checkBox
+		-l "Velocity:"
+		-v true
+		fluidCacheCacheVelocityCheckBox
+		;
+		
+	checkBox
+		-l "Temperature:"
+		-v true
+		fluidCacheCacheTemperatureCheckBox
+		;
+	
+	checkBox
+		-l "Fuel:"
+		-v false
+		fluidCacheCacheFuelCheckBox
+		;
+		
+	checkBox
+		-l "Color:"
+		-v false
+		fluidCacheCacheColorCheckBox
+		;
+		
+	checkBox
+		-l "Texture coordinates:"
+		-v false
+		fluidCacheCacheTextureCoordinatesCheckBox
+		;
+		
+	checkBox
+		-l "Falloff:"
+		-v false
+		fluidCacheCacheFalloffCheckBox
+		;	
+
+		
+	setParent..;
+
+	
+}
+
+global proc cacheFluidsLayout(string $parent)
+{
+	string $cachingLayout = `frameLayout
+		-l "Cache"
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true		
+		-parent $parent`;		
+		
+	button
+		-label "Create Custom Cache Attributes"
+		-ann ""			
+		-command "createCustomCacheAttributes"
+		createCustomCacheAttributes;
+		
+	button
+		-label "Delete Custom Cache Attributes"
+		-ann ""			
+		-command "deleteCustomCacheAttributes"
+		deleteCustomCacheAttributes;	
+	
+	text
+		-l "Fluids to Cache:"
+		;
+		
+	textScrollList
+		-w 80
+		-h 60
+		-ams true
+		-dkc "removeSelectedFluidFromCacheList"
+		getCacheList
+		;
+	
+		
+	string $cacheListLayout = `rowLayout
+		-numberOfColumns 3
+		`;
+		
+		button
+			-label "Select Fluids"
+			-ann ""
+			-command "assignFluidsToCacheList"
+			assignFluidsToCacheList
+			;
+			
+		button
+			-label "Clear List"
+			-ann ""
+			-command "clearFluidsCacheList"
+			clearFluidsCacheList;			
+			
+		button
+			-label "Cache Selected"
+			-ann ""			
+			-command "createCacheForSelected"
+			createCacheForSelected;			
+			
+		setParent..;
+		
+		checkBox
+			-l "Render When Cache is Complete."
+			-v true
+			cacheRenderWhenCacheIsCompleteOption
+			;
+		
+}
+
+//FLUID CACHE
+//=============================================================================
+//CREATE CUSTOM CACHE ATTRIBUTES
+//-----------------------------------------------
+global proc createCustomCacheAttributes()
+{
+	string $sel[] = `ls -sl`;
+	/*
+	1 = "3" - RenderSettings, TimeSlider, StartEnd
+	2 = "1" - StartFrame
+	3 = "2" - EndFrame
+	4 = "OneFile" - FileDistribution
+	5 = "1" - ?
+	6 = "" - ?
+	7 = "0" - ?
+	8 = "" - ?
+	9 = "0" - ?
+	10 = "add" or "replace"
+	11 = "0" ?
+	12 = "1" - ByFrame
+	13 = "1" - SaveEvery _ Evaluations
+	14 = "0" - usePrefix ?
+	15 = "1" - inheritModifications ?
+	16 = "mcc" - CacheFormat
+	17 = "1" - Cache Density
+	18 = "1" - Cache Velocity
+	19 = "1" - Cache Temperature
+	20 = "1" - Cache Fuel
+	21 = "1" - Cache Color
+	22 = "1" - Cache Texture Coordinates
+	23 = "1" - Cache Falloff
+
+	doCreateFluidCache 5 { "3", "1", "2", "OneFile", "1", "","0", "","0", "add", "0", "1", "1", "0", "1", "mcc", "1", "1", "1", "1", "1", "1", "1" }  /
+	doCreateFluidCache 5 { "3", "2", "3", "OneFile", "1", "","0", "","0", "add", "0", "0.5", "2", "0", "1", "mcc", "1", "1", "1", "1", "1", "1", "1" } ;
+	doCreateFluidCache 5 { "3", "5", "9", "OneFilePerFrame", "1", "","0", "","0", "add", "0", "2", "1", "0", "1", "mcc", "1", "1", "1", "1", "1", "1", "1" } ;
+	doCreateFluidCache 5 { "3", "5", "9", "OneFilePerFrame", "1", "","0", "","0", "replace", "0", "2", "1", "1", "1", "mcc", "1", "1", "1", "1", "1", "1", "1" } ;
+
+	deleteCacheFile 2 { "delete", "fluidShape1Cache1,fluidShape1Cache2,fluidShape1Cache3,fluidShape1Cache4,fluidShape1Cache5" } ;
+
+	cacheFile -attachFile -fileName "fluidShape3" -directory "/Shared/projects/SolarQuest-GJ/data/CME_PFEmitThinSpray2"  -cnm "fluidShape3_density" -cnm "fluidShape3_velocity" -cnm "fluidShape3_resolution" -cnm "fluidShape3_offset" -ia fluidShape3.inDensity -ia fluidShape3.inVelocity -ia fluidShape3.inResolution -ia fluidShape3.inOffset;
+	*/
+	int $i;
+	string $cacheDir = `workspace -q -rd`;
+	$cacheDir = $cacheDir + "cache/fluids/";
+	
+	for ($i = 0; $i < `size $sel` ; $i++){
+		
+		addAttr -ln cacheDirectory -dt "string" $sel[$i];
+			setAttr ($sel[$i] + ".cacheDirectory") -type "string" $cacheDir;
+		addAttr -ln cacheName -dt "string" $sel[$i];
+			setAttr ($sel[$i] + ".cacheName") -type "string" $sel[$i];
+			
+		addAttr -ln usePrefix -at bool -dv 0 $sel[$i];
+		//addAttr -ln usePrefix -at long -dv 0 $sel[$i];
+		
+		addAttr -ln cacheTimeRange -at enum -en "renderSettings=1:timeSlider=2:startEnd=3" $sel[$i];
+			setAttr ($sel[$i] + ".cacheTimeRange") 3;
+		addAttr -ln cacheStartFrame -nn "Start Frame" -at long -dv 1 $sel[$i];
+		addAttr -ln cacheEndFrame -nn "End Frame" -at long -dv 100 -min 0 -max 100000000 $sel[$i];
+		addAttr -ln cacheByFrame -nn "By Frame" -at "float" -dv 1 $sel[$i];
+		addAttr -ln saveEveryNEvaluations -nn "Save Every N Evaluatinos" -at "float" -dv 1 $sel[$i];
+		
+		addAttr -ln fileDistribution -at enum -en "oneFile=1:oneFilePerFrame=2" $sel[$i];
+		addAttr -ln addReplaceCache -at enum -en "add=0:replace=1" $sel[$i];
+		
+		addAttr -ln cacheDensity -at bool -dv 1 $sel[$i];
+		addAttr -ln cacheVelocity -at bool -dv 1 $sel[$i];
+		addAttr -ln cacheTemperature -at bool -dv 1 $sel[$i];
+		addAttr -ln cacheFuel -at bool -dv 1 $sel[$i];
+		addAttr -ln cacheColor -at bool -dv 1 $sel[$i];
+		addAttr -ln cacheTextureCoordinates -at bool -dv 1 $sel[$i];
+		addAttr -ln cacheFalloff -at bool -dv 1 $sel[$i];
+		
+		addAttr -ln inheritModifications -at bool -dv 0 $sel[$i];	
+	}
+
+}
+
+global proc createCacheForSelected()
+{
+	string $sel[] = `ls -sl`;
+	string $ar;
+	string $fd;
+	int $up;
+	int $im;
+	int $cd;
+	int $cv;
+	int $ct;
+	int $cf;
+	int $cc;
+	int $ctc;
+	int $cfo;
+	int $i;
+	for ($i = 0; $i < `size $sel` ; $i++){
+		string $cacheDirectory = `getAttr ($sel[$i] + ".cacheDirectory")`;
+		string $cacheName = `getAttr ($sel[$i] + ".cacheName")`;
+		$usePrefix = `getAttr ($sel[$i] + ".usePrefix")`;
+		if($usePrefix){
+			$up = 1;
+		} else {
+			$up = 0;
+		}
+		
+		int $cacheTimeRange = `getAttr ($sel[$i] + ".cacheTimeRange")`;
+			string $ctr = $cacheTimeRange;
+		float $cacheStartFrame = `getAttr ($sel[$i] + ".cacheStartFrame")`;
+		float $cacheEndFrame = `getAttr ($sel[$i] + ".cacheEndFrame")`;
+		float $cacheByFrame = `getAttr ($sel[$i] + ".cacheByFrame")`;
+		int $saveEveryNEvaluations = `getAttr ($sel[$i] + ".saveEveryNEvaluations")`;
+		
+		int $fileDistribution = `getAttr ($sel[$i] + ".fileDistribution")`;
+			if($fileDistribution == 1){
+				$fd = "OneFile";
+			} else {
+				$fd = "OneFilePerFrame";
+			}
+		int $addReplaceCache = `getAttr ($sel[$i] + ".addReplaceCache")`;
+			if($addReplaceCache == 0){
+				$ar = "add";
+			} else {
+				$ar = "replace";
+			}
+		
+		$cacheDensity = `getAttr ($sel[$i] + ".cacheDensity")`;
+			if($cacheDensity){$cd = 1;} else {$cd = 0;}
+		$cacheVelocity = `getAttr ($sel[$i] + ".cacheVelocity")`;
+			if($cacheVelocity){$cv = 1;} else {$cv = 0;}
+		$cacheTemperature = `getAttr ($sel[$i] + ".cacheTemperature")`;
+			if($cacheTemperature){$ct = 1;} else {$ct = 0;}
+		$cacheFuel = `getAttr ($sel[$i] + ".cacheFuel")`;
+			if($cacheFuel){$cf = 1;} else {$cf = 0;}
+		$cacheColor = `getAttr ($sel[$i] + ".cacheColor")`;
+			if($cacheColor){$cc = 1;} else {$cc = 0;}
+		$cacheTextureCoordinates = `getAttr ($sel[$i] + ".cacheTextureCoordinates")`;
+			if($cacheTextureCoordinates){$ctc = 1;} else {$ctc = 0;}
+		$cacheFalloff = `getAttr ($sel[$i] + ".cacheFalloff")`;
+			if($cacheFalloff){$cfo = 1;} else {$cfo = 0;}
+		
+		$inheritModifications = `getAttr ($sel[$i] + ".inheritModifications")`;
+		
+		if ($inheritModifications){
+			$im = 1;
+		} else {
+			$im = 0;
+		}
+		
+		int $p;
+		for($p=0;$p<`size $sel`;$p++){
+			if($sel[$p] != $sel[$i]){
+				hide $sel[$p];
+			}
+			
+		}
+		//hide `ls -type "fluidShape"`;	
+		select -r $sel[$i];
+		showHidden $sel[$i];
+		print("Caching: " + $sel[$i] + "\n");
+		//doCreateFluidCache 5 { $cacheTimeRange, $cacheStartFrame, $cacheEndFrame, $fd, "1", "","0", "","0", $ar, "0", $cacheByFrame, $saveEveryNEvaluations, $usePrefix, $inheritModifications, "mcc", $cacheDensity, $cacheVelocity, $cacheTemperature, $cacheFuel, $cacheColor, $cacheTextureCoordinates, $cacheFalloff }; 	
+		//doCreateFluidCache 5 { "2", "1", "10", "OneFilePerFrame", "1", "","0", "","0", "add", "0", "1", "1", "0", "1", "mcc", "1", "1", "1", "1", "1", "1", "1" } ;
+		doCreateFluidCache 5 { $ctr, $cacheStartFrame, $cacheEndFrame, $fd, "1", "","0", "","0", $ar, "0", $cacheByFrame, $saveEveryNEvaluations, $up, $im, "mcc", $cd, $cv, $ct, $cf, $cc, $ctc, $cfo } ;
+		print("Done Caching: " + $sel[$i] + "\n");
+	}
+
+	if(`checkBox -q -v cacheRenderWhenCacheIsCompleteOption`){
+		//render -b;
+		BatchRender;
+	}
+}
+
+
+global proc deleteCustomCacheAttributes()
+{
+	string $sel[] = `ls -sl`;
+
+	string $allAttr[] = {	
+	"cacheDirectory","cacheName","usePrefix","cacheTimeRange","cacheStartFrame","cacheEndFrame",
+	"cacheByFrame","saveEveryNEvaluations","fileDistribution","addReplaceCache",
+	"cacheDensity","cacheVelocity","cacheTemperature","cacheFuel","cacheColor",
+	"cacheTextureCoordinates","cacheFalloff","inheritModifications"
+	};
+
+	doDeleteAttr($allAttr, $sel[0]);
+	print ("Custom Cache Attributes on " + $sel[0] + " Deleted!" + "\n");
+
+}
+
+global proc assignFluidsToCacheList()
+{
+	string $sel[] = `ls -sl`;
+	if(`size $sel`==0){
+		error "Nothing is selected. Select some fluids to cache.";
+	} else {
+		int $i;
+		for($i = 0; $i<`size $sel`; $i++){
+		textScrollList
+			-e
+			-append $sel[$i]
+			getCacheList;
+		}
+		
+	}
+		
+}
+
+global proc clearFluidsCacheList()
+{
+	textScrollList
+		-e
+		-ra
+		getCacheList;
+}
+
+global proc removeSelectedFluidFromCacheList()
+{
+	string $sel[] = `textScrollList -q -si getCacheList`;
+	int $i;
+	for($i = 0; $i<`size $sel`; $i++){
+	textScrollList
+		-e
+		-ri $sel[$i]
+		getCacheList;
+	}
+}
+
+global proc disableAllFluidEvaluation()
+{
+	string $fluids[] = `ls -typ "fluidShape"`;
+	int $i;
+	for($i=0;$i<`size $fluids`;$i++){
+		catchQuiet(`setAttr ($fluids[$i] + ".disableInteractiveEval") 1`);
+	}
+}
+
+global proc disableSelectedFluidEvaluation()
+{
+	string $fluids[] = `ls -dag -s -sl`;
+	int $i;
+	for($i=0;$i<`size $fluids`;$i++){
+		catchQuiet(`setAttr ($fluids[$i] + ".disableInteractiveEval") 1`);
+	}	
+}
+
+global proc enableAllFluidEvaluation()
+{
+	string $fluids[] = `ls -typ "fluidShape"`;
+	int $i;
+	for($i=0;$i<`size $fluids`;$i++){
+		catchQuiet(`setAttr ($fluids[$i] + ".disableInteractiveEval") 0`);
+	}
+}
+
+global proc enableSelectedFluidEvaluation()
+{
+	string $fluids[] = `ls -dag -s -sl`;
+	int $i;
+	for($i=0;$i<`size $fluids`;$i++){
+		catchQuiet(`setAttr ($fluids[$i] + ".disableInteractiveEval") 0`);
+	}	
+}
+
+global proc turnOffFluidBoundingBoxes()
+{
+	string $fluids[] = `ls -typ "fluidShape"`;
+	
+	int $i;
+	for($i=0;$i<`size $fluids`;$i++){
+		catchQuiet(`setAttr ($fluids[$i] + ".boundaryDraw") 5`);
+	}
+
+}
+
+global proc turnOnFluidBoundingBoxes()
+{
+	string $fluids[] = `ls -typ "fluidShape"`;
+	
+	int $i;
+	for($i=0;$i<`size $fluids`;$i++){
+		catchQuiet(`setAttr ($fluids[$i] + ".boundaryDraw") 4`);
+	}
+
+}
+
+global proc turnOnFluidBoundingBoxWithBottomGrid()
+{
+	string $fluids[] = `ls -typ "fluidShape"`;
+	
+	int $i;
+	for($i=0;$i<`size $fluids`;$i++){
+		catchQuiet(`setAttr ($fluids[$i] + ".boundaryDraw") 0`);
+	}
+
+}
+
+global proc normalQualityFluidDisplay()
+{
+	string $fluids[] = `ls -typ "fluidShape"`;
+	
+	int $i;
+	for($i=0;$i<`size $fluids`;$i++){
+		catchQuiet(`setAttr ($fluids[$i] + ".shadedDisplay") 1`);
+		catchQuiet(`setAttr ($fluids[$i] + ".slices") 2`);
+		catchQuiet(`setAttr ($fluids[$i] + ".voxelQuality") 1`);
+	}
+
+}
+
+global proc betterQualityFluidDisplay()
+{
+	string $fluids[] = `ls -typ "fluidShape"`;
+	
+	int $i;
+	for($i=0;$i<`size $fluids`;$i++){
+		catchQuiet(`setAttr ($fluids[$i] + ".shadedDisplay") 1`);
+		catchQuiet(`setAttr ($fluids[$i] + ".slices") 4`);
+		catchQuiet(`setAttr ($fluids[$i] + ".voxelQuality") 1`);
+	}
+
+}
+
+global proc superQualityFluidDisplay()
+{
+	string $fluids[] = `ls -typ "fluidShape"`;
+	
+	int $i;
+	for($i=0;$i<`size $fluids`;$i++){
+		catchQuiet(`setAttr ($fluids[$i] + ".shadedDisplay") 1`);
+		catchQuiet(`setAttr ($fluids[$i] + ".slices") 4`);
+		catchQuiet(`setAttr ($fluids[$i] + ".voxelQuality") 2`);
+	}
+
+}
+
+global proc ultraQualityFluidDisplay()
+{
+	string $fluids[] = `ls -typ "fluidShape"`;
+	
+	int $i;
+	for($i=0;$i<`size $fluids`;$i++){
+		catchQuiet(`setAttr ($fluids[$i] + ".shadedDisplay") 1`);
+		catchQuiet(`setAttr ($fluids[$i] + ".slices") 8`);
+		catchQuiet(`setAttr ($fluids[$i] + ".voxelQuality") 2`);
+	}
+
+}
+
+global proc insaneQualityFluidDisplay()
+{
+	string $fluids[] = `ls -typ "fluidShape"`;
+	
+	int $i;
+	for($i=0;$i<`size $fluids`;$i++){
+		catchQuiet(`setAttr ($fluids[$i] + ".shadedDisplay") 1`);
+		catchQuiet(`setAttr ($fluids[$i] + ".slices") 12`);
+		catchQuiet(`setAttr ($fluids[$i] + ".voxelQuality") 2`);
+	}
+
+}
+
+global proc lowQualityFluidDisplay()
+{
+	string $fluids[] = `ls -typ "fluidShape"`;
+	
+	int $i;
+	for($i=0;$i<`size $fluids`;$i++){
+		catchQuiet(`setAttr ($fluids[$i] + ".shadedDisplay") 1`);
+		catchQuiet(`setAttr ($fluids[$i] + ".slices") 1`);
+		catchQuiet(`setAttr ($fluids[$i] + ".voxelQuality") 1`);
+	}
+
+}
+
+global proc showOnlyBoundingBoxFluidDisplay()
+{
+	string $fluids[] = `ls -typ "fluidShape"`;
+	
+	int $i;
+	for($i=0;$i<`size $fluids`;$i++){
+		catchQuiet(`setAttr ($fluids[$i] + ".shadedDisplay") 0`);
+		catchQuiet(`setAttr ($fluids[$i] + ".boundaryDraw") 4`);
+	}
+
+}
+
+global proc hideFluidsInModelEditor()
+{
+	modelEditor -av -fl false;
+}
+
+global proc showFluidsInModelEditor()
+{
+	modelEditor -av -fl true;
+}
+
+//CONNECT SELECTED DYNAMICS
+//======================================================
+/*
+global proc connectSelectedDynamics()
+{
+	string $sel[] = `ls -sl`;
+	string $fluid;
+	int $i;
+	int $p;
+	
+	for ($i=0;$i<`size $sel`;$i++){
+		string $rel[] = `listRelatives -s $sel[$i]`;
+		for ($p=0;$p<`size $rel`;$p++){
+			if(`objectType -isa "fluidShape" $rel[$p]`){
+				$fluid = $rel[$p];
+			}
+		}
+	}
+	
+	print ("Connecting: " + $fluid + " To: ");
+	for ($i=0;$i<`size $sel`;$i++){
+		if (`objectType -isa "emitter" $sel[$i]`){
+			connectDynamic -em $sel[$i] $fluid;
+			print($sel[$i]);
+		} else if (`objectType -isa "collision" $sel[$i]`){
+			connectDynamic -c $sel[$i] $fluid;
+		} else if (`objectType -isa "field" $sel[$i]`){
+			connectDynamic -f $sel[$i] $fluid;
+		} else if (`objectType -isa "fluidEmitter" $sel[$i]`){
+			connectDynamic -em $sel[$i] $fluid;
+		} else {
+			if (catchQuiet(`connectDynamic -f $sel[$i] $fluid`)){
+				print ("WIZ| Could Not Connect : " + $sel[$i] + " To : " + $fluid + "\n");
+			}
+		}
+		if ($i<((`size $sel`) -1)) print(", ");
+	}
+	print("\n");
+	
+}
+*/
+
+global proc connectSelectedDynamics()
+{
+	string $sel[] = `ls -sl`;
+	string $target = $sel[(`size $sel` - 1)];
+	for ($i=0;$i<(`size $sel` - 1);$i++){	
+			if (catchQuiet(`connectDynamic -f $sel[$i] $target`)){
+				if (catchQuiet(`connectDynamic -f $target $sel[$i] `)){
+					print ("WIZ| connectSelectedDynamics : Could Not Connect : " + $sel[$i] + " To : " + $target + "\n");
+				} else {
+					print ("WIZ| connectSelectedDynamics : Connected: " + $sel[$i] + " To: " + $target + "\n");
+				}
+			} else {
+				print ("WIZ| connectSelectedDynamics : Connected: " + $sel[$i] + " To: " + $target + "\n");
+			}
+	}	
+}
+
+
+//DISCONNECT SELECTED DYNAMICS
+//======================================================
+/*
+global proc disconnectSelectedDynamics()
+{
+	string $sel[] = `ls -sl`;
+	string $fluid;
+	
+	int $i;
+	int $p;
+	for($i=0;$i<`size $sel`;$i++){
+		string $rel[] = `listRelatives -s $sel[$i]`;
+		for($p=0;$p<`size $rel`;$p++){
+			if(`objectType -isa "fluidShape" $rel[$p]`){
+				$fluid = $rel[$p];
+			}
+		}
+	}
+	print ("Disconnecting: " + $fluid + " From: ");
+	for($i=0;$i<`size $sel`;$i++){
+		if(`objectType -isa "emitter" $sel[$i]`){
+			connectDynamic -d -em $sel[$i] $fluid;
+			print($sel[$i]);
+		} else if(`objectType -isa "collision" $sel[$i]`){
+			connectDynamic -d -c $sel[$i] $fluid;
+			print($sel[$i]);
+		} else if(`objectType -isa "field" $sel[$i]`){
+			connectDynamic -d -f $sel[$i] $fluid;
+			print($sel[$i]);
+		} else if(`objectType -isa "fluidEmitter" $sel[$i]`){
+			connectDynamic -d -em $sel[$i] $fluid;
+			print($sel[$i]);
+		} 
+		}
+		if($i<((`size $sel`) -1)) print(", ");
+	}
+	print("\n");
+}
+*/
+
+global proc disconnectSelectedDynamics()
+{
+	string $sel[] = `ls -sl`;
+	string $target = $sel[(`size $sel` - 1)];
+	for ($i=0;$i<`size $sel`;$i++){	
+			if (catchQuiet(`connectDynamic -d $sel[$i] $target`)){
+				if (catchQuiet(`connectDynamic -d $target $sel[$i]`)){
+					print ("WIZ| disconnectSelectedDynamics : Could Not Disconnect : " + $sel[$i] + " From : " + $target + "\n");
+				} else {
+					print ("WIZ| disconnectSelectedDynamics : Disconnected: " + $sel[$i] + " From: " + $target + "\n");
+				}
+			} else {
+				print ("WIZ| disconnectSelectedDynamics : Disconnected: " + $sel[$i] + " From: " + $target + "\n");
+			} 
+	}	
+}
+
+global proc createFluidPresetAndApplyToSelectedFluids()
+{
+	string $fluids[] = `ls -sl -dag -s`;
+	
+	string $attrPresetName = $fluids[0] + "Preset";
+	string $newAttrPresetName = `saveAttrPreset $fluids[0] $attrPresetName false`;
+	
+	int $fluidCount = size($fluids);
+	string $connectingFluids[];
+	for($i=1; $i< $fluidCount; $i++)	{
+		$connectingFluids[$i-1] = $fluids[$i];;
+	}
+	
+	for($fluid in $connectingFluids){
+		applyAttrPreset $fluid $newAttrPresetName 1;
+	}
+
+}
+
+global proc createTempFluidPresetAndApplyToSelectedFluids()
+{
+	string $fluids[] = `ls -sl -dag -s`;
+	int $baseRes = `getAttr ($fluids[0] + ".baseResolution")`;
+	string $attrPresetName = "Temp";
+	string $newAttrPresetName = `saveAttrPreset $fluids[0] $attrPresetName false`;
+	
+	int $fluidCount = size($fluids);
+	string $connectingFluids[];
+	for($i=1; $i< $fluidCount; $i++)	{
+		$connectingFluids[$i-1] = $fluids[$i];;
+	}
+	
+	for($fluid in $connectingFluids){
+		applyAttrPreset $fluid $newAttrPresetName 1;
+		setAttr ($fluid + ".baseResolution") $baseRes;
+	}
+
+}
+
+global proc createTempFluidPresetAndApplyToFluid(string $sourceFluid, string $targetFluid)
+{
+	int $baseRes = `getAttr ($sourceFluid + ".baseResolution")`;
+	string $attrPresetName = "Temp";
+	string $newAttrPresetName = `saveAttrPreset $sourceFluid $attrPresetName false`;
+	applyAttrPreset $targetFluid $newAttrPresetName 1;
+	setAttr ($targetFluid + ".baseResolution") $baseRes;
+}
+
+global proc createNewFluidAndApplyPresetFromSelectedFluid()
+{
+	string $fluids[] = `ls -sl -dag -s`;
+	string $rel[] = `listRelatives -p -typ "transform" $fluids[0]`;
+	int $baseRes = `getAttr ($fluids[0] + ".baseResolution")`;
+	
+	string $attrPresetName = "Temp";
+	string $newAttrPresetName = `saveAttrPreset $fluids[0] $attrPresetName false`;
+	string $newFluid = `create3DFluid 10 10 10 10 10 10`;
+	applyAttrPreset $newFluid $newAttrPresetName 1;
+	setAttr ($newFluid + ".baseResolution") $baseRes;
+	string $rels[] = `listRelatives -p -typ "transform" $newFluid`;
+	
+	select -r $newFluid;
+	rename $fluids[0];
+	
+	select -r $rels[0];
+	rename $rel[0];
+
+}
+
+global proc connectAllFluidAttributes()
+{
+	
+	string $fluids[] = `ls -sl -dag -s`;
+	int $fluidCount = size($fluids);
+	string $connectingFluids[];
+	for($i=1; $i< $fluidCount; $i++)	{
+		$connectingFluids[$i-1] = $fluids[$i];;
+	}
+	
+	for($fluid in $connectingFluids)	{
+		connectAttr -f ($fluids[0] + ".startFrame") ($fluid + ".startFrame");
+		connectAttr -f ($fluids[0] + ".resolution") ($fluid + ".resolution");
+		//seg faults in 2011 if this is turned on
+		//connectAttr -f ($fluids[0] + ".dimensions") ($fluid + ".dimensions");
+		connectAttr -f ($fluids[0] + ".highDetailSolve") ($fluid + ".highDetailSolve");
+		connectAttr -f ($fluids[0] + ".solverQuality") ($fluid + ".solverQuality");
+		connectAttr -f ($fluids[0] + ".densityMethod") ($fluid + ".densityMethod");
+		connectAttr -f ($fluids[0] + ".densityGradient") ($fluid + ".densityGradient");
+		connectAttr -f ($fluids[0] + ".densityScale") ($fluid + ".densityScale");
+		connectAttr -f ($fluids[0] + ".densityDissipation") ($fluid + ".densityDissipation");
+		connectAttr -f ($fluids[0] + ".densityDiffusion") ($fluid + ".densityDiffusion");
+		connectAttr -f ($fluids[0] + ".densityBuoyancy") ($fluid + ".densityBuoyancy");
+		connectAttr -f ($fluids[0] + ".velocityMethod") ($fluid + ".velocityMethod");
+		connectAttr -f ($fluids[0] + ".velocityGradient") ($fluid + ".velocityGradient");
+		connectAttr -f ($fluids[0] + ".velocityScale") ($fluid + ".velocityScale");
+		connectAttr -f ($fluids[0] + ".viscosity") ($fluid + ".viscosity");
+		connectAttr -f ($fluids[0] + ".friction") ($fluid + ".friction");
+		connectAttr -f ($fluids[0] + ".velocitySwirl") ($fluid + ".velocitySwirl");
+		connectAttr -f ($fluids[0] + ".velocityDamp") ($fluid + ".velocityDamp");
+		connectAttr -f ($fluids[0] + ".turbulenceStrength") ($fluid + ".turbulenceStrength");
+		connectAttr -f ($fluids[0] + ".turbulenceFrequency") ($fluid + ".turbulenceFrequency");
+		connectAttr -f ($fluids[0] + ".turbulenceSpeed") ($fluid + ".turbulenceSpeed");
+		connectAttr -f ($fluids[0] + ".temperatureMethod") ($fluid + ".temperatureMethod");
+		connectAttr -f ($fluids[0] + ".temperatureGradient") ($fluid + ".temperatureGradient");
+		connectAttr -f ($fluids[0] + ".temperatureScale") ($fluid + ".temperatureScale");
+		connectAttr -f ($fluids[0] + ".temperatureDissipation") ($fluid + ".temperatureDissipation");
+		connectAttr -f ($fluids[0] + ".temperatureDiffusion") ($fluid + ".temperatureDiffusion");
+		connectAttr -f ($fluids[0] + ".temperatureTurbulence") ($fluid + ".temperatureTurbulence");
+		connectAttr -f ($fluids[0] + ".buoyancy") ($fluid + ".buoyancy");
+		connectAttr -f ($fluids[0] + ".colorMethod") ($fluid + ".colorMethod");
+		connectAttr -f ($fluids[0] + ".colorDissipation") ($fluid + ".colorDissipation");
+		connectAttr -f ($fluids[0] + ".colorDiffusion") ($fluid + ".colorDiffusion");
+		connectAttr -f ($fluids[0] + ".fuelMethod") ($fluid + ".fuelMethod");
+		connectAttr -f ($fluids[0] + ".fuelGradient") ($fluid + ".fuelGradient");
+		connectAttr -f ($fluids[0] + ".fuelScale") ($fluid + ".fuelScale");
+		connectAttr -f ($fluids[0] + ".reactionSpeed") ($fluid + ".reactionSpeed");
+		connectAttr -f ($fluids[0] + ".fuelIgnitionTemp") ($fluid + ".fuelIgnitionTemp");
+		connectAttr -f ($fluids[0] + ".maxReactionTemp") ($fluid + ".maxReactionTemp");
+		connectAttr -f ($fluids[0] + ".heatReleased") ($fluid + ".heatReleased");
+		connectAttr -f ($fluids[0] + ".lightReleased") ($fluid + ".lightReleased");
+		connectAttr -f ($fluids[0] + ".lightColor") ($fluid + ".lightColor");
+		connectAttr -f ($fluids[0] + ".simulationRateScale") ($fluid + ".simulationRateScale");
+		connectAttr -f ($fluids[0] + ".boundaryX") ($fluid + ".boundaryX");
+		connectAttr -f ($fluids[0] + ".boundaryY") ($fluid + ".boundaryY");
+		connectAttr -f ($fluids[0] + ".boundaryZ") ($fluid + ".boundaryZ");
+		connectAttr -f ($fluids[0] + ".falloffMethod") ($fluid + ".falloffMethod");
+		connectAttr -f ($fluids[0] + ".solver") ($fluid + ".solver");
+		connectAttr -f ($fluids[0] + ".gridInterpolator") ($fluid + ".gridInterpolator");
+		connectAttr -f ($fluids[0] + ".gravity") ($fluid + ".gravity");
+		connectAttr -f ($fluids[0] + ".slices") ($fluid + ".slices");
+		connectAttr -f ($fluids[0] + ".voxelQuality") ($fluid + ".voxelQuality");
+		connectAttr -f ($fluids[0] + ".drawHeads") ($fluid + ".drawHeads");
+		connectAttr -f ($fluids[0] + ".velocityDraw") ($fluid + ".velocityDraw");
+		connectAttr -f ($fluids[0] + ".velocityDrawLength") ($fluid + ".velocityDrawLength");
+		connectAttr -f ($fluids[0] + ".velocityDrawSkip") ($fluid + ".velocityDrawSkip");
+		connectAttr -f ($fluids[0] + ".shadedDisplay") ($fluid + ".shadedDisplay");
+		connectAttr -f ($fluids[0] + ".opacityPreviewGain") ($fluid + ".opacityPreviewGain");
+		connectAttr -f ($fluids[0] + ".boundaryDraw") ($fluid + ".boundaryDraw");
+		connectAttr -f ($fluids[0] + ".numericDisplay") ($fluid + ".numericDisplay");
+		connectAttr -f ($fluids[0] + ".wireframeDisplay") ($fluid + ".wireframeDisplay");
+		connectAttr -f ($fluids[0] + ".selfShadowing") ($fluid + ".selfShadowing");
+		connectAttr -f ($fluids[0] + ".quality") ($fluid + ".quality");
+		connectAttr -f ($fluids[0] + ".renderInterpolator") ($fluid + ".renderInterpolator");
+		connectAttr -f ($fluids[0] + ".colorInputBias") ($fluid + ".colorInputBias");
+		connectAttr -f ($fluids[0] + ".opacityInput") ($fluid + ".opacityInput");
+		connectAttr -f ($fluids[0] + ".opacityInputBias") ($fluid + ".opacityInputBias");
+		connectAttr -f ($fluids[0] + ".transparency") ($fluid + ".transparency");
+		connectAttr -f ($fluids[0] + ".shadowOpacity") ($fluid + ".shadowOpacity");
+		connectAttr -f ($fluids[0] + ".incandescenceInput") ($fluid + ".incandescenceInput");
+		connectAttr -f ($fluids[0] + ".incandescenceInputBias") ($fluid + ".incandescenceInputBias");
+		connectAttr -f ($fluids[0] + ".glowIntensity") ($fluid + ".glowIntensity");
+		connectAttr -f ($fluids[0] + ".cosinePower") ($fluid + ".cosinePower");
+		connectAttr -f ($fluids[0] + ".dropoffShape") ($fluid + ".dropoffShape");
+		connectAttr -f ($fluids[0] + ".edgeDropoff") ($fluid + ".edgeDropoff");
+		connectAttr -f ($fluids[0] + ".contrastTolerance") ($fluid + ".contrastTolerance");
+		connectAttr -f ($fluids[0] + ".heightField") ($fluid + ".heightField");
+		connectAttr -f ($fluids[0] + ".surfaceRender") ($fluid + ".surfaceRender");
+		connectAttr -f ($fluids[0] + ".surfaceThreshold") ($fluid + ".surfaceThreshold");
+		connectAttr -f ($fluids[0] + ".surfaceTolerance") ($fluid + ".surfaceTolerance");
+		connectAttr -f ($fluids[0] + ".softSurface") ($fluid + ".softSurface");
+		connectAttr -f ($fluids[0] + ".realLights") ($fluid + ".realLights");
+		connectAttr -f ($fluids[0] + ".directionalLight") ($fluid + ".directionalLight");
+		connectAttr -f ($fluids[0] + ".sampleMethod") ($fluid + ".sampleMethod");
+		connectAttr -f ($fluids[0] + ".textureType") ($fluid + ".textureType");
+		connectAttr -f ($fluids[0] + ".colorTexture") ($fluid + ".colorTexture");
+		connectAttr -f ($fluids[0] + ".colorTexGain") ($fluid + ".colorTexGain");
+		connectAttr -f ($fluids[0] + ".incandTexture") ($fluid + ".incandTexture");
+		connectAttr -f ($fluids[0] + ".incandTexGain") ($fluid + ".incandTexGain");
+		connectAttr -f ($fluids[0] + ".opacityTexture") ($fluid + ".opacityTexture");
+		connectAttr -f ($fluids[0] + ".opacityTexGain") ($fluid + ".opacityTexGain");
+		connectAttr -f ($fluids[0] + ".invertTexture") ($fluid + ".invertTexture");
+		connectAttr -f ($fluids[0] + ".amplitude") ($fluid + ".amplitude");
+		connectAttr -f ($fluids[0] + ".ratio") ($fluid + ".ratio");
+		connectAttr -f ($fluids[0] + ".threshold") ($fluid + ".threshold");
+		connectAttr -f ($fluids[0] + ".textureScale") ($fluid + ".textureScale");
+		connectAttr -f ($fluids[0] + ".textureOrigin") ($fluid + ".textureOrigin");
+		connectAttr -f ($fluids[0] + ".depthMax") ($fluid + ".depthMax");
+		connectAttr -f ($fluids[0] + ".frequency") ($fluid + ".frequency");
+		connectAttr -f ($fluids[0] + ".frequencyRatio") ($fluid + ".frequencyRatio");
+		connectAttr -f ($fluids[0] + ".inflection") ($fluid + ".inflection");
+		connectAttr -f ($fluids[0] + ".textureTime") ($fluid + ".textureTime");
+		connectAttr -f ($fluids[0] + ".billowDensity") ($fluid + ".billowDensity");
+		connectAttr -f ($fluids[0] + ".spottyness") ($fluid + ".spottyness");
+		connectAttr -f ($fluids[0] + ".sizeRand") ($fluid + ".sizeRand");
+		connectAttr -f ($fluids[0] + ".randomness") ($fluid + ".randomness");
+		connectAttr -f ($fluids[0] + ".falloff") ($fluid + ".falloff");
+		connectAttr -f ($fluids[0] + ".numWaves") ($fluid + ".numWaves");
+		connectAttr -f ($fluids[0] + ".implode") ($fluid + ".implode");
+		connectAttr -f ($fluids[0] + ".implodeCenter") ($fluid + ".implodeCenter");
+		connectAttr -f ($fluids[0] + ".coordinateMethod") ($fluid + ".coordinateMethod");
+		//2011 additional attrs and some I missed before
+		connectAttr -f ($fluids[0] + ".is2d ") ($fluid + ".is2d");
+		connectAttr -f ($fluids[0] + ".baseResolution ") ($fluid + ".baseResolution");
+		connectAttr -f ($fluids[0] + ".squareVoxels ") ($fluid + ".squareVoxels");
+		connectAttr -f ($fluids[0] + ".autoResize ") ($fluid + ".autoResize");
+		connectAttr -f ($fluids[0] + ".resizeClosedBoundaries ") ($fluid + ".resizeClosedBoundaries");
+		connectAttr -f ($fluids[0] + ".autoResizeThreshold ") ($fluid + ".autoResizeThreshold");
+		connectAttr -f ($fluids[0] + ".maxResolution ") ($fluid + ".maxResolution");
+		connectAttr -f ($fluids[0] + ".resizeToEmitter ") ($fluid + ".resizeToEmitter");
+		connectAttr -f ($fluids[0] + ".dynamicOffset ") ($fluid + ".dynamicOffset");
+		connectAttr -f ($fluids[0] + ".substeps ") ($fluid + ".substeps");
+		connectAttr -f ($fluids[0] + ".densityGradientForce ") ($fluid + ".densityGradientForce");
+		connectAttr -f ($fluids[0] + ".densityTension ") ($fluid + ".densityTension");
+		connectAttr -f ($fluids[0] + ".densityNoise ") ($fluid + ".densityNoise");
+		connectAttr -f ($fluids[0] + ".selfForce ") ($fluid + ".selfForce");
+		connectAttr -f ($fluids[0] + ".selfAttract ") ($fluid + ".selfAttract");
+		connectAttr -f ($fluids[0] + ".selfRepel ") ($fluid + ".selfRepel");
+		connectAttr -f ($fluids[0] + ".equilibriumValue ") ($fluid + ".equilibriumValue");
+		connectAttr -f ($fluids[0] + ".selfForceDistance ") ($fluid + ".selfForceDistance");
+		connectAttr -f ($fluids[0] + ".velocityNoise ") ($fluid + ".velocityNoise");
+		connectAttr -f ($fluids[0] + ".turbulenceRes ") ($fluid + ".turbulenceRes");
+		connectAttr -f ($fluids[0] + ".temperatureNoise ") ($fluid + ".temperatureNoise");
+		connectAttr -f ($fluids[0] + ".temperatureTension ") ($fluid + ".temperatureTension");
+		connectAttr -f ($fluids[0] + ".matteOpacityMode ") ($fluid + ".matteOpacityMode");
+		connectAttr -f ($fluids[0] + ".matteOpacity ") ($fluid + ".matteOpacity");
+		connectAttr -f ($fluids[0] + ".shadowDiffusion ") ($fluid + ".shadowDiffusion");
+		connectAttr -f ($fluids[0] + ".lightType ") ($fluid + ".lightType");
+		connectAttr -f ($fluids[0] + ".lightBrightness ") ($fluid + ".lightBrightness");
+		connectAttr -f ($fluids[0] + ".pointLightDecay ") ($fluid + ".pointLightDecay");
+		connectAttr -f ($fluids[0] + ".fluidLightColor ") ($fluid + ".fluidLightColor");
+		connectAttr -f ($fluids[0] + ".ambientBrightness ") ($fluid + ".ambientBrightness");
+		connectAttr -f ($fluids[0] + ".ambientDiffusion ") ($fluid + ".ambientDiffusion");
+		connectAttr -f ($fluids[0] + ".ambientColor ") ($fluid + ".ambientColor");
+		connectAttr -f ($fluids[0] + ".meshResolution ") ($fluid + ".meshResolution");
+		connectAttr -f ($fluids[0] + ".colorPerVertex ") ($fluid + ".colorPerVertex");
+		connectAttr -f ($fluids[0] + ".opacityPerVertex ") ($fluid + ".opacityPerVertex");
+		connectAttr -f ($fluids[0] + ".incandescencePerVertex ") ($fluid + ".incandescencePerVertex");
+		connectAttr -f ($fluids[0] + ".velocityPerVertex ") ($fluid + ".velocityPerVertex");
+		connectAttr -f ($fluids[0] + ".uvwPerVertex ") ($fluid + ".uvwPerVertex");
+		connectAttr -f ($fluids[0] + ".useGradientNormals ") ($fluid + ".useGradientNormals");
+		connectAttr -f ($fluids[0] + ".refractiveIndex ") ($fluid + ".refractiveIndex");
+		connectAttr -f ($fluids[0] + ".pointLight ") ($fluid + ".pointLight");
+		connectAttr -f ($fluids[0] + ".textureRotate ") ($fluid + ".textureRotate");
+		//connectAttr -f ($fluids[0] + ".incandescence ") ($fluid + ".incandescence");
+		//connectAttr -f ($fluids[0] + ".color ") ($fluid + ".color");
+		//connectAttr -f ($fluids[0] + ".opacity ") ($fluid + ".opacity");
+	}
+	
+}
+
+global proc disconnectAllFluidAttributes()
+{
+	
+	string $fluids[] = `ls -sl -dag -s`;
+	int $fluidCount = size($fluids);
+	string $disconnectingFluids[];
+	for($i=1; $i< $fluidCount; $i++)	{
+		$disconnectingFluids[$i-1] = $fluids[$i];;
+	}
+	
+	for($fluid in $disconnectingFluids)	{
+		disconnectAttr  ($fluids[0] + ".startFrame") ($fluid + ".startFrame");
+		disconnectAttr  ($fluids[0] + ".resolution") ($fluid + ".resolution");
+		//seg faults in 2011 if this is turned on
+		//disconnectAttr  ($fluids[0] + ".dimensions") ($fluid + ".dimensions");
+		disconnectAttr  ($fluids[0] + ".highDetailSolve") ($fluid + ".highDetailSolve");
+		disconnectAttr  ($fluids[0] + ".solverQuality") ($fluid + ".solverQuality");
+		disconnectAttr  ($fluids[0] + ".densityMethod") ($fluid + ".densityMethod");
+		disconnectAttr  ($fluids[0] + ".densityGradient") ($fluid + ".densityGradient");
+		disconnectAttr  ($fluids[0] + ".densityScale") ($fluid + ".densityScale");
+		disconnectAttr  ($fluids[0] + ".densityDissipation") ($fluid + ".densityDissipation");
+		disconnectAttr  ($fluids[0] + ".densityDiffusion") ($fluid + ".densityDiffusion");
+		disconnectAttr  ($fluids[0] + ".densityBuoyancy") ($fluid + ".densityBuoyancy");
+		disconnectAttr  ($fluids[0] + ".velocityMethod") ($fluid + ".velocityMethod");
+		disconnectAttr  ($fluids[0] + ".velocityGradient") ($fluid + ".velocityGradient");
+		disconnectAttr  ($fluids[0] + ".velocityScale") ($fluid + ".velocityScale");
+		disconnectAttr  ($fluids[0] + ".viscosity") ($fluid + ".viscosity");
+		disconnectAttr  ($fluids[0] + ".friction") ($fluid + ".friction");
+		disconnectAttr  ($fluids[0] + ".velocitySwirl") ($fluid + ".velocitySwirl");
+		disconnectAttr  ($fluids[0] + ".velocityDamp") ($fluid + ".velocityDamp");
+		disconnectAttr  ($fluids[0] + ".turbulenceStrength") ($fluid + ".turbulenceStrength");
+		disconnectAttr  ($fluids[0] + ".turbulenceFrequency") ($fluid + ".turbulenceFrequency");
+		disconnectAttr  ($fluids[0] + ".turbulenceSpeed") ($fluid + ".turbulenceSpeed");
+		disconnectAttr  ($fluids[0] + ".temperatureMethod") ($fluid + ".temperatureMethod");
+		disconnectAttr  ($fluids[0] + ".temperatureGradient") ($fluid + ".temperatureGradient");
+		disconnectAttr  ($fluids[0] + ".temperatureScale") ($fluid + ".temperatureScale");
+		disconnectAttr  ($fluids[0] + ".temperatureDissipation") ($fluid + ".temperatureDissipation");
+		disconnectAttr  ($fluids[0] + ".temperatureDiffusion") ($fluid + ".temperatureDiffusion");
+		disconnectAttr  ($fluids[0] + ".temperatureTurbulence") ($fluid + ".temperatureTurbulence");
+		disconnectAttr  ($fluids[0] + ".buoyancy") ($fluid + ".buoyancy");
+		disconnectAttr  ($fluids[0] + ".colorMethod") ($fluid + ".colorMethod");
+		disconnectAttr  ($fluids[0] + ".colorDissipation") ($fluid + ".colorDissipation");
+		disconnectAttr  ($fluids[0] + ".colorDiffusion") ($fluid + ".colorDiffusion");
+		disconnectAttr  ($fluids[0] + ".fuelMethod") ($fluid + ".fuelMethod");
+		disconnectAttr  ($fluids[0] + ".fuelGradient") ($fluid + ".fuelGradient");
+		disconnectAttr  ($fluids[0] + ".fuelScale") ($fluid + ".fuelScale");
+		disconnectAttr  ($fluids[0] + ".reactionSpeed") ($fluid + ".reactionSpeed");
+		disconnectAttr  ($fluids[0] + ".fuelIgnitionTemp") ($fluid + ".fuelIgnitionTemp");
+		disconnectAttr  ($fluids[0] + ".maxReactionTemp") ($fluid + ".maxReactionTemp");
+		disconnectAttr  ($fluids[0] + ".heatReleased") ($fluid + ".heatReleased");
+		disconnectAttr  ($fluids[0] + ".lightReleased") ($fluid + ".lightReleased");
+		disconnectAttr  ($fluids[0] + ".lightColor") ($fluid + ".lightColor");
+		disconnectAttr  ($fluids[0] + ".simulationRateScale") ($fluid + ".simulationRateScale");
+		disconnectAttr  ($fluids[0] + ".boundaryX") ($fluid + ".boundaryX");
+		disconnectAttr  ($fluids[0] + ".boundaryY") ($fluid + ".boundaryY");
+		disconnectAttr  ($fluids[0] + ".boundaryZ") ($fluid + ".boundaryZ");
+		disconnectAttr  ($fluids[0] + ".falloffMethod") ($fluid + ".falloffMethod");
+		disconnectAttr  ($fluids[0] + ".solver") ($fluid + ".solver");
+		disconnectAttr  ($fluids[0] + ".gridInterpolator") ($fluid + ".gridInterpolator");
+		disconnectAttr  ($fluids[0] + ".gravity") ($fluid + ".gravity");
+		disconnectAttr  ($fluids[0] + ".slices") ($fluid + ".slices");
+		disconnectAttr  ($fluids[0] + ".voxelQuality") ($fluid + ".voxelQuality");
+		disconnectAttr  ($fluids[0] + ".drawHeads") ($fluid + ".drawHeads");
+		disconnectAttr  ($fluids[0] + ".velocityDraw") ($fluid + ".velocityDraw");
+		disconnectAttr  ($fluids[0] + ".velocityDrawLength") ($fluid + ".velocityDrawLength");
+		disconnectAttr  ($fluids[0] + ".velocityDrawSkip") ($fluid + ".velocityDrawSkip");
+		disconnectAttr  ($fluids[0] + ".shadedDisplay") ($fluid + ".shadedDisplay");
+		disconnectAttr  ($fluids[0] + ".opacityPreviewGain") ($fluid + ".opacityPreviewGain");
+		disconnectAttr  ($fluids[0] + ".boundaryDraw") ($fluid + ".boundaryDraw");
+		disconnectAttr  ($fluids[0] + ".numericDisplay") ($fluid + ".numericDisplay");
+		disconnectAttr  ($fluids[0] + ".wireframeDisplay") ($fluid + ".wireframeDisplay");
+		disconnectAttr  ($fluids[0] + ".selfShadowing") ($fluid + ".selfShadowing");
+		disconnectAttr  ($fluids[0] + ".quality") ($fluid + ".quality");
+		disconnectAttr  ($fluids[0] + ".renderInterpolator") ($fluid + ".renderInterpolator");
+		disconnectAttr  ($fluids[0] + ".colorInputBias") ($fluid + ".colorInputBias");
+		disconnectAttr  ($fluids[0] + ".opacityInput") ($fluid + ".opacityInput");
+		disconnectAttr  ($fluids[0] + ".opacityInputBias") ($fluid + ".opacityInputBias");
+		disconnectAttr  ($fluids[0] + ".transparency") ($fluid + ".transparency");
+		disconnectAttr  ($fluids[0] + ".shadowOpacity") ($fluid + ".shadowOpacity");
+		disconnectAttr  ($fluids[0] + ".incandescenceInput") ($fluid + ".incandescenceInput");
+		disconnectAttr  ($fluids[0] + ".incandescenceInputBias") ($fluid + ".incandescenceInputBias");
+		disconnectAttr  ($fluids[0] + ".glowIntensity") ($fluid + ".glowIntensity");
+		disconnectAttr  ($fluids[0] + ".cosinePower") ($fluid + ".cosinePower");
+		disconnectAttr  ($fluids[0] + ".dropoffShape") ($fluid + ".dropoffShape");
+		disconnectAttr  ($fluids[0] + ".edgeDropoff") ($fluid + ".edgeDropoff");
+		disconnectAttr  ($fluids[0] + ".contrastTolerance") ($fluid + ".contrastTolerance");
+		disconnectAttr  ($fluids[0] + ".heightField") ($fluid + ".heightField");
+		disconnectAttr  ($fluids[0] + ".surfaceRender") ($fluid + ".surfaceRender");
+		disconnectAttr  ($fluids[0] + ".surfaceThreshold") ($fluid + ".surfaceThreshold");
+		disconnectAttr  ($fluids[0] + ".surfaceTolerance") ($fluid + ".surfaceTolerance");
+		disconnectAttr  ($fluids[0] + ".softSurface") ($fluid + ".softSurface");
+		disconnectAttr  ($fluids[0] + ".realLights") ($fluid + ".realLights");
+		disconnectAttr  ($fluids[0] + ".directionalLight") ($fluid + ".directionalLight");
+		disconnectAttr  ($fluids[0] + ".sampleMethod") ($fluid + ".sampleMethod");
+		disconnectAttr  ($fluids[0] + ".textureType") ($fluid + ".textureType");
+		disconnectAttr  ($fluids[0] + ".colorTexture") ($fluid + ".colorTexture");
+		disconnectAttr  ($fluids[0] + ".colorTexGain") ($fluid + ".colorTexGain");
+		disconnectAttr  ($fluids[0] + ".incandTexture") ($fluid + ".incandTexture");
+		disconnectAttr  ($fluids[0] + ".incandTexGain") ($fluid + ".incandTexGain");
+		disconnectAttr  ($fluids[0] + ".opacityTexture") ($fluid + ".opacityTexture");
+		disconnectAttr  ($fluids[0] + ".opacityTexGain") ($fluid + ".opacityTexGain");
+		disconnectAttr  ($fluids[0] + ".invertTexture") ($fluid + ".invertTexture");
+		disconnectAttr  ($fluids[0] + ".amplitude") ($fluid + ".amplitude");
+		disconnectAttr  ($fluids[0] + ".ratio") ($fluid + ".ratio");
+		disconnectAttr  ($fluids[0] + ".threshold") ($fluid + ".threshold");
+		disconnectAttr  ($fluids[0] + ".textureScale") ($fluid + ".textureScale");
+		disconnectAttr  ($fluids[0] + ".textureOrigin") ($fluid + ".textureOrigin");
+		disconnectAttr  ($fluids[0] + ".depthMax") ($fluid + ".depthMax");
+		disconnectAttr  ($fluids[0] + ".frequency") ($fluid + ".frequency");
+		disconnectAttr  ($fluids[0] + ".frequencyRatio") ($fluid + ".frequencyRatio");
+		disconnectAttr  ($fluids[0] + ".inflection") ($fluid + ".inflection");
+		disconnectAttr  ($fluids[0] + ".textureTime") ($fluid + ".textureTime");
+		disconnectAttr  ($fluids[0] + ".billowDensity") ($fluid + ".billowDensity");
+		disconnectAttr  ($fluids[0] + ".spottyness") ($fluid + ".spottyness");
+		disconnectAttr  ($fluids[0] + ".sizeRand") ($fluid + ".sizeRand");
+		disconnectAttr  ($fluids[0] + ".randomness") ($fluid + ".randomness");
+		disconnectAttr  ($fluids[0] + ".falloff") ($fluid + ".falloff");
+		disconnectAttr  ($fluids[0] + ".numWaves") ($fluid + ".numWaves");
+		disconnectAttr  ($fluids[0] + ".implode") ($fluid + ".implode");
+		disconnectAttr  ($fluids[0] + ".implodeCenter") ($fluid + ".implodeCenter");
+		disconnectAttr  ($fluids[0] + ".coordinateMethod") ($fluid + ".coordinateMethod");
+		//2011 additional attrs and some I missed before
+		disconnectAttr  ($fluids[0] + ".is2d ") ($fluid + ".is2d");
+		disconnectAttr  ($fluids[0] + ".baseResolution ") ($fluid + ".baseResolution");
+		disconnectAttr  ($fluids[0] + ".squareVoxels ") ($fluid + ".squareVoxels");
+		disconnectAttr  ($fluids[0] + ".autoResize ") ($fluid + ".autoResize");
+		disconnectAttr  ($fluids[0] + ".resizeClosedBoundaries ") ($fluid + ".resizeClosedBoundaries");
+		disconnectAttr  ($fluids[0] + ".autoResizeThreshold ") ($fluid + ".autoResizeThreshold");
+		disconnectAttr  ($fluids[0] + ".maxResolution ") ($fluid + ".maxResolution");
+		disconnectAttr  ($fluids[0] + ".resizeToEmitter ") ($fluid + ".resizeToEmitter");
+		disconnectAttr  ($fluids[0] + ".dynamicOffset ") ($fluid + ".dynamicOffset");
+		disconnectAttr  ($fluids[0] + ".substeps ") ($fluid + ".substeps");
+		disconnectAttr  ($fluids[0] + ".densityGradientForce ") ($fluid + ".densityGradientForce");
+		disconnectAttr  ($fluids[0] + ".densityTension ") ($fluid + ".densityTension");
+		disconnectAttr  ($fluids[0] + ".densityNoise ") ($fluid + ".densityNoise");
+		disconnectAttr  ($fluids[0] + ".selfForce ") ($fluid + ".selfForce");
+		disconnectAttr  ($fluids[0] + ".selfAttract ") ($fluid + ".selfAttract");
+		disconnectAttr  ($fluids[0] + ".selfRepel ") ($fluid + ".selfRepel");
+		disconnectAttr  ($fluids[0] + ".equilibriumValue ") ($fluid + ".equilibriumValue");
+		disconnectAttr  ($fluids[0] + ".selfForceDistance ") ($fluid + ".selfForceDistance");
+		disconnectAttr  ($fluids[0] + ".velocityNoise ") ($fluid + ".velocityNoise");
+		disconnectAttr  ($fluids[0] + ".turbulenceRes ") ($fluid + ".turbulenceRes");
+		disconnectAttr  ($fluids[0] + ".temperatureNoise ") ($fluid + ".temperatureNoise");
+		disconnectAttr  ($fluids[0] + ".temperatureTension ") ($fluid + ".temperatureTension");
+		disconnectAttr  ($fluids[0] + ".matteOpacityMode ") ($fluid + ".matteOpacityMode");
+		disconnectAttr  ($fluids[0] + ".matteOpacity ") ($fluid + ".matteOpacity");
+		disconnectAttr  ($fluids[0] + ".shadowDiffusion ") ($fluid + ".shadowDiffusion");
+		disconnectAttr  ($fluids[0] + ".lightType ") ($fluid + ".lightType");
+		disconnectAttr  ($fluids[0] + ".lightBrightness ") ($fluid + ".lightBrightness");
+		disconnectAttr  ($fluids[0] + ".pointLightDecay ") ($fluid + ".pointLightDecay");
+		disconnectAttr  ($fluids[0] + ".fluidLightColor ") ($fluid + ".fluidLightColor");
+		disconnectAttr  ($fluids[0] + ".ambientBrightness ") ($fluid + ".ambientBrightness");
+		disconnectAttr  ($fluids[0] + ".ambientDiffusion ") ($fluid + ".ambientDiffusion");
+		disconnectAttr  ($fluids[0] + ".ambientColor ") ($fluid + ".ambientColor");
+		disconnectAttr  ($fluids[0] + ".meshResolution ") ($fluid + ".meshResolution");
+		disconnectAttr  ($fluids[0] + ".colorPerVertex ") ($fluid + ".colorPerVertex");
+		disconnectAttr  ($fluids[0] + ".opacityPerVertex ") ($fluid + ".opacityPerVertex");
+		disconnectAttr  ($fluids[0] + ".incandescencePerVertex ") ($fluid + ".incandescencePerVertex");
+		disconnectAttr  ($fluids[0] + ".velocityPerVertex ") ($fluid + ".velocityPerVertex");
+		disconnectAttr  ($fluids[0] + ".uvwPerVertex ") ($fluid + ".uvwPerVertex");
+		disconnectAttr  ($fluids[0] + ".useGradientNormals ") ($fluid + ".useGradientNormals");
+		disconnectAttr  ($fluids[0] + ".refractiveIndex ") ($fluid + ".refractiveIndex");
+		disconnectAttr  ($fluids[0] + ".pointLight ") ($fluid + ".pointLight");
+		disconnectAttr  ($fluids[0] + ".textureRotate ") ($fluid + ".textureRotate");
+		//disconnectAttr  ($fluids[0] + ".incandescence ") ($fluid + ".incandescence");
+		//disconnectAttr  ($fluids[0] + ".color ") ($fluid + ".color");
+		//disconnectAttr  ($fluids[0] + ".opacity ") ($fluid + ".opacity");
+	}
+	
+}
+
+global proc connectFluidResAttributes()
+{
+	string $fluids[] = `ls -sl -dag -s`;
+	int $i;
+	for($i=1;$i<`size $fluids`;$i++){
+		connectAttr -f ($fluids[0] + ".squareVoxels") ($fluids[$i] + ".squareVoxels");
+		connectAttr -f ($fluids[0] + ".baseResolution") ($fluids[$i] + ".baseResolution");
+		connectAttr -f ($fluids[0] + ".resolutionW") ($fluids[$i] + ".resolutionW");
+		connectAttr -f ($fluids[0] + ".resolutionH") ($fluids[$i] + ".resolutionH");
+		connectAttr -f ($fluids[0] + ".resolutionD") ($fluids[$i] + ".resolutionD");
+		connectAttr -f ($fluids[0] + ".dimensionsW") ($fluids[$i] + ".dimensionsW");
+		connectAttr -f ($fluids[0] + ".dimensionsH") ($fluids[$i] + ".dimensionsH");
+		connectAttr -f ($fluids[0] + ".dimensionsD") ($fluids[$i] + ".dimensionsD");	
+	}
+}
+
+global proc disconnectFluidResAttributes()
+{
+	string $fluids[] = `ls -sl -dag -s`;
+	int $i;
+	for($i=1;$i<`size $fluids`;$i++){
+		disconnectAttr ($fluids[0] + ".squareVoxels") ($fluids[$i] + ".squareVoxels");
+		disconnectAttr ($fluids[0] + ".baseResolution") ($fluids[$i] + ".baseResolution");
+		disconnectAttr ($fluids[0] + ".resolutionW") ($fluids[$i] + ".resolutionW");
+		disconnectAttr ($fluids[0] + ".resolutionH") ($fluids[$i] + ".resolutionH");
+		disconnectAttr ($fluids[0] + ".resolutionD") ($fluids[$i] + ".resolutionD");
+		disconnectAttr ($fluids[0] + ".dimensionsW") ($fluids[$i] + ".dimensionsW");
+		disconnectAttr ($fluids[0] + ".dimensionsH") ($fluids[$i] + ".dimensionsH");
+		disconnectAttr ($fluids[0] + ".dimensionsD") ($fluids[$i] + ".dimensionsD");
+	}
+}
+
+global proc miscFluidFunctionsLayout(string $parent)
+{
+	string $miscFluidFunctionsLayout = `frameLayout
+		-l "Other Fluid Functions"
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $parent`;
+			
+	button
+		-label "Convert between 2d and 3d fluid"
+		-ann "This will change a 2d fluid to a 3d fluid or a 3d fluid to a 2d fluid."			
+		-command "convert2d3dFluid"
+		convert2d3dFluid;
+		
+	floatSliderButtonGrp 
+		-cal 1 "left" 
+		-cw3 140 70 100
+		-l "Fill Fluid Up:" 
+		-minValue 0		
+		-maxValue 100
+		-value 50 
+		-precision 3
+		-fieldMinValue 0.0001 
+		-fieldMaxValue 100
+		-fs 0.05
+		-sliderStep 1
+		-step 1
+		-buttonLabel "Fill"
+		-buttonCommand "fillFluidUp"
+		-field true	
+		-ann "This adds fluid to selected fluid container by percentage."
+		fillFluidUp;
+		
+	setParent..;
+}
+
+global proc fillSelectedFluidWithColorLayout(string $parent)
+{
+	string $fluidColorFillLayout = `frameLayout
+		-l "Fluid Color Fill"
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $parent`;
+			
+	colorSliderGrp 
+		-label "Fill Color"
+		-rgb 0 0 1
+		fillSelectedFluidColor
+		;
+		
+	button
+		-label "Fill Fluid With Color"		
+		-command "fillSelectedFluidWithColor"
+		fillSelectedFluidWithColor;	
+}
+
+global proc emitFalloffUsingOtherMethodLayout(string $parent)
+{
+	string $layout = `frameLayout
+		-l "Emit Falloff Using Other Method"
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $parent`;
+				
+	button
+		-label "Create Emit Falloff Using Other Method Expression"		
+		-command "createEmitFalloffUsingOtherMethodExpression"
+		createEmitFalloffUsingOtherMethodExpression
+		;
+
+	setParent..;
+}
+
+global proc fluidToFluidContentsTransferLayout(string $parent)
+{
+	string $fluidToFluidContentsTransferLayout = `frameLayout
+		-l "Fluid Contents Transfer"
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $parent`;
+		
+		textFieldButtonGrp
+			-ed true
+			-label "Source Fluid"
+			-text  ""
+			-ann ""
+			-buttonLabel "Select"
+			-bc "assignFluidContentsTransferSourceFluid"
+			getFluidContentsTransferSourceFluid
+			;
+        	
+		textFieldButtonGrp
+			-ed true
+			-label "Target Fluid"
+			-text ""
+			-ann ""
+			-buttonLabel "Select"
+			-bc "assignFluidContentsTransferTargetFluid"
+			getFluidContentsTransferTargetFluid
+			;
+		
+		checkBoxGrp
+			-ncb 1
+			-l "Transfer in World Space: "				
+			-v1 false
+			-vr
+			transferContentsInWorldSpace
+			;
+
+		optionMenuGrp -l "Source Type"
+			sourceFluidContentsTransferType;
+				menuItem -label "velocity";
+				menuItem -label "density";
+				menuItem -label "temperature";
+				menuItem -label "fuel";
+				menuItem -label "color";
+				menuItem -label "falloff";
+		
+		optionMenuGrp -l "Target Type"
+			targetFluidContentsTransferType;
+				menuItem -label "velocity";
+				menuItem -label "density";
+				menuItem -label "temperature";
+				menuItem -label "fuel";
+				menuItem -label "color";
+				menuItem -label "falloff";		
+			
+		floatSliderButtonGrp 
+			-cal 1 "left" 
+			-cw3 140 70 100
+			-l "Transfer Percent:" 
+			-minValue 0		
+			-maxValue 100
+			-value 100 
+			-precision 3
+			-fieldMinValue 0.0001 
+			-fieldMaxValue 100
+			-fs 0.05
+			-sliderStep 1
+			-step 1
+			-buttonLabel "Transfer"
+			-buttonCommand "doFluidToFluidContentsTransfer"
+			-field true	
+			-ann ""
+			 doFluidToFluidContentsTransfer;
+			 
+		button
+			-l "Copy Fluid Properties"
+			-c "copyFluidContentsSourceTypeToTargetType"
+			-ann "The source fluid and taget fluid must be of the same exact resolution and must be in same place in the world."
+			copyFluidContentsSourceTypeToTargetType
+			;
+			
+			 
+		progressBar
+			-min 0
+			-max 100
+			fluidContentsTransferProgressBar
+			;	
+}
+
+
+global proc doFluidToFluidContentsTransfer()
+{
+	print("Starting Fluid to Fluid Transfer... \n");
+	waitCursor -state on; // Turn waitcursor on for duplication process
+	progressBar
+		-e				
+		-pr 0
+		fluidContentsTransferProgressBar
+		;
+		
+	string $mFluid = `textFieldButtonGrp -q -text getFluidContentsTransferSourceFluid`;
+	string $sFluid = `textFieldButtonGrp -q -text getFluidContentsTransferTargetFluid`;
+	$useVoxWP = `checkBoxGrp -q -v1 transferContentsInWorldSpace`;
+	
+	float $res[] = `getAttr ($mFluid + ".resolution")`;
+	int $xRes = $res[0];
+	int $yRes = $res[1];
+	int $zRes = $res[2];
+	
+	// get the resolution of the slave fluid-container 
+	float $sres[] = `getAttr ($sFluid + ".resolution")`;
+	// If the resolutions don't match we need to use the world positions of the voxels to get the indexes. 
+	if($res[0] != $sres[0] || $res[1] != $sres[1] || $res[2] != $sres[2]){
+		$useVoxWP = true;
+		$xRes = $sres[0];
+		$yRes = $sres[1];
+		$zRes = $sres[2];
+	}
+	
+	int $xi = 0;
+	int $yi = 0;
+	int $zi = 0;
+	float $voxPos[];
+	//print("xRes : " + $xRes + "yRes : " + $yRes + "zRes : " + $zRes + "\n");
+	$ok = false;
+	int $progress = 0;
+	int $i = 0;
+	int $voxelCount = $xRes * $yRes * $zRes;
+	float $timeA;
+	float $timeB;
+	for($xi=0;$xi < $xRes; $xi++){
+		for($yi=0;$yi < $yRes; $yi++){ 
+			for($zi=0;$zi < $zRes; $zi++ ){ 			
+				$ok = `fluidVoxelInfo -inBounds $xi $yi $zi $mFluid`;	
+				
+				if(!$ok){
+					continue;
+				}
+				if($useVoxWP){
+					$voxPos = `fluidVoxelInfo -os false -voxelCenter -cb -xi $xi -yi $yi -zi $zi $mFluid`;
+				} else {
+					$voxPos = {0,0,0};
+				}		
+				
+				setFluidColor($xi, $yi, $zi, $voxPos, $useVoxWP);
+				
+				$i++;
+				$progress = 100 - (($i / $voxelCount) * 100);
+				progressBar
+					-e
+					-max $voxelCount				
+					-s 1
+					fluidContentsTransferProgressBar
+					;
+							
+			}
+		}
+	
+	}
+	print("Fluid Transfer Complete.\n");
+	waitCursor -state off; // Turn waitcursor on for duplication process
+}
+
+global proc setFluidColor(float $xi, float $yi, float $zi, float $voxPos[], int $useVoxWP)
+{
+	string $mFluid = `textFieldButtonGrp -q -text getFluidContentsTransferSourceFluid`;
+	string $sFluid = `textFieldButtonGrp -q -text getFluidContentsTransferTargetFluid`;
+	string $sourceType = `optionMenuGrp -q -v sourceFluidContentsTransferType`;
+	string $targetType = `optionMenuGrp -q -v targetFluidContentsTransferType`;
+	float $amount = `floatSliderButtonGrp -q -v doFluidToFluidContentsTransfer`;
+						 
+	int $svi[];
+	$ok = false;
+	
+	// Either use the same voxel index as the master fluid or get the index from the position of the mFluid voxel.
+	if($useVoxWP == 1){
+		$svi = `fluidVoxelInfo -os false -cb -voxel $voxPos[0] $voxPos[1] $voxPos[2] $sFluid`;
+	} else { 
+		$svi[0] = $xi;
+		$svi[1] = $yi;
+		$svi[2] = $zi;
+		$ok = `fluidVoxelInfo -inBounds $xi $yi $zi $sFluid`;
+		//If we can't find the voxel by index then we need to look for it by position 
+		if(!$ok){
+			$svi = `fluidVoxelInfo -os false -cb -voxel $voxPos[0] $voxPos[1] $voxPos[2] $sFluid`;
+		}
+	}
+	
+	//$svi = `fluidVoxelInfo -os false -cb -voxel $voxPos[0] $voxPos[1] $voxPos[2] $sFluid`;
+	
+	float $val[];
+	$val = `getFluidAttr -at $sourceType -xi $xi -yi $yi -zi $zi $mFluid`;
+	int $i;
+	for($i=0;$i<`size $val`;$i++){
+		$val[$i] = $val[$i] * ($amount * 0.01);
+	}
+	if($targetType == "velocity" || $targetType == "color"){
+		setFluidAttr -at $targetType -vv $val[0] $val[1] $val[2] -xi $svi[0] -yi $svi[1] -zi $svi[2] $sFluid;
+	} else {
+		setFluidAttr -at $targetType -fv $val[0] -xi $svi[0] -yi $svi[1] -zi $svi[2] $sFluid;
+	}
+	//print("Transfering: " + $sourceType + " To: " + $targetType + " At: " + $svi[0] + " || " + $svi[1] + " || " + $svi[2] + " Amount: " + $amount + "\n");
+}
+
+global proc copyFluidContentsSourceTypeToTargetType()
+{
+	string $mFluid = `textFieldButtonGrp -q -text getFluidContentsTransferSourceFluid`;
+	string $sFluid = `textFieldButtonGrp -q -text getFluidContentsTransferTargetFluid`;
+	string $sourceType = `optionMenuGrp -q -v sourceFluidContentsTransferType`;
+	string $targetType = `optionMenuGrp -q -v targetFluidContentsTransferType`;
+	
+	float $sourceVals[] = `getFluidAttr -at $sourceType $mFluid`;
+	select -r $sFluid;
+	
+	float $res[] = `getAttr ($sFluid + ".resolution")`;
+	int $xRes = $res[0];
+	int $yRes = $res[1];
+	int $zRes = $res[2];
+	
+	int $xi = 0;
+	int $yi = 0;
+	int $zi = 0;
+	
+	int $i;
+	for($zi=0;$zi < $zRes; $zi++){
+		for($yi=0;$yi < $yRes; $yi++){ 
+			for($xi=0;$xi < $xRes; $xi++ ){
+				//setFluidAttr -at $targetType -fv $sourceVals;
+				setFluidAttr -at $targetType -fv $sourceVals[$i] -xi $xi -yi $yi -zi $zi $sFluid;
+				$i++;
+			}
+		}
+	
+	}
+
+}
+
+global proc fillSelectedFluidWithColor()
+{
+	float $color[] = `colorSliderGrp -q -rgb fillSelectedFluidColor`;
+	string $sel[] = `ls -sl`;
+	
+	
+	float $res[] = `getAttr ($sel[0] + ".resolution")`;
+	int $xRes = $res[0];
+	int $yRes = $res[1];
+	int $zRes = $res[2];
+	
+	int $xi = 0;
+	int $yi = 0;
+	int $zi = 0;
+	
+	for($xi=0;$xi < $xRes; $xi++){
+		for($yi=0;$yi < $yRes; $yi++){ 
+			for($zi=0;$zi < $zRes; $zi++ ){ 
+					setFluidAttr -at color -vv $color[0] $color[1] $color[2] -xi $xi -yi $yi -zi $zi $sel[0];	
+	
+			}
+		}
+	
+	}
+
+}
+
+global proc assignFluidContentsTransferSourceFluid()
+{
+	string $fluids[] = `ls -sl -dag -s`;
+	textFieldButtonGrp
+		-edit
+		-text $fluids[0]
+		getFluidContentsTransferSourceFluid
+		;
+	
+}
+
+global proc assignFluidContentsTransferTargetFluid()
+{
+	string $fluids[] = `ls -sl -dag -s`;
+	textFieldButtonGrp
+		-edit
+		-text $fluids[0]
+		getFluidContentsTransferTargetFluid
+		;
+		
+}
+
+global proc centerFluidOnObjectBoundingBoxLayout(string $parent)
+{
+	string $centerFluidOnBBoxLayout = `frameLayout
+		-l "Center Fluid On Bounding Box"	
+		-ann ""
+		-bv true
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $parent
+		centerFluidOnBoundingBoxLayout
+		`;
+		
+		text
+			-l "Select an Object and then Select a Fluid."
+			;
+		
+		checkBox 
+				-l "Center On Bounding Box"
+				-v true
+				centerFluidOnBoundingBoxOption
+				;
+				
+		checkBox 
+			-l "Scale to Fit Bounding Box"
+			-v false
+			scaleToFitFluidOnBoundingBoxOption
+			;
+				
+		button
+			-label "Create Fluid Bounding Box Expression"
+			-ann ""
+			-command "centerFluidOnObjectBoundingBox"
+			-p $centerFluidOnBBoxLayout
+			centerFluidOnObjectBoundingBox
+			;
+}
+
+global proc centerFluidOnObjectBoundingBox()
+{
+	$centerOnBBox = `checkBox -q -v centerFluidOnBoundingBoxOption`;
+	$fitToBBox = `checkBox -q -v scaleToFitFluidOnBoundingBoxOption`;
+	string $sel[] = `ls -sl`;
+	string $obj = $sel[0];
+	string $fluid = $sel[1];
+	string $expPrefix = "";
+	
+	string $centerExp = "";
+	if($centerOnBBox){
+		$expPrefix = "CenterOn";
+		$centerExp = (
+		"float $center[] = `objectCenter " + $obj + "`;\n"
+		+"xform -t $center[0] $center[1] $center[2] " + $fluid + ";\n"
+	);
+	}
+	
+	string $scaleToFitExp = "";
+	if($fitToBBox){
+		$expPrefix = $fitToBBox + "FitTo";
+		$scaleToFitExp = (
+		"float $bbox[] = `xform -q -bb " + $obj + "`;\n"
+		+"float $sizeX = $bbox[3] - $bbox[0];\n"
+		+"float $sizeY = $bbox[4] - $bbox[1];\n"
+		+"float $sizeZ = $bbox[5] - $bbox[2];\n"
+		+"float $fbbox[] = `xform -q -bb " + $fluid + "`;\n"
+		+"float $targetX = $fbbox[3] - $fbbox[0];\n"
+		+"float $targetY = $fbbox[4] - $fbbox[1];\n"
+		+"float $targetZ = $fbbox[5] - $fbbox[2];\n"	
+		+"float $diffSizeX = $sizeX - $targetX;\n"
+		+"float $diffSizeY = $sizeY - $targetY;\n"
+		+"float $diffSizeZ = $sizeZ - $targetZ;\n"
+		+"float $scaleFactX = 1 + (1 / $diffSizeX);\n"
+		+"float $scaleFactY = 1 + (1 / $diffSizeY);\n"
+		+"float $scaleFactZ = 1 + (1 / $diffSizeZ);\n"
+		+"xform -s $scaleFactX $scaleFactY $scaleFactZ " + $fluid + ";\n"
+		);
+	}
+	
+	string $expName = $obj + $fluid + $expPrefix + "BoundingBox";
+	
+	string $exp = (
+	$expName + "();\n"
+	+"proc " + $expName + "()\n"
+	+"{\n"
+	+ $centerExp
+	+ $scaleToFitExp
+	+"}\n"
+	);
+	//print($exp + "\n");
+	expression -s ($exp) -o $fluid -n ($expName); // end of the expression	
+	print ($expName + " Was Created!" + "\n");
+}
+
+global proc selectAllFluidsGroupedUnderSelected()
+{
+	string $sel[] = `ls -sl`;
+	int $i;
+	string $fluids[];
+	for($i=0;$i<`size $sel`;$i++){
+		string $rel[] = `listRelatives -ad -type "fluidShape" $sel[$i]`;
+		appendStringArray($fluids, $rel, `size $rel`);		
+	}
+	
+	select -r $fluids;
+
+}
+
+
+global proc copySelectedFluidRampAttributes()
+{
+	string $obj[] = `ls -sl`;
+	if(`size($obj)` < 2){
+		error "Please select the source and destination object";
+	}
+	string $child_A[] = `listRelatives $obj[0]`;
+	string $child_B[] = `listRelatives $obj[1]`;
+	
+	string $node = $child_A[0];
+	string $dest = $child_B[0];
+	
+	int $input = `getAttr ($node + ".colorInput")`;
+	float $bias = `getAttr ($node + ".colorInputBias")`;
+	
+	setAttr ($dest + ".colorInput") $input;
+	setAttr ($dest + ".colorInputBias") $bias;
+	
+	$input = `getAttr ($node + ".incandescenceInput")`;
+	$bias = `getAttr ($node + ".incandescenceInputBias")`;
+	
+	setAttr ($dest + ".incandescenceInput") $input;
+	setAttr ($dest + ".incandescenceInputBias") $bias;
+	
+	$input = `getAttr ($node + ".opacityInput")`;
+	$bias = `getAttr ($node + ".opacityInputBias")`;
+	
+	setAttr ($dest + ".opacityInput") $input;
+	setAttr ($dest + ".opacityInputBias") $bias;
+
+}
+
+global proc connectSelectedFluidsStartTimeToCacheStartTime()
+{
+	string $fluids[] = `ls -dag -s -sl`;
+	string $cacheFiles[] = getSelectedFluidsCacheFileNodes();
+	int $i;
+	for($i=0;$i<`size $fluids`;$i++){
+		connectAttr -f ($cacheFiles[$i] + ".startFrame") ($fluids[$i] + ".startFrame");
+	}
+}
+
+global proc string[] getSelectedFluidsCacheFileNodes()
+{
+	string $fluids[] = `ls -dag -s -sl`;
+	int $i;
+	int $p;
+	string $cacheFileNode[];
+	for($i=0;$i<`size $fluids`;$i++){
+		$cacheFileNode = `listConnections -t cacheFile $fluids[$i]`;	
+		if(`size $cacheFileNode` == 0){
+			string $cacheBlend[] = `listConnections -t cacheBlend $fluids[$i]`;
+			if(`size $cacheBlend` > 0){
+				for($p=0;$p<`size $cacheBlend`;$p++){
+					string $cfn[] = `listConnections -t cacheFile $cacheBlend[$p]`;
+					$cacheFileNode[$i] = $cfn[0];
+				}
+			} else {
+				print("No Cache File Found on " + $fluids[$i] + ".\n");
+			}
+		}
+	}
+	return $cacheFileNode;
+}
+
+global proc convert2d3dFluid()
+{
+
+	string $sel[] = `ls -sl -dag -lf`;
+	if(`size $sel` < 1){
+		print ("You must select a fluid to convert." + "\n");
+		return;
+	}
+	
+	$is2d = `getAttr ($sel[0] + ".is2d")`;
+	if($is2d){
+		eval setAttr($sel[0] + ".is2d ") 0;
+		float $fluidRes = `getAttr ($sel[0] + ".dimensionsW")`;
+		eval setAttr($sel[0] + ".dimensionsD") $fluidRes;
+		print ("Converted 2d fluid to 3d fluid." + "\n");
+	} else {	
+		eval setAttr($sel[0] + ".is2d ") 1;
+		eval setAttr($sel[0] + ".dimensionsD") 0.25;
+		print ("Converted 3d fluid to 2d fluid." + "\n");
+	}
+
+}
+
+
+global proc resetFluidVelocityWindow () 
+{
+
+	
+	string $window;
+	$window = "window";//Global name for window
+	//global string $MY_customFileNamePrefix;
+	if (`window -exists $window`)//Is my window there?
+		deleteUI $window;
+		
+	window
+		-title "ResetFluidVelocity"
+		-widthHeight 400 300
+		-menuBar on
+		-menuBarVisible on
+		-minimizeButton on
+		-maximizeButton on
+		-sizeable on		
+		-resizeToFitChildren on
+		-titleBar on
+		$window;
+	
+	frameLayout
+		-l "Reset Fluid Velocity"
+		;
+		
+	button
+		-label "Reset Fluid Velocity"
+		-ann ""			
+		-command "resetFluidVelocity"
+		
+		resetFluidVelocity;
+		
+	showWindow $window;
+}
+		
+global proc resetFluidVelocity()
+{
+	string $sel[] = `ls -sl`;
+	
+	float $res[] = `getAttr ($sel[0] + ".resolution")`;
+	int $xRes = $res[0];
+	int $yRes = $res[1];
+	int $zRes = $res[2];
+	 
+	int $xi = 0;
+	int $yi = 0;
+	int $zi = 0;
+	
+	for($xi=0;$xi < $xRes; $xi++){
+		for($yi=0;$yi < $yRes; $yi++){ 
+			for($zi=0;$zi < $zRes; $zi++ ){ 
+				setFluidAttr -at velocity -vv 0 0 0 -xi $xi -yi $yi -zi $zi $sel[0];
+	
+			}
+	
+		}
+	
+	}
+
+}
+
+global proc connectSelectedCacheFileToSelectedFluid()
+{
+	string $fluid[] = `ls -dag -s -sl`;
+	string $cache[] = `ls -type "cacheFile" -sl`;
+	//if(attributeExists (inRange, $newCacheFile[0]) == 1){
+			connectAttr -f ($cache[0] + ".inRange") ($fluid[0] + ".playFromCache");
+		//}
+		//if(attributeExists ("outCacheData.outCacheData[0]", $newCacheFile[0]) == 1){
+			connectAttr -f ($cache[0] + ".outCacheData[0]") ($fluid[0] + ".inDensity");
+		//}
+		//if(attributeExists ("outCacheData.outCacheData[1]", $newCacheFile[0]) == 1){
+			connectAttr -f ($cache[0] + ".outCacheData[1]") ($fluid[0] + ".inVelocity");
+		//}
+		//if(attributeExists ("outCacheData.outCacheData[2]", $newCacheFile[0]) == 1){
+			connectAttr -f ($cache[0] + ".outCacheData[2]") ($fluid[0] + ".inTemperature");
+		//}
+		//if(attributeExists ("outCacheData.outCacheData[3]", $newCacheFile[0]) == 1){
+			connectAttr -f ($cache[0] + ".outCacheData[3]") ($fluid[0] + ".inReaction");
+		//}
+		//if(attributeExists ("outCacheData.outCacheData[4]", $newCacheFile[0]) == 1){
+			connectAttr -f ($cache[0] + ".outCacheData[4]") ($fluid[0] + ".inColor");
+		//}
+		//if(attributeExists ("outCacheData.outCacheData[5]", $newCacheFile[0]) == 1){
+			connectAttr -f ($cache[0] + ".outCacheData[5]") ($fluid[0] + ".inFalloff");
+		//}
+		//if(attributeExists ("outCacheData.outCacheData[6]", $newCacheFile[0]) == 1){
+			connectAttr -f ($cache[0] + ".outCacheData[6]") ($fluid[0] + ".inResolution");
+		//}
+		//if(attributeExists ("outCacheData.outCacheData[7]", $newCacheFile[0]) == 1){
+			connectAttr -f ($cache[0] + ".outCacheData[7]") ($fluid[0] + ".inOffset");
+		//}
+		connectAttr -f time1.outTime ($cache[0] + ".time");	
+}
+
+global proc controlSelectedFluidsRampsLayout(string $parent)
+{
+	string $controlFluidRampLayout = `frameLayout
+		-l "Copy Fluid Gradients"	
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $parent		
+		`;
+	
+	textFieldButtonGrp
+		-ed true
+		-label "Source Fluid"
+		-text ""
+		-ann ""
+		-cal 1 "center"
+		-buttonLabel "Select"
+		-bc "assignGradientSourceFluid"
+		getGradientSourceFluid
+		;
+			
+	text
+		-l "Target Fluids"
+		;
+	
+	
+	textScrollList
+		-h 90
+		-ams true
+		-dkc ("removeSelectedTextScrollListObjects " + "getFluidsControledByRampControls ")
+		getFluidsControledByRampControls			
+		;
+		
+	setParent..;
+	
+		rowLayout
+			-numberOfColumns 2
+			-p $controlFluidRampLayout
+			;	
+			
+			button
+				-label "Select Object(s)"
+				-command "assignFluidsControledByRampControls"
+				;
+				
+			button
+				-label "Clear List"
+				-command "clearFluidsControledByRampControlsList"
+				;
+				
+			setParent..;
+			
+	/*
+        columnLayout;
+       		string $colorControl = `attrColorSliderGrp -label "color"`;
+       		gradientControl
+       			-at "fluidShape1.incandescence"
+       			-selectedColorControl $colorControl
+       			incandescenceControl
+       			;
+       		
+       	setParent..;
+       	
+       	button
+		-label "Update Gradients"
+		-command "updateFluidGradients"
+		;
+	*/
+	
+	button
+		-label "Copy Gradients"
+		-command "copyGradientsFromFluidList"
+		;
+	
+}
+
+global proc updateFluidGradients()
+{
+	gradientControl
+		-edit
+		-at "fluidShape2.incandescence"
+		incandescenceControl
+		;	
+}
+
+global proc createGradientAttributeOnObj(string $obj)
+{
+	
+	string $attrName = "gradientControl";
+	
+	// add the attrs to our object that the gradientControl will interact with:
+	string $attrName = "gradientControl";
+	addAttr -ln ($attrName) -numberOfChildren 3 -at compound -multi $obj;
+	addAttr -sn ($attrName + "Pos") -at "float" -parent $attrName $obj;
+	addAttr -sn ($attrName + "Value") -at "float3" -parent $attrName -storable 1 $obj;
+	addAttr -sn ($attrName + "ValueR") -at "float" -parent ($attrName + "Value") $obj;
+	addAttr -sn ($attrName + "ValueG") -at "float" -parent ($attrName + "Value") $obj;
+	addAttr -sn ($attrName + "ValueB") -at "float" -parent ($attrName + "Value") $obj;
+	addAttr -sn ($attrName + "Interpolation") -at "enum" -enumName "0:1:2:3" 
+	-parent $attrName $obj;
+	
+	//give it some default vals, or we'll get an error when the UI tries to build below: 		
+	setAttr ($obj + "." + $attrName + "[0]." + $attrName + "Value") -type double3 1 0 0;
+	setAttr ($obj + "." + $attrName + "[0]." + $attrName + "Pos") 0;
+	setAttr ($obj + "." + $attrName + "[0]." + $attrName + "Interpolation") 3;
+	
+	setAttr ($obj + "." + $attrName + "[1]." + $attrName + "Value") -type double3 0 1 0;
+	setAttr ($obj + "." + $attrName + "[1]." + $attrName + "Pos") .5;
+	setAttr ($obj + "." + $attrName + "[1]." + $attrName + "Interpolation") 3;
+	
+	setAttr ($obj + "." + $attrName + "[2]." + $attrName + "Value") -type double3 0 0 1;
+	setAttr ($obj + "." + $attrName + "[2]." + $attrName + "Pos") 1;
+	setAttr ($obj + "." + $attrName + "[2]." + $attrName + "Interpolation") 3;
+	
+}
+
+global proc copyGradientFromObjToObjs(string $source, string $target[], string $gradient)
+{
+	//string $allAttributes[] = `attributeInfo -all -l on $source`;
+	//string $source = "fluidShape1";
+	//string $gradient = "incandescence";
+	int $indices[] = `getAttr -mi ($source + "." + $gradient)`;
+	string $attrProp[] = `attributeQuery -node $source -lc $gradient`;
+	int $i;
+	int $p;
+	for($i=0;$i<`size $attrProp`;$i++){
+		string $subAttr[] = `attributeQuery -node $source -lc $attrProp[$i]`;
+		appendStringArray($attrProp, $subAttr, `size $subAttr`);
+		//print("AttrProp: " + $attrProp + "\n");
+		
+	}
+	clearGradientAttributesOnObjects($target, $gradient);
+	float $attrVal[];
+	string $allAttr[] = `listAttr -m ($source + "." + $gradient)`;
+	string $allAttrLf[] = `listAttr -lf -m ($source + "." + $gradient)`;
+	for($i=0;$i<`size $allAttr`;$i++){
+		//print("Attr: " + $allAttr[$i] + "\n");
+		if(catchQuiet(`attributeQuery -node $source -nc $allAttrLf[$i]`) == 0){
+			int $nc[] = `attributeQuery -node $source -nc $allAttrLf[$i]`;
+			//print("NC: " + $nc[0] + "\n");
+			if(`size $nc` == 0){
+				float $val = `getAttr ($source + "." + $allAttr[$i])`;
+				$attrVal[`size $attrVal`] = $val;
+				for($p=0;$p<`size $target`;$p++){
+					//print("SetAttr: " + $target[$p] + "." + $allAttr[$i] + " To: " + $val + "\n");
+					setAttr ($target[$p] + "." + $allAttr[$i]) $val;
+				}
+				
+			}
+		}
+	}
+}
+
+global proc setGradientValuesOnObj(string $obj, string $gradient)
+{
+
+}
+
+global proc clearGradientAttributesOnObjects(string $obj[], string $gradient)
+{
+	int $i;
+	int $p;
+	for($i=0;$i<`size $obj`;$i++){
+		string $attr[] = `listAttr -lf -m ($obj[$i] + "." + $gradient)`;	
+		for($p=1;$p<`size $attr`;$p++){
+			//print("Obj: " + $obj[$i] + " Attr: " + $attr[$p] + "\n");
+			catchQuiet(`removeMultiInstance -break true ($obj[$i] + "." + $attr[$p])`);
+			//print($obj[$i] + "." + $attr[$p] + "\n");
+			/*
+			if(`attributeQuery -node $obj[$i] -m $attr[$p]`){
+				removeMultiInstance -break true ($obj[$i] + "." + $attr[$p]);
+				print($obj[$i] + "." + $attr[$p] + "\n");
+			}
+			*/
+			//removeMultiInstance -break true ($obj[$i] + "." + $gradient + "[" + $p + "]");
+			//print($obj[$i] + "." + $gradient + "[" + $p + "]" + "\n");
+		}
+	}
+}
+
+global proc copyGradientsFromFluidList()
+{
+	string $source = `textFieldButtonGrp -q -text getGradientSourceFluid`;
+	string $target[] = `textScrollList -q -ai getFluidsControledByRampControls`;
+	
+	copyGradientFromObjToObjs($source, $target, "incandescence");
+	copyGradientFromObjToObjs($source, $target, "color");
+	copyGradientFromObjToObjs($source, $target, "opacity");
+
+}
+
+global proc copyGradientsFromSelectedFluids()
+{
+	string $sel[] = `ls -dag -s -sl`;
+	string $target[];
+	int $i;
+	for($i=1;$i<`size $sel`;$i++){	
+		$target[`size $target`] = $sel[$i];
+	}
+	copyGradientFromObjToObjs($sel[0], $target, "incandescence");
+	copyGradientFromObjToObjs($sel[0], $target, "color");
+	copyGradientFromObjToObjs($sel[0], $target, "opacity");
+}
+
+global proc assignGradientSourceFluid()
+{
+	string $sel[]=`ls -dag -s -sl`;
+	textFieldButtonGrp -e -text $sel[0] getGradientSourceFluid;
+}
+
+global proc assignFluidsControledByRampControls()
+{
+	string $sel[]=`ls -dag -s -sl`;
+	int $i;
+	for($i = 0; $i<`size $sel`; $i++){
+		textScrollList	-e	-append $sel[$i] getFluidsControledByRampControls;
+	}
+}
+
+global proc clearFluidsControledByRampControlsList()
+{
+	textScrollList -e -ra getFluidsControledByRampControls;
+}
+
+global proc removeSelectedTextScrollListObjects(string $list)
+{
+	string $sel[] = `textScrollList -q -si $list`;
+	int $i;
+	for($i=0;$i<`size $sel`;$i++){
+		textScrollList	-edit -ri $sel[$i] $list;
+	}
+}
+
+global proc copyFluidAttributesExpressionLayout(string $parent)
+{
+	string $frameLayout = `frameLayout
+		-l "Copy Fluid Attributes Expression"	
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $parent		
+		`;
+		
+	textFieldButtonGrp
+		-label "Source Fluid"
+		-text ""
+		-ann ""
+		-buttonLabel "Select"
+		-bc "assignCopyFluidExpressionSourceFluid"
+		getCopyFluidExpressionSourceFluid
+		;
+	
+	textFieldButtonGrp
+		-label "Target Fluid"
+		-text ""
+		-ann ""
+		-buttonLabel "Select"
+		-bc "assignTargetFluidExpressionSourceFluid"
+		getTargetFluidExpressionSourceFluid
+		;
+		
+	checkBox -l "Copy Density" -v true copyFluidExpressionDensityOption;
+	checkBox -l "Copy Velocity" -v true copyFluidExpressionVelocityOption;
+	checkBox -l "Copy Temperature" -v false copyFluidExpressionTemperatureOption;
+	checkBox -l "Copy Fuel" -v false copyFluidExpressionFuelOption;
+	checkBox -l "Copy Color" -v false copyFluidExpressionColorOption;
+	checkBox -l "Copy Falloff" -v false copyFluidExpressionFalloffOption;
+		
+	button 
+		-l "Create Copy Fluid Attributes Each Frame Expression"
+		-c "createCopyFluidAttributesEachFrameExpression"
+		;
+			
+	setParent..;	
+}
+
+global proc createCopyFluidAttributesEachFrameExpression()
+{
+	string $mFluid = `textFieldButtonGrp -q -text getCopyFluidExpressionSourceFluid`;
+	string $sFluid = `textFieldButtonGrp -q -text getTargetFluidExpressionSourceFluid`;
+	$cd = `checkBox -q -v copyFluidExpressionDensityOption`;
+	$cv = `checkBox -q -v copyFluidExpressionVelocityOption`;
+	$ct = `checkBox -q -v copyFluidExpressionTemperatureOption`;
+	$cf = `checkBox -q -v copyFluidExpressionFuelOption`;
+	$cc = `checkBox -q -v copyFluidExpressionColorOption`;
+	$cfo = `checkBox -q -v copyFluidExpressionFalloffOption`;
+	
+	string $cdArg = "";
+	string $cvArg = "";
+	string $ctArg = "";
+	string $cfArg = "";
+	string $ccArg = "";
+	string $cfoArg = "";
+	if($cd){
+		$cdArg = "copyFluidAttributesEachFrame(\"" + $mFluid + "\",\"" + $sFluid + "\", \"density\");\n";
+	}
+	if($cv){
+		$cvArg = "copyFluidAttributesEachFrame(\"" + $mFluid + "\",\"" + $sFluid + "\", \"veloctiy\");\n";
+	}
+	if($ct){
+		$ctArg = "copyFluidAttributesEachFrame(\"" + $mFluid + "\",\"" + $sFluid + "\", \"temperature\");\n";
+	}
+	if($cf){
+		$cfArg = "copyFluidAttributesEachFrame(\"" + $mFluid + "\",\"" + $sFluid + "\", \"fuel\");\n";
+	}
+	if($cc){
+		$ccArg = "copyFluidAttributesEachFrame(\"" + $mFluid + "\",\"" + $sFluid + "\", \"color\");\n";
+	}
+	if($cfo){
+		$cfoArg = "copyFluidAttributesEachFrame(\"" + $mFluid + "\",\"" + $sFluid + "\", \"falloff\");\n";
+	}
+	string $expName = $mFluid + $sFluid + "CopyFluidAttributesEachFrame";
+	string $exp = (
+	$cdArg
+	+ $cvArg
+	+ $ctArg
+	+ $cfArg
+	+ $ccArg
+	+ $cfoArg
+	+"global proc copyFluidAttributesEachFrame(string $mFluid, string $sFluid, string $attrType)\n"
+	+"{\n"
+	+"float $sourceVals[] = `getFluidAttr -at $attrType $mFluid`;\n"
+	+"select -r $sFluid;\n"
+	+"float $res[] = `getAttr ($sFluid + \".resolution\")`;\n"
+	+"int $xRes = $res[0];\n"
+	+"int $yRes = $res[1];\n"
+	+"int $zRes = $res[2];\n"
+	+"int $xi;\n"
+	+"int $yi;\n"
+	+"int $zi;\n"
+	+"int $i;\n"
+	+"for($xi=0;$xi < $xRes; $xi++){\n"
+	+"	for($yi=0;$yi < $yRes; $yi++){ \n"
+	+"		for($zi=0;$zi < $zRes; $zi++ ){\n"
+	+"			setFluidAttr -at $attrType -fv $sourceVals[$i] -xi $xi -yi $yi -zi $zi $sFluid;\n"
+	+"			$i++;\n"
+	+"		}\n"
+	+"	}\n"
+	+"}\n"
+	+"\n"
+	+"}\n"
+	);
+	print($exp + "\n");
+	expression -s ($exp) -o $mFluid -n $expName;
+
+}
+
+global proc assignCopyFluidExpressionSourceFluid()
+{
+	string $fluid[] = `ls -dag -s -sl`;
+	textFieldButtonGrp -edit -text $fluid[0] getCopyFluidExpressionSourceFluid;
+}
+
+global proc assignTargetFluidExpressionSourceFluid()
+{
+	string $fluid[] = `ls -dag -s -sl`;
+	textFieldButtonGrp -edit -text $fluid[0] getTargetFluidExpressionSourceFluid;
+}
+
+global proc createEmitFalloffUsingOtherMethodExpression()
+{
+	string $sel[] = `ls -dag -s -sl`;
+	string $fluid = $sel[0];
+	
+	if(attributeExists ("falloffMapping", $fluid)==0){
+		addAttr -ln falloffMapping -at enum -en "none=0:velocity=1:density=2:temperature=3:fuel=4:color=5" $fluid;
+		setAttr ($fluid + ".falloffMapping" ) 2 ;
+	}
+	string $expName = $fluid + "EmitFalloffUsingOtherMethod";
+	string $exp = (
+	"string $falloffMapping = `getAttr -as \"" + $fluid + ".falloffMapping\"`;\n"
+	+"emitFalloffUsingOtherMethod(\"" + $fluid + "\", $falloffMapping);\n"
+	+"global proc emitFalloffUsingOtherMethod(string $fluid, string $method)\n"
+	+"{\n"
+	+"float $sourceVals[] = `getFluidAttr -at $method $fluid`;\n"
+	+"float $res[] = `getAttr ($fluid + \".resolution\")`;\n"
+	+"int $xRes = $res[0];\n"
+	+"int $yRes = $res[1];\n"
+	+"int $zRes = $res[2];\n"
+	+"int $xi;\n"
+	+"int $yi;\n"
+	+"int $zi;\n"
+	+"int $i;\n"
+	+"for($xi=0;$xi < $xRes; $xi++){\n"
+	+"	for($yi=0;$yi < $yRes; $yi++){ \n"
+	+"		for($zi=0;$zi < $zRes; $zi++ ){\n"
+	+"			$sourceVals[$i] = $sourceVals[$i] * 0.1;\n"
+	+"			setFluidAttr -at falloff -fv $sourceVals[$i] -xi $xi -yi $yi -zi $zi $fluid;\n"
+	+"			$i++;\n"
+	+"		}\n"
+	+"	}\n"
+	+"}\n"
+	+"\n"
+	+"}\n"
+	);
+	print($exp + "\n");
+	expression -s ($exp) -o $fluid -n $expName;
+
+}
+
+global proc connectSelectedFluidEmitterToSelectedSurface()
+{
+	string $sel[] = `ls -sl`;
+	string $emitter = $sel[0];
+	string $surface = $sel[1];
+
+
+}
+
+global proc connectSelectedFluidEmitterToSelectedCurve()
+{
+	string $sel[] = `ls -sl`;
+	string $emitter = $sel[0];
+	string $curve = $sel[1];
+	
+
+}
+
+
+global proc convert2d3dFluid()
+{
+
+	string $sel[] = `ls -sl -dag -lf`;
+	if(`size $sel` < 1){
+		print ("You must select a fluid to convert." + "\n");
+		return;
+	}
+	
+	$is2d = `getAttr ($sel[0] + ".is2d")`;
+	if($is2d){
+		eval setAttr($sel[0] + ".is2d ") 0;
+		float $fluidRes = `getAttr ($sel[0] + ".dimensionsW")`;
+		eval setAttr($sel[0] + ".dimensionsD") $fluidRes;
+		print ("Converted 2d fluid to 3d fluid." + "\n");
+	} else {	
+		eval setAttr($sel[0] + ".is2d ") 1;
+		eval setAttr($sel[0] + ".dimensionsD") 0.25;
+		print ("Converted 3d fluid to 2d fluid." + "\n");
+	}
+
+}
+
+global proc fillFluidUp()
+{
+	string $sel[] = `ls -sl`;
+	if(`size $sel` < 1){
+		print("You must select a fluid to fill up." + "\n");
+		return;
+	}
+	print("Fill 'er Up!" + "\n");
+	float $amount = `floatSliderButtonGrp  -q -v fillFluidUp`;
+	float $res[] = `getAttr ($sel[0] + ".resolution")`;
+	int $xi = 0;
+	int $yi = 0;
+	int $zi = 0;
+	$amount = $amount / $res[1];
+	for($xi=0;$xi < $res[0]; $xi++){
+		for($yi=0;$yi < $res[1]; $yi++ ){ 
+			for($zi=0;$zi < $res[2]; $zi++ ){ 
+				setFluidAttr -at density -fv 0 -xi $xi -yi $yi -zi $zi $sel[0];
+				setFluidAttr -at temperature -fv 0 -xi $xi -yi $yi -zi $zi $sel[0];
+			}
+		}
+	}
+	
+	for($xi=0;$xi < $res[0]; $xi++){
+		for($yi=0;$yi < $amount; $yi++ ){ 
+			for($zi=0;$zi < $res[2]; $zi++ ){ 
+				setFluidAttr -at density -fv 1 -xi $xi -yi $yi -zi $zi $sel[0];
+				setFluidAttr -at temperature -fv 1 -xi $xi -yi $yi -zi $zi $sel[0];
+			}
+		}
+	}
+
+}
+
+global proc fillFluidWithDensityValue( string $sel[], float $density )
+{
+	string $fluid = $sel[0];
+	setFluidAttr -at density -fv 1;
+	/*
+	float $res[] = `getAttr ($sel[0] + ".resolution")`;
+	int $xRes = $res[0];
+	int $yRes = $res[1];
+	int $zRes = $res[2];
+	
+	int $xi = 0;
+	int $yi = 0;
+	int $zi = 0;
+	
+	for($xi=0;$xi < $xRes; $xi++){
+		for($yi=0;$yi < $yRes; $yi++){ 
+			for($zi=0;$zi < $zRes; $zi++ ){ 
+					setFluidAttr -at density -fv $density -xi $xi -yi $yi -zi $zi $fluid;	
+	
+			}
+		}
+	
+	}
+	*/
+}
+
+global proc fillMeshWithFluid( string $sel[] )
+{
+	int $pad = `intSliderGrp -q -v fillWithFluidPaddingIntSliderGroup`;
+	float $quality = `floatSliderGrp -q -v fillWithFluidQualityFloatSliderGroup`;
+	string $obj = $sel[0];
+	string $fluidState[] = { "1", 0, 0, 0, 0, 0, 0 } ;
+	float $bboxSize[] = `getAttr ($obj + ".boundingBoxSize")`;
+	
+	float $bboxMin[] = `getAttr ($obj + ".boundingBoxMin")`;
+	float $bboxMax[] = `getAttr ($obj + ".boundingBoxMax")`;
+	
+	float $size[] = { ($bboxSize[0]), ($bboxSize[1]), ($bboxSize[2]) };
+	
+	int $faceCount[] = `polyEvaluate -f $obj`;
+	int $br = int($faceCount[0] * $quality);
+	
+	//Create the fluid and set the resolution
+	string $fluidShape = `create3DFluid 10 10 10 ($size[0] + $pad) ($size[1] + $pad) ($size[2] + $pad)`;
+	setAttr ($fluidShape + ".squareVoxels") 1;	
+	setAttr ($fluidShape + ".baseResolution") $br;
+	setAttr ($fluidShape + ".densityBuoyancy") 0;
+	
+	string $ft[] = `ls -tr -sl`;
+	select -r $ft[0];
+	
+	string $flName = ($obj + "FillFluid");
+	rename $ft[0] $flName;
+	$fluid = $flName;
+	$fluidShape = $fluid + "Shape";
+	
+	//Parent constrain the fluid to the object
+	float $center[] = `getAttr ($obj + ".center")`;
+	
+	xform -ws -t $center[0] $center[1] $center[2] $fluid;
+	
+	select -r $obj;
+	select -add $fluid;
+	
+	doCreateParentConstraintArgList 1 { "1","0","0","0","0","0","0","1","","1" };
+	parentConstraint -weight 1;
+	
+	select -cl  ;
+	
+	//Emit fluid from the object;	
+	string $shaders[] = getShadersFromSelected({$obj});
+	
+	string $textures[] = `listConnections -type texture2d $shaders[0]`;
+	
+	select -r $obj;
+	string $emitter = ($obj + "FluidFillEmitter");
+	fluidEmitter -type surface -der 1 -her 1 -fer 1 -fdr 2 -r 100.0 -cye none -cyi 1 -mxd 1 -mnd 0 -n $emitter;
+	connectDynamic -em $emitter $fluid;
+	setAttr ($emitter + ".emitterType") 2;
+	setAttr ($emitter + ".fillObject") 1;
+	
+	//Create smooth falloff
+	if(`checkBox -q -v fillWithFluidSmoothFalloffCheckBox` == 1){
+		creatFluidFillFalloff($fluidShape, $emitter);
+	}			
+	
+	if(`checkBox -q -v fillWithFluidFillWithColorCheckBox` == 1){
+		$fluidState = { "1", 0, 0, 0, 1, 0, 0 } ;
+		if(`size $textures` > 0){
+			setAttr ($emitter + ".emitFluidColor") 1;
+			setAttr ($fluidShape + ".colorMethod") 2; 
+			
+			connectAttr -force ($textures[0] + ".outColor") ($emitter + ".particleColor");	
+		}
+	}
+	if(`checkBox -q -v fillWithFluidSetUpOnlyCheckBox` == 1){
+		return;
+	}
+	
+	//Play fluid
+	currentTime -e 0;
+	playFrameCount(2);	
+	
+	//Reset
+	hide($obj);	
+	select -r $fluid;
+	doSetFluidState 1 $fluidState ;
+	currentTime -e 0;
+	
+	setAttr (($fluid + "Shape")	+ ".disableInteractiveEval") 1;
+	
+	
+	
+}
+
+global proc creatFluidFillFalloff( string $fluid, string $emitter )
+{
+	int $falloffStep = `intSliderGrp -q -v fillWithFluidFalloffStepIntSliderGroup`;
+
+	//Fill the fluid up
+	fillFluidWithDensityValue({$fluid}, 10);
+	
+	//Subtract the fill of the object
+	setAttr ($emitter + ".fillObject") 1;
+	setAttr ($emitter + ".fluidDropoff") 0;
+	setAttr ($emitter + ".rate") 1000;
+	setAttr ($emitter + ".fillObject") 1;
+	setAttr ($emitter + ".densityMethod") 2;
+	setAttr ($emitter + ".fluidDensityEmission") -1;
+	setAttr ($emitter + ".fluidJitter") 0;
+	setAttr ($emitter + ".speedMethod") 0;	
+	
+	currentTime -e 0;
+	playFrameCount(2);	
+	
+	select -r $fluid;
+	doSetFluidState 1 { "1", 0, 0, 0, 0, 0, 0 } ;
+	currentTime -e 0;
+	
+	//Emit fluid with negative normal velocity into empty space to gradiate
+	setAttr ($emitter + ".fillObject") 0;
+	setAttr ($emitter + ".fluidDensityEmission") 1;
+	setAttr ($emitter + ".densityMethod") 1;
+	setAttr ($emitter + ".speedMethod") 2;
+	setAttr ($emitter + ".normalSpeed") -10;
+	
+	currentTime -e 0;
+	playFrameCount($falloffStep);
+	doSetFluidState 1 { "1", 0, 0, 0, 0, 0, 0 } ;
+	currentTime -e 0;
+	
+	//Transfer the density values to the falloff
+	setAttr ($fluid + ".falloffMethod") 1;
+	setAttr ($fluid + ".dropoffShape") 12;
+	
+	copyFluidSourceTypeToTargetType($fluid, $fluid, "density", "falloff");
+	
+}
+
+global proc copyFluidSourceTypeToTargetType( string $sourceFluid, string $targetFluid, string $sourceType, string $targetType)
+{
+	float $sourceVals[] = `getFluidAttr -at $sourceType $sourceFluid`;
+	//select -r $targetFluid;
+	
+	float $res[] = `getAttr ($targetFluid + ".resolution")`;
+	int $xRes = $res[0];
+	int $yRes = $res[1];
+	int $zRes = $res[2];
+	
+	int $xi = 0;
+	int $yi = 0;
+	int $zi = 0;
+	
+	int $i;
+	for($zi=0;$zi < $zRes; $zi++){
+		for($yi=0;$yi < $yRes; $yi++){ 
+			for($xi=0;$xi < $xRes; $xi++ ){
+				setFluidAttr -at $targetType -fv $sourceVals[$i] -xi $xi -yi $yi -zi $zi $targetFluid;
+				$i++;
+			}
+		}	
+	}
+
+}
+
+global proc createFluidFitToObject( string $sel[] )
+{
+	string $obj = $sel[0];
+	int $pad = `intSliderGrp -q -v fillWithFluidPaddingIntSliderGroup`;
+	float $quality = `floatSliderGrp -q -v fillWithFluidQualityFloatSliderGroup`;
+	float $bboxSize[] = `getAttr ($obj + ".boundingBoxSize")`;	
+	float $size[] = { ($bboxSize[0]), ($bboxSize[1]), ($bboxSize[2]) };
+	
+	int $faceCount[] = `polyEvaluate -f $obj`;
+	int $br = int($faceCount[0] * $quality);
+	
+	//Create the fluid and set the resolution
+	string $fluidShape = `create3DFluid 10 10 10 ($size[0] + $pad) ($size[1] + $pad) ($size[2] + $pad)`;
+	setAttr ($fluidShape + ".squareVoxels") 1;	
+	setAttr ($fluidShape + ".baseResolution") $br;
+	//setAttr ($fluidShape + ".densityBuoyancy") 0;
+	
+	string $ft[] = `ls -tr -sl`;
+	select -r $ft[0];
+	
+	string $flName = ($obj + "FillFluid");
+	rename $ft[0] $flName;
+	$fluid = $flName;
+	$fluidShape = $fluid + "Shape";
+	
+	//Parent constrain the fluid to the object
+	float $center[] = `getAttr ($obj + ".center")`;
+	
+	xform -ws -t $center[0] $center[1] $center[2] $fluid;
+	
+	select -r $obj;
+	select -add $fluid;
+	
+	doCreateParentConstraintArgList 1 { "1","0","0","0","0","0","0","1","","1" };
+	parentConstraint -weight 1;
+	
+}
+
+global proc playFrameCount( int $frames )
+{
+	float $start = `currentTime -q`;
+	int $ok = 1;
+	float $stopFrame = float($frames);
+	while($ok){
+		nextOrPreviousFrame next;
+		float $curFrame = `currentTime -q`;
+		float $elapsed = $curFrame - $start;
+		if($elapsed > $stopFrame){
+			$ok = 0;
+			break;
+		}
+	}
+	
+}
+
+global proc createFluidCacheScriptNode()
+{
+	
+	
+}
+
+global proc freezeSelectedFluids( string $sel[] )
+{
+	string $s[] = getMainShapeNodesFromSelection($sel);
+	select -r $s;
+	string $fluids[] = `ls -type fluidShape -sl`;
+	for ($i=0;$i<`size $fluids`;$i++){
+		freezeSelectedFluid($fluids[$i]);
+	}
+}
+
+global proc freezeSelectedFluid( string $fluid )
+{
+	
+	setAttr ($fluid + ".densityMethod") 1;
+	setAttr ($fluid + ".temperatureMethod") 1;
+	setAttr ($fluid + ".colorMethod") 1;	
+	setAttr ($fluid + ".doEmission") 0;
+}
+
+
+global proc wizFreezeCache( string $flags )
+{
+	string $sel[];
+	int $sf, $ss, $se;
+	float $frame;
+	float $holdFrame;
+	string $tok[] = tokenizeString($flags, " ");	
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-af" : case "-allFluids" :
+			string $fluid[] = `ls -type fluidShape`;
+			$sel = smartSelectObjectsOfType($fluid, "-type cacheFile");			
+			break ;
+
+			case "-ap" : case "-allParticles" :
+			string $particles[] = `ls -type nParticleShape`;
+			$sel = smartSelectObjectsOfType($particles, "-type cacheFile");			
+			break ;
+			
+			case "-all" : 
+			$sel = `ls -type cacheFile`;		
+			break ;
+			
+			case "-sl" :
+			$sel = `ls -sl`;
+			$sel = smartSelectObjectsOfType($sel, "-type cacheFile");
+			break ;
+			
+			case "-sf" : case "-startFrame" :
+			$sf = 1;
+			break;
+							
+			case "-ss" : case "-sourceStart" :
+			$ss = 1;
+			break;
+			
+			case "-se" : case "-sourceEnd" :
+			$se = 1;
+			break;
+			
+			case "-f" : case "-frame" :
+			$holdFrame = float($tok[(`size $tok` + 1)]);
+			break;
+		}
+	}
+
+	for ($i=0;$i<`size $sel`;$i++){
+		float $hf;
+		if ($sf){
+			$hf = `getAttr ($sel[$i] + ".startFrame")`;
+			$holdFrame = abs($hf);
+			
+		}
+		if ($ss){
+			$hf = `getAttr ($sel[$i] + ".sourceStart")`;
+			$holdFrame = abs($hf);
+		}
+		if ($se){
+			$hf = `getAttr ($sel[$i] + ".sourceEnd")`;
+			$holdFrame = abs($hf);
+		}
+		
+		setAttr ($sel[$i] + ".sourceStart") $holdFrame;
+		setAttr ($sel[$i] + ".sourceEnd") $holdFrame;
+		setAttr ($sel[$i] + ".startFrame") 0;
+		setAttr ($sel[$i] + ".hold") 999999.0;
+		
+			
+	}
+	
+}
+
+//@ WIZ FREEZE FLUID STATE
+//====================================================================
+/*****************************************************************//**
+	Makes a fluid static.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	wizFreezeFluidState("-sl");
+	
+	</code>
+*********************************************************************/
+global proc wizFreezeFluidState( string $flags )
+{
+	string $sel[];
+	int $sf, $ss, $se;
+	float $frame;
+	float $holdFrame;
+	string $tok[] = tokenizeString($flags, " ");	
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-af" : case "-allFluids" :
+			string $fluid[] = `ls -type fluidShape`;
+			$sel = smartSelectObjectsOfType($fluid, "-type fluidShape");			
+			break ;
+
+			case "-all" : 
+			$sel = `ls -type fluidShape`;		
+			break ;
+			
+			case "-sl" :
+			$sel = `ls -sl`;
+			$sel = smartSelectObjectsOfType($sel, "-type fluidShape");
+			break ;
+		
+		}
+	}
+
+	for ($i=0;$i<`size $sel`;$i++){
+		select -r $sel[$i];
+		doSetFluidState 1 { "1", 1, 1, 0, 0, 1, 1 } ;
+		
+		string $cf[] = smartSelectObjectsOfType(`ls -sl`, "-type cacheFile");
+		for ($ci=0;$ci<`size $cf`;$ci++){
+			setAttr ($cf[$ci] + ".enable") 0;	
+		}
+				
+		setAttr ($sel[$i] + ".doFields") 0;
+		setAttr ($sel[$i] + ".doEmission") 0;
+		setAttr ($sel[$i] + ".collide") 0;
+		setAttr ($sel[$i] + ".conserveMass") 0;
+		setAttr ($sel[$i] + ".densityMethod") 1;
+		setAttr ($sel[$i] + ".velocityMethod") 1;
+		setAttr ($sel[$i] + ".temperatureMethod") 1;
+		setAttr ($sel[$i] + ".densityDissipation") 0;
+		setAttr ($sel[$i] + ".turbulenceStrength") 0;
+		setAttr ($sel[$i] + ".temperatureDissipation") 0;
+			
+	}
+
+}
+
+/*
+setFilterScript "initialShadingGroup";
+// Result: 0 // 
+setFilterScript "initialParticleSE";
+// Result: 0 // 
+setFilterScript "defaultLightSet";
+// Result: 0 // 
+setFilterScript "defaultObjectSet";
+// Result: 0 // 
+setFilterScript "fluidShape15SG";
+// Result: 0 // 
+setFilterScript "lambert3SG";
+// Result: 0 // 
+setFilterScript "fluidShape41SG";
+// Result: 0 // 
+setFilterScript "lambert4SG";
+// Result: 0 // 
+setFilterScript "tweakSet1";
+// Result: 0 // 
+setFilterScript "fluidShape42SG";
+// Result: 0 // 
+setFilterScript "SurfaceFlamesGridFluidShape2SG";
+// Result: 0 // 
+setFilterScript "SurfaceFlamesGridFluidShape3SG";
+// Result: 0 // 
+setFilterScript "SurfaceFlamesGridFluidShape4SG";
+// Result: 0 // 
+setFilterScript "SurfaceFlamesGridFluidShape5SG";
+// Result: 0 // 
+setFilterScript "SurfaceFlamesGridFluidShape6SG";
+// Result: 0 // 
+setFilterScript "SurfaceFlamesGridFluidShape7SG";
+// Result: 0 // 
+setFilterScript "SurfaceFlamesGridFluidShape8SG";
+// Result: 0 // 
+setFilterScript "SurfaceFlamesGridFluidShape9SG";
+// Result: 0 // 
+setFilterScript "SurfaceFlamesGridFluidShape10SG";
+// Result: 0 // 
+setFilterScript "SurfaceFlamesGridFluidShape11SG";
+// Result: 0 // 
+setFilterScript "SurfaceFlamesGridFluidShape2SG1";
+// Result: 0 // 
+setFilterScript "SurfaceFlamesGridFluidShape3SG1";
+// Result: 0 // 
+setFilterScript "SurfaceFlamesGridFluidShape4SG1";
+// Result: 0 // 
+setFilterScript "SurfaceFlamesGridFluidShape5SG1";
+// Result: 0 // 
+setFilterScript "SurfaceFlamesGridFluidShape6SG1";
+// Result: 0 // 
+setFilterScript "SurfaceFlamesGridFluidShape7SG1";
+// Result: 0 // 
+setFilterScript "SurfaceFlamesGridFluidShape8SG1";
+// Result: 0 // 
+setFilterScript "SurfaceFlamesGridFluidShape9SG1";
+// Result: 0 // 
+setFilterScript "SurfaceFlamesGridFluidShape10SG1";
+// Result: 0 // 
+setFilterScript "SurfaceFlamesGridFluidShape11SG1";
+// Result: 0 // 
+setFilterScript "SurfaceFlamesGridFluidShape2SG2";
+// Result: 0 // 
+setFilterScript "SurfaceFlamesGridFluidShape3SG2";
+// Result: 0 // 
+setFilterScript "SurfaceFlamesGridFluidShape4SG2";
+// Result: 0 // 
+setFilterScript "SurfaceFlamesGridFluidShape5SG2";
+// Result: 0 // 
+setFilterScript "SurfaceFlamesGridFluidShape6SG2";
+// Result: 0 // 
+setFilterScript "SurfaceFlamesGridFluidShape7SG2";
+// Result: 0 // 
+setFilterScript "SurfaceFlamesGridFluidShape8SG2";
+// Result: 0 // 
+setFilterScript "SurfaceFlamesGridFluidShape9SG2";
+// Result: 0 // 
+setFilterScript "SurfaceFlamesGridFluidShape10SG2";
+// Result: 0 // 
+setFilterScript "SurfaceFlamesGridFluidShape11SG2";
+// Result: 0 // 
+setFilterScript "SurfaceFlamesGridFluidShape2SG3";
+// Result: 0 // 
+setFilterScript "SurfaceFlamesGridFluidShape2SG4";
+// Result: 0 // 
+setFilterScript "SurfaceFlamesGridFluidShape2SG5";
+// Result: 0 // 
+setFilterScript "fluidShape43SG";
+// Result: 0 // 
+setFilterScript "fluidShape44SG";
+// Result: 0 // 
+setFilterScript "fluidShape45SG";
+// Result: 0 // 
+setFilterScript "fluidShape46SG";
+// Result: 0 // 
+setFilterScript "fluidShape47SG";
+// Result: 0 // 
+setFilterScript "fluidShape48SG";
+// Result: 0 // 
+setFilterScript "fluidShape49SG";
+// Result: 0 // 
+setFilterScript "fluidShape50SG";
+// Result: 0 // 
+setFilterScript "fluidShape51SG";
+// Result: 0 // 
+setFilterScript "fluidShape52SG";
+// Result: 0 // 
+setFilterScript "fluidShape53SG";
+// Result: 0 // 
+setFilterScript "fluidShape54SG";
+// Result: 0 // 
+setFilterScript "fluidShape55SG";
+// Result: 0 // 
+setFilterScript "fluidShape56SG";
+// Result: 0 // 
+setFilterScript "fluidShape57SG";
+// Result: 0 // 
+setFilterScript "fluidShape58SG";
+// Result: 0 // 
+setFilterScript "fluidShape59SG";
+// Result: 0 // 
+setFilterScript "fluidShape60SG";
+// Result: 0 // 
+setFilterScript "fluidShape61SG";
+// Result: 0 // 
+setFilterScript "fluidShape62SG";
+// Result: 0 // 
+setFilterScript "fluidShape63SG";
+// Result: 0 // 
+setFilterScript "fluidShape64SG";
+// Result: 0 // 
+setFilterScript "fluidShape65SG";
+// Result: 0 // 
+setFilterScript "fluidShape66SG";
+// Result: 0 // 
+setFilterScript "fluidShape67SG";
+// Result: 0 // 
+setFilterScript "fluidShape68SG";
+// Result: 0 // 
+setFilterScript "fluidShape69SG";
+// Result: 0 // 
+setFilterScript "fluidShape70SG";
+// Result: 0 // 
+setFilterScript "fluidShape71SG";
+// Result: 0 // 
+setFilterScript "fluidShape72SG";
+// Result: 0 // 
+setFilterScript "fluidShape73SG";
+// Result: 0 // 
+setFilterScript "fluidShape74SG";
+// Result: 0 // 
+setFilterScript "fluidShape75SG";
+// Result: 0 // 
+setFilterScript "fluidShape76SG";
+// Result: 0 // 
+setFilterScript "fluidShape77SG";
+// Result: 0 // 
+setFilterScript "fluidShape78SG";
+// Result: 0 // 
+setFilterScript "fluidShape79SG";
+// Result: 0 // 
+setFilterScript "fluidShape80SG";
+// Result: 0 // 
+setFilterScript "fluidShape81SG";
+// Result: 0 // 
+setFilterScript "fluidShape82SG";
+// Result: 0 // 
+setFilterScript "fluidShape83SG";
+// Result: 0 // 
+setFilterScript "fluidShape84SG";
+// Result: 0 // 
+setFilterScript "fluidShape85SG";
+// Result: 0 // 
+setFilterScript "fluidShape86SG";
+// Result: 0 // 
+setFilterScript "fluidShape87SG";
+// Result: 0 // 
+setFilterScript "fluidShape88SG";
+// Result: 0 // 
+setFilterScript "fluidShape89SG";
+// Result: 0 // 
+setFilterScript "fluidShape90SG";
+// Result: 0 // 
+setFilterScript "fluidShape91SG";
+// Result: 0 // 
+setFilterScript "fluidShape92SG";
+// Result: 0 // 
+setFilterScript "fluidShape93SG";
+// Result: 0 // 
+setFilterScript "fluidShape94SG";
+// Result: 0 // 
+setFilterScript "fluidShape95SG";
+// Result: 0 // 
+setFilterScript "fluidShape96SG";
+// Result: 0 // 
+setFilterScript "fluidShape97SG";
+// Result: 0 // 
+setFilterScript "fluidShape98SG";
+// Result: 0 // 
+setFilterScript "fluidShape99SG";
+// Result: 0 // 
+setFilterScript "fluidShape100SG";
+// Result: 0 // 
+setFilterScript "fluidShape101SG";
+// Result: 0 // 
+setFilterScript "fluidShape102SG";
+// Result: 0 // 
+setFilterScript "fluidShape103SG";
+// Result: 0 // 
+setFilterScript "fluidShape104SG";
+// Result: 0 // 
+setFilterScript "fluidShape105SG";
+// Result: 0 // 
+setFilterScript "fluidShape106SG";
+// Result: 0 // 
+setFilterScript "fluidShape107SG";
+// Result: 0 // 
+setFilterScript "fluidShape108SG";
+// Result: 0 // 
+setFilterScript "fluidShape109SG";
+// Result: 0 // 
+setFilterScript "fluidShape110SG";
+// Result: 0 // 
+setFilterScript "fluidShape111SG";
+// Result: 0 // 
+setFilterScript "fluidShape112SG";
+// Result: 0 // 
+setFilterScript "fluidShape113SG";
+// Result: 0 // 
+setFilterScript "fluidShape114SG";
+// Result: 0 // 
+setFilterScript "fluidShape115SG";
+// Result: 0 // 
+setFilterScript "fluidShape116SG";
+// Result: 0 // 
+setFilterScript "fluidShape117SG";
+// Result: 0 // 
+setFilterScript "fluidShape118SG";
+// Result: 0 // 
+setFilterScript "fluidShape119SG";
+// Result: 0 // 
+setFilterScript "fluidShape120SG";
+// Result: 0 // 
+setFilterScript "fluidShape121SG";
+// Result: 0 // 
+setFilterScript "fluidShape122SG";
+// Result: 0 // 
+setFilterScript "fluidShape123SG";
+// Result: 0 // 
+setFilterScript "fluidShape124SG";
+// Result: 0 // 
+setFilterScript "fluidShape125SG";
+// Result: 0 // 
+setFilterScript "fluidShape126SG";
+// Result: 0 // 
+setFilterScript "fluidShape127SG";
+// Result: 0 // 
+setFilterScript "fluidShape128SG";
+// Result: 0 // 
+setFilterScript "fluidShape129SG";
+// Result: 0 // 
+setFilterScript "fluidShape130SG";
+// Result: 0 // 
+setFilterScript "fluidShape131SG";
+// Result: 0 // 
+setFilterScript "fluidShape132SG";
+// Result: 0 // 
+setFilterScript "fluidShape133SG";
+// Result: 0 // 
+setFilterScript "fluidShape134SG";
+// Result: 0 // 
+setFilterScript "fluidShape135SG";
+// Result: 0 // 
+setFilterScript "fluidShape136SG";
+// Result: 0 // 
+setFilterScript "fluidShape137SG";
+// Result: 0 // 
+setFilterScript "fluidShape138SG";
+// Result: 0 // 
+setFilterScript "fluidShape139SG";
+// Result: 0 // 
+setFilterScript "fluidShape140SG";
+// Result: 0 // 
+setFilterScript "fluidShape141SG";
+// Result: 0 // 
+setFilterScript "fluidShape142SG";
+// Result: 0 // 
+setFilterScript "fluidShape143SG";
+// Result: 0 // 
+setFilterScript "fluidShape144SG";
+// Result: 0 // 
+setFilterScript "fluidShape145SG";
+// Result: 0 // 
+setFilterScript "fluidShape146SG";
+// Result: 0 // 
+setFilterScript "fluidShape147SG";
+// Result: 0 // 
+setFilterScript "fluidShape148SG";
+// Result: 0 // 
+setFilterScript "fluidShape149SG";
+// Result: 0 // 
+setFilterScript "fluidShape150SG";
+// Result: 0 // 
+setFilterScript "fluidShape151SG";
+// Result: 0 // 
+setFilterScript "fluidShape152SG";
+// Result: 0 // 
+setFilterScript "fluidShape153SG";
+// Result: 0 // 
+setFilterScript "fluidShape154SG";
+// Result: 0 // 
+setFilterScript "fluidShape155SG";
+// Result: 0 // 
+setFilterScript "fluidShape156SG";
+// Result: 0 // 
+setFilterScript "fluidShape157SG";
+// Result: 0 // 
+setFilterScript "fluidShape158SG";
+// Result: 0 // 
+setFilterScript "fluidShape159SG";
+// Result: 0 // 
+setFilterScript "fluidShape160SG";
+// Result: 0 // 
+setFilterScript "fluidShape161SG";
+// Result: 0 // 
+setFilterScript "fluidShape162SG";
+// Result: 0 // 
+setFilterScript "fluidShape163SG";
+// Result: 0 // 
+setFilterScript "fluidShape164SG";
+// Result: 0 // 
+setFilterScript "fluidShape165SG";
+// Result: 0 // 
+setFilterScript "fluidShape166SG";
+// Result: 0 // 
+setFilterScript "fluidShape167SG";
+// Result: 0 // 
+setFilterScript "fluidShape168SG";
+// Result: 0 // 
+setFilterScript "fluidShape169SG";
+// Result: 0 // 
+setFilterScript "fluidShape170SG";
+// Result: 0 // 
+setFilterScript "fluidShape171SG";
+// Result: 0 // 
+setFilterScript "fluidShape172SG";
+// Result: 0 // 
+setFilterScript "fluidShape173SG";
+// Result: 0 // 
+setFilterScript "fluidShape174SG";
+// Result: 0 // 
+setFilterScript "fluidShape175SG";
+// Result: 0 // 
+setFilterScript "fluidShape176SG";
+// Result: 0 // 
+setFilterScript "fluidShape177SG";
+// Result: 0 // 
+setFilterScript "fluidShape178SG";
+// Result: 0 // 
+setFilterScript "fluidShape179SG";
+// Result: 0 // 
+setFilterScript "fluidShape180SG";
+// Result: 0 // 
+setFilterScript "fluidShape181SG";
+// Result: 0 // 
+setFilterScript "fluidShape182SG";
+// Result: 0 // 
+setFilterScript "fluidShape183SG";
+// Result: 0 // 
+setFilterScript "fluidShape184SG";
+// Result: 0 // 
+setFilterScript "fluidShape185SG";
+// Result: 0 // 
+setFilterScript "fluidShape186SG";
+// Result: 0 // 
+setFilterScript "fluidShape187SG";
+// Result: 0 // 
+setFilterScript "fluidShape188SG";
+// Result: 0 // 
+setFilterScript "fluidShape189SG";
+// Result: 0 // 
+setFilterScript "fluidShape190SG";
+// Result: 0 // 
+setFilterScript "fluidShape191SG";
+// Result: 0 // 
+setFilterScript "fluidShape192SG";
+// Result: 0 // 
+setFilterScript "fluidShape193SG";
+// Result: 0 // 
+setFilterScript "fluidShape194SG";
+// Result: 0 // 
+setFilterScript "fluidShape195SG";
+// Result: 0 // 
+setFilterScript "fluidShape196SG";
+// Result: 0 // 
+setFilterScript "fluidShape197SG";
+// Result: 0 // 
+setFilterScript "fluidShape198SG";
+// Result: 0 // 
+setFilterScript "fluidShape199SG";
+// Result: 0 // 
+setFilterScript "fluidShape200SG";
+// Result: 0 // 
+setFilterScript "fluidShape201SG";
+// Result: 0 // 
+setFilterScript "fluidShape202SG";
+// Result: 0 // 
+setFilterScript "fluidShape203SG";
+// Result: 0 // 
+setFilterScript "fluidShape204SG";
+// Result: 0 // 
+setFilterScript "fluidShape205SG";
+// Result: 0 // 
+setFilterScript "fluidShape206SG";
+// Result: 0 // 
+setFilterScript "fluidShape207SG";
+// Result: 0 // 
+setFilterScript "fluidShape208SG";
+// Result: 0 // 
+setFilterScript "fluidShape209SG";
+// Result: 0 // 
+setFilterScript "fluidShape210SG";
+// Result: 0 // 
+setFilterScript "fluidShape211SG";
+// Result: 0 // 
+setFilterScript "fluidShape212SG";
+// Result: 0 // 
+setFilterScript "fluidShape213SG";
+// Result: 0 // 
+setFilterScript "fluidShape214SG";
+// Result: 0 // 
+setFilterScript "fluidShape215SG";
+// Result: 0 // 
+setFilterScript "fluidShape216SG";
+// Result: 0 // 
+setFilterScript "fluidShape217SG";
+// Result: 0 // 
+setFilterScript "fluidShape218SG";
+// Result: 0 // 
+setFilterScript "fluidShape219SG";
+// Result: 0 // 
+setFilterScript "fluidShape220SG";
+// Result: 0 // 
+setFilterScript "fluidShape221SG";
+// Result: 0 // 
+setFilterScript "fluidShape222SG";
+// Result: 0 // 
+setFilterScript "fluidShape223SG";
+// Result: 0 // 
+setFilterScript "fluidShape224SG";
+// Result: 0 // 
+setFilterScript "fluidShape225SG";
+// Result: 0 // 
+setFilterScript "fluidShape226SG";
+// Result: 0 // 
+setFilterScript "fluidShape227SG";
+// Result: 0 // 
+setFilterScript "fluidShape228SG";
+// Result: 0 // 
+setFilterScript "fluidShape229SG";
+// Result: 0 // 
+setFilterScript "fluidShape230SG";
+// Result: 0 // 
+setFilterScript "fluidShape231SG";
+// Result: 0 // 
+setFilterScript "fluidShape232SG";
+// Result: 0 // 
+setFilterScript "fluidShape233SG";
+// Result: 0 // 
+setFilterScript "fluidShape234SG";
+// Result: 0 // 
+setFilterScript "fluidShape235SG";
+// Result: 0 // 
+setFilterScript "fluidShape236SG";
+// Result: 0 // 
+setFilterScript "fluidShape237SG";
+// Result: 0 // 
+setFilterScript "fluidShape238SG";
+// Result: 0 // 
+setFilterScript "fluidShape239SG";
+// Result: 0 // 
+setFilterScript "fluidShape240SG";
+// Result: 0 // 
+setFilterScript "fluidShape241SG";
+// Result: 0 // 
+setFilterScript "fluidShape242SG";
+// Result: 0 // 
+setFilterScript "fluidShape243SG";
+// Result: 0 // 
+setFilterScript "fluidShape244SG";
+// Result: 0 // 
+setFilterScript "fluidShape245SG";
+// Result: 0 // 
+setFilterScript "fluidShape246SG";
+// Result: 0 // 
+setFilterScript "fluidShape247SG";
+// Result: 0 // 
+setFilterScript "fluidShape248SG";
+// Result: 0 // 
+setFilterScript "fluidShape249SG";
+// Result: 0 // 
+setFilterScript "fluidShape250SG";
+// Result: 0 // 
+setFilterScript "fluidShape251SG";
+// Result: 0 // 
+setFilterScript "fluidShape252SG";
+// Result: 0 // 
+setFilterScript "fluidShape253SG";
+// Result: 0 // 
+setFilterScript "fluidShape254SG";
+// Result: 0 // 
+setFilterScript "fluidShape255SG";
+// Result: 0 // 
+setFilterScript "fluidShape256SG";
+// Result: 0 // 
+setFilterScript "fluidShape257SG";
+// Result: 0 // 
+setFilterScript "fluidShape258SG";
+// Result: 0 // 
+setFilterScript "fluidShape259SG";
+// Result: 0 // 
+setFilterScript "fluidShape260SG";
+// Result: 0 // 
+setFilterScript "fluidShape261SG";
+// Result: 0 // 
+setFilterScript "fluidShape262SG";
+// Result: 0 // 
+setFilterScript "fluidShape263SG";
+// Result: 0 // 
+setFilterScript "fluidShape264SG";
+// Result: 0 // 
+setFilterScript "fluidShape265SG";
+// Result: 0 // 
+setFilterScript "fluidShape266SG";
+// Result: 0 // 
+setFilterScript "fluidShape267SG";
+// Result: 0 // 
+setFilterScript "fluidShape268SG";
+// Result: 0 // 
+setFilterScript "fluidShape269SG";
+// Result: 0 // 
+setFilterScript "fluidShape270SG";
+// Result: 0 // 
+setFilterScript "fluidShape271SG";
+// Result: 0 // 
+setFilterScript "fluidShape272SG";
+// Result: 0 // 
+setFilterScript "fluidShape273SG";
+// Result: 0 // 
+setFilterScript "fluidShape274SG";
+// Result: 0 // 
+setFilterScript "fluidShape275SG";
+// Result: 0 // 
+setFilterScript "fluidShape276SG";
+// Result: 0 // 
+setFilterScript "fluidShape277SG";
+// Result: 0 // 
+setFilterScript "fluidShape278SG";
+// Result: 0 // 
+setFilterScript "fluidShape279SG";
+// Result: 0 // 
+setFilterScript "fluidShape280SG";
+// Result: 0 // 
+setFilterScript "fluidShape281SG";
+// Result: 0 // 
+setFilterScript "fluidShape282SG";
+// Result: 0 // 
+setFilterScript "fluidShape283SG";
+// Result: 0 // 
+setFilterScript "fluidShape284SG";
+// Result: 0 // 
+setFilterScript "fluidShape285SG";
+// Result: 0 // 
+setFilterScript "fluidShape286SG";
+// Result: 0 // 
+setFilterScript "fluidShape287SG";
+// Result: 0 // 
+setFilterScript "fluidShape288SG";
+// Result: 0 // 
+setFilterScript "fluidShape289SG";
+// Result: 0 // 
+setFilterScript "fluidShape290SG";
+// Result: 0 // 
+setFilterScript "fluidShape291SG";
+// Result: 0 // 
+refreshAE;
+listHistory -pdo true -lf false -il 2 "|SurfaceFlames|SurfaceFlamesGridCopies1|SunSurfaceFlamesFluidGrid5";
+listHistory -pdo true -lf false -il 2 -f true "|SurfaceFlames|SurfaceFlamesGridCopies1|SunSurfaceFlamesFluidGrid5";
+listConnections -source true -destination false "|SurfaceFlames|SurfaceFlamesGridCopies1|SunSurfaceFlamesFluidGrid5|SunSurfaceFlamesFluidGridShape5.visibility";
+listConnections -source true -destination false "|SurfaceFlames|SurfaceFlamesGridCopies1|SunSurfaceFlamesFluidGrid5|SunSurfaceFlamesFluidGridShape5.currentTime";
+// Result: time1 // 
+listConnections -source true -destination false "|SurfaceFlames|SurfaceFlamesGridCopies1|SunSurfaceFlamesFluidGrid5|SunSurfaceFlamesFluidGridShape5.outColor";
+listConnections -source true -destination false "|SurfaceFlames|SurfaceFlamesGridCopies1|SunSurfaceFlamesFluidGrid5|SunSurfaceFlamesFluidGridShape5.instObjGroups";
+listConnections -source true -destination false "|SurfaceFlames|SurfaceFlamesGridCopies1|SunSurfaceFlamesFluidGrid5|SunSurfaceFlamesFluidGridShape5.instObjGroups[0]";
+listConnections -source true -destination false "|SurfaceFlames|SurfaceFlamesGridCopies1|SunSurfaceFlamesFluidGrid5|SunSurfaceFlamesFluidGridShape5.playFromCache";
+// Result: SurfaceFlamesGridFluidShape1Cache10 // 
+*/
+/*
+	+"float $difSizeX = $sizeX - $fsizeX;\n"
+	+"float $difSizeY = $sizeY - $fsizeY;\n"
+	+"float $difSizeZ = $sizeZ - $fsizeZ;\n"
+	+"float $scaleFactX = 1 / $difSizeX;\n"
+	+"float $scaleFactY = 1 / $difSizeY;\n"
+	+"float $scaleFactZ = 1 / $difSizeZ;\n"
+	
+	*/

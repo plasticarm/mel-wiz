@@ -1,0 +1,1637 @@
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//|||||||||||||||||||||||||:::WIZ:::||||||||||||||||||||||||||||||||||
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//                         SORT WIZ
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+/*====================================================================
+Author: Glen Johnson
+Email: plasticarm@gmail.com
+Website: plasticarm.com / hrpictures.com
+----------------------------------------------------------
+Summary:
+
+
+
+====================================================================*/
+
+global proc sortWiz()
+{
+	
+}
+
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         SORTED OUTPUT
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//CREATE SORTED OUTPUT
+//=================================================
+global proc string[] createSortedOutput(string $sel[])
+{
+	openCurrentOptions("sortMethodOptionsMenu");
+	int $sets = `checkBox -q -v sortMethodsSortIntoSetsCheckBox`;
+	int $sep = `checkBox -q -v sortMethodsSortIntoSeparatedArrayCheckBox`;
+	int $selCom = `checkBox -q -v sortMethodsSortIntoSelectionCommandsCheckBox`;
+	int $grp = `checkBox -q -v sortMethodsSortIntoGroupsCheckBox`;
+	string $sortGroup[];
+	string $sorted[];
+	for ($i=0;$i<`size $sel`;$i++){
+		if ($sel[$i] == "|"){
+			string $sortSet;
+			string $sortCom[];		
+			if ($sets){
+				$sortSet = createSetFromSelection($sortGroup, $sortGroup[0]);
+				$sorted[`size $sorted`] = $sortSet;
+			}
+			if ($selCom){
+				string $selCommand = "select -r " + stringArrayToString($sortGroup, " ");
+				$sorted[`size $sorted`] = $selCommand;
+			}
+			if ($sep){
+				appendStringArray($sorted, $sortGroup, `size $sortGroup`);
+				$sorted[`size $sorted`] = "|";
+			}
+			if ($grp){
+				if (`size $sortGroup` == 0){
+					wizlog ("[No Objects In Sort Group]");
+					continue;
+				}
+				if (`size $sortGroup` == 1){
+					wizlog ("[Only One Object In Sort Group]");
+					continue;
+				}
+				select -r $sortGroup;
+				string $curSel[] = `ls -sl`;
+				
+				string $n = stripNumbersFromEndOfString($curSel[0]);
+				$n = ("Group") + $n;
+				print("WIZ| Grouping: " + $n + "\n");
+				//doGroup 0 1 1;
+				$sorted[`size $sorted`] = `group -n $n`;
+			}
+			clear $sortGroup;
+		} else {
+			$sortGroup[`size $sortGroup`] = $sel[$i];	
+		}
+	}
+	
+	return $sorted;
+
+}
+
+//CREATE SETS FROM SORTED
+//==================================================
+global proc string[] createSetsFromSorted(string $sorted[])
+{
+	string $sortGroup[];
+	string $sortedSets[];
+	for($i=0;$i<`size $sorted`;$i++){
+		if($sorted[$i] == "|"){
+			string $sortSet;	
+			string $setName = $sortGroup[0] + "Set";
+			$sortSet = createSetFromSelection($sortGroup, $sortGroup[0]);
+			$sortedSets[`size $sortedSets`] = $sortSet;
+		
+			
+			clear $sortGroup;
+		} else {
+			$sortGroup[`size $sortGroup`] = $sorted[$i];	
+		}
+	}
+	
+	return $sortedSets;
+}
+
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         BY HIERARCHY
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+
+//SORTING
+//============================================================================================
+//============================================================================================
+
+//SORTING BY HIERARCHY
+//====================================
+global proc string[] sortObjectsByTopDownGroup(string $sel[])
+{
+	printProc("sortObjectsByTopDownGroup");	
+	global string $WIZ_sep;
+	if($WIZ_sep == ""){ $WIZ_sep = "|";}
+		
+	debugML1("Sort Objects By Top Down Group" + "\n");
+	
+	string $t[];
+	string $children[];
+	string $sortedObj[];
+	string $remove[];
+	//Make sure we are starting at the root?
+	$t[0] = getFirstCommonParentFromSelected($sel);
+	if($t[0] == "World" || $t[0] == ""){
+			$t = getHighestObjectsInHierarchy($sel);
+	}
+	
+	while(`size $t` > 0){
+		debugML2("Transforms: " + stringArrayToString($t, " ") + "\n");	
+	
+		for($i=0;$i<`size $t`;$i++){
+			debugML2("	* Searching: " + $t[$i] + "\n");	
+			string $rel[] = `listRelatives $t[$i]`;
+			$rel = stringArrayRemoveDuplicates($rel);
+			
+			debugML2("		- Relatives: " + stringArrayToString($rel, " ") + "\n");	
+			
+			string $geo[] = getGeometryTransforms($rel);
+			
+			debugML2("		- Geometry Transforms: " + stringArrayToString($geo, " ") + "\n");	
+			
+			if(`size $geo` > 0){
+				
+				string $tAr[] = {$t[$i]};
+				string $allGeo[] = getGeometryTransformsInHeirarchy($tAr);
+				
+				$allGeo[`size $allGeo`] = $WIZ_sep;
+				appendStringArray($sortedObj,$allGeo,`size $allGeo`);
+				debugML2("		- All Geometry Transforms Below: " + stringArrayToString($allGeo, " ") + "\n");	
+			
+				//$remove[`size $remove`] = $t[$i];
+			} else {
+				//stringArrayRemove($geo,$rel);
+				appendStringArray($children, $rel, `size $rel`);
+			}		
+		}
+		clear $t;
+		appendStringArray($t, $children, `size $children`);
+		clear $children;
+	}
+	debugML2("* Top Down Sorted Geometry Transforms: " + stringArrayToString($sortedObj, " ") + "\n");
+	
+	return $sortedObj;
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         BY MATERIAL
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//BY SHADER(MATERIAL)
+//------------------------------
+global proc string[] sortObjectsByMaterial(string $sel[])
+{
+	printProc("sortObjectsByMaterial");
+	string $objByMat[];
+	string $mat[] = getShadersFromSelected($sel);
+	string $myMat[];
+	int $i;
+	int $p;
+	for ($i=0;$i<`size $mat`;$i++){	
+		$objByMat[`size $objByMat`] = $mat[$i];
+		for ($p=0;$p<`size $sel`;$p++){
+			if (isGeometryTransform($sel[$p]) == 0){ continue;}
+			
+			$myMat = getShaderFromObj($sel[$p]);		
+			if ($myMat[0] == $mat[$i]){
+				debugML1("			- Object: " + $sel[$i] + " || Material: " + $mat[$i] + "\n");
+				$objByMat[`size $objByMat`] =  $sel[$p];			
+			}
+		}
+	
+		$objByMat[`size $objByMat`] = "|";
+	
+	}
+	//If there are any object without materials add them as well
+	string $objWithNoMaterial[];
+	$objWithNoMaterial = stringArrayRemove($objByMat, $sel);
+	if (`size $objWithNoMaterial` > 0){
+		$objByMat[`size $objByMat`] = "NoShader";
+		appendStringArray($objByMat,$objWithNoMaterial, `size $objWithNoMaterial`);
+		$objByMat[`size $objByMat`] = "|";
+	}
+	
+	debugML1("		* Sorted Objects By Material: " + stringArrayToString($objByMat, " ") + "\n");
+	$objByMat = createSortedOutput($objByMat);
+	return $objByMat;
+
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                        BY GROUPS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//BY GROUP
+//------------------------------
+global proc string[] sortObjectsByGroup(string $obj[])
+{
+	printProc("sortObjectsByGroup");
+	global string $Wiz_sep;
+	string $parent[] = getFirstParentOfSelectedObjects($obj);
+	string $objByGroup[];
+	int $i;
+	int $p;
+	for($i=0;$i<`size $parent`;$i++){	
+		for($p=0;$p<`size $obj`;$p++){
+			//if(`objExists $obj[$p]` == false){ continue;}
+			if(`isPolyGeometry($obj[$p])`== 0){ continue;}
+			string $myParent = firstParentOf($obj[$p]);
+			
+			//Make sure parent is a group		
+			if ($parent[$i] == $myParent){
+				debugML2("			+ Object: " + $obj[$p] + " || Parent: " + $myParent + "\n");
+				$objByGroup[`size $objByGroup`] =  $obj[$p];
+			}
+		}
+		$objByGroup[`size $objByGroup`] = $Wiz_sep;
+	}
+	
+	debugML1("		* Sorted Objects By Group: " + stringArrayToString($objByGroup, " ") + "\n");
+	$ok = detailConfirmStep("Sorted Objects By Group OK?");if(!$ok){ return $objByGroup;}
+	$objByGroup = createSortedOutput($objByGroup);
+	return $objByGroup;
+
+}
+
+//SORT OBJECTS BY TOP DOWN GROUP SHADER
+//------------------------------
+global proc string[] sortObjectsByTopDownGroupShader(string $sel[])
+{
+	string $t[];
+	string $children[];
+	string $sortedObj[];
+	string $remove[];
+	//Make sure we are starting at the root?
+	$t[0] = getFirstCommonParentFromSelected($sel);
+	if($t[0] == "World" || $t[0] == ""){
+			$t = getHighestObjectsInHierarchy($sel);
+	}
+	
+	while (`size $t` > 0){
+		for ($i=0;$i<`size $t`;$i++){	
+			string $rel[] = `listRelatives $t[$i]`;
+			$rel = stringArrayRemoveDuplicates($rel);
+			
+			string $geo[] = getGeometryTransforms($rel);
+			
+			if (`size $geo` > 0){			
+				string $tAr[] = {$t[$i]};
+				string $allGeo[] = getGeometryTransformsInHeirarchy($tAr);
+							
+				$allGeo = sortObjectsByMaterial($allGeo);
+				stringArrayInsertAtIndex(0,$allGeo,$t[$i]);
+				if ($allGeo[(`size $allGeo` - 1)] != "|"){
+					$allGeo[`size $allGeo`] = "|";
+				}
+				appendStringArray($sortedObj,$allGeo,`size $allGeo`);
+					
+			} else {
+				appendStringArray($children, $rel, `size $rel`);
+			}		
+		}
+		clear $t;
+		appendStringArray($t, $children, `size $children`);
+		clear $children;
+	}
+	debugML2("* Top Down Shader Sorted Geometry Transforms: " + stringArrayToString($sortedObj, " ") + "\n");
+	
+	return $sortedObj;
+
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         BY NAME
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//SORT BY NAME
+//-----------------------------------
+global proc string[] sortObjectsByName(string $sel[])
+{
+	printProc("sortObjectsByName");
+	$sel = sort($sel);
+	string $name[];
+	appendStringArray($name,$sel,`size $sel`);
+	string $raw[] = getRawObjectNames($sel);
+	string $sorted[];
+	string $compare = $raw[0];
+	int $newGroup = 0;
+	for ($i=1;$i<`size $name`;$i++){	
+		debugML2("Compare Name: " + $raw[$i] + " To: " + $compare + " : Sel: " + $name[$i] + "\n");
+		if ($raw[$i] == $compare ){
+			if($newGroup == 0){ $newGroup = 1;}
+			$sorted[`size $sorted`] = $name[$i];
+			
+		} else {
+			if($newGroup == 1){
+				$sorted[`size $sorted`] = "|";
+				$newGroup = 0;
+			} else {
+				$sorted[`size $sorted`] = $name[$i];
+				$sorted[`size $sorted`] = "|";
+			}
+		}
+		$compare = $raw[$i];
+		
+	}
+	return $sorted;
+}
+
+//SORT SELECTION LIST BY NAME
+//-----------------------------------
+global proc string[] sortSelectionListByName(string $sel[])
+{
+	$sel = sortObjectsByName($sel);
+	$sel = createSortedOutput($sel);
+	return $sel;
+}
+
+
+//SORT SELECTIN LIST ALPHABETICALLY
+//-----------------------------------
+global proc string[] sortSelectionListAlphabetically(string $sel[])
+{
+	$sel = sort($sel);
+	$sel = createSortedOutput($sel);
+	return $sel;
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         BY TYPE
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//SORT BY TYPE
+//==================================================================
+//SORT BY OBJECT TYPE
+//-----------------------------------
+global proc string[] sortObjectsByType(string $sel[])
+{
+	printProc("sortObjectsByType");
+	$sel = sort($sel);
+	debugList("Selected", $sel, 1, "replace");
+	string $allNodeType[] = getNodeTypeForSelected($sel);
+	debugList("All Node Type", $allNodeType, 2, "replace");
+	string $nodeType[] = stringArrayRemoveDuplicates($allNodeType);
+	string $sorted[];
+	for($i=0;$i<`size $nodeType`;$i++){
+		$sorted[`size $sorted`] = $nodeType[$i];
+		for($p=0;$p<`size $allNodeType`;$p++){
+			if($allNodeType[$p] == $nodeType[$i]){
+				$sorted[`size $sorted`] = $sel[$p];
+			}
+		}	
+		$sorted[`size $sorted`] = "|";
+	}
+	$sorted = createSortedOutput($sorted);
+	return $sorted;
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         BY MATCHING GEOMETRY
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//SORT BY GEOMETRY
+//====================================================
+//SORT BY MATCHING POLY GEOMETRY
+//-----------------------------------
+global proc string[] sortByMatchingPolyGeometry(string $sel[])
+{
+	//<DEBUG>
+	printProc("sortByMatchingPolyGeometry");
+	int $debug = `menuItem -q -cb SortByMatchingPolyGeometryDebugMenuItem`;
+	string $dbl = "Sort By Matching Poly Geometry";
+	string $dbm = "add";
+	int $dbc = 1;
+	//<DEBUG>
+			
+	openCurrentOptions("sortByMatchingGeometryOptionsMenu");
+	
+	int $i;
+	int $p;
+	string $copy[];
+	string $remove[];
+	int $uniqueCount, $instanceCount;
+	
+	appendStringArray($copy, $sel, `size $sel`);
+	string $sorted[];
+	$sorted[`size $sorted`] = "|";
+	
+	for ($i=0;$i<`size $sel`;$i++){
+		if (`objExists $sel[$i]` == false){ continue;}
+		if (`isPolyGeometry($sel[$i])`== 0){ continue;}	
+		
+		//If the object was added to our remove list then skip it.
+		$removed = stringArrayContains($sel[$i],$remove);
+		if ($removed){continue;}
+		
+		if ($debug){
+			debugList($dbl,{ (" - Looking for Matches To: " + $sel[$i]) }, $dbc, $dbm);
+		}
+		
+		$sorted[`size $sorted`] = $sel[$i];
+		
+		for ($p=1;$p<`size $copy`;$p++){		
+			if (`objExists $copy[$p]` == false){ continue;}
+			if (`isPolyGeometry($copy[$p])`== 0){ continue;}
+			
+			if ($sel[$i] == $copy[$p]){ continue;}
+			
+			//If the object was added to our remove list then skip it.
+			$removed = stringArrayContains($copy[$p],$remove);
+			if ($removed){continue;}
+				
+			//If we are acidentally comparing a poly object to something that isn't a poly object and get an error then skip it.
+			if (catchQuiet(`polyCompare -v $sel[$i] $copy[$p]`) == 1){
+				continue;
+			}
+			
+			//A value of 0 means a successfull match
+			
+			int $same = wizPolyCompare($sel[$i], $copy[$p]);
+			if ($same == 0){
+				$sorted[`size $sorted`] = $copy[$p];							
+				//Put the object in our remove list so we don't bother looking at it anymore.
+				$remove[`size $remove`] = $copy[$p];	
+				if ($debug){
+					debugList($dbl,{ (" - MATCH: " + $copy[$p]) }, $dbc, $dbm);
+				}
+			}
+		}
+		$sorted[`size $sorted`] = "|";
+		if ($debug){
+			debugList($dbl,{ ("------------NEXT-----------") }, $dbc, $dbm);
+		}
+		
+	}
+	$sorted = createSortedOutput($sorted);
+	
+	return $sorted;	
+}
+
+//WIZ POLY COMPARE
+//============================================================
+global proc int wizPolyCompare(string $obj1, string $obj2)
+{
+	//A value of 0 means a successfull match
+	int $sameFd = 0;
+	int $sameV = 0;
+	int $sameUV = 0;
+	int $sameE = 0;
+	int $sameUVSet = 0;
+	int $sameAll[];
+	if (`checkBox -q -v sortByMatchingGeometryCompareFacesCheckBox` == 1){
+		$sameFd = `polyCompare -fd $obj1 $obj2`;
+		$sameAll[`size $sameAll`] = $sameFd;
+	}
+	if (`checkBox -q -v sortByMatchingGeometryCompareVerticesCheckBox` == 1){		
+		$sameV = `polyCompare -v $obj1 $obj2`;
+		$sameAll[`size $sameAll`] = $sameV;
+	}
+	if (`checkBox -q -v sortByMatchingGeometryCompareUVsCheckBox` == 1){
+		$sameUV = `polyCompare -uv $obj1 $obj2`;
+		$sameAll[`size $sameAll`] = $sameUV;
+	}
+	if (`checkBox -q -v sortByMatchingGeometryCompareEdgesCheckBox` == 1){
+		$sameE = `polyCompare -e $obj1 $obj2`;
+		$sameAll[`size $sameAll`] = $sameE;
+	}
+	if (`checkBox -q -v sortByMatchingGeometryCompareUVSetIndicesCheckBox` == 1){
+		$sameUVSet = `polyCompare -iuv $obj1 $obj2`;
+		$sameAll[`size $sameAll`] = $sameUVSet;
+	}
+	
+	int $same = 1;
+	for ($i=0;$i<`size $sameAll`;$i++){		
+		if(`optionMenuGrp -q -sl geometryMatchSortOptionMenuGrp` == 1){
+			if($sameAll[$i] == 0){
+				$same = 0;	
+			} else {
+				return 1;	
+			}
+		} else if(`optionMenuGrp -q -sl geometryMatchSortOptionMenuGrp` == 2){	
+			if($sameAll[$i] == 0){
+				return 0;
+			}
+		}
+	}
+	return $same;
+}
+
+
+//POLY COMPARE TWO GROUPS
+//------------------------------
+global proc int polyCompareTwoGroups(string $groupA, string $groupB)
+{
+	//A Value of 0 means a successfull match	
+	printProc("polyCompareTwoGroups");	
+	string $matched[];
+	
+	if(`isGroup($groupA)` == 0 || `isGroup($groupB)` == 0){ return 1;}
+	string $childA[] = getChildGeometryTransforms({$groupA});
+	string $childB[] = getChildGeometryTransforms({$groupB});
+	
+	if(`size $childA` != `size $childB` || `size $childA` == 0 || `size $childB` == 0){
+		return 1;
+	}
+	
+	debugML2("		* Poly Comparing Objects: " + stringArrayToString($childA, " ") + 
+		    "\n" + "				   	 To: " + stringArrayToString($childB, " ") + "\n");
+		    
+	for($a=0;$a<`size $childA`;$a++){
+		if(`isPolyGeometry($childA[$a])`== 0){ continue;}
+		
+		for($b=0;$b<`size $childB`;$b++){
+			if(`isPolyGeometry($childB[$b])`== 0){ continue;}
+			
+			//If the object was added to our remove list then skip it.		
+			if(stringArrayContains($childB[$b],$matched) == 1){continue;}
+				
+			//A value of 0 means a successfull match
+			int $sameFd = `polyCompare -fd $childA[$a] $childB[$b]`;		
+			int $sameV = `polyCompare -v $childA[$a] $childB[$b]`;		
+			
+			if($sameFd == 0 || $sameV == 0){
+				debugML2("			*MATCH* " + $childA[$a] + " | " + $childB[$b] + "\n");
+				//Put the object in our remove list so we don't bother looking at it anymore.
+				$matched[`size $matched`] = $childB[$b];
+			} 
+			
+		}	
+		
+	}
+	
+	debugML2("		* Found: " + `size $matched` + " Matches To " + `size $childA` + " Objects." + "\n");
+	if(`size $matched` == `size $childA`){
+		debugML2("		+ Groups Match" + "\n");
+		return 0;	
+	} else {
+		debugML2("		- Groups Do NOT Match" + "\n");
+		return 1;
+	}
+}
+
+//@ SORT UVS BY UV SPACE
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $uvs[] = sortUVsbyUVspace(`ls -fl sl`, 1);
+	
+	</code>
+*********************************************************************/
+global proc string[] sortUVsbyUVspace( string $uvs[], int $dir )
+{
+	string $dbl = "-dmi SortUVsbyUVspaceDebugMenuItem -t Sort UVs By UV Space"; string $dbm = "add"; int $dbc = 1;
+	menuItem -e -cb true SortUVsbyUVspaceDebugMenuItem;
+	
+	string $uv[] = `ls -fl $uvs`;
+/*
+	//wizlog (niceArrayList("		[#] UVs [#]", $uv));
+	float $uvPos[] = `polyEditUV -q -u -v $uv`;	
+	string $uvPosStringArray[] = floatArrayToStringArray($uvPos);
+	//wizlog (niceArrayList("	[#] UV Positions [#]", $uvPosStringArray));
+	
+	float $sortPos[];
+	if ($dir == 0){
+		$sortPos = getColumnOfFloatArray($uvPos,1,2);
+	} else if($dir == 1){
+		$sortPos = getColumnOfFloatArray($uvPos,2,2);
+	} else if($dir == 2){
+		
+	} else if($dir == 3){
+		
+	} else if($dir == 4){
+		$sortPos = addFloatColumnAToColumnB($uvPos);
+	} 
+	
+	$uvPosStringArray = floatArrayToStringArray($sortPos);
+	*/
+	
+	float $uvPos[];
+	float $sortPos[];
+	if ($dir == 0){
+		$uvPos = `polyEditUV -q -u -v $uv`;
+		$sortPos = getColumnOfFloatArray($uvPos,1,2);
+	} else if ($dir == 1){
+		$uvPos = `polyEditUV -q -u -v $uv`;	
+		$sortPos = getColumnOfFloatArray($uvPos,2,2);
+	}
+	
+	
+	string $uvPosStringArray[] = floatArrayToStringArray($sortPos);
+	debugListArray($dbl, " - UV Positions: ", $uvPosStringArray, $dbc, $dbm, "[NEXT]", 1000);
+	
+	//wizlog (niceArrayList("		[#] Sort Positions [#]", $uvPosStringArray));
+	//wizlog (niceArrayList("		[#] UVs [#]", $uv));
+	
+	string $sort[] = prefixStringArrayWithFloatArray($uv,$sortPos);
+	debugListArray($dbl, " [Position] [UV] ", $sort, $dbc, $dbm, "[NEXT]", 1000);
+	
+	//wizlog ((niceArrayList("	[#] UPos/VPos/UV [#]", $sort)));
+	
+	//debugList("Sort UVs", {"|Prefix with Float Array|"}, 2, "add");
+	//debugList("Sort UVs", $sort, 2, "add");
+	
+	
+	$sort = sort($sort);
+	debugListArray($dbl, " [SORTED] ", $sort, $dbc, $dbm, "[NEXT]", 1000);
+	
+	//debugList("Sort UVs", {"|Sorted|"}, 2, "add");
+	//debugList("Sort UVs", $sort, 2, "add");
+	
+		
+	$sort = getStringArrayAfterSpace($sort);
+	debugListArray($dbl, " [SORTED UV Names] ", $sort, $dbc, $dbm, "[NEXT]", 1000);
+	//wizlog ((niceArrayList("	[#] Sorted [#]", $sort)));	
+	
+	//string $fl[] = `ls -fl -sl`;
+	
+	
+	return $sort;
+
+}
+
+
+//@ WIZ SORT UVS
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $sortedUVs[] = wizSortUVs("-sl -u");
+	
+	</code>
+*********************************************************************/
+global proc string[] wizSortUVs( string $flags )
+{
+	string $dbl = "-dmi SortUVsbyUVspaceDebugMenuItem -t Sort UVs By UV Space"; string $dbm = "add"; int $dbc = 1;
+	//menuItem -e -cb true SortUVsbyUVspaceDebugMenuItem;
+	
+	string $obj, $type;
+	int $byU = 1;
+	int $byV = 0;
+	string $uv[];
+	string $sel[];
+	int $edit;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-typ" : case "-type" :
+			$type = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$uv = `ls -fl -sl`;			
+			break ;			
+			
+			case "-byU" : case "-u" :
+			$byU = 1;
+			break ;
+			
+			case "-byV" : case "-v" :
+			$byV = 1;
+			$byU = 0;
+			break ;
+			
+		}
+	}
+	if (`size $uv` == 0){
+		$uv = wizFlagObjTrail($flags);
+	}
+	//print ($flags + "\n");
+	
+	// make sure all uv pos have 8 digits
+	float $uvPos[] = `polyEditUV -q -u -v $uv`;
+	string $uvPosStr[] = floatArrayToStringArray($uvPos);
+	string $uvPosStrFor[];
+	for ($i=0;$i<`size $uvPosStr`;$i++){
+		string $dotTok[] = tokenizeString($uvPosStr[$i], ".");
+		//debugListArray($dbl, "[DotTok]", $dotTok, $dbc, $dbm, "[NEXT]", 100);
+		
+		if (`size $dotTok[0]` == 1){
+			$dotTok[0] = "0" + $dotTok[0];
+		}		
+		
+		if (`size $dotTok` == 1){
+			$dotTok[`size $dotTok`] = "000000";			
+		}
+		if (`size $dotTok[1]` < 6){
+			int $dotTokSize = `size $dotTok[1]`;
+			for ($b=$dotTokSize;$b<6;$b++){
+				$dotTok[1] = $dotTok[1] + "0";
+			}
+			
+		}
+		$dotTok[1] = substring($dotTok[1], 1, 6);
+		$uvPosStrFor[`size $uvPosStrFor`] = $dotTok[0] + $dotTok[1];
+		
+		//print ($dotTok[0] + $dotTok[1] + "\n");
+		if ($i == 1000){
+			break ;
+		}
+	}
+	//debugListArray($dbl, "[Positions]", $uvPosStr, $dbc, $dbm, "[NEXT]", 100);
+	
+	// add the u pos and v pos together with the uv name and then sort
+	//int $halfUV = (`size $uvPosStr` / 2);
+	string $uvSortStr[];
+	int $p;
+	for ($i=0;$i<`size $uvPosStrFor`;$i++){
+		if ($byU){
+			$uvSortStr[`size $uvSortStr`] = $uvPosStrFor[$i] + $uvPosStrFor[($i + 1)] + " " + $uv[$p];
+		}
+		if ($byV){
+			$uvSortStr[`size $uvSortStr`] = $uvPosStrFor[($i + 1)] + $uvPosStrFor[$i] + " " + $uv[$p];
+		}
+		$i++;
+		$p++;
+		//print ($uvSortStr[(`size $uvSortStr` - 1)] + "\n");
+		if ($i == 1000){
+			break ;
+		}
+	}
+	
+	//print ("Ready To Sort \n");
+	debugListArray($dbl, "[PRE-SORTED] ", $uvSortStr, $dbc, $dbm, "[NEXT]", 100);
+	string $sorted[] = sort($uvSortStr);
+	debugListArray($dbl, "[SORTED] ", $sorted, $dbc, $dbm, "[NEXT]", 100);
+	
+	
+	$sorted = getStringArrayAfterSpace($sorted);
+	//print ("Sorted\n");
+	debugListArray($dbl, "[SORTED UV Names]", $sorted, $dbc, $dbm, "[NEXT]", 100);
+	
+	return $sorted;
+	
+
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                      ARRAY BY ANOTHER ARRAY
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+
+//SORT ARRAY BY OTHER ARRAY
+//========================================================================
+
+//SORT STRING ARRAY BY FLOAT ARRAY
+//-------------------------------------------------
+global proc string[] sortStringArrayByFloatArray( string $string[], float $float[])
+{
+	
+	string $dbl = "-dmi SortStringArrayByFloatArrayDebugMenuItem -t Sort String Array By Float Array"; string $dbm = "add"; int $dbc = 1;
+	
+	debugListArray($dbl, " - String Array: ", $string, $dbc, $dbm, "", 0);
+	debugListArray($dbl, " - Float Array: ", (floatArrayToStringArray($float)), $dbc, $dbm, "", 0);
+	debugList($dbl, {(tslDiv("[SORT]"))}, $dbc, $dbm);
+	
+	float $fCopy[] = $float;
+	if(`size $string` != `size $float`){
+		print("WIZ| sortStringArrayByFloatArray : Warning : The Size of the String Array and the Size of the Float Array Do not Match~ \n");	
+	}
+	
+	float $sortedFloat[] = sort($fCopy);
+	debugListArray($dbl, " - Sorted Float Array: ", (floatArrayToStringArray($sortedFloat)), $dbc, $dbm, "[NEXT]", 0);
+	
+	int $sortedIndices[] = matchSortedFloatArrayIndicesToNonSortedArrayIndices($sortedFloat, $float );
+	debugListArray($dbl, " - Sorted Indices: ", (intArrayToStringArray($sortedIndices)), $dbc, $dbm, "[NEXT]", 0);
+	
+	string $sorted[] = reorderStringArrayWithIndices($string, $sortedIndices);
+	debugListArray($dbl, " - Sorted: ", $sorted, $dbc, $dbm, "[END]", 0);
+	
+	/* Method 2
+	string $sorted[] = prefixObjectWithFloatArray($string,$float);
+	//We must add 0's to the max size of largest number ( 004.98, 045.34, 450.323 )
+	$sorted = sort($sorted);
+	$sorted = getStringArrayAfterSpace($sorted);
+	*/
+	return $sorted;
+
+}
+
+//@ SORT INT ARRAY BY FLOAT ARRAY
+//====================================================================
+global proc int[] sortIntArrayByFloatArray( int $int[], float $float[] )
+{
+	string $sortString[];
+	int $sorted[];
+	for ($i=0;$i<`size $int`;$i++){
+		$sortString[$i] = $float[$i] + "|" + $int[$i];
+	}
+	$sortString = sort($sortString);
+	for ($i=0;$i<`size $sortString`;$i++){
+		string $tok[] = tokenizeString($sortString[$i], "|");
+		$sorted[$i] = int($tok[1]);
+	}
+	return $sorted;
+}
+
+//REORDER STRING ARRAY WITH INDICES
+//=================================================
+global proc string[] reorderStringArrayWithIndices( string $arr[], int $indices[])
+{
+	string $return[];
+	for ($i=0;$i<`size $arr`;$i++){
+		int $ni = $indices[$i];
+		$return[$ni] = $arr[$i];		
+	}
+	return $return;
+}
+
+//COMPARE FLOAT ARRAY INDICES
+//-------------------------------------------------
+/*
+global proc int[] compareFloatArrayIndices( float $a[], float $b[])
+{
+    menuItem -e -cb true CompareFloatArrayIndicesDebugMenuItem;
+	string $dbl = "-dmi CompareFloatArrayIndicesDebugMenuItem -t Compare Float Array Indices"; string $dbm = "add"; int $dbc = 1;
+	// <ToDoWiz!> 
+	//This would be better if it would make sure to deal with floats that have duplicates
+	debugListArray($dbl, " - Array A: ", (floatArrayToStringArray($a)), $dbc, $dbm, "", 0);
+	debugListArray($dbl, " - Array B: ", (floatArrayToStringArray($b)), $dbc, $dbm, "", 0);
+	
+	int $index[];
+	for($i=0;$i<`size $a`;$i++){
+		
+		int $bi = floatArrayFind($a[$i], 0, $b);
+
+        debugListString($dbl, (" - Find : " + $bi), $dbc, $dbm);
+        debugListString($dbl, (" - Count : " + $count), $dbc, $dbm);
+        
+        if ($bi > -1){			
+			$index[$i] = $bi;
+			debugListString($dbl, (" - Float: " + $a[$i]), $dbc, $dbm);
+			debugListString($dbl, (" - A Index: " + $i + " B Index: " + $bi), $dbc, $dbm);
+			debugList($dbl, {(tslDiv("[NEXT]"))}, $dbc, $dbm);
+		}
+            
+	}
+    string $indexString[] = intArrayToStringArray($index);
+    debugListArray($dbl, " - Index Order: ", $indexString, $dbc, $dbm, "[NEXT]", 100);
+    
+	debugListString($dbl, (" This Function Does Not Handle Duplicate Values! "), $dbc, $dbm);
+	return $index;
+}
+
+*/
+
+
+/*
+global proc int[] compareFloatArrayIndices( float $a[], float $b[])
+{
+    menuItem -e -cb true CompareFloatArrayIndicesDebugMenuItem;
+	string $dbl = "-dmi CompareFloatArrayIndicesDebugMenuItem -t Compare Float Array Indices"; string $dbm = "add"; int $dbc = 1;
+	// <ToDoWiz!> 
+	//This would be better if it would make sure to deal with floats that have duplicates
+	debugListArray($dbl, " - Array A: ", (floatArrayToStringArray($a)), $dbc, $dbm, "", 0);
+	debugListArray($dbl, " - Array B: ", (floatArrayToStringArray($b)), $dbc, $dbm, "", 0);
+	
+	int $index[];
+    int $fillIndex = 0;
+	for ($i=0;$i<`size $a`;$i++){
+        print ("================ Start - " + $i + " - Loop ===============\n");
+		print (" i :  " + $i + " a[" + $i + "] : " + $a[$i] + "\n");
+		int $bi = floatArrayFind($a[$i], 0, $b);
+		int $count = floatArrayCount($a[$i], $b);
+        debugListString($dbl, (" - Find : " + $bi), $dbc, $dbm);
+        debugListString($dbl, (" - Count : " + $count), $dbc, $dbm);
+        print (" - corresponding index from list b : " + $bi + " count : " + $count + "\n");
+        
+        if ($bi > -1){			
+			$index[$fillIndex] = $bi;
+			debugListString($dbl, (" - Float: " + $a[$i]), $dbc, $dbm);
+			debugListString($dbl, (" - A Index: " + $i + " B Index: " + $bi), $dbc, $dbm);
+			debugList($dbl, {(tslDiv("[NEXT]"))}, $dbc, $dbm);
+		}
+        
+        if ($count > 1){
+            //int $mi = $fillIndex;
+            print (" i :  " + $i + " a[" + $i + "] : " + $a[$i] + "\n");
+            debugListString($dbl, (" - " + $a[$i] + " - Occurs Multiple Times: "), $dbc, $dbm);   
+            
+            print (wizDiv("se") + "\n" + $a[$i] + " : Occurs : " + $count + " Times\n");
+            
+            
+            print (" i = " + $i + "\n");
+            int $si = $bi + 1;
+            print (" search start index = " + $si + "\n");
+            print ("        -------- Multi Count Loop Start --------\n");
+            for ($p=0;$p<$count;$p++){
+                print ("        -------- Multi Count Loop - " + $p + " ---------\n");
+                print ("         i = " + $i + "\n");
+                
+                int $bii = floatArrayFind($a[$i], $si, $b);
+                if ($bii == $bi){ continue;}
+                
+                if ($bii == -1){	
+                    break;
+                }     
+                                
+                print ("     - corresponding index from list b : " + $bii + "\n");
+                debugListString($dbl, (" - Find : " + $bii), $dbc, $dbm);
+                
+                $si = $bii + 1;
+                print ("     - next search starting at index = " + $si + "\n");
+                
+                $fillIndex++;
+                print ("     - filling index : " + $fillIndex + "\n");
+                $index[$fillIndex] = $bii;
+                print (" A Index [" + $i + "] = B Index [" + $bii + "]\n");
+                print (" A : " + $a[$i] + " B : " + $b[$bii] + "\n");
+                
+                //$i++;
+                print ("        ========= Multi Count Loop End Iteration =======\n");
+            }
+           // $i = $fillIndex + 1;
+        } else {
+            print (" A Index [" + $i + "] = B Index [" + $b + "]\n");
+            print (" A : " + $a[$i] + " B : " + $b[$bii] + "\n");
+            $fillIndex++;
+            
+        }
+        
+        
+        
+	}
+    print (wizDiv("end"));
+    print (" index[] = " + intArrayToString($index, ", ") + "\n");
+    string $indexString[] = intArrayToStringArray($index);
+    debugListArray($dbl, " - Index Order: ", $indexString, $dbc, $dbm, "[NEXT]", 100);
+    
+	debugListString($dbl, (" This Function Does Not Handle Duplicate Values! "), $dbc, $dbm);
+	return $index;
+}
+*/
+
+/*
+float $a[] = { 0.1, 0.25, 1.5, 1.5, 19.8 };
+float $b[] = { 19.8, 1.5, 0.1, 1.5, 0.25 };
+compareFloatArrayIndices($a, $b);
+
+float $a[] = { 1.0, 2.0, 3.0, 4.0, 3.0 };
+float $b[] = { 4.0, 3.0, 1.0, 3.0, 2.0 };
+compareFloatArrayIndices($a, $b);
+//2, 4, 1, 3, 0
+*/
+
+global proc int[] compareFloatArrayIndices( float $a[], float $b[])
+{
+
+	int $index[];
+    int $fi = 0;
+	for ($i=0;$i<`size $a`;$i++){
+		int $bi = floatArrayFind($a[$i], 0, $b);
+		int $count = floatArrayCount($a[$i], $b);
+        
+        if ($bi > -1){			
+            $index[$fi] = $bi;
+        }
+        
+        if ($count > 1){
+            //int $ci = floatArrayFind($a[$i], $i, $a);
+            //if ($ci > -1){
+            //    continue;
+            //}
+            int $mi = $i;
+            int $si = $bi + 1;
+            for ($p=0;$p<($count - 1);$p++){
+                int $bii = floatArrayFind($a[$mi], $si, $b);
+                if ($bii == -1){
+                    break;
+                }
+                $fi++;
+                
+                $index[$fi] = $bii;  
+                $si = $bii + 1;    
+                print (" index[] = " + intArrayToString($index, ", ") + "\n");    
+                
+            }
+
+        } else {
+            
+            $fi++;
+            print (" index[] = " + intArrayToString($index, ", ") + "\n");
+        }        
+        
+        
+	}
+    print (" END index[] = " + intArrayToString($index, ", ") + "\n");
+    
+	return $index;
+}
+
+/*
+float $a[] = { 1.0, 2.0, 2.0, 3.0, 4.0 };
+float $b[] = { 4.0, 2.0, 1.0, 3.0, 2.0 };
+matchSortedFloatArrayIndicesToNonSortedArrayIndices($a, $b);
+//2, 1, 4, 3, 0
+*/
+
+/*
+global proc int[] matchSortedFloatArrayIndicesToNonSortedArrayIndices( float $a[], float $b[])
+{
+    string $dbl = "-dmi SortStringArrayByFloatArrayDebugMenuItem -t Sort String Array By Float Array"; string $dbm = "add"; int $dbc = 1;
+   
+	int $index[];
+    int $si;
+    for ($i=0;$i<`size $a`;$i++){
+        int $count = floatArrayCount($a[$i], $b);
+        int $bi;
+        if ($count > 1){
+            $bi = floatArrayFind($a[$i], $si, $b);
+            if ($bi == -1){
+                $si = 0; 
+            } else {
+                $si = $bi + 1;
+            }
+        } else {
+            $bi = floatArrayFind($a[$i], 0, $b);
+        }
+        if ($bi > -1){
+            $index[$i] = $bi; 
+            string $compare = "a[" + $i + "] : " + $a[$i] + " || b[" + $bi + "] : " + $b[$bi];
+            debugList($dbl, {$compare}, $dbc, $dbm);
+        }
+       
+    }
+	return $index;
+    
+}
+*/
+
+global proc int[] matchSortedFloatArrayIndicesToNonSortedArrayIndices( float $a[], float $b[])
+{
+    string $dbl = "-dmi SortStringArrayByFloatArrayDebugMenuItem -t Sort String Array By Float Array"; string $dbm = "add"; int $dbc = 1;
+   
+	int $index[];
+    
+    for ($i=0;$i<`size $a`;$i++){
+        int $si = 0;
+        int $count = floatArrayCount($a[$i], $b);
+        int $bi;
+        if ($count > 1){
+            for ($p=0;$p<$count;$p++){
+                $bi = floatArrayFind($a[$i], $si, $b);
+                if($bi == -1){
+                    break;
+                }
+                $si = $bi + 1;
+                $index[$i] = $bi; 
+                
+                string $compare = " - R - a[" + $i + "] : " + $a[$i] + " || b[" + $bi + "] : " + $b[$bi];
+                debugList($dbl, {$compare}, $dbc, $dbm);
+                
+                $i++;
+                
+            }
+        } else {
+            $bi = floatArrayFind($a[$i], $si, $b);
+            $index[$i] = $bi; 
+            $si = 0;
+            string $compare = " - NR - a[" + $i + "] : " + $a[$i] + " || b[" + $bi + "] : " + $b[$bi];
+            debugList($dbl, {$compare}, $dbc, $dbm);
+        }
+        
+
+       
+    }
+	return $index;
+    
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         BY DISTANCE
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//SORT BY CLOSEST TO POINT
+//=========================================================================
+//SORT BY CLOSEST TO POINT
+//=========================================================================
+global proc string[] sortByClosestToPoint(string $sel[], float $point[])
+{
+	string $dbl = "-dmi SortByClosestToPointDebugMenuItem -t Sort By Closest To Point"; string $dbm = "add"; int $dbc = 1;
+	
+	$sel = checkSel($sel);	
+	debugListArray($dbl, " - Selected: ", $sel, $dbc, $dbm, "", 100);
+	
+	float $dis[];
+	for($i=0;$i<`size $sel`;$i++){
+		float $t[] = `xform -q -ws -t $sel[$i]`;
+		//debugListArray($dbl, " - Transform: ", $t, $dbc, $dbm, "NEXT", 100);
+		float $d = getDistanceBetweenPoints($point, $t);
+		debugList($dbl, { (" - Distance: " + $d) }, $dbc, $dbm);
+		debugList($dbl, {(tslDiv("NEXT"))}, $dbc, $dbm);
+		$dis[`size $dis`] = $d;
+		
+	}
+	string $sort[] = prefixObjectWithFloatArray($sel,$dis);
+	//We must add 0's to the max size of largest number ( 004.98, 045.34, 450.323 )
+	$sort = addLeadingZeroes($sort);
+	debugListArray($dbl, " - Sorted Added 0s: ", $sort, $dbc, $dbm, "", 100);
+	
+	$sort = sort($sort);
+	debugListArray($dbl, " - Sorted: ", $sort, $dbc, $dbm, "", 100);
+	
+	$sort = getStringArrayAfterSpace($sort);
+	
+	return $sort;
+	
+}	
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         BY DIRECTION
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+ 
+//SORT BY DIRECTION
+//=========================================================================
+global proc string[] sortByDirection( string $sel[], float $sortDir[])
+{
+    menuItem -e -cb true SortByDirectionDebugMenuItem;
+    
+	string $dbl = "-dmi SortByDirectionDebugMenuItem -t Sort By Direction"; string $dbm = "add"; int $dbc = 1;
+	if (`menuItem -q -cb SortByDirectionDebugMenuItem`){
+		menuItem -e -cb 1 SortStringArrayByFloatArrayDebugMenuItem;
+	}
+	int $maxDebug = 0;
+	$sel = checkSel($sel);	
+	debugListArray($dbl, " - Selected: ", $sel, $dbc, $dbm, "", $maxDebug);
+    debugList($dbl, {(" - Sort Direction : " + $sortDir[0] + ", " + $sortDir[1] + ", " + $sortDir[2])}, $dbc, $dbm);
+	float $dir[];
+	debugList($dbl, {(tslDiv("DIRECTION"))}, $dbc, $dbm);
+    int $objWithNoTransforms = 0;
+	for ($i=0;$i<`size $sel`;$i++){
+		//float $t[] = `xform -q -ws -t $sel[$i]`;
+        float $t[] = `getAttr ($sel[$i] + ".center")`;
+		$t[0] = $t[0] * $sortDir[0];
+		$t[1] = $t[1] * $sortDir[1];
+		$t[2] = $t[2] * $sortDir[2];
+		debugList($dbl, { ($sel[$i]) }, $dbc, $dbm);
+		debugList($dbl, { (" - Direction: " + $t[0] + " " + $t[1] + " " + $t[2]) }, $dbc, $dbm);
+		//debugList($dbl, {(tslDiv("NEXT"))}, $dbc, $dbm);
+		
+		$dir[`size $dir`] = $t[0] + $t[1] + $t[2];
+        if ($t[0] == 0 && $t[1] == 0 && $t[2] == 0){
+            $objWithNoTransforms++;
+            if ($objWithNoTransforms = 3){ 
+                warning ("WIZ| sortByDirection : The objects you are sorting may have their pivots centered in the world.\n Connot sort by direction accuratly if pivots are center in world. Please center them to the object.\n\n");
+            }
+        }
+	}
+	debugList($dbl, {(tslDiv(""))}, $dbc, $dbm);
+	/*
+	string $sorted[] = prefixObjectWithFloatArray($sel,$dir);
+	
+	//We must add 0's to the max size of largest number ( 004.98, 045.34, 450.323 )
+	$sorted = addLeadingZeroes($sorted);	
+	debugListArray($dbl, " - Sorted Added 0s: ", $sorted, $dbc, $dbm, "", $maxDebug);	
+	
+	$sorted = sort($sorted);
+	*/
+	
+	string $sorted[] = sortStringArrayByFloatArray($sel, $dir);
+	debugListArray($dbl, " - Sorted: ", $sorted, $dbc, $dbm, "", $maxDebug);
+	/*
+	$sorted = getStringArrayAfterSpace($sorted);
+	*/
+	float $totDir = $sortDir[0] + $sortDir[1] + $sortDir[2];
+	if($totDir < 0){
+		$sorted = reverseStringArray($sorted);	
+	}
+	
+	select -r $sel;
+	return $sorted;
+	
+}
+
+//SORT BY DIRECTION
+//=========================================================================
+global proc string[] sortByDistanceDirection(string $sel[], float $sortPoint[], float $sortDir[])
+{
+	string $dbl = "-dmi SortByDistanceDirectionDebugMenuItem -t Sort By Distance Direction"; string $dbm = "add"; int $dbc = 1;
+	$sel = checkSel($sel);
+	int $debugLimit = 20;	
+	debugListArray($dbl, " - Selected: ", $sel, $dbc, $dbm, "", $debugLimit);
+	debugList($dbl, { (" - Sort Point: " + $sortPoint[0] + " " + $sortPoint[1] + " " + $sortPoint[2]) }, $dbc, $dbm);
+	debugList($dbl, { (" - Sort Direction: " + $sortDir[0] + " " + $sortDir[1] + " " + $sortDir[2]) }, $dbc, $dbm);
+	debugList($dbl, {(tslDiv("[SORT]"))}, $dbc, $dbm);
+	
+	float $disDir[];
+	
+	for($i=0;$i<`size $sel`;$i++){
+		float $t[] = `xform -q -ws -t $sel[$i]`;
+		float $tDir[];		
+		$tDir[0] = $t[0] * $sortDir[0];
+		$tDir[1] = $t[1] * $sortDir[1];
+		$tDir[2] = $t[2] * $sortDir[2];
+		
+		float $dir = $tDir[0] + $tDir[1] + $tDir[2];		
+		
+		float $d = getDistanceBetweenPoints($sortPoint, $t);		
+		float $dd = $d / $dir;
+		
+		if($i < $debugLimit){
+			debugList($dbl, { (" - Distance: " + $d) }, $dbc, $dbm);
+			debugList($dbl, { (" - Direction: " + $t[0] + " " + $t[1] + " " + $t[2]) }, $dbc, $dbm);
+			debugList($dbl, { (" - Dir * Dis: " + $dd)}, $dbc, $dbm);
+			debugList($dbl, {(tslDiv("NEXT"))}, $dbc, $dbm);
+		}
+		
+		$disDir[`size $disDir`] = $dd;
+	}
+	string $sorted[] = prefixObjectWithFloatArray($sel,$disDir);
+	
+	//We must add 0's to the max size of largest number ( 004.98, 045.34, 450.323 )
+	$sorted = addLeadingZeroes($sorted);	
+	//debugListArray($dbl, " - Sorted Added 0s: ", $sort, $dbc, $dbm, "", 100);
+	
+	$sorted = sort($sorted);
+	debugListArray($dbl, " - Sorted: ", $sorted, $dbc, $dbm, "", $debugLimit);
+	
+	$sorted = getStringArrayAfterSpace($sorted);
+	$sorted = reverseStringArray($sorted);	
+	
+	float $totDir = $sortDir[0] + $sortDir[1] + $sortDir[2];
+	if($totDir < 0){
+		$sorted = reverseStringArray($sorted);	
+	}
+	
+	return $sorted;
+	
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         STRING OPERATIONS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//GET STRING ARRAY BEFORE -FIRST- TOKEN
+//---------------------------------
+global proc string[] getStringArrayBeforeToken(string $arr[])
+{
+	string $string[];
+	for($i=0;$i<`size $arr`;$i++){
+		string $buffer[];
+		int $numTok = `tokenize $arr[$i] ". " $buffer`;
+		$string[$i] = $buffer[0];
+	}
+	return $string;	
+}
+
+//GET NEGATIVE STRINGS
+//--------------------------------
+global proc string[] getNegativeStrings(string $arr[])
+{
+	string $neg[];
+	for($i=0;$i<`size $arr`;$i++){		
+		if(startsWith($arr[$i], "-") == 1){
+			$neg[$i] = "-";
+		} else {
+			$neg[$i] = "";	
+		}
+	
+	}
+	return $neg;	
+}
+
+
+//ADD LEADING ZEROES
+//===========================
+global proc string[] addLeadingZeroes(string $add[])
+{
+	string $string[];	
+	$string = getStringArrayBeforeToken($add);
+	//Get the negative symbols and then remove them. Put the negative symbols back on later.
+	string $neg[] = getNegativeStrings($string);
+	$string = substituteAllStringArray($string, "-", "");
+	$add = substituteAllStringArray($add, "-", "");
+	
+	int $max = 0;
+	
+	for($i=0;$i<`size $add`;$i++){		
+		if(size($string[$i])>$max){
+			$max = (size($string[$i]) + 1);
+		}
+		
+	}
+	string $added[] = $add;
+	for($i=0;$i<`size $add`;$i++){
+		int $zeroCount = $max-size($string[$i]);
+		for($p=0;$p<$zeroCount;$p++){
+			$added[$i] = "0" + $added[$i];
+		}
+		//Put the negative symbols back on
+		$added[$i] = $neg[$i] + $added[$i];
+	}
+	return $added;
+}
+
+global proc string[] sortFloatStringArray(string $arr[])
+{
+	string $dbl = "-dmi SortFloatStringArrayDebugMenuItem -t Sort Float String Array"; string $dbm = "add"; int $dbc = 1;
+	
+	$arr = addLeadingZeroes($arr);
+	debugListArray($dbl, " - Added Leading Zeroes: ", $arr, $dbc, $dbm, "[NEXT]", 100);
+	
+	string $sorted[] = sort($arr);
+	debugListArray($dbl, " - Sorted: ", $sorted, $dbc, $dbm, "[END]", 0);
+	
+	return $sorted;
+
+}
+
+//SHUFFLE SEPARATED SORTED ARRAY
+//=====================================================================
+global proc string[] shuffleSeperatedSortedArray(string $arr[])
+{
+	string $shuffled[] = $arr;
+	int $start;
+	int $end = `size $arr`;
+	for($i=0;$i<`size $arr`;$i++){
+		if($arr[$i] == "|" || $arr[$i] == "||"){
+			$end = ($i - 1);
+			$shuffled = shufflePartStringArray($shuffled,$start,$end);
+			$start = $i + 1;
+		}
+	}
+	return $shuffled;
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         BY TRANSFORMS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//SORT BY MATCHING TRANSFORMS
+//======================================================================
+
+global proc string[] sortByMatchingTransforms(string $sel[])
+{
+	int $debug = `menuItem -q -cb SortByMatchingTransformsDebugMenuItem`;
+	string $dbl = "Sort By Matching Transforms";
+	int $del = `checkBox -q -v sortByMatchingTransformsDeleteDuplicatesCheckBox`;
+	
+	
+	$sel = `ls -tr $sel`;
+	
+	wizProgressWindowStart("Sorting " + `size $sel` + " Objects By Matching Transforms", "Starting", 1);
+	
+	int $maxProgress = (`size $sel`) * (`size $sel`);
+	wizProgressWindowMinMax(0, $maxProgress);
+	
+	string $dbm = "add";
+	int $dbc = 1;
+
+	int $p;
+	string $copy[];
+	string $remove[];
+	int $uniqueCount = 1;
+	int $instanceCount;
+	
+	appendStringArray($copy, $sel, `size $sel`);
+	string $sorted[];
+	$sorted[`size $sorted`] = "|";
+	
+	for($i=0;$i<`size $sel`;$i++){
+		if(`objExists $sel[$i]` == false){ continue;}
+				
+		//If the object was added to our remove list then skip it.
+		$removed = stringArrayContains($sel[$i],$remove);
+		if($removed){continue;}
+		
+		if($debug){
+			debugList($dbl,{ (" - Looking for Matches To: " + $sel[$i]) }, $dbc, $dbm);
+		}
+		
+		$sorted[`size $sorted`] = $sel[$i];
+		int $newmax = ((`size $sel`) - (`size $remove`));
+		$newmax = $newmax * ($newmax - $i);
+		wizProgressWindowMinMax(0, $newmax);
+		
+		for ($p=1;$p<`size $copy`;$p++){		
+			if(`objExists $copy[$p]` == false){ continue;}
+						
+			if($sel[$i] == $copy[$p]){ continue;}
+			
+			//If the object was added to our remove list then skip it.
+			$removed = stringArrayContains($copy[$p],$remove);
+			if($removed){continue;}
+			
+			//A value of 0 means a successfull match
+			
+			int $same = wizTransformCompare($sel[$i], $copy[$p]);
+			
+			if($same == 0){
+				
+				$sorted[`size $sorted`] = $copy[$p];							
+				//Put the object in our remove list so we don't bother looking at it anymore.
+				$remove[`size $remove`] = $copy[$p];
+				if($del == 1){
+					delete $copy[$p];				
+					
+				}
+				if($debug){
+					if($del == 1){
+						debugList($dbl,{ (" - DELETED MATCH: " + $copy[$p]) }, $dbc, $dbm);
+					} else {
+						debugList($dbl,{ (" - MATCH: " + $copy[$p]) }, $dbc, $dbm);
+					}
+				}
+			}
+			wizProgressWindowStatus("Found " + $uniqueCount + " Unique Transforms\n" + "Found " + `size $remove` + " Matching Transforms");
+			wizProgressWindowStep(1);
+			if(wizProgressCancelled() == 1){ break;	}
+		}
+		
+		$sorted[`size $sorted`] = "|";
+		$uniqueCount++;
+		if($debug){
+			debugList($dbl,{ ("------------NEXT-----------") }, $dbc, $dbm);
+		}
+		if(wizProgressCancelled() == 1){ break;	}
+	}
+	wizProgressWindowEnd();
+	$sorted = createSortedOutput($sorted);
+	
+	return $sorted;	
+}
+
+
+
+global proc string[] sortByBoundingBoxHeight( string $sel[] )
+{
+
+	int $del = `checkBox -q -v sortByMatchingTransformsDeleteDuplicatesCheckBox`;
+	
+	
+	$sel = `ls -tr $sel`;
+	
+	wizProgressWindowStart("Sorting " + `size $sel` + " Objects By Matching Transforms", "Starting", 1);
+	
+	int $maxProgress = (`size $sel`) * (`size $sel`);
+	wizProgressWindowMinMax(0, $maxProgress);
+	
+	string $dbm = "add";
+	int $dbc = 1;
+
+	int $p;
+	string $copy[];
+	string $remove[];
+	int $uniqueCount = 1;
+	int $instanceCount;
+	
+	appendStringArray($copy, $sel, `size $sel`);
+	string $sorted[];
+	$sorted[`size $sorted`] = "|";
+	
+	for ($i=0;$i<`size $sel`;$i++){
+		if (`objExists $sel[$i]` == false){ continue;}
+				
+		//If the object was added to our remove list then skip it.
+		$removed = stringArrayContains($sel[$i],$remove);
+		if ($removed){continue;}
+		
+		
+		$sorted[`size $sorted`] = $sel[$i];
+		
+		int $newmax = ((`size $sel`) - (`size $remove`));
+		$newmax = $newmax * ($newmax - $i);
+		
+		wizProgressWindowMinMax(0, $newmax);
+		
+		for ($p=1;$p<`size $copy`;$p++){		
+			if (`objExists $copy[$p]` == false){ continue;}
+						
+			if ($sel[$i] == $copy[$p]){ continue;}
+			
+			//If the object was added to our remove list then skip it.
+			$removed = stringArrayContains($copy[$p],$remove);
+			if ($removed){continue;}
+			
+			//A value of 0 means a successfull match
+			
+			//int $same = wizTransformCompare($sel[$i], $copy[$p]);
+			int $same = 0;
+			string $sel[] = `ls -sl`;
+			float $maxYA = `getAttr ($sel[$i] + ".boundingBoxMaxY")`;
+			float $maxYB = `getAttr ($copy[$i] + ".boundingBoxMaxY")`;
+			float $diff = `abs ($maxYA - $maxYB)`;
+			
+			if ($diff < 1.0){
+				$same = 1;
+			}
+			
+			
+			if ($same == 0){
+				
+				$sorted[`size $sorted`] = $copy[$p];							
+				//Put the object in our remove list so we don't bother looking at it anymore.
+				$remove[`size $remove`] = $copy[$p];
+				if ($del == 1){
+					delete $copy[$p];				
+					
+				}
+				
+			}
+			
+			wizProgressWindowStatus("Found " + $uniqueCount + " Unique Transforms\n" + "Found " + `size $remove` + " Matching Transforms");
+			wizProgressWindowStep(1);
+			if (wizProgressCancelled() == 1){ break;	}
+		}
+		
+		$sorted[`size $sorted`] = "|";
+		$uniqueCount++;
+		
+		if (wizProgressCancelled() == 1){ break;	}
+	}
+	wizProgressWindowEnd();
+	$sorted = createSortedOutput($sorted);
+	
+	return $sorted;	
+}

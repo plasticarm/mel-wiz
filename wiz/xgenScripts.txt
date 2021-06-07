@@ -1,0 +1,81 @@
+$hi =0.1920;
+$lo =0.4110;
+$contrast =0.9180;
+$freq =1.7380; #.1,30
+$noise_a = smoothstep(noise(($P[1]*$freq), $lo, $hi) -> contrast($contrast);
+
+$slope_threshold = 0.9000; #Like Maya Snow
+$onFlat = $noise_a - ($Nrefg[1]<$slope_threshold);
+
+$loHeight =2900;    #-20.0,20.0
+$hiHeight =3200;    #-20.0,20.0
+invert(linearstep($onFlat,$loHeight,$hiHeight))
+
+//
+
+
+$hi =0.1550;
+$lo =0.5000;
+$contrast =0.9180;
+$freq =0.2100; #.1,30
+
+$slope_threshold = 0.9700; #Like Maya Snow
+$onFlat = $P - ($Nrefg[1]<$slope_threshold);
+
+$loHeight =2900.0000;    #-20.0,20.0
+$hiHeight =3200.0000;    #-20.0,20.0
+$heightVar = invert(linearstep($P,$loHeight,$hiHeight));
+$tt = $P - ($onFlat - $heightVar);
+$tt
+#smoothstep(noise(($P - $tt)*$freq), $lo, $hi) -> contrast($contrast)
+
+=======================================================================================
+#////// On Slope In Height Range ////////
+# Place On Top
+$slope_threshold = 0.8; #Like Maya Snow
+$on_top = $N[1]<$slope_threshold;
+
+#Limit Height
+$loHeight =0.0;    #-20.0,20.0
+$hiHeight =10.0;    #-20.0,20.0
+$in_height_range = invert(linearstep($P[1],$loHeight,$hiHeight));
+
+# Get The Difference
+$in_height_range - $on_top
+
+=======================================================================================
+#////// On Slope In Height Range With Noise ////////
+# Place On Top
+$slope_threshold = 0.8700; #Like Maya Snow
+$on_top = $N[1]<$slope_threshold;
+
+#Limit Height
+$loHeight = 1.0000;    #-20.0,20.0
+$hiHeight = 10.0000;    #-20.0,20.0
+$in_height_range = invert(linearstep($P[1],$loHeight,$hiHeight));
+
+# Get The Difference
+$slope_height = $in_height_range - $on_top;
+
+# Add Noise
+$freq_fine = 0.7000; #0.00,1.00
+$freq_coarse = 0; # 0,100
+$X = 1.0000; #0.00,10.00
+$Y = 1.0000; #0.00,10.00
+$Z = 1.0000; #0.00,10.00
+$frequency = ($freq_fine+$freq_coarse) * [$X,$Y,$Z];
+$Strength = 1.0000;
+$Contrast = 0.8750;
+$Color =0; #0,1
+$fbmOctaves=4; #1,32
+$fbmLacunarity=6.0000; #1.00,8.00
+$fbmGain=0.5000;
+
+$Cnew = ($Color ?
+	cfbm($P*$frequency,$fbmOctaves,$fbmLacunarity,$fbmGain) :
+	fbm($P*$frequency,$fbmOctaves,$fbmLacunarity,$fbmGain))
+	-> contrast($Contrast);
+$noise_mix = mix($Cs,$Cnew,$Strength);
+
+# Subtract the slope_height from the noise ( just the y )
+$slope_height - $noise_mix[1]

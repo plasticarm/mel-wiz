@@ -1,0 +1,165 @@
+
+global proc repeatWiz()
+{
+	
+}
+
+global proc serializeRepeatLayout(string $parent)
+{
+string $layout = `frameLayout
+	-l "Serialized Repeater"	
+	-ann ""
+	-bv true
+	-la "center"
+	-li 10
+	-lv true
+	-mw 10
+	-mh 10		
+	
+	-cll true
+	-cl true
+	-parent $parent		
+	`;	
+
+	text
+		-l "Objects"
+		;
+		
+	textScrollList
+		-w 80
+		-h 90
+		-ams true
+		-dkc ("removeSelectedItemFromTextScrollList(\"serializedRepeatObjectsA\");")
+		serializedRepeatObjectsA
+		;
+		
+	rowLayout
+		-numberOfColumns 2
+		;
+		
+		button
+			-l "Select Object(s)"
+			-c ("addSelectedObjectsToTextScrollList(`ls -sl`," + "\"" + "serializedRepeatObjectsA" + "\"" + ");")
+			;
+		button
+			-l "Clear List"
+			-c ("clearTextScrollList(\"serializedRepeatObjectsA\");")
+			;
+	setParent..;
+
+	textScrollList
+		-w 80
+		-h 90
+		-ams true
+		-dkc ("removeSelectedItemFromTextScrollList(\"serializedRepeatObjectsB\");")
+		serializedRepeatObjectsB
+		;
+		
+	rowLayout
+		-numberOfColumns 2
+		;
+		
+		button
+			-l "Select Object(s)"
+			-c ("addSelectedObjectsToTextScrollList(`ls -sl`,\"serializedRepeatObjectsB\");")
+			;
+		button
+			-l "Clear List"
+			-c ("clearTextScrollList(\"serializedRepeatObjectsB\");")
+			;
+			
+	setParent..;	
+	
+	button 
+		-l "Do Repeat"
+		-c "doSerializeRepeat"
+		;
+}
+
+global proc repeatLastOnAllTextScrollList(string $tsl)
+{
+	string $sel[] = `textScrollList -q -ai $tsl`;
+	for($i=0;$i<`size $sel`;$i++){
+		select -r $sel[$i];				
+		repeatLast;
+	}
+}
+
+global proc repeatLastOnSelectWizLists()
+{		
+	string $dbl = "-dmi DoRepeatLastOnListMenuItem -t Do Repeat Last On List"; string $dbm = "add"; int $dbc = 1;
+	string $selA[] = `textScrollList -q -ai selectMasterListA`;
+	string $selB[] = `textScrollList -q -ai selectMasterListB`;
+	
+	debugListArray($dbl, " - A: ", $selA, $dbc, $dbm, "[NEXT]", 100);
+	debugListArray($dbl, " - B: ", $selB, $dbc, $dbm, "[NEXT]", 100);
+	
+	if(`size $selA` == 1){
+		debugList($dbl, { (" - Repeat Last A: 1 | B: " + `size $selB`) }, $dbc, $dbm);		
+		for($i=0;$i<`size $selB`;$i++){
+			select -r $selA[0];		
+			select -add $selB[$i];			
+			repeatLast;
+		}	
+		return;
+	} else if(`size $selB` == 1){
+		debugList($dbl, { (" - Repeat Last A: " + `size $selA` + " | B: 1") }, $dbc, $dbm);	
+		for($i=0;$i<`size $selA`;$i++){
+			select -r $selA[$i];		
+			select -add $selB[0];			
+			repeatLast;
+		}	
+		return;	
+	} else if(`size $selA` == `size $selB`){
+		debugList($dbl, { (" - Repeat Last A: " + `size $selA` + " | B: " + `size $selB`) }, $dbc, $dbm);
+		for($i=0;$i<`size $selA`;$i++){
+			select -r $selA[$i];		
+			select -add $selB[$i];			
+			repeatLast;
+		}	
+		return;		
+	} else {
+		print("WIZ| ERROR! Cannot Do Repeat Last On Lists - Lists Must Either Be Equal In Length Or One List Can Contain Only One Item\n");
+		
+	}
+}
+
+global proc doRepeatLastOnAll(string $sel[])
+{
+	for($i=0;$i<`size $sel`;$i++){
+		select -r $sel[$i];				
+		repeatLast;
+	}
+}
+
+global proc doSerializeRepeat()
+{
+	string $groupA[] = `textScrollList -q -ai serializedRepeatObjectsA`;
+	string $groupB[] = `textScrollList -q -ai serializedRepeatObjectsB`;
+	
+	int $i;
+	
+	if(`size $groupA` == 1){
+		for($i=0;$i<`size $groupB`;$i++){
+			select -r $groupA[0];		
+			select -add $groupB[$i];			
+			repeatLast;
+		}	
+		return;
+	}
+	for($i=0;$i<`size $groupA`;$i++){
+		select -r $groupA[$i];
+		if(`size $groupB` > 0){
+			if(`size $groupB` > 1){
+				select -add $groupB[$i];
+			} else {
+				select -add $groupB[0];
+			}
+		}
+		repeatLast;
+	}
+
+}
+
+
+

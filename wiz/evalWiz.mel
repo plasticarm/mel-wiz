@@ -1,0 +1,92 @@
+global proc evalWiz()
+{
+	
+}
+
+//EVAL AND SELECT
+global proc string[] evalAndSelectAllReturnedObjects(string $eval[])
+{
+string $sel[];
+for($i=0;$i<`size $eval`;$i++){
+	string $s[] = `eval($eval[$i])`;	
+	if(`size $s` == 0){
+		$s = `ls -fl -sl`;		
+	}
+	
+	debugList("Eval And Select", {("Select: " + $i)}, 1, "add");
+	debugList("Eval And Select", $s, 1, "add");
+	
+	$sel = appendStringArray($sel, $s, `size $s`);
+}
+return $sel;
+
+}
+
+//EVAL SELECTION LIST AND RETURN SELECTION
+global proc string[] evalSelectionListAndReturnSelection(string $eval[])
+{
+string $returnSel[];
+for($i=0;$i<`size $eval`;$i++){
+	eval($eval[$i]);	
+	string $s[] = `ls -fl -sl`;	
+	debugList("Eval And Select", {("Select: " + $i)}, 1, "add");
+	debugList("Eval And Select", $s, 1, "add");
+	
+	appendStringArray($returnSel, $s, `size $s`);
+	clear $s;
+}
+return $returnSel;	
+}
+
+//EVAL DEFERED ARRAY
+global proc evalDeferredArray(string $eval[])
+{
+for($i=0;$i<`size $eval`;$i++){
+	evalDeferred($eval[$i]);
+}	
+}
+
+global proc processAllObjectsInArray(string $obj[], string $function)
+{
+int $i;
+for($i=0;$i<`size $obj`;$i++){
+	if(`objExists $obj[$i]` == false){ continue;}
+	string $eval = $function + "(\"" + $obj[$i] + "\")";
+	eval($eval);
+}
+}
+
+global proc runCommandOnAllObjectsInArray(string $obj[], string $command)
+{
+int $i;
+for($i=0;$i<`size $obj`;$i++){
+	if(`objExists $obj[$i]` == false){ continue;}
+	
+	string $eval = $command + "\"" + $obj[$i] + "\";";
+	eval($eval);
+}
+}
+
+global proc evalCommandOnAllObjectsInArray(int $cycle, string $command)
+{
+int $i;
+for($i=0;$i<$cycle;$i++){
+	string $eval = $command;
+	eval($eval);
+}
+}
+
+global proc string[] evalCommandListReturnStringArray(string $eval[])
+{
+global string $WIZ_currentProgressBar;	
+string $arr[];
+for($i=0;$i<`size $eval`;$i++){
+	string $new[] = `eval($eval[$i])`;
+	$new = stringArrayRemoveEmptyIndices($new);
+	appendStringArray($arr,$new,`size $new`);
+	progressBar -e -s 1 $WIZ_currentProgressBar;
+}	
+return $arr;
+}
+
+

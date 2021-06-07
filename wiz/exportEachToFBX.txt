@@ -1,0 +1,62 @@
+float ExportReductionPercent = 50.0;
+
+//this is callback for dialog that asks if user needs to save scene after New command 
+void ModalDialogCallbackDontSave(){ 
+	cmd("$DialogButton#2");/*press Don't save - second button*/  
+}
+
+//this is callback to press OK when user is asked to keep scale or not 
+void ModalDialogCallbackOk(){  
+	cmd("$DialogButton#1");/*press OK*/  
+} 
+
+//this is callback for decimation dialog 
+void ModalDialogCallbackDecimation(){
+	SetSliderValue("$DecimationParams::ReductionPercent",ExportReductionPercent);
+	cmd("$DialogButton#1");/*press Ok*/  
+} 
+
+	
+void main(){
+	
+	// Prompt for reduction percent
+	AddTranslation("ExportReductionPercent", " Export Reduction Percent ");
+	AddFloatSlider("ExportReductionPercent",0.0,99.999);
+	ModalDialogOkCancel("","");
+	
+	// prompt for export folder
+	string folder;
+	FolderDialog(folder);
+	
+	// Select first volume (false) - onlyVisisble false
+	SelectFirstVolume(false);
+	string s;
+	s = GetCurVolume();
+	
+	do {
+		
+		// For each volume export a fbx file at reduction percent	
+		// Use the current volume name as filename 
+		string filename; 
+		filename = GetCurVolume();  
+		
+		// Add the extension
+		filename += ".fbx";  
+		
+		// Add the dir to filename
+		filename = folder + "/" + filename;
+		
+		SetFileForFileDialogs(filename); 
+	
+		
+		SetModalDialogCallback("ModalDialogCallbackDecimation"); 
+		
+		//and finally export 
+		cmd("$ExportObject");/*Export scene*/
+	
+	} while (SelectNextVolume(false));
+		SetCurVolume(s);
+	
+	
+} 
+	

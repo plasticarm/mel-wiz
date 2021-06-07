@@ -1,0 +1,2508 @@
+global proc prepforpaintingWiz()
+{
+	string $pfp = newEmptyWizWindow("PrepForPaintingWiz");
+	prepDoctorLayout($pfp);
+
+}
+
+//PREP DOCTOR LAYOUT
+//======================================================================================
+//PREP FOR PAINTING COLUMN LAYOUT
+//--------------------------------------------
+global proc prepForPaintingColumnLayout(string $parent)
+{		
+	string $layout = `columnLayout
+		-adjustableColumn true
+		-p $parent
+		prepForPaintingColumnLayout
+		`;	
+		
+	prepForPaintingTopMenuBarLayout($layout);
+	
+	prepForPaintingLayout($layout);
+	
+	prepUVsForPaintingLayout($layout);
+	
+	fixTransformsLayout($layout);
+}
+
+//PREP FOR PAINTING FRAME LAYOUT (NOT USED)
+//--------------------------------------------
+global proc prepForPaintingFrameLayout(string $parent)
+{		
+	string $layout = wizStandardFrameLayout($parent, "Prep Doctor", "Doctor");
+	frameLayout -e $layout;
+		
+	prepForPaintingLayout($layout);
+	
+	prepUVsForPaintingLayout($layout);
+	
+	fixTransformsLayout($layout);
+}
+
+//PREP UVS FOR PAINTING LAYOUT
+//--------------------------------------------
+global proc prepUVsForPaintingLayout(string $parent)
+{
+	uvLayoutLayout($parent);	
+}
+
+//MENUS
+//================================================================================
+global proc prepForPaintingTopMenuBarLayout(string $parent)
+{
+string $menuBarLayout = `menuBarLayout	-p $parent prepForPaintingTopMenuBarLayout`;
+	
+	menu -l "File";
+		exportSelectedMenuItems();
+		
+	menu -label "Prep";		
+		menuItem -sm true -l "Prep For Painting";		
+			prepForPaintingMainFunctionMenuItems();
+			
+		setParent -menu..;
+		
+		menuItem -sm true -l "UV Layout";
+			sortUVShellsIntoGridAreasMainFunctionsMenuItems();				
+		
+		setParent -menu..;
+		
+		menuItem -l "Fix Objects And Shaders Imported From Mudbox" -c ("fixObjectsAndShadersImportedFromMudbox();");
+		
+		setParent -menu..;
+	
+	wizGlobalUVMenu();
+	
+	wizTransformsMenu();
+	
+}
+
+//MAIN FUNCTIONS MENU ITEMS
+//-------------------------------------------------------
+global proc prepForPaintingMainFunctionMenuItems()
+{
+	menuItem -l "Inspect" -c "inspectPrepForPainting";
+	menuItem -l "Auto Prep For Painting" -c "autoPrepForPainting";
+	menuItem -l "Step Prep For Painting" -c "autoPrepForPaintingConfirmStep";	
+}
+
+//PREP FOR PAINTING LAYOUT
+//=========================================================
+global proc prepForPaintingLayout(string $parent)
+{
+	//Main Frame Layout	
+	string $layout = wizStandardFrameLayoutNoMargins($parent, "Prep For Painting", "prepForPainting_frameLayout");
+	
+	//Section and Help Tabs
+	//string $sectionAndHelp[] = createSectionAndHelpTabLayout($layout, "prepForPaintingMain");
+	string $tabLayout = `tabLayout
+		-scr false
+		-cr true
+		-iv true
+		-tv true
+		-imw 30
+		-imh 30
+		-cc ("wizTabCC(\"prepForPaintingMainTabLayout\");")
+		-p $layout
+		prepForPaintingMainTabLayout
+		`;
+	
+	//Main Layout
+	string $sectionlayout = wizFrameLayoutNoFrame($tabLayout,"prepForPaintingMain");
+	
+	//MenuBar
+	string $menuBarLayout = `menuBarLayout	-p $sectionlayout prepForPaintingProcessFunctionsMenuBarLayout`;
+	
+	//Settings Layout
+	autoPrepForPaintingSettingLayout("prepForPaintingMainTabLayout");
+		
+	tabLayout 
+		-e 
+		-tl "prepForPaintingMainFrameLayout" "Main"
+		-tl "autoPrepForPaintingSettingLayout" "Settings"
+		prepForPaintingMainTabLayout
+		;
+	
+	setParent $sectionlayout;
+
+	
+	//Main Options
+	//-----------------
+	//Unite By
+	string $uniteByMenuItems[] = { "all", "shader", "allGroups", "topDownGroup", "topDownGroupShader"}; 
+	wizOptionMenuGrpMenuItems("Unite By:", "autoPrepForPaintingUnitByOption", $uniteByMenuItems);		
+	optionMenuGrp -e -ann `getPrepForPaintingHelpInfo("uniteBy -ann")` autoPrepForPaintingUnitByOption;
+	optionMenuGrp -edit -v "shader" autoPrepForPaintingUnitByOption;
+	
+	//Optimize By	
+	string $obChangeCommand = ("int $optimize = `optionMenuGrp -q -sl autoPrepForPaintingOptimizeByOption`;"
+	+"if($optimize == 2){"
+	+"	optionMenuGrp -e -en 1 prepForPaintingMasterShareUVSpaceMethodOptionMenuGrp;"
+	+"} else {"
+	+"	optionMenuGrp -e -en 0 prepForPaintingMasterShareUVSpaceMethodOptionMenuGrp;"
+	+"}");	
+	
+	string $optimizeByMenuItems[] = { "none", "consolidateUVSpace", "instanceMatchingGeometry"};  	
+	wizOptionMenuGrpMenuItems("Optimize By:", "autoPrepForPaintingOptimizeByOption", $optimizeByMenuItems);	
+	optionMenuGrp -e -ann `getPrepForPaintingHelpInfo("optimizeBy -ann")` autoPrepForPaintingOptimizeByOption;		
+	optionMenuGrp -edit -v "consolidateUVSpace" -cc $obChangeCommand autoPrepForPaintingOptimizeByOption;
+	
+	//Share UV Space
+	string $suvsOMGChangeCommand = ("int $susEn = `optionMenuGrp -q -en prepForPaintingMasterShareUVSpaceMethodOptionMenuGrp`;"
+	+"int $sl = `optionMenuGrp -q -sl prepForPaintingMasterShareUVSpaceMethodOptionMenuGrp`;"
+	+"if($susEn == 0 || $sl == 1){"
+	+"	intSliderGrp -e -en 0 prepForPaintingMasterMaxSameUVSpaceIntSliderGrp;"
+	+"	intSliderGrp -e -l \"Max Share UV\" prepForPaintingMasterMaxSameUVSpaceIntSliderGrp;"
+	+"} else if($sl == 2){"
+	+"	intSliderGrp -e -en 1 prepForPaintingMasterMaxSameUVSpaceIntSliderGrp;" 
+	+"	intSliderGrp -e -l \"Max Share UV Count\" prepForPaintingMasterMaxSameUVSpaceIntSliderGrp;"
+	+"} else if($sl == 3){"
+	+"	intSliderGrp -e -en 1 prepForPaintingMasterMaxSameUVSpaceIntSliderGrp;" 
+	+"	intSliderGrp -e -l \"Max Share UV Percent\" prepForPaintingMasterMaxSameUVSpaceIntSliderGrp;"
+	+"}"	
+	+"optionMenuGrp -e -sl $sl prepForPaintingShareUVSpaceMethodOptionMenuGrp;");
+	
+	string $maxSameUVSpaceChangeCommand = ("int $maxNum = `intSliderGrp -q -v prepForPaintingMasterMaxSameUVSpaceIntSliderGrp`;"
+	+"intSliderGrp -e -v $maxNum prepForPaintingMaxSameUVSpaceIntSliderGrp;");
+	
+	string $shareUVSpaceItems[] = { "All Matching", "Max Count" , "Max Percent" };
+	string $shareUVSpaceOMG = wizOptionMenuGrpMenuItems("Share UV Space", "prepForPaintingMasterShareUVSpaceMethodOptionMenuGrp", $shareUVSpaceItems);		
+	optionMenuGrp -e -cc $suvsOMGChangeCommand prepForPaintingMasterShareUVSpaceMethodOptionMenuGrp;
+	
+	string $maxSameUVSpace = `intSliderGrp 
+		-l "Max Share UV"
+		-ann "Max Number Of Matching Objects Occuping Unique UV Space"
+		-cal 1 "left"
+		-value 3
+		-min 1
+		-max 10		
+		-f true
+		-fmn 1 
+		-fmx 999999 	
+		-cc $maxSameUVSpaceChangeCommand
+		prepForPaintingMasterMaxSameUVSpaceIntSliderGrp
+		`;
+
+		
+	//Optimize Symetrical
+	string $optimizeSymetricalMenuItems[] = { "none", "X", "Y", "Z"};
+	wizOptionMenuGrpMenuItems("Optimize Symetrical:", "autoPrepForPaintingOptimizeSymetricalOption", $optimizeSymetricalMenuItems);
+	optionMenuGrp -e -ann `getPrepForPaintingHelpInfo("optimizeSymetrical -ann")` autoPrepForPaintingOptimizeSymetricalOption;		
+	
+	//Other Options
+	//------------------
+	checkBox -l "Preserve Heirarchy" -v 0 	prepForPaintingPreserveHierarchyOption;
+			
+	checkBox -l "Open Options (Each Step)" -v 0 prepForPaintingOpenOptionsEachStep;				
+
+	//Settings Layout
+	//======================
+	
+	string $inspectCommand = ("string $sel[] = getCurrentPrepForPaintingObjects();"
+	+ "$sel = inspectSelectedObjectsAndGetRecommendedPrepForPaintingSettings($sel);"
+	+ "openCurrentOptionsLayout(\"recommendedSettingsOptionMenu\");");
+	
+	string $appRowColumnLayout = `rowColumnLayout -nc 2 -rs 1 10 -cs 2 10 -cw 1 150 -cw 2 200 autoPrepForPaintingButtonsRowColumnLayout`;
+		
+		string $pfpInspectButton = wizButton("Inspect", "", "inspectPrepForPaintingButton", "inspect");	
+		iconTextButton -e -c $inspectCommand $pfpInspectButton;	
+
+		//Auto Prep For Painting
+		string $appButton = wizButton("Auto Prep For Painting", "", "autoPrepForPainting", "wizButton");
+		//string $appButton = wizStandardActionButton("Auto Prep For Painting", "autoPrepForPainting", "autoPrepForPainting");
+		iconTextButton -e -c ("autoPrepForPainting();") $appButton;
+		
+	setParent ..;	
+	
+	string $stepRowColumnLayout = `rowColumnLayout -nc 2 -rs 1 10 -cs 2 10 -cw 1 250 -cw 2 100 stepPrepForPaintingButtonsRowColumnLayout`;
+				
+		//Step Prep For Painting	
+		string $stepButton = wizButton("Step Prep For Painting", "autoPrepForPaintingConfirmStep", "autoPrepForPaintingConfirmStepButton", "manualProcess");
+		//string $stepButton = wizStandardActionButton("Step Prep For Painting", "autoPrepForPaintingConfirmStep", "autoPrepForPaintingConfirmStep");
+		//iconTextButton -e -c ("autoPrepForPaintingConfirmStep();") $stepButton;
+		
+		string $cancelButton = wizButton("Cancel", "cancelAutoPrepForPainting", "cancelAutoPrepForPainting", "cancelIconTextButton");
+		//string $pfpCancelButton = wizButton("Cancel", "cancelAutoPrepForPainting", "cancelAutoPrepForPainting", "cancel");	
+		//button -e -w 100 $pfpCancelButton;
+		
+	setParent..;
+	
+	rowColumnLayout -nc 2 -rs 1 10 -cs 2 10 -cw 1 250 -cw 2 250 prepForPaintingMeshFunctionsButtonsRowColumnLayout;
+	
+		string $fixButton = wizButton("Fix Common Polygon Problems", ("fixCommonPolygonProblemsOnSelected(`ls -sl`);"), "prepForPaintingFixCommonPolygonProblemsButton", "wizButton");
+	
+		string $creaseButton = wizButton("Crease Edges", ("creaseEdgesOnSelectedObjects(`ls -sl`);"), "prepForPaintingCreaseEdgesButton", "wizButton");
+	
+	setParent..;
+	
+	//Export Prep For Painting
+	float $bgc[] = getWizColor("exportButtonColor");
+	
+	string $exportButton = wizButton("Export Selected Objects For Painting", "exportSelectedObjectsForPainting", "exportSelectedObjectsForPaintingButton", "exportIconTextButton");
+	/*
+	button
+		-l "Export Selected Objects For Painting"
+		-ann "Exports the selected objects as fbx."
+		-bgc $bgc[0] $bgc[1] $bgc[2]
+		-c "exportSelectedObjectsForPainting"
+		exportSelectedObjectsForPainting
+		;
+	*/
+	
+}
+
+//PREP FOR PAINTING SETTINGS LAYOUT
+//------------------------------------------
+global proc autoPrepForPaintingSettingLayout(string $parent)
+{
+	//Frame Layout
+	//string $layout = wizStandardFrameLayout($parent, "Process Settings", "autoPrepForPaintingSettingLayout");
+	string $layout = wizStandardColumnLayout($parent, "autoPrepForPaintingSettingLayout");
+	
+	//Row Layout - Column Layout
+	string $rowLayout = `rowLayout -nc 2 -p $layout autoPrepForPaintingSettingsRowLayout`;
+	string $colLayoutA = `columnLayout -adj true -p $rowLayout autoPrepForPaintingSettingsColumnLayoutA`;
+	
+	//Get Prep For Painting Info
+	string $l[] = getPrepForPaintingInfo("label");
+	string $vs[] = getPrepForPaintingInfo("default state");
+	int $v[] = stringArrayToIntArray($vs);
+	string $function[] = getPrepForPaintingInfo("function");
+	string $cbName[] = getPrepForPaintingInfo("checkBoxName");
+		
+	//Make Check Boxes for Each Function
+	for($i=0;$i<`size $function`;$i++){
+		checkBox -l ($l[$i]) -v $v[$i] -ann ($function[$i]) -p "autoPrepForPaintingSettingsColumnLayoutA" $cbName[$i];
+	}
+	checkBox -e -vis false $cbName[0];
+	
+	setParent..;
+	
+	//Make Buttons To Open Current Options Menus
+	//Column Layout
+	string $colLayoutB = `columnLayout -adj true -p $rowLayout autoPrepForPaintingSettingsColumnLayoutB`;
+	string $optionsMenu[] = getPrepForPaintingInfo("optionsMenu");
+	string $openOptions[];
+	int $h = 17;
+	for($i=1;$i<`size $optionsMenu`;$i++){
+		if($optionsMenu[$i] == ""){
+			string $opName = $l[$i] + "Options";
+			button -en false -l ("No Options") -h $h;
+		} else {
+			button -l ($l[$i] + "Options") -h $h -c ("openCurrentOptionsLayout(" + "\"" + $optionsMenu[$i] + "\"" + ")");
+			$openOptions[`size $openOptions`] = "loadCurrentOptions((" + "\"" + $optionsMenu[$i] + "\"" + "));";
+		}
+	}
+	
+	setParent..;
+	
+	//Other Settings
+	//--------------------
+	//Column Layout
+	string $colLayoutC = `columnLayout -adj true -p $layout autoPrepForPaintingSettingsColumnLayoutC`;
+	
+	otherPrepForPaintingSettings();
+	
+	//Execute the menu bar proc
+	prepForPaintingMainMenu($layout);
+	
+	setParent..;	
+
+}
+
+global proc otherPrepForPaintingSettings()
+{
+	
+	textFieldGrp
+		-l "Name New Object(s):"
+		-tx ""
+		-cal 1 "left"
+		-ann "New objects created with this procedure will be named after this field."
+		newPaintingObjectName
+		;
+	
+}
+
+
+//GET PREP FOR PAINTING INFO
+//======================================================
+global proc string[] getPrepForPaintingInfo(string $returnType)
+{
+	//This IS the MASTER list of functions!
+	//The order that these items are in are the order the functions will execute!
+	int $totCol = 4;
+	//functionName, label, default state, optionMenu
+	
+	string $ppInfo[] = {
+	"makePrepForPaintingSelection", "Select Objects", "1", "",
+	
+	"inspectPrepForPainting", "Inspect Objects", "0", "recommendedSettingsOptionMenu",
+	"applyRecommendedSettingsPrepForPainting", "Apply Recommended Settings", "0", "recommendedSettingsOptionMenu",
+	
+	"duplicatePrepForPaintingObjects", "Duplicate", "1", "",
+	"fixTransformsPrepForPainting", "Fix Transforms", "0", "",
+	"convertNurbsPrepForPainting", "Convert Nurbs To Polygons", "1", "convertNurbsToPolyPrepForPaintingOptions",
+	"breakApartMeshesWithMultipleMaterialsPrepForPainting", "Break Apart Meshes With Multiple Materials", "1", "",
+	"sortPrepForPaintingSelection", "Sort", "1", "",
+	"optimizeSymetricalPrepForPainting", "Optimize Symetrical", "1", "",
+	
+	"triangulatePrepForPainting", "Triangulate", "0", "",	
+	"freezeScalePrepForPainting", "Freeze Scale", "1", "",
+	"autoProjectUVsPrepForPainting", "Auto Project UVs", "1", "autoProjectUVsPrepForPaintingOptions",
+	
+	"optimizePrepForPainting", "Optimize", "1", "optimizePrepForPaintingOptions",
+	"reverseNegativelyScaledObjectsPrepForPainting", "Reverse Negatively Scaled Objects", "0", "",
+	"freezeTransformsPrepForPainting", "Freeze Transforms", "0", "",
+	
+	"unitePrepForPainting", "Unite", "1", "",
+	"groupNewObjectsPrepForPainting", "Group New Objects", "0", "",
+	"mirrorSymetricallyCutObjectsPrepForPainting", "Mirror Symetrically Cut Objects", "0", "",
+	"polyCleanUpPrepForPainting", "Poly Clean Up", "0", "",
+	"fixCommonPolygonProblemsPrepForPainting", "Fix Common Polygon Problems", "0", "",
+	"mergeVerticesPrepForPainting", "Merge Close Vertices", "0", "maximizeMergeVerticesOptionsMenu",
+	"creaseEdgesPrepForPainting", "Crease Edges", "1", "creaseEdgesOptionsMenu",	
+	"deleteHistoryPrepForPainting", "Delete History", "1", "",
+	"turnOffDoubleSidedPrepForPainting", "Turn Off Double Sided", "1", "",
+	"assignShadersPrepForPainting", "Assign Shaders", "0", "assignShaderToEachSelectedObjectOptionsMenu",
+	"transferMapsToNewObjectsPrepForPainting", "Transfer Maps To New Object(s)", "0", "",
+	"sortUVShellsIntoGridAreasPrepForPainting", "Layout into Multiple UV Grid Spaces", "0", "polyLayoutUVOptionsMenu",
+	"splitUVsIntoGridPrepForPainting", "Split into Multiple UV Grid Spaces", "0", "",
+	"buildSourceGroupPrepForPainting", "Build Source Group", "0", "",
+	"putIntoPrepForPaintingGroupPrepForPainting", "Put Into Prep For Painting Group", "0", "",
+	"cleanUpPrepForPainting", "Clean Up", "1", ""
+	};
+	string $function[] = getColumnOfArray($ppInfo,1,$totCol);
+	string $checkBoxName[];
+	for($i=0;$i<`size $function`;$i++){
+		string $cbName = $function[$i] + "CheckBox";
+		$checkBoxName[`size $checkBoxName`] = $cbName;
+	}
+	$ppInfo = addColumnToArray($ppInfo,$checkBoxName,5,5);
+	$totCol = 5;
+	
+	string $return[];
+	
+	if($returnType == "function"){
+		$return = getColumnOfArray($ppInfo,1,$totCol);	
+	} else if($returnType == "label"){
+		$return = getColumnOfArray($ppInfo,2,$totCol);	
+	} else if($returnType == "default state"){
+		$return = getColumnOfArray($ppInfo,3,$totCol);	
+	} else if($returnType == "optionsMenu"){
+		$return = getColumnOfArray($ppInfo,4,$totCol);	
+	} else if($returnType == "checkBoxName"){
+		$return = getColumnOfArray($ppInfo,5,$totCol);
+	} else if($returnType == "all"){
+		appendStringArray($return,$ppInfo,`size $ppInfo`);	
+	}
+	//print("PFPInfo: " + stringArrayToString($return, " ") + "\n");
+	return $return;
+}
+
+//PREP FOR PAINTING MAIN MENU
+//============================================
+global proc prepForPaintingMainMenu(string $parent)
+{
+	setParent $parent;
+	prepForPaintingProcessFunctionsMenu();
+	
+	wizGlobalUVMenu();
+	
+	menu -l "Polygons";
+		menuItem -l "Maximize Merge Vertices" -c ("maximizeMergeVertices(`ls -sl`)");
+		menuItem -ob true -c ("openCurrentOptionsLayout(\"maximizeMergeVerticesOptionsMenu\");");
+		
+	menu -l "Transforms";
+	
+	replaceInstancesMenu();
+	
+	shadingWizShadersMenu();
+	
+	prepForPaintingSettingMenu();
+
+	menu -l "Help";
+		menuItem -l "Prep For Painting Help" -c ("openPrepForPaintingHelp();");
+}
+
+global proc prepForPaintingSettingMenu()
+{
+	menu -label "Settings";	
+	
+	menuItem -l "Recommended Settings" -c ("openCurrentOptionsLayout(\"recommendedSettingsOptionMenu\")");
+	
+	//Add the other options menu items	
+	string $optionsMenu[] = getPrepForPaintingInfo("optionsMenu");
+	string $l[] = getPrepForPaintingInfo("label");
+	for($i=1;$i<`size $optionsMenu`;$i++){
+	if($optionsMenu[$i] == ""){
+		continue;
+	} else {
+		menuItem -l ($l[$i] + " Options") -c ("openCurrentOptionsLayout(" + "\"" + $optionsMenu[$i] + "\"" + ")");
+	}
+	}
+
+}
+
+//PROCESS FUNCTIONS MENU
+//-------------------------------
+global proc prepForPaintingProcessFunctionsMenu()
+{
+	string $app[] = getAutoPrepForPaintingCommandList();
+	string $appLabel[] = getAutoPrepForPaintingButtonLabels();
+	int $appStates[] = getAutoPrepForPaintingCommandStates();
+	
+	menu -l "Process Functions" -pmc "updatePrepForPaintingMenuItemAppState";
+	
+	//Add menu items for all the functions in the list
+	for($i=0;$i<`size $app`;$i++){
+		menuItem -en $appStates[$i] -l $appLabel[$i] -c $app[$i] ($app[$i] + "MenuItem");
+	}
+
+}
+
+//UPDATE - PROCESS FUNCTIONS MENU
+//-------------------------------
+global proc updatePrepForPaintingMenuItemAppState()
+{
+	//This updates the prep for painting manual process menu enabled states of the menu items	
+	int $appStates[] = getAutoPrepForPaintingCommandStates();
+	string $app[] = getAutoPrepForPaintingCommandList();
+	for($i=0;$i<`size $app`;$i++){
+		menuItem -edit -en $appStates[$i] -c $app[$i] ($app[$i] + "MenuItem");
+	}
+}
+
+//AUTO PREP FOR PAINTING FUNCTIONS
+//=============================================================================
+//AUTO PREP FOR PAINTING
+//-------------------------------
+global proc autoPrepForPainting()
+{
+	printProc("autoPrepForPainting");
+	
+	int $debug = `menuItem -q -cb AutoPrepForPaintingDebugMenuItem`;
+	string $dbl = "-dmi AutoPrepForPaintingDebugMenuItem -t Auto Prep For Painting"; string $dbm = "add"; int $dbc = 1;
+	
+	global int $WIZ_appStep;
+	string $app[] = getAutoPrepForPaintingCommandList();
+	string $optionsMenu[] = getPrepForPaintingInfo("optionsMenu");
+	
+	if ($WIZ_appStep >= (`size $app` - 1)){	
+		$WIZ_appStep = 0;
+	}
+	int $totSteps = `size $app` - $WIZ_appStep;	
+	
+	global int $WIZ_wizProcCount;
+	
+	wizProgressWindowStart("Auto Prep For Painting", "Starting Prep For Painting", 1);
+	int $maxProgress = $totSteps;
+	
+	$WIZ_wizProcCount = $maxProgress;	
+	int $pmax = 100 * $WIZ_wizProcCount;
+	wizProgressWindowMinMax(0,$pmax);		
+	
+	debugList ($dbl, { (" - Prep For Painting Step Number: " + $WIZ_appStep) }, $dbc, $dbm);
+	
+	debugListArray ($dbl, " - Prep For Painting Command List: ", $app, $dbc, $dbm, "", 1000);
+	debugListArray ($dbl, " - Options Menu: ", $optionsMenu, $dbc, $dbm, "", 1000);
+	
+	int $pStep = wizProgressWindowGetStepValue(`size $app`);
+	for ($i=$WIZ_appStep;$i<`size $app`;$i++){
+			
+		if ($optionsMenu[$i] != ""){
+			debugList ($dbl, { ($i + " - Options: " + $optionsMenu[$i]) }, $dbc, $dbm);
+			loadCurrentOptions($optionsMenu[$i]);
+		}
+		debugList ($dbl, { ($i + " - Executing: " + $app[$WIZ_appStep]) }, $dbc, $dbm);
+		wizProgressWindowStatus(($app[$WIZ_appStep]));
+		
+		eval ($app[$WIZ_appStep]);
+		
+		wizProgressWindowStep($pStep);
+		$WIZ_appStep++;	
+		debugList($dbl, { ("------------NEXT------------") }, $dbc, $dbm);
+		if(wizProgressCancelled() == 1) return;	
+	}
+	
+	finishPrepForPainting();
+	wizProgressWindowRemoveProcCount(`size $app`);
+	wizProgressWindowEnd();
+	
+	debugList($dbl, { ("------------END------------") }, $dbc, $dbm);
+
+}
+
+//PREP FOR PAINTING CONFIRM STEPS
+//------------------------------------
+global proc autoPrepForPaintingConfirmStep()
+{
+	printProc("autoPrepForPaintingConfirmStep");
+	global int $WIZ_appStep;
+	
+	string $app[] = getAutoPrepForPaintingCommandList();
+	string $appLabel[] = getAutoPrepForPaintingButtonLabels();
+	int $appStates[] = getAutoPrepForPaintingCommandStates();
+	string $optionsMenu[] = getPrepForPaintingInfo("optionsMenu");
+	
+	if ($optionsMenu[$WIZ_appStep] != ""){
+		loadCurrentOptions($optionsMenu[$WIZ_appStep]);
+	}
+	eval ($app[$WIZ_appStep]);
+		
+	for ($i=$WIZ_appStep;$i<`size $appStates`;$i++){
+		$WIZ_appStep++;	
+		if ($appStates[$WIZ_appStep] == 1){		
+			break;
+		}
+		if ($WIZ_appStep == `size $appStates`){
+			finishPrepForPainting();
+			return;
+		}
+	}
+	
+	iconTextButton -e -l $appLabel[$WIZ_appStep] -c "autoPrepForPaintingConfirmStep" autoPrepForPaintingConfirmStepButton;	
+	if (`checkBox -q -v prepForPaintingOpenOptionsEachStep` == 0){ return;}
+	openPrepForPaintingStepOptionWindow();
+
+}
+
+//SKIP STEP
+//------------------------------------
+global proc skipStepPrepForPainting()
+{
+	global int $WIZ_appStep;
+	string $app[] = getAutoPrepForPaintingCommandList();
+	string $appLabel[] = getAutoPrepForPaintingButtonLabels();
+	int $appStates[] = getAutoPrepForPaintingCommandStates();
+	string $optionsMenu[] = getPrepForPaintingInfo("optionsMenu");
+	if ($optionsMenu[$WIZ_appStep] != ""){
+		loadCurrentOptions($optionsMenu[$WIZ_appStep]);
+	}	
+	for ($i=$WIZ_appStep;$i<`size $appStates`;$i++){
+		$WIZ_appStep++;	
+		if($appStates[$WIZ_appStep] == 1){		
+			break;
+		}
+		if($WIZ_appStep == `size $appStates`){
+			finishPrepForPainting();
+			return;
+		}
+	}
+	iconTextButton -e -l $appLabel[$WIZ_appStep] -c  "autoPrepForPaintingConfirmStep" autoPrepForPaintingConfirmStepButton;	
+	if (`checkBox -q -v prepForPaintingOpenOptionsEachStep` == 0){ return;}
+	openPrepForPaintingStepOptionWindow();
+}
+
+//CANCEL PREP FOR PAINTING
+//========================================
+global proc cancelAutoPrepForPainting()
+{
+	global int $WIZ_appStep;
+	$WIZ_appStep = 0;
+	setAutoPrepForPaintingToDefaultButton();
+	
+}
+	
+//SET AUTO PREP FOR PAINTING TO DEFAULT BUTTON
+//========================================	
+global proc setAutoPrepForPaintingToDefaultButton()
+{
+	iconTextButton -e -l "Step Prep For Painting" -c "autoPrepForPaintingConfirmStep" autoPrepForPaintingConfirmStepButton;	
+
+}
+
+//GET PREP FOR PAINTING UI ITEMS
+//===========================================
+//GET COMMAND UI ITEMS
+//----------------------------
+global proc string[] getAutoPrepForPaintingCommandUIItems()
+{
+	string $commandLayout = "autoPrepForPaintingSettingsColumnLayoutA";
+	string $child[] = `columnLayout -q -ca $commandLayout`;
+	string $app[];
+	for($i=0;$i<`size $child`;$i++){
+	    if(`checkBox -q -exists $child[$i]` == 1){ 		
+			$app[`size $app`] = $child[$i]; 
+	    }    
+	}	
+	return $app;
+}
+
+//GET COMMAND LIST
+//----------------------------
+global proc string[] getAutoPrepForPaintingCommandList()
+{
+	string $app[] = getAutoPrepForPaintingCommandUIItems();
+	string $appCommands[];
+	for($i=0;$i<`size $app`;$i++){
+		string $appCommand = `checkBox -q -ann $app[$i]`;
+		$appCommands[`size $appCommands`] = $appCommand;    
+	}
+	
+	return $appCommands;
+}
+
+//GET COMMAND STATES
+//----------------------------
+global proc int[] getAutoPrepForPaintingCommandStates()
+{
+	int $state[];	
+	string $app[] = getAutoPrepForPaintingCommandUIItems();
+	for($i=0;$i<`size $app`;$i++){
+		$state[`size $state`] = `checkBox -q -v $app[$i]`;
+	}
+	return $state;
+}
+
+//GET COMMAND BUTTON LABELS
+//----------------------------
+global proc string[] getAutoPrepForPaintingButtonLabels()
+{
+	string $app[] = getAutoPrepForPaintingCommandUIItems();
+	string $labels[];
+	for($i=0;$i<`size $app`;$i++){
+		string $l = `checkBox -q -l $app[$i]`;
+		$labels[`size $labels`] = $l;   
+	}
+	
+	return $labels;
+}
+
+//OPEN STEP OPTION WINDOW
+//=============================================
+global proc openPrepForPaintingStepOptionWindow()
+{
+	global int $WIZ_appStep;	
+	string $openWindowCommand[] = getPrepForPaintingStepOpenWindowCommands();	
+	
+	string $owc = $openWindowCommand[$WIZ_appStep];
+	if($owc != ""){
+		eval($owc);
+	}
+}
+
+//GET PREP FOR PAINTING STEP OPEN WINDOW COMMANDS
+//------------------------------------------------------
+global proc string[] getPrepForPaintingStepOpenWindowCommands()
+{
+	//This needs fixing... it won't update if we change our main function list
+	//Consolidate it with our main prep for painting info
+	string $owc[] = {
+	"",
+	"",
+	"",
+	"NURBSToPolygonsOptions;",
+	"",
+	"",
+	"",
+	"",
+	"performPolyCleanup 1;",
+	"",
+	"performPolyAutoProj 1;",
+	"",
+	"",
+	"",
+	"CombinePolygonsOptions;",
+	"",
+	"",
+	"",
+	"",
+	"performSurfaceSampling 1;",
+	"",
+	"",
+	""
+	};
+
+	return $owc;
+}
+
+//PREP FOR PAINTING SELECTION
+//============================================================
+//MAKE SELECTION
+//----------------------
+global proc makePrepForPaintingSelection()
+{
+	printProc("makePrepForPaintingSelection");	
+	string $sel[] = `ls -sl`;
+	
+	if (`size $sel` == 0){
+		$sel = getCurrentPrepForPaintingObjects();
+	} else {
+		
+	}
+	
+	/*
+	//Create a set with the original selection
+	string $pfpSelSet = "pfpSelSet";
+	if(`objExists $pfpSelSet`){
+		emptyAndDeleteSelectedSets({$pfpSelSet});	
+	}
+	$pfpSelSet = createSetFromSelection($sel, "pfpSelSet");
+	*/
+	
+	$sel = filterOutInstancesFromSelection($sel);
+	if (`checkBox -q -v prepForPaintingPreserveHierarchyOption` == 1 || `optionMenuGrp -q -v autoPrepForPaintingUnitByOption` == "topDownGroup" || `optionMenuGrp -q -v autoPrepForPaintingUnitByOption` == "topDownGroupShader"){
+		if(`size $sel` > 1){
+			string $firstCommonParent = getFirstCommonParentFromSelected($sel);
+			if($firstCommonParent == "World"){
+				
+			} else {
+				clear $sel;
+				$sel[0] = $firstCommonParent;	
+			}
+		}
+	} else {
+		$sel = smartSelectGeometryObjects($sel);
+		
+	}
+	
+	if (`textFieldGrp -q -tx newPaintingObjectName` == ""){
+		string $firstCommonParent = getFirstCommonParentFromSelected($sel);
+		if($firstCommonParent == "World"){
+			
+		} else {
+			textFieldGrp -e -tx $firstCommonParent newPaintingObjectName;	
+		}	
+	}
+	openSelectWiz();
+	
+	putCurrentPrepForPaintingObjects($sel);
+}
+
+//GET SELECTION
+//----------------------
+global proc string[] getCurrentPrepForPaintingObjects()
+{
+	string $sel[] = `textScrollList -q -ai selectMasterListA`;
+	if (`size $sel` == 0 || $sel[0] == ""){
+		$sel = getTransformsBelow(`ls -sl`);
+	
+		putCurrentPrepForPaintingObjects($sel);	
+	}
+	return $sel;
+}
+
+//PUT SELECTION
+//----------------------
+global proc string[] putCurrentPrepForPaintingObjects(string $sel[])
+{
+	textScrollList -e -ra selectMasterListA;
+	for($i=0;$i<`size $sel`;$i++){
+		textScrollList -e -a $sel[$i] selectMasterListA;
+	}
+	return $sel;
+}
+
+//GET SELECTION TYPE
+//----------------------
+global proc int getPrepForPaintSelectionType(string $sel[])
+{
+	printProc("getPrepForPaintSelectionType");
+	int $allGeoTransforms = isSelectionAllGeometryTransforms($sel);
+	int $allGroups = isSelectionAllGroups($sel);
+	if($allGeoTransforms){
+		return 0;
+	} else if($allGroups){
+		return 1;
+	} else{
+		return 2;
+	}
+}
+
+//PREP FOR PAINTING PROCESSES
+//================================
+//Generic 
+global proc doPrepForPaintingFunction()
+{
+	global int $WIZ_appStep;
+	int $state[] = getAutoPrepForPaintingCommandStates();
+	if($state[$WIZ_appStep] == 0){ return;}
+	
+	string $sel[] = getCurrentPrepForPaintingObjects();
+	string $command[] = getAutoPrepForPaintingCommandList();
+	
+	string $selectString = stringArrayToStringArrayString($sel);
+	string $eval = ($command[$WIZ_appStep] + "(" + $selectString + ");");
+	
+	$sel = `eval($eval)`;
+	putCurrentPrepForPaintingObjects($sel);
+
+}
+
+//INSPECT
+//-----------------------
+global proc inspectPrepForPainting()
+{
+	if(`checkBox -q -v inspectPrepForPaintingCheckBox` == 0){ return;}	
+	printProc("inspectPrepForPainting");
+	string $sel[] = getCurrentPrepForPaintingObjects();
+	$sel = inspectSelectedObjectsAndGetRecommendedPrepForPaintingSettings($sel);
+	putCurrentPrepForPaintingObjects($sel);
+
+}
+
+//APPLY SETTINGS
+//-----------------------
+global proc applyRecommendedSettingsPrepForPainting()
+{
+	if(`checkBox -q -v applyRecommendedSettingsPrepForPaintingCheckBox` == 0){ return;}	
+	printProc("applyRecommendedSettingsPrepForPainting");
+	string $sel[] = getCurrentPrepForPaintingObjects();
+	applyRecommendedPrepForPaintingSettings();
+	putCurrentPrepForPaintingObjects($sel);
+
+}
+
+//DUPLICATE
+//-----------------------
+global proc duplicatePrepForPaintingObjects()
+{
+	if(`checkBox -q -v duplicatePrepForPaintingObjectsCheckBox` == 0){ return;}
+	
+	printProc("duplicatePrepForPaintingObjects");
+	string $sel[] = getCurrentPrepForPaintingObjects();
+	
+	if(`checkBox -q -v prepForPaintingPreserveHierarchyOption` == 1 || `optionMenuGrp -q -v autoPrepForPaintingUnitByOption` == "topDownGroup" || `optionMenuGrp -q -v autoPrepForPaintingUnitByOption` == "topDownGroupShader"){
+		$sel = duplicateAndPresereveHierarchy($sel);
+		$sel = smartSelectGeometryObjects($sel);
+		
+	} else {
+		//$sel = smartSelectGeometryObjects($sel);
+		$sel = duplicateSelectedObjectsAndSelectDuplicates($sel);		
+		$sel = unparentSelectedObjects($sel);
+	
+	}
+	putCurrentPrepForPaintingObjects($sel);
+	debugML1("Found: " + `size $sel` + " Geometry Transforms to Combine" + "\n");
+}
+
+//FIX TRANSFORMS
+//-----------------------
+global proc fixTransformsPrepForPainting()
+{
+
+	if(`checkBox -q -v fixTransformsPrepForPaintingCheckBox` == 0){ return;}
+	printProc("fixTransformsPrepForPainting");
+	string $sel[] = getCurrentPrepForPaintingObjects();
+	fixGeometryTransforms($sel);
+	putCurrentPrepForPaintingObjects($sel);
+
+}
+
+//CONVERT NURBS TO POLY
+//-----------------------
+global proc convertNurbsPrepForPainting()
+{
+	if(`checkBox -q -v convertNurbsPrepForPaintingCheckBox` == 0){ return;}
+	printProc("convertNurbsPrepForPainting");
+	string $sel[] = getCurrentPrepForPaintingObjects();
+	$sel = convertSelectedNurbsSurfacesToPolygons($sel);
+	putCurrentPrepForPaintingObjects($sel);
+
+}
+
+//BREAK APRT MESHS WITH MULTI MATERIALS
+//------------------------------------------
+global proc breakApartMeshesWithMultipleMaterialsPrepForPainting()
+{
+	if(`checkBox -q -v breakApartMeshesWithMultipleMaterialsPrepForPaintingCheckBox` == 0){ return;}
+	printProc("breakApartMeshesWithMultipleMaterialsPrepForPainting");
+	string $sel[] = getCurrentPrepForPaintingObjects();
+	$sel = breakApartMeshesWithMultipleMaterials($sel);
+	putCurrentPrepForPaintingObjects($sel);
+
+}
+
+//SORT
+//-----------------------
+global proc sortPrepForPaintingSelection()
+{
+	if(`checkBox -q -v sortPrepForPaintingSelectionCheckBox` == 0){ return;}	
+	printProc("sortPrepForPaintingSelection");
+	string $sel[] = getCurrentPrepForPaintingObjects();
+	string $uniteBy = `optionMenuGrp -q -v autoPrepForPaintingUnitByOption`;
+	string $sortCommand;
+	if($uniteBy == "all"){
+		return;
+	} else if($uniteBy == "allGroups"){
+		$sortCommand = "sortObjectsByGroup";
+	} else if($uniteBy == "shader"){
+		$sortCommand = "sortObjectsByMaterial";
+	} else if($uniteBy == "topDownGroup"){
+		$sortCommand = "sortObjectsByTopDownGroup";
+	} else if($uniteBy == "topDownGroupShader"){
+		$sortCommand = "sortObjectsByTopDownGroupShader";
+	}
+	string $selString = createStringFormatedStringArray($sel);
+	$sel = `eval($sortCommand + "(" + $selString + ")")`;
+	
+	putCurrentPrepForPaintingObjects($sel);
+
+}
+
+//OPTIMIZE SYMETRICAL
+//-----------------------
+global proc optimizeSymetricalPrepForPainting()
+{
+	if(`checkBox -q -v optimizeSymetricalPrepForPaintingCheckBox` == 0){ return;}	
+	if(`optionMenuGrp -q -v autoPrepForPaintingOptimizeSymetricalOption` == "none"){ return;}
+	printProc("optimizeSymetricalPrepForPainting");
+	string $sel[] = getCurrentPrepForPaintingObjects();
+	$sel = optimizeSymetrical($sel);
+	putCurrentPrepForPaintingObjects($sel);
+
+}
+
+//FIX COMMON POLYGON PROBLEMS
+//-----------------------
+global proc fixCommonPolygonProblemsPrepForPainting()
+{
+	if(`checkBox -q -v fixCommonPolygonProblemsPrepForPaintingCheckBox` == 0){ return;}
+	printProc("fixCommonPolygonProblemsPrepForPainting");
+	string $sel[] = getCurrentPrepForPaintingObjects();
+	fixCommonPolygonProblemsOnSelected($sel);
+	putCurrentPrepForPaintingObjects($sel);
+
+}
+//TRIANGULATE
+//-----------------------
+global proc triangulatePrepForPainting()
+{
+	if(`checkBox -q -v triangulatePrepForPaintingCheckBox` == 0){ return;}
+	printProc("triangulatePrepForPainting");
+	string $sel[] = getCurrentPrepForPaintingObjects();
+	$sel = triangulateSelectedObjects($sel);
+	putCurrentPrepForPaintingObjects($sel);
+
+}
+
+//POLY CLEAN UP
+//-----------------------
+global proc polyCleanUpPrepForPainting()
+{
+	if(`checkBox -q -v polyCleanUpPrepForPaintingCheckBox` == 0){ return;}
+	printProc("polyCleanUpPrepForPainting");
+	string $sel[] = getCurrentPrepForPaintingObjects();
+	$sel = cleanUpSelectedPolyObjects($sel);
+	putCurrentPrepForPaintingObjects($sel);
+
+}
+
+//FREEZE SCALE
+//-----------------------
+global proc freezeScalePrepForPainting()
+{
+	if(`checkBox -q -v freezeScalePrepForPaintingCheckBox` == 0){ return;}
+	printProc("freezeScalePrepForPainting");
+	string $sel[] = getCurrentPrepForPaintingObjects();
+	freezeScaleOnSelectedObjects($sel);
+	putCurrentPrepForPaintingObjects($sel);
+
+}
+
+//AUTO PROJECT UVS
+//-----------------------
+global proc autoProjectUVsPrepForPainting()
+{
+	if(`checkBox -q -v autoProjectUVsPrepForPaintingCheckBox` == 0){ return;}
+	printProc("autoProjectUVsPrepForPainting");
+	string $sel[] = getCurrentPrepForPaintingObjects();
+	$sel = autoProjectUVsOnSelectedObjects($sel);
+	putCurrentPrepForPaintingObjects($sel);
+
+}
+
+//OPTIMIZE
+//-----------------------
+global proc optimizePrepForPainting()
+{
+	if(`checkBox -q -v optimizePrepForPaintingCheckBox` == 0){ return;}	
+	printProc("optimizePrepForPainting");
+	string $optimizeBy = `optionMenuGrp -q -v autoPrepForPaintingOptimizeByOption`;
+	string $sel[] = getCurrentPrepForPaintingObjects();
+	string $command;
+	if($optimizeBy == "none"){
+		$command = "polyLayoutUVSelected";
+		processSortedObjectArray($sel, $command);
+		//polyLayoutUVSelected($sel);
+	} else if($optimizeBy == "consolidateUVSpace"){
+		$command = "optimizeUVSpace";
+		processSortedObjectArray($sel, $command);
+	} else if($optimizeBy == "instanceMatchingGeometry"){
+		$command = "replaceMatchingObjectsWithInstances";
+		$sel = processSortedObjectArray($sel, $command);
+	} 
+	putCurrentPrepForPaintingObjects($sel);
+
+}
+
+//REVERSE NEG SCALED
+//-----------------------
+global proc reverseNegativelyScaledObjectsPrepForPainting()
+{
+	if(`checkBox -q -v reverseNegativelyScaledObjectsPrepForPaintingCheckBox` == 0){ return;}
+	printProc("reverseNegativelyScaledObjectsPrepForPainting");
+	string $sel[] = getCurrentPrepForPaintingObjects();
+	$sel = reverseNegativelyScaledObjects($sel);
+	putCurrentPrepForPaintingObjects($sel);
+
+}
+
+//FREEZE TRANSFORMS
+//-----------------------
+global proc freezeTransformsPrepForPainting()
+{
+	if(`checkBox -q -v freezeTransformsPrepForPaintingCheckBox` == 0){ return;}
+	printProc("freezeTransformsPrepForPainting");
+	string $sel[] = getCurrentPrepForPaintingObjects();
+	$sel = freezeTransformsOnSelectedObjects($sel);
+	putCurrentPrepForPaintingObjects($sel);
+
+}
+
+//UNITE
+//-----------------------
+global proc unitePrepForPainting()
+{
+	if(`checkBox -q -v unitePrepForPaintingCheckBox` == 0){ return;}	
+	printProc("unitePrepForPainting");
+	string $sel[] = getCurrentPrepForPaintingObjects();
+	string $command = "uniteSelectedObjects";
+	$sel = processSortedObjectArray($sel, $command);
+	$sel = stringArrayRemoveDuplicates($sel);
+	putCurrentPrepForPaintingObjects($sel);
+
+}
+
+//GROUP NEW OBJECTS
+//-----------------------
+global proc groupNewObjectsPrepForPainting()
+{
+	if(`checkBox -q -v groupNewObjectsPrepForPaintingCheckBox` == 0 || `checkBox -q -v prepForPaintingPreserveHierarchyOption` == 1){ return;}
+	printProc("groupNewObjectsPrepForPainting");
+	string $sel[] = getCurrentPrepForPaintingObjects();
+	string $newGroup = groupSelectedObjects($sel);
+	putCurrentPrepForPaintingObjects($sel);
+
+}
+
+//MIRROR SYMETRICAL
+//-----------------------
+global proc mirrorSymetricallyCutObjectsPrepForPainting()
+{
+	if(`optionMenuGrp -q -v autoPrepForPaintingOptimizeSymetricalOption` == "none" && `checkBox -q -v mirrorSymetricallyCutObjectsPrepForPaintingCheckBox` == 0){ return;}
+	printProc("mirrorSymetricallyCutObjectsPrepForPainting");
+	string $sel[] = getCurrentPrepForPaintingObjects();
+	mirrorPolyFaces($sel);
+	putCurrentPrepForPaintingObjects($sel);
+
+}
+
+//MERGE VERTICES
+//-----------------------
+global proc mergeVerticesPrepForPainting()
+{
+	if(`checkBox -q -v mergeVerticesPrepForPaintingCheckBox` == 0){ return;}
+	printProc("mergeVerticesPrepForPainting");
+	string $sel[] = getCurrentPrepForPaintingObjects();
+	//mergeVerticesOnSelected($sel, 0.0001);
+	maximizeMergeVertices($sel);
+	putCurrentPrepForPaintingObjects($sel);
+
+}
+
+//CREASE EDGES
+//-----------------------
+global proc creaseEdgesPrepForPainting()
+{
+	if(`checkBox -q -v creaseEdgesPrepForPaintingCheckBox` == 0){ return;}
+	printProc("creaseEdgesPrepForPainting");
+	string $sel[] = getCurrentPrepForPaintingObjects();
+	creaseEdgesOnSelectedObjects($sel);
+	putCurrentPrepForPaintingObjects($sel);
+
+}
+
+//DELETE HISTORY
+//-----------------------
+global proc deleteHistoryPrepForPainting()
+{
+	if(`checkBox -q -v deleteHistoryPrepForPaintingCheckBox` == 0){ return;}
+	printProc("deleteHistoryPrepForPainting");
+	string $sel[] = getCurrentPrepForPaintingObjects();
+	deleteHistoryOnAllObjectsInArray($sel);
+	putCurrentPrepForPaintingObjects($sel);
+
+}
+
+//TURN OFF DOUBLE SIDED
+//-----------------------
+global proc turnOffDoubleSidedPrepForPainting()
+{
+	if(`checkBox -q -v turnOffDoubleSidedPrepForPaintingCheckBox` == 0){ return;}
+	printProc("turnOffDoubleSidedPrepForPainting");
+	string $sel[] = getCurrentPrepForPaintingObjects();
+	setDoubleSided($sel,0);
+	putCurrentPrepForPaintingObjects($sel);
+
+}
+
+//ASSIGN DEFAULT SHADER
+//-----------------------
+global proc assignShadersPrepForPainting()
+{
+	if(`checkBox -q -v assignShadersPrepForPaintingCheckBox` == 0){ return;}
+	printProc("assignShadersPrepForPainting");
+	string $sel[] = getCurrentPrepForPaintingObjects();
+	assignShaderToEachSelectedObject($sel);
+	putCurrentPrepForPaintingObjects($sel);
+
+}
+
+//TRANSFER MAPS
+//-----------------------
+global proc transferMapsToNewObjectsPrepForPainting()
+{
+	if(`checkBox -q -v transferMapsToNewObjectsPrepForPaintingCheckBox` == 0){ return;}
+	printProc("transferMapsToNewObjectsPrepForPainting");
+	string $sel[] = getCurrentPrepForPaintingObjects();
+	//transferMapsToNewObjects($originalObj, $sel);
+	putCurrentPrepForPaintingObjects($sel);
+
+}
+
+//SORT SHELSS INTO GRID AREAS
+//------------------------------
+global proc sortUVShellsIntoGridAreasPrepForPainting()
+{
+	if(`checkBox -q -v sortUVShellsIntoGridAreasPrepForPaintingCheckBox` == 0){ return;}	
+	printProc("layoutUVsIntoMultiGridPrepForPainting");
+	string $sel[] = getCurrentPrepForPaintingObjects();
+	sortUVShellsIntoGridAreas($sel);
+	putCurrentPrepForPaintingObjects($sel);
+
+}
+
+//SPLIT UVS INTO GRID AREAS
+//----------------------------
+global proc splitUVsIntoGridPrepForPainting()
+{
+	if(`checkBox -q -v splitUVsIntoGridPrepForPaintingCheckBox` == 0){ return;}	
+	printProc("splitUVsIntoGridPrepForPainting");
+	string $sel[] = getCurrentPrepForPaintingObjects();
+	splitUVsOfSelectedObjectsIntoGridSpacesByUVs($sel);
+	putCurrentPrepForPaintingObjects($sel);
+
+}
+
+//BUILD SOURCE GROUP
+//-----------------------
+global proc buildSourceGroupPrepForPainting()
+{
+	string $sel[] = getCurrentPrepForPaintingObjects();
+	if(`checkBox -q -v buildSourceGroupPrepForPaintingCheckBox` == 0){ return;}	
+	printProc("buildSourceGroupPrepForPainting");
+	$sel = buildPrepForPaintingSourceGroup($sel);
+	putCurrentPrepForPaintingObjects($sel);
+
+}
+
+//PUT INTO PREP FOR PAINTING GROUP
+//---------------------------------------
+global proc putIntoPrepForPaintingGroupPrepForPainting()
+{
+	string $sel[] = getCurrentPrepForPaintingObjects();
+	if(`checkBox -q -v putIntoPrepForPaintingGroupPrepForPaintingCheckBox` == 0){ return;}	
+	printProc("putIntoPrepForPaintingGroupPrepForPainting");
+	$sel = putSelectedIntoGroup($sel, "PrepForPaintingGroup");
+	putCurrentPrepForPaintingObjects($sel);
+
+}
+
+//CLEAN UP
+//-----------------------
+global proc cleanUpPrepForPainting()
+{
+	string $sel[] = getCurrentPrepForPaintingObjects();
+	if(`checkBox -q -v cleanUpPrepForPaintingCheckBox` == 0){ return;}	
+	printProc("cleanUpPrepForPainting");
+	putCurrentPrepForPaintingObjects($sel);
+
+}
+
+//FINISH
+//-----------------------
+global proc finishPrepForPainting()
+{
+	string $sel[] = getCurrentPrepForPaintingObjects();
+	//Put everything into select list B
+	moveAllItemsFromTextScrollListToTextScrollList("selectMasterListA", "selectMasterListB");
+	
+	global int $WIZ_appStep;
+	$WIZ_appStep = 0;
+	textFieldGrp -e -tx "" newPaintingObjectName;
+	
+	/*
+	//Hide the original selection	
+	if(`objExists "pfpSelSet"`){
+		string $oSel[] = `sets -q "pfpSelSet"`;	
+		hide $oSel;
+		emptyAndDeleteSelectedSets({"pfpSelSet"});
+	}
+	*/
+	$sel = removeObjectsThatDontExist($sel);
+	select -r $sel;
+	setAutoPrepForPaintingToDefaultButton();
+	
+	debugML1("Prep For Painting Finished: Created: " + `size $sel` + " Combined Objects" + "\n");
+}
+
+//PROCESS SORTED OBJECT ARRAY
+//=======================================================================
+global proc string[] processSortedObjectArray(string $sel[], string $command)
+{
+	printProc("processSortedObjectArray");
+	global string $Wiz_sep = "|";
+	if($sel[(`size $sel` - 1)] != $Wiz_sep){
+		$sel[`size $sel`] = $Wiz_sep;
+	}
+	string $pObj[];
+	string $processed[];
+	string $returnObjs[];
+	
+	for($i=0;$i<`size $sel`;$i++){	
+		if($sel[$i] == "|"){	
+			string $pString = createStringFormatedStringArray($pObj);
+			debugML1($command + stringArrayToStringNiceList($pObj));
+			$processed = `eval($command + "(" + $pString + ");")`;		
+			clear $pObj;		
+	
+		} else {
+			$pObj[`size $pObj`] = $sel[$i];
+		}	
+		appendStringArray($returnObjs, $processed, `size $processed`);
+		if(wizProgressCancelled() == 1) return $returnObjs;	
+	}	
+	return $returnObjs;
+}
+
+//AUTO PREP PROCESS FUNCTIONS
+//======================================================================================
+//**************************************************************************************
+//SELECTING
+//====================
+// see selectWiz.mel
+
+//INSPECT
+//==========================
+global proc string[] inspectSelectedObjectsAndGetRecommendedPrepForPaintingSettings(string $sel[])
+{
+	global string $WIZ_activeSelectList;
+	//<DEBUG>
+	printProc("inspectSelectedObjectsAndGetRecommendedPrepForPaintingSettings");
+	int $debug = `menuItem -q -cb InspectPrepForPaintingDebugMenuItem`;
+	string $dbl = "Inspect Prep For Painting";
+	int $dbc = 1;
+	string $dbm = "add";
+	//<DEBUG>
+	
+	//<DEBUG>
+	if($debug){
+		debugList($dbl, { (" * Inspecting Objects * ") }, $dbc, $dbm);
+		debugList($dbl, { ("---------------------------------") }, $dbc, $dbm);
+		debugList($dbl, $sel, $dbc, $dbm);
+		debugList($dbl, { ("---------------------------------") }, $dbc, $dbm);
+	}
+	//<DEBUG>
+	
+	int $recCount = 0;
+	
+	//Instances
+	string $instances[] = inspectInstances($sel, "prepForPainting");
+	
+	//High Valence Vertices
+	string $highV[] = inspectHighValenceVertices($sel, "prepForPainting");
+	
+	//T Shapes
+	string $ts[] = inspectTShapes($sel, "prepForPainting");
+	
+	//Too Many Sides
+	string $tms[] = inspectTooManySides($sel, "prepForPainting");
+	
+	//Count Objects With Multiple Materials
+	string $mm[] = inspectObjectsWithMultipleMaterials($sel, "prepForPainting");
+	
+	//Count Nurbs Surfaces and recommend to turn on convert nurbs
+	string $nurbs[] = inspectConvertNurbsSurfaces($sel, "prepForPainting");
+	
+	//Count Unmapped Faces and recommend to auto project uvs
+	string $unmapped[] = inspectUnmappedFaces($sel, "prepForPainting");
+	
+	//Count Non Manifold Geometry and Recommend To PolyCleanup
+	
+	inspectSortUVShellsIntoGridAreas($sel);
+	
+	//Count N Sided Faces and Recommend to Triangulate
+	string $nsf[] = inspectNSidedFaces($sel, "prepForPainting");
+	/*
+	if($recCount == 0){
+		addRecommendedSetting("autoPrepForPaintingRecommendedSettings", "No Recommended Changes To Current Settings", "", "", ""); 
+		print("WIZ| No Prep For Painting Recommended Settings\n");	
+	}
+	*/
+	
+	return $sel;	
+}
+
+//APPLY SETTINGS
+//==========================
+global proc applyRecommendedPrepForPaintingSettings()
+{
+	string $dbl = "-dim ApplyRecommendedPrepForPaintingSettingsDebugMenuItem -t Apply Recommended Prep For Painting Settings"; string $dbm = "add"; int $dbc = 1;
+		
+	string $rsc[]; //Recommended Setting Commands
+	//Get all the commands from the buttons in column A in the recommended settings options menu
+	//loadCurrentOptions("recommendedSettingsOptionMenu");
+	string $col = "recommendedSettingsOptionMenuA";
+	string $ca[] = `columnLayout -q -ca $col`;
+	
+	debugList($dbl, { (" - Recommended Settings Buttons: " + `size $ca`) }, $dbc, $dbm);
+	debugList($dbl, $ca, $dbc, $dbm);
+	debugList($dbl, { ("---------------------------------") }, $dbc, $dbm);
+	
+	for($i=0;$i<`size $ca`;$i++){
+		if(`iconTextButton -q -ex $ca[$i]` == 1){
+			$rsc[`size $rsc`] = `iconTextButton -q -c $ca[$i]`;	
+		}
+	}
+	
+	debugList($dbl, { (" - Recommended Settings Commands: " + `size $rsc`) }, $dbc, $dbm);
+	debugList($dbl, $rsc, $dbc, $dbm);
+	debugList($dbl, { ("---------------------------------") }, $dbc, $dbm);
+	
+	if(`size $rsc` == 0){
+		return;
+	}
+	
+	//execute the commands
+	for($i=0;$i<`size $rsc`;$i++){
+		if($rsc[$i] == ""){
+			continue;	
+		}
+		eval($rsc[$i]);	
+	}
+
+}
+
+
+//DUPLICATION
+//==========================
+global proc string[] duplicateAndPresereveHierarchy(string $sel[])
+{
+	printProc("duplicateAndPresereveHierarchy");
+	//string $firstCommonParent = getFirstCommonParentFromSelected($sel);
+	
+	string $dup[] = `duplicate -rc $sel`;
+	hide $sel;
+	debugML1("	- Duplicates: " + "\n" + stringArrayToStringNiceList($dup) + "\n");
+	
+	debugML1("	- Unparenting : Sel: " + $dup[0] + "\n");
+	$sel = unparentSelectedObjects({$dup[0]});
+	debugML1("	- Unparented : " + "\n" + stringArrayToStringNiceList($sel) + "\n");
+	
+	debugML1("	- Deleting All Except Geometry Transforms From Sel: " + "\n" + stringArrayToStringNiceList($sel) + "\n");
+	$sel = deleteAllExceptTransformsAndTypesInHierarchy($sel,{"mesh","nurbsSurface"});
+	debugML1("RESULT - Sel: " + "\n" + stringArrayToStringNiceList($sel) + "\n");
+	
+	return $sel;
+}
+	
+global proc string[] duplicateSelectedObjectsAndSelectDuplicates(string $sel[])
+{
+	debugML1("		* Duplicating Originals... " + "\n");
+	int $i;
+	for($i=0;$i<`size $sel`;$i++){
+		if(`objExists $sel[$i]` == false){ continue;}
+		debugML1("			- Original: " + $sel[$i] + " || ");
+		//Duplicate the objects
+		string $dup[] = `duplicate -rc $sel[$i]`;
+		$sel[$i] = $dup[0];	
+		debugML1(" Copy: " + $sel[$i] + "\n");
+		if(wizProgressCancelled() == 1) return $sel;	
+	}
+	return $sel;
+}
+
+//Breaking Meshesh Apart
+//==========================
+global proc string[] breakApartMeshesWithMultipleMaterials(string $sel[])
+{
+	printProc("breakApartMeshesWithMultipleMaterials");
+	int $i;
+	int $p;
+	string $newObj[];
+	string $remove[];
+	string $garbage[];
+	string $tempSets[];
+	int $polyChipError = 0;
+	for($i=0;$i<`size $sel`;$i++){	
+		
+		if(`isPolyGeometry($sel[$i])`== 0){ continue;}
+		
+		//Get the shaders(materials) from the object
+		string $shaders[] = getShaderFromObj($sel[$i]);
+		
+		 //Skip objects that only have one shader assigned
+		if(`size $shaders` <= 1){
+			continue;
+		}
+		
+		debugML1("			- Found Multiple Shaders On - Object: " + $sel[$i] + " || Shaders: " + stringArrayToString($shaders, " ") + "\n");
+		
+		string $parent = firstParentOf($sel[$i]);
+		string $sourceObj = $sel[$i];
+		for($p=0;$p<`size $shaders`;$p++){
+			//Select the object and then convert the selection to faces
+			select -r $sel[$i];
+			ConvertSelectionToFaces; 
+			
+			//Create a set and then select the set that contains the faces we want
+			string $tempset = `sets`;
+			string $tempgrps[] = `listConnections -type shadingEngine $shaders[$p]`;
+			select `sets -int $tempset $tempgrps[0]`;		
+			
+			//Do the polyChipOff - polyChipOff will "chip off" the faces with selected shader
+			if(catchQuiet(`polyChipOff -kft 1`) == 1){
+				debugML2("		! ERROR Doing polySeparate on: " + $sel[$i] + " Skipping." + "\n");
+				//continue;
+				$polyChipError = 1;
+			}
+			
+			//Empty and Delete the temp sets
+			string $emptySet[] = {$tempset};		
+			emptyAndDeleteSelectedSets($emptySet);
+			
+			$ok = detailConfirmStep("polyChipOff OK?");if(!$ok){ break;}
+	
+		}
+		if($polyChipError == 1){
+			$polyChipError = 0;
+			continue;
+		}
+		debugML2("		* Doing polySeparate on: " + $sel[$i] + "\n");
+		//Do the polySeparate
+		string $separate[] = `polySeparate $sel[$i]`;
+			
+		//Delete the first object in the separated array, maya creates a not broken copy when it does polySeparate
+		$garbage[`size $garbage`] = $separate[0];	
+		
+		//Add the sel object to a remove list to remove when we are done
+		$remove[`size $remove`] = $sel[$i];
+		
+		//Add all the separated objects to a list
+		appendStringArray($newObj, $separate, `size $separate`);	
+			
+		debugML1("			- Separated Objects: " + stringArrayToString($separate, " ") + "\n");
+		
+		$ok = detailConfirmStep("PolySeparate: " + "\n"
+		+ "SourceObj: " + $sourceObj + "\n"
+		+ "NewObjects: " + stringArrayToString($separate, " ") + "\n" 
+		+ "SourceParent: " + $parent);if(!$ok){ break;}
+		
+		if(`checkBox -q -v prepForPaintingPreserveHierarchyOption` == 1){
+			deleteHistoryOnAllObjectsInArray($separate);
+			parentAllSelectedTo($separate,$parent);
+		} 
+		
+		if(wizProgressCancelled() == 1) return $sel;	
+	}
+	if(`size $newObj` == 0){
+		return $sel;
+	}
+	
+	$newObj = removeObjectsThatDontExist($newObj);
+	
+	deleteHistoryOnAllObjectsInArray($newObj);
+	
+	selectAllObjectsInArray($newObj);	
+	
+	if(`checkBox -q -v prepForPaintingPreserveHierarchyOption` == 0){
+		parent -w;
+	}
+	
+	$sel = deleteAndRemoveObjectsFromArray($sel, $remove);
+	$sel = stringArrayRemove($remove, $sel);
+	
+	$newObj = deleteAndRemoveObjectsFromArray($newObj, $garbage);
+	$newObj = stringArrayRemove($garbage, $newObj);
+	
+	//Put all of our new objects together in our old list of objects
+	appendStringArray($sel, $newObj, `size $newObj`);
+	
+	debugML1("		=COMPLETE= Breaking Apart Meshes With Multiple Materials - NewObj:" + stringArrayToString($newObj, " ") + " Sel: " + stringArrayToString($sel, " ") + "\n");
+	
+	return $sel;
+}
+
+//CONVERT NURBS SURFACES
+//==========================
+global proc string[] convertSelectedNurbsSurfacesToPolygons(string $sel[])
+{
+	debugML1("		* Converting Nurbs to Polygons... " + "\n");
+	int $edgeSoftness = `intSliderGrp -q -v prepForPaintingConvertedNurbsEdgeSoftness`;
+	int $i;
+	for($i=0;$i<`size $sel`;$i++){	
+		if(`objExists $sel[$i]` == false){ continue;}
+		int $isNurbs = isNurbsSurface($sel[$i]);
+		if($isNurbs == 0){ continue;}
+		
+		//string $nurbsObj[] = {$sel[$i]};
+		string $parent = firstParentOf($sel[$i]);
+		
+		string $sg[] = getShadingGroupFromObj($sel[$i]);
+		
+		//Convert to poly	
+		string $new[];
+		if (`checkBox -q -v prepForPainting_useNurbsToPolyCount_checkBox` == 1){
+			wizlog ("[#] Using Poly Count Converting Nurbs To Poly");
+			
+			int $polyCount = `intSliderGrp -q -v prepForPainting_nurbsToPolyCount_intSliderGrp`;
+			$new = `nurbsToPoly -f 0 -pt 1 -pc $polyCount $sel[$i]`;
+			
+			wizlog ("nurbsToPoly -f 0 -pt 1 -pc " + $polyCount + " " + $sel[$i] + ";");
+		} else {
+			$new = `nurbsToPoly $sel[$i]`;
+		}
+				
+		//Delete the history and the old nurbs surface
+		delete -ch $new[0];
+		debugML2("		 - Converted: " + $sel[$i] + "\n");
+		delete $sel[$i];
+		
+		//Put the new poly obj back into the selection array
+		$sel[$i] = $new[0];
+		select -r $sel[$i];
+		
+		//Assign shader from nurbs to new poly
+		if(`size $sg` > 0){
+			sets -e -forceElement $sg[0];
+		}
+		//Soften the edges
+		polySoftEdge -angle $edgeSoftness -ch false $sel[$i];
+		
+		//tryToParentNewObjectToSourceParent($sel[$i], $nurbsObj);
+		if(`checkBox -q -v prepForPaintingPreserveHierarchyOption` == 1){
+			parent $sel[$i] $parent;
+		}
+		if(wizProgressCancelled() == 1) return $sel;	
+	}
+	return $sel;
+}
+
+global proc int isNurbsSurface( string $obj)
+{
+	string $rel[] = `listRelatives -c -typ "nurbsSurface" $obj`;
+	if(`size $rel` > 0){
+		return 1;
+	} else {
+		return 0;
+	}
+}
+
+//TRIANGULATE
+//===========================
+global proc string[] triangulateSelectedObjects(string $sel[])
+{
+	debugML2("		* Triangulating... " + "\n");
+	int $i;
+	for($i=0;$i<`size $sel`;$i++){
+		if(`isPolyGeometry($sel[$i])`== 0){ continue;}
+		/*
+		string $nsf[] = getNSidedFaces($sel[$i]);
+		if(`size $nsf` == 0){
+				
+		}
+		*/
+		polyTriangulate $sel[$i];
+	}
+	return $sel;
+}
+
+//SORTING
+//===================================================
+//see sortWiz
+
+//OPTIMIZING
+//==============================================================
+//see uvWiz
+
+
+
+//POLY CLEAN UP
+//===============================================================================
+global proc string[] cleanUpSelectedPolyObjects(string $sel[])
+{
+	string $toClean[];
+	appendStringArray($toClean,$sel,`size $sel`);
+	string $clean[] = getGeometryTransforms($toClean);	
+	select -r $clean;
+	polyCleanupArgList 3 { "0","1","0","1","1","1","1","1","1","1e-05","1","1e-05","0","1e-05","0","1","1" };
+	select -cl;
+	changeSelectMode -object;
+	return $sel;
+}
+
+
+//UNITING
+//================================================================================
+global proc string[] uniteSelectedObjects(string $sel[])
+{
+	string $pp = "uniteSelectedObjects";
+	printProc($pp);
+	
+	//Make sure we only have poly geometry transforms in our list
+	$sel = removeSeparatorsFromStringArray($sel); //We don't need them any more	
+	string $geo[] = getGeometryTransforms($sel);
+	$geo = stringArrayRemoveDuplicates($geo);
+	if(`size $geo` == 1){
+		return $geo;	
+	}
+	if(`size $geo` == 0){
+		print("WIZ| Error in Uniting: No Geometry To Unite: Selected: " + stringArrayToStringNiceList($sel));
+		return $sel;	
+	}
+	
+	//Make a new name for the united object
+	string $newName = `textFieldGrp -q -tx newPaintingObjectName`;
+	string $firstCommonParent = getFirstCommonParentFromSelected($geo);
+	if($firstCommonParent != "World" && $newName == ""){
+		$newName += $firstCommonParent;
+	}
+	if($newName == ""){
+		$newName = "CombinedMesh";
+	}
+	
+	$newName = capitalizeString($newName);
+	
+	string $shader[] = `ls -mat $sel`;
+	string $group[] = lsGroups($sel);
+	$group = stringArrayRemove($shader, $group);	
+	$group[0] = capitalizeString($group[0]);	
+	$shader[0] = capitalizeString($shader[0]);
+		
+	if(`optionMenuGrp -q -v autoPrepForPaintingUnitByOption` == "shader"){
+		$newName += $shader[0];
+	} else if(`optionMenuGrp -q -v autoPrepForPaintingUnitByOption` == "topDownGroup"){
+		$newName += $group[0];	
+	} else if(`optionMenuGrp -q -v autoPrepForPaintingUnitByOption` == "topDownGroupShader"){
+		$newName += $group[0] + $shader[0];	
+	} 
+	$newName = removeIllegalCharactersFromName($newName);
+	
+	//See if we should put the new object back under the parent where it came from
+	string $parent;
+	if(`checkBox -q -v groupNewObjectsPrepForPaintingCheckBox` == 0){
+		if(`size $group` > 0){
+			$parent = $group[0];
+		} else {
+			$parent = firstParentOf($geo[0]);
+		}	
+	} else {
+		$geo = unparentSelectedObjects($geo);
+	}
+	debugML1("		* Re-Parent To: " + $parent + "\n");
+	
+	//Unite objects
+	string $uniteString;
+	$uniteString = stringArrayToQuoteAndSpaceSeparatedString($geo);
+	string $uniteCommand = "polyUnite -ch false -mergeUVSets 1 -n " + $newName + " " + $uniteString + ";";
+	string $newMesh[] = `eval($uniteCommand)`;
+	debugML1("		* United Mesh: " + $newMesh[0] + "\n");
+	
+	//Reparent the new object
+	if($parent != ""){
+		debugML1("		* Re-Parenting New Object: " + $newMesh[0] + " To Original Parent: " + $parent + "\n");
+		parent $newMesh[0] $parent;	
+	}
+	
+	printReturn($pp,("United Object: " + $newMesh[0] + "\n"));
+	return $newMesh;
+}
+
+//OPTIMIZE SYMETRICAL
+//===============================================================================
+global proc string[] optimizeSymetrical(string $sel[])
+{
+	printProc("optimizeSymetrical");
+	string $symAxis = `optionMenuGrp -q -v autoPrepForPaintingOptimizeSymetricalOption`;
+	$sel = removeObjectsOnNegAxis($sel, $symAxis);
+	
+	for($i=0;$i<`size $sel`;$i++){
+		if(`isPolyGeometry($sel[$i])`== 0){ continue;}
+		
+		$crossesAxis = objectCrossesAxis($sel[$i], $symAxis);
+		if(!$crossesAxis){
+			continue;
+		}
+		float $bboxSize[] = `getAttr ($sel[$i] + ".boundingBoxSize")`;
+		float $cutSize[] = `sort $bboxSize`;
+		float $center[] = `getAttr ($sel[$i] + ".center")`;
+		if($symAxis == "X"){
+			$center[0] = 0;
+		} else if($symAxis == "Y"){
+			$center[1] = 0;
+		} else if($symAxis == "Z"){
+			$center[2] = 0;
+		} 
+		polyCut -ch false -pc $center[0] $center[1] $center[2] -cd $symAxis -ps $cutSize[2] $cutSize[2] -df true $sel[$i];
+		if(wizProgressCancelled() == 1) return $sel;	
+	}
+	return $sel;
+}
+
+global proc int objectCrossesAxis(string $obj, string $axis)
+{
+		
+	float $bboxMin[] = `getAttr ($obj + ".boundingBoxMin")`;
+	float $bboxMax[] = `getAttr ($obj + ".boundingBoxMax")`;
+	float $minCompare;
+	float $maxCompare;
+	if($axis == "X"){
+		$minCompare = $bboxMin[0];
+		$maxCompare = $bboxMax[0];
+	} else if($axis == "Y"){
+		$minCompare = $bboxMin[1];
+		$maxCompare = $bboxMax[1];
+	} else if($axis == "Z"){
+		$minCompare = $bboxMin[2];
+		$maxCompare = $bboxMax[2];
+	}
+	
+	int $pos = 0;
+	int $neg = 0;
+	if($minCompare > 0 && $maxCompare > 0){	$pos = 1;}
+	if($minCompare < 0 && $maxCompare < 0){	$neg = 1;}
+	
+	if($pos == 1 || $neg == 1){
+		return 0;
+	} else {
+		return 1;
+	}
+	}
+	
+global proc mirrorPolyFaces(string $sel[])
+{
+	for($i=0;$i<`size $sel`;$i++){
+		polyMirrorFace -ws 1 -direction 5 -mergeMode 1 -ch 0 $sel[$i];
+		if(wizProgressCancelled() == 1) return;	
+	}
+}
+
+global proc string[] removeObjectsOnNegAxis(string $sel[], string $axis)
+{
+	string $remove[];
+	for($i=0;$i<`size $sel`;$i++){
+		if(`isPolyGeometry($sel[$i])`== 0){ continue;}
+		float $bboxMin[] = `getAttr ($sel[$i] + ".boundingBoxMin")`;
+		float $bboxMax[] = `getAttr ($sel[$i] + ".boundingBoxMax")`;
+		float $minCompare;
+		float $maxCompare;
+		if($axis == "X"){
+			$minCompare = $bboxMin[0];
+			$maxCompare = $bboxMax[0];
+		} else if($axis == "Y"){
+			$minCompare = $bboxMin[1];
+			$maxCompare = $bboxMax[1];
+		} else if($axis == "Z"){
+			$minCompare = $bboxMin[2];
+			$maxCompare = $bboxMax[2];
+		}
+		int $neg = 0;
+		if($minCompare < 0 && $maxCompare < 0){	$neg = 1;}
+		if($neg == 1){
+			$remove[`size $remove`] = $sel[$i];
+		}
+	}
+	$sel = stringArrayRemove($remove, $sel);
+	deleteSelectedObjects($remove);
+	
+	return $sel;
+}
+
+
+//REVERSE SURFACES
+//=============================
+global proc reversePolySurfaceIfNegativelyScaled(string $obj)
+{
+	if(`isPolyGeometry($obj)`== 0){ return;}	
+	int $rev = isNegativelyScaled($obj);
+	if($rev == 1){
+		
+		//ReversePolygonNormals;
+		//makeIdentity -apply true -t 0 -r 0 -s 1 -n 0 $obj;
+		polyNormal -nm 4 -ch false $obj;
+		debugML2("		* Reversing: " + $obj + "\n");
+	}	
+}
+
+global proc reverseNurbsSurfaceIfNegativelyScaled(string $obj)
+{
+	int $rev = isNegativelyScaled($obj);
+	if($rev == 1){
+		reverseSurface -ch false $obj;
+	}	
+}
+
+global proc int isNegativelyScaled(string $obj)
+{
+	if(`objExists $obj` == false){ return 0;}
+	if(`nodeType $obj` != "transform"){ return 0;}
+	float $scale[] = `xform -q -s -r $obj`;
+	int $p;
+	int $rev = 0;
+	for($p=0;$p<`size $scale`;$p++){
+		if($scale[$p] < 0){
+			$rev = 1;
+		}
+	}
+	return $rev;
+}
+
+global proc string[] reverseNegativelyScaledObjects(string $sel[])
+{	
+	printProc("reverseNegativelyScaledObjects");
+	int $i;
+	string $reversed[];
+	for($i=0;$i<`size $sel`;$i++){
+		if(`objExists $sel[$i]` == false){ continue;}
+		if(`isPolyGeometry($sel[$i])`== 0){ continue;}
+		
+		//Check if object is negatively scaled now that it is unparented
+		int $rev = isNegativelyScaled($sel[$i]);	
+		if($rev == 1){			
+			//Reverse Normals
+			polyNormal -nm 4 $sel[$i];
+			$reversed[`size $reversed`] = $sel[$i];
+			
+			setAttr ($sel[$i] + ".opposite") 0;
+			
+			//Freeze scale
+			makeIdentity -apply true -t 0 -r 0 -s 1 -n 0 $sel[$i];		
+		}	
+		if(wizProgressCancelled() == 1) return $sel;	
+	}
+	if(`size $reversed` > 0){
+		debugML2("			- Reversed: " + stringArrayToString($reversed, " ") + "\n");
+	}
+	
+	return $sel;
+}
+
+//FREEZE TRANSFORMS
+//========================================
+//FREEZE TRANSFORMS
+//------------------------------
+global proc string[] freezeTransformsOnSelectedObjects(string $sel[])
+{
+	printProc("freezeTransformsOnSelectedObjects");
+	int $i;
+	for($i=0;$i<`size $sel`;$i++){
+		//if(`objExists $sel[$i]` == false){ continue;}
+		if(`isPolyGeometry($sel[$i])`== 0){ continue;}	
+		//Freeze transforms
+		makeIdentity -apply true -t 1 -r 1 -s 1 -n 0 $sel[$i];	
+		if(wizProgressCancelled() == 1) return $sel;
+	}
+	return $sel;	
+}
+
+//FREEZE SCALE
+//------------------------------
+global proc freezeScaleOnSelectedObjects(string $sel[])
+{
+	printProc("freezeScaleOnSelectedObjects");
+	for($i=0;$i<`size $sel`;$i++){
+		//if(`objExists $sel[$i]` == false){ continue;}
+		if(`isPolyGeometry($sel[$i])`== 0){ continue;}
+		//Freeze scale
+		makeIdentity -apply true -t 0 -r 0 -s 1 -n 0 $sel[$i];	
+		if(wizProgressCancelled() == 1) return;
+	}
+}
+
+//BUILD SOURCE GROUP
+//====================================
+global proc string[] buildPrepForPaintingSourceGroup(string $sel[])
+{
+	printProc("buildPrepForPaintingSourceGroup");
+	$sel = removeObjectsThatDontExist($sel);
+	string $group = `group -em -name "sourceGroup"`;
+	for($i=0;$i<`size $sel`;$i++){
+		string $inst[] = `instance $sel[$i]`;
+	}
+	parent `ls $sel` $group;
+	centerToWorldAlignToWorldGround($group);
+	return $sel;
+}
+
+//REPLACING MATCHING GEOMETRY WITH INSTANCES
+//==============================================
+global proc string[] replaceMatchingObjectsWithInstances(string $sel[])
+{
+	printProc("replaceMatchingObjectsWithInstances");
+	$ok = detailConfirmStep("InitialSelection: " + stringArrayToStringNiceList($sel));if(!$ok){return $sel;}
+	
+	string $replacedGroups[] = replaceGroupsWithMatchingGeometryWithInstances($sel);
+	
+	$ok = detailConfirmStep("ReplacedGroupsWithInstances: " + stringArrayToStringNiceList($replacedGroups));if(!$ok){return $sel;}
+	
+	$sel = removeObjectsThatDontExist($sel);
+	$sel = getGeometryTransforms($sel);
+	
+	//$ok = detailConfirmStep("RemovedObjectsThatDontExist: " + stringArrayToStringNiceList($sel));if(!$ok){return $sel;}
+	
+	$sel = replaceMatchingGeometryWithInstances($sel);
+	
+	$ok = detailConfirmStep("ReplacedMatchingGeometryWithInstances: " + stringArrayToStringNiceList($sel));if(!$ok){return $sel;}
+	
+	return $sel;
+
+}
+
+//MATCHING GEOMETRY
+//------------------------------
+global proc string[] selectAndReplaceMatchingGeometryWithInstances()
+{
+	printProc("selectAndReplaceMatchingGeometryWithInstances");
+	debugML1("=========================================================" + "\n");
+	string $sel[] = `ls -sl`;
+	$isGroup = isSelectedGroup($sel);
+	string $matchedGroups[];
+	string $matchedObjects[];
+	if($isGroup){
+		debugML1("* Searching GROUPS for matching geometry..." + "\n");
+		//Go through groups and try to match groups that contain all matching geometry
+		$matchedGroups = replaceGroupsWithMatchingGeometryWithInstances($sel);
+		
+		debugML1("=========================================================" + "\n");
+		$matchedObjects = getGeometryTransformsInHeirarchy($matchedGroups);
+		debugML1("			*MATCHED OBJECTS*: " + stringArrayToString($matchedObjects, " ") + "\n");
+		$sel = smartSelectGeometryObjects($sel);
+		$sel = stringArrayRemove($matchedObjects,$sel);
+		debugML2("			*REMAINING OBJECTS*: " + stringArrayToString($sel, " ") + "\n");
+		
+		//Then go through all the objects that remain and try to match them to one another
+		debugML1("* Searching OBJECTS for matching geometry..." + "\n");
+		$sel = replaceMatchingGeometryWithInstances($sel);	
+	} else {
+		$sel = smartSelectGeometryObjects($sel);
+		debugML1("* Searching OBJECTS for matching geometry..." + "\n");
+		$sel = replaceMatchingGeometryWithInstances($sel);	
+	}
+	return $sel;
+	debugML1("=COMPLETED= REPLACING MATCHING GEOMETRY WITH INSTANCES" + "\n");
+	debugML1("=========================================================" + "\n");
+}
+
+//MATCHING GROUPS WITH MATCHING GEOMETRY
+//------------------------------
+global proc string[] replaceGroupsWithMatchingGeometryWithInstances(string $sel[])
+{	
+	string $fName = "replaceGroupsWithMatchingGeometryWithInstances";	
+	printProc($fName);
+	$fName = allCaps($fName);
+	
+	$sel = removeObjectsThatDontExist($sel);
+	
+	//string $transformsBelow[] = getTransformsFrom(`ls -dag $sel`);
+	//$ok = detailConfirmStep("TransformsBelowSel: " + stringArrayToStringNiceList($transformsBelow));if(!$ok){return $sel;}
+	string $group[] = lsGroups($sel);
+	$ok = detailConfirmStep("Groups: " + stringArrayToStringNiceList($group));if(!$ok){return $group;}
+	
+	string $groupCopy[];
+	appendStringArray($groupCopy, $group, `size $group`);
+	
+	//$ok = detailConfirmStep("Searching Groups: " + stringArrayToStringNiceList($group));if(!$ok){return $group;}
+		
+	string $remove[];
+	string $match[];
+	string $newObj[];
+	
+	debugML1("			* Looking for Groups with Matching Geometry to Instance: " + stringArrayToString($group, " ") + "\n");
+	for($i=0;$i<`size $group`;$i++){
+		//$ok = detailConfirmStep($fName + "\n" + "Searching: " + $group[$i]);if(!$ok){return $group;}
+		if(`objExists $group[$i]` == 0){ continue;}	
+		
+		//If the object was added to our remove list then skip it.
+		if(stringArrayContains($group[$i],$remove)){continue;}
+			
+		for($p=1;$p<`size $groupCopy`;$p++){
+			if(`objExists $groupCopy[$p]` == 0){ continue;}		
+			if($group[$i] == $groupCopy[$p]){ continue;}
+			
+			//If the object was added to our remove list then skip it.
+			if(stringArrayContains($groupCopy[$p],$remove)){continue;}
+			
+			//$ok = detailConfirmStep($fName + "\n" + "Comparing: " + $group[$i] + " | " + $groupCopy[$p]);if(!$ok){return $group;}
+			
+			//A value of 0 means a successfull match	
+			$groupMatch = polyCompareTwoGroups($group[$i],$groupCopy[$p]);
+			string $matchString = "MATCH";
+			if($groupMatch == 1){ $matchString = "No Match";}
+			//$ok = detailConfirmStep($fName + "\n" + "Comparing: " + $group[$i] + " | " + $groupCopy[$p] + "\n" + "GroupMatch: " + $matchString);if(!$ok){return $group;}
+			
+			if($groupMatch == 0){
+				$ok = detailConfirmStep($fName + "\n" + "Comparing: " + $group[$i] + " | " + $groupCopy[$p] + "\n" + "GroupMatch: " + $matchString);if(!$ok){return $group;}
+			
+				debugML1("				*MATCH* " + $group[$i] + " || " + $groupCopy[$p] + "\n");
+				
+				//Instance the object
+				string $inst[] = `instance $group[$i]`;
+				
+				//Get the parent to reparent the instance
+				string $parentA = firstParentOf($group[$i]);
+				string $parentB = firstParentOf($groupCopy[$p]);
+				
+				//Do the attribute transfer
+				debugML2("					- Keeping Group: " + $group[$i] + " : Creating Instance : " + $inst[0] + " : Removing Matching Group : " + $groupCopy[$p] + "\n");
+					
+				//Parent the instance to the parent of the object that we are replacing
+				if($parentA != "" || $parentB != ""){
+					if($parentA != $parentB){
+						parent $inst[0] $parentB;
+					}
+				}
+				
+				transferTransforms($groupCopy[$p],$inst[0]);
+				
+				//Put the object in our remove list so we don't bother looking at it anymore.
+				$remove[`size $remove`] = $groupCopy[$p];
+				$match[`size $match`] = $group[$i];
+				$newObj[`size $newObj`] = $inst[0];
+	
+			}		
+		}
+		debugML1("		======================" + "\n");
+		if(wizProgressCancelled() == 1) return $sel;
+	}
+	$match = `stringArrayRemoveDuplicates($match)`;
+	//Remove the matched items from our list of objects
+	$group = stringArrayRemove($remove,$group);
+	
+	debugML2("		- " + `size $match` + " Unique Groups Found" + "\n");
+	debugML2("		- " + `size $remove` + " Instanced Groups Created" + "\n");
+	debugML1("		- Matched Groups: " + stringArrayToString($match, " ") + "\n");
+	
+	$ok = detailConfirmStep("Deleting Extra Objects: " + stringArrayToStringNiceList($remove));if(!$ok){return $group;}
+			
+	//Delete all the matched items
+	deleteSelectedObjects($remove);
+	
+	string $return[];
+	appendStringArray($return, $match, `size $match`);
+	appendStringArray($return, $newObj, `size $newObj`);
+	
+	return $return;
+}
+
+
+//MATCHING GEOMETRY
+//------------------------------
+global proc string[] replaceMatchingGeometryWithInstances(string $obj[])
+{
+	printProc("replaceMatchingGeometryWithInstances");		
+		
+	int $i;
+	int $p;
+	string $copy[];
+	string $remove[];
+	int $uniqueCount, $instanceCount;
+	
+	appendStringArray($copy, $obj, `size $obj`);
+	
+	debugML1("			* Looking for Matching Geometry to Instance: " + stringArrayToString($obj, " ") + "\n");
+	for ($i=0;$i<`size $obj`;$i++){
+		if(`objExists $obj[$i]` == false){ continue;}
+		if(`isPolyGeometry($obj[$i])`== 0){ continue;}	
+		
+		//If the object was added to our remove list then skip it.
+		$removed = stringArrayContains($obj[$i],$remove);
+		if($removed){continue;}
+			
+		for ($p=1;$p<`size $copy`;$p++){		
+			if (`objExists $copy[$p]` == false){ continue;}
+			if (`isPolyGeometry($copy[$p])`== 0){ continue;}
+			
+			if ($obj[$i] == $copy[$p]){ continue;}
+			
+			//If the object was added to our remove list then skip it.
+			$removed = stringArrayContains($copy[$p],$remove);
+			if ($removed){continue;}
+				
+			//If we are acidentally comparing a poly object to something that isn't a poly object and get an error then skip it.
+			if (catchQuiet(`polyCompare -v $obj[$i] $copy[$p]`) == 1){
+				continue;
+			}
+			
+			//A value of 0 means a successfull match
+			int $sameFd = `polyCompare -fd $obj[$i] $copy[$p]`;		
+			int $sameV = `polyCompare -v $obj[$i] $copy[$p]`;		
+			
+			if ($sameFd == 0 || $sameV == 0){
+				debugML1("				*MATCH*: " + $obj[$i] + " || " + $copy[$p] + "\n");
+				
+				//Instance the object
+				string $inst[] = `instance $obj[$i]`;
+				string $parentA = firstParentOf($obj[$i]);
+				string $parentB = firstParentOf($copy[$p]);
+				
+				//Do the attribute transfer
+				debugML2("					- Keeping Object: " + $obj[$i] + " : Creating Instance : " + $inst[0] + " : Removing Matching Object : " + $copy[$p] + "\n");
+				//transferAttributes -uvs 0 -pos 1 -spa 0 -sm 3 $copy[$p] $inst[0];
+				transferTransforms($copy[$p],$inst[0]);
+				
+				//Parent the instance to the parent of the object that we are replacing
+				if ($parentA != "" || $parentB != ""){
+					if ($parentA != $parentB){
+						parent $inst[0] $parentB;
+					}
+				}
+				
+				//Put the object in our remove list so we don't bother looking at it anymore.
+				$remove[`size $remove`] = $copy[$p];
+			}	
+		}
+		if (wizProgressCancelled() == 1) return $obj;
+	}
+	//Remove the matched items from our list of objects
+	$obj = stringArrayRemove($remove,$obj);
+	
+	debugML2("		- " + `size $obj` + " Unique Objects Found" + "\n");
+	debugML2("		- " + `size $remove` + " Instances Created" + "\n");
+	
+	//Delete all the matched items
+	deleteSelectedObjects($remove);
+	
+	return $obj;
+}
+
+
+//MATCHING GEOMETRY
+//------------------------------
+global proc string[] replaceMatchingGeometryWithInstancesMaintainGroups( string $obj[] )
+{
+	printProc("replaceMatchingGeometryWithInstances");		
+		
+	int $i;
+	int $p;
+	string $copy[];
+	string $remove[];
+	int $uniqueCount, $instanceCount;
+	
+	appendStringArray($copy, $obj, `size $obj`);
+	
+	debugML1("			* Looking for Matching Geometry to Instance: " + stringArrayToString($obj, " ") + "\n");
+	for ($i=0;$i<`size $obj`;$i++){
+		if (`objExists $obj[$i]` == false){ continue;}
+		if (`isPolyGeometry($obj[$i])`== 0){ continue;}	
+		
+		//If the object was added to our remove list then skip it.
+		$removed = stringArrayContains($obj[$i],$remove);
+		if ($removed){continue;}
+			
+		for ($p=1;$p<`size $copy`;$p++){		
+			if (`objExists $copy[$p]` == false){ continue;}
+			if (`isPolyGeometry($copy[$p])`== 0){ continue;}
+			
+			if ($obj[$i] == $copy[$p]){ continue;}
+			
+			//If the object was added to our remove list then skip it.
+			$removed = stringArrayContains($copy[$p],$remove);
+			if ($removed){continue;}
+				
+			//If we are acidentally comparing a poly object to something that isn't a poly object and get an error then skip it.
+			if (catchQuiet(`polyCompare -v $obj[$i] $copy[$p]`) == 1){
+				continue;
+			}
+			
+			//A value of 0 means a successfull match
+			int $sameFd = `polyCompare -fd $obj[$i] $copy[$p]`;		
+			int $sameV = `polyCompare -v $obj[$i] $copy[$p]`;		
+			
+			if ($sameFd == 0 || $sameV == 0){
+				debugML1("				*MATCH*: " + $obj[$i] + " || " + $copy[$p] + "\n");
+				
+				//Instance the object
+				string $inst[] = `instance $obj[$i]`;
+				string $parentA = firstParentOf($obj[$i]);
+				string $parentB = firstParentOf($copy[$p]);
+				
+				//Do the attribute transfer
+				debugML2("					- Keeping Object: " + $obj[$i] + " : Creating Instance : " + $inst[0] + " : Removing Matching Object : " + $copy[$p] + "\n");
+				//transferAttributes -uvs 0 -pos 1 -spa 0 -sm 3 $copy[$p] $inst[0];
+				transferTransforms($copy[$p],$inst[0]);
+				
+				//Parent the instance to the parent of the object that we are replacing
+				if ($parentA != "" || $parentB != ""){
+					if ($parentA != $parentB){
+						parent $inst[0] $parentB;
+					}
+				}
+				
+				//Put the object in our remove list so we don't bother looking at it anymore.
+				$remove[`size $remove`] = $copy[$p];
+			}	
+		}
+		if (wizProgressCancelled() == 1) return $obj;
+	}
+	//Remove the matched items from our list of objects
+	$obj = stringArrayRemove($remove,$obj);
+	
+	debugML2("		- " + `size $obj` + " Unique Objects Found" + "\n");
+	debugML2("		- " + `size $remove` + " Instances Created" + "\n");
+	
+	//Delete all the matched items
+	deleteSelectedObjects($remove);
+	
+	return $obj;
+}
+
+//EXPORTING FBX
+//=================================================
+global proc exportSelectedObjectsForPainting()
+{
+	printProc("exportSelectedObjectsForPainting");
+	//Export fbx file
+	string $ff = "*.fbx";
+	string $filename[] = `fileDialog2 -fm 0 -ff $ff -rf true -ds 2 -cap "Export FBX For Painting" -okc "Export" -cc "Cancel"`;
+	/*
+	if(endsWith($filename[0], ".fbx") == 0){
+		
+		string $basename = 	
+	}
+	print(" - Auto Prep for Painting FileName: " + $filename[0] + "\n");
+	if($filename[0] != ""){
+		file -force -options "v=0;" -typ "FBX export" -es $filename[0];
+		FBXExport -f $filename[0] -caller FBXMayaTranslator  -exportFormat "fbx;v=0";
+	}	
+	*/
+	print("Export Selected Objects Prep For Painting: " + stringArrayToString($filename, " | ") + "\n");
+	wizExportFBX($filename[0]);
+}
+
+//RE IMPORTING FROM MUDBOX
+//=================================================
+global proc fixObjectsAndShadersImportedFromMudbox()
+{
+	setAllTexturesFilterType();
+	dissconnectAllReflectedColorTextures();
+	clampAllShaderDiffuseToDefault();
+}
+
+//HELPER FUNCTIONS
+//=================================================
+//DELETE HISTORY ON ALL OBJECTS
+//---------------------------------------
+global proc deleteHistoryOnAllObjectsInArray(string $obj[])
+{
+	int $i;
+	for($i=0;$i<`size $obj`;$i++){
+		if(`objExists $obj[$i]` == false){ continue;}
+		delete -ch $obj[$i];
+	}	
+}
+
+//HELP
+//==================================================================================
+//==================================================================================
+
+//PREP FOR PAINTING HELP
+//==================================================================================
+//GET PREP FOR PAINTING HELP INFO
+//--------------------------------
+global proc string getPrepForPaintingHelpInfo(string $request)
+{
+	if($request == "uniteBy -ann"){	
+		string $uniteByAnn = ("All: All selected objects will be united into one object." + "\n"
+		+ "Shader: Objects will be united together based on shared materials." + "\n"
+		+ "allGroups: Starting with lowest in heirarchy. Objects that share the same parent will be united."
+		+ "TopDownGroup: Starting with highest in heirarchy. Objects that share the same parent will be united."
+		);
+		return $uniteByAnn;
+	}
+	if($request == "optimizeBy -ann"){	
+		string $optimizeByAnn = ("None: No optimization will be done. UVs will be layout out." + "\n"
+			+ "Consolidate UV Space: Any objects that share the same geometry will share the same UV space." + "\n"
+			+ "Instance Matching Geometry: Any objects that share the same geometry will be instanced.");	
+		return $optimizeByAnn;
+	}
+	if($request == "optimizeSymetrical -ann"){	
+		string $optimzieSymetricalAnn = ("None: No optimization will be done. No objects will be cut." + "\n"
+			+ "X,Y,Z: Any object that lies on both sides of the specified axis will be cut in half." + "\n"
+			+ "The positive side of the axis will be kept.");
+		return $optimzieSymetricalAnn;
+	}
+
+}
+
+global proc openPrepForPaintingHelp()
+{
+	wizHelpWindow();
+	string $layout = "prepForPaintingHelpLayout";
+	if(`layout -q -ex $layout`){
+		return;	
+	}
+	
+	string $layout = wizHelpContentLayout($layout, "PrepForPainting");
+		
+	prepForPaintingHelp($layout);
+	
+}
+
+//PREP FOR PAINTING HELP LAYOUT
+//--------------------------------
+global proc prepForPaintingHelp(string $parent)
+{
+	
+	//printProc("prepForPaintingHelp");
+	//debugML1("PrepForPaintingHelp: Parent: " + $parent + "\n");
+	setParent $parent;
+	
+	
+	string $about = (
+	"Prep For Painting runs a series of processes on selected objects to unite meshes and optimize uv space"
+	+" to prepare the objects for 3d painting across multiple mesh surfaces.\n"
+	);
+	
+	wizText($about);
+	separator -style "single";
+	
+	string $mainProcess = (
+	"The main function of prep for painting is to unite meshes. To decide which meshes to unite there are several options."
+	);
+	wizText($mainProcess);
+	string $uniteByMenuItems[] = { "all", "shader", "allGroups", "topDownGroup", "topDownGroupShader"}; 
+	wizOptionMenuGrpMenuItems("Unite By:", "", $uniteByMenuItems);	
+	string $uniteByAnn = (" - All: All selected objects will be united into one object." + "\n"
+	+ " - Shader: Objects will be united together based on shared materials." + "\n"
+	+ " - All Groups: Starting with lowest in heirarchy. Objects that share the same parent will be united." + "\n"
+	+ " - Top Down Group: Starting with highest in heirarchy. Objects that share the same parent will be united." + "\n"
+	+ " - Top Down Group Shader: Starting with highest in heirarchy. Objects that share the same parent will be united."
+	+ " Then objects that share the same materials will be united."
+	);			
+	wizText($uniteByAnn);
+	
+	separator -style "single";
+	
+	string $optimizeProcess = (
+	"The other important function that prep for painting does is to find objects that share the same geometry and lay them out"
+	+ " into the same uv space. This eliminates the need to paint the same screw head window pane or whatever over and over.\n"
+	+ "If you want to make use of this feature select [consolidateUVSpace].\n"
+	+ "You can also select [instanceMatchingGeometry].\n"
+	+ "Istead of laying out uvs into the same space for geometry that maches. Prep for painting will make instances of the geometry.\n"
+	);
+	
+	$optimizeProcess = ("The other important function that prep for painting does is to find objects that share the same geometry and do one of several options.");
+	wizText($optimizeProcess);
+	string $optimizeByMenuItems[] = { "none", "consolidateUVSpace", "instanceMatchingGeometry"};  	
+	wizOptionMenuGrpMenuItems("Optimize By:", "", $optimizeByMenuItems);	
+		
+	string $optimizeByAnn = (" - None: No optimization will be done. UVs will just be layout out." + "\n"
+	+ " - Consolidate UV Space: Any objects that share the same geometry will share the same UV space." 
+	+ " This eliminates the need to paint the same screw head, window pane or whatever over and over."+ "\n"
+	+ " - Instance Matching Geometry: Any objects that share the same geometry will be instanced.");
+	wizText($optimizeByAnn);	
+	separator -style "single";	
+	
+	string $opsy = "Another helpful function is the optimize symetrical function.";
+	wizText($opsy);
+	string $optimizeSymetricalMenuItems[] = { "none", "X", "Y", "Z"};
+	wizOptionMenuGrpMenuItems("Optimize Symetrical:", "", $optimizeSymetricalMenuItems);
+	string $optimzieSymetricalAnn = (" - None: No optimization will be done. No objects will be cut or analyized for symetry." + "\n"
+	+ " - X , Y , Z: Any object that lies on both sides of the specified axis will be cut in half."
+	+ " The positive side of the axis will be kept. There is another option under process settings to optionally mirror the object(s).");
+	wizText($optimzieSymetricalAnn);	
+	separator -style "single";
+		
+	string $ph = ("To keep all the hierarchy of the selected objects during and after the process of uniting objects check this box.\n");
+	wizText($ph);	
+	checkBox -l "Preserve Heirarchy" -v 1 ;
+	separator -style "single";
+	
+	string $ces = ("If you wish to run each step in the process in order manually check this box.\n"
+	+"After each step you can make changes or cancel the operation with the cancel button.\n");		
+	wizText($ces);		
+	checkBox -l "Confirm Each Step" -v 0 ;	
+	
+	separator -style "single";
+	
+	string $other = ("There are other optional processes you can automatically perform during prep for painting.\n"
+	+"They are located under the Process settings rolldown.\n"
+	+"Each process can be performed individually by selecting it from the [Process Functions] menu."
+	);		
+	
+	wizText($other);	
+	//string $menuBarLayout = `menuBarLayout`;	
+	//prepForPaintingMainMenu($parent);
+	
+	separator -style "single";
+	/*
+	string $knowProblems = (" - If you see a UVs being stretched into corners or out toward the side really really far..."
+	+"Try setting the Sample Space to <Model Space>. Under <Optimize Options><TransferUVOptions><Sample Space>");
+	wizText($knowProblems);
+	*/
+	
+	string $tips = "General Tips";
+	wizText($tips);
+	
+	string $tip1 = (" - It's always a good idea to run Fix Common Polygon Problems after Prep For Painting or as part of"
+	+" the process.");
+	wizText($tip1);
+	
+	setParent..;
+}
+
+
+global proc wizCraftAutoTileUVLayout( string $flags )
+{
+	string $type;
+	string $sel[];
+	int $edit;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+				
+			case "-typ" : case "-type" :
+			$type = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = `ls -sl`;
+	}
+	
+	select -r $sel;
+	for ($i=0;$i<`size $sel`;$i++){
+		select -r $sel[$i];
+		string $curUVSet[] = `polyUVSet -q -cuv`;
+		if (`size $curUVSet` == 0){
+			continue ;
+		}
+		polyAutoProjection -lm 0 -pb 0 -ibd 1 -cm 0 -l 2 -sc 1 -o 1 -p 6 -ps 0.2 -ws 0 $sel[$i];	
+	}
+		
+	select -r $sel;
+	polyMultiLayoutUV -lm 1 -sc 1 -rbf 1 -fr 1 -ps 0.2 -l 3 -gu (`size $sel`) -gv 1 -psc 0 -su 1 -sv 1 -ou 0 -ov 0;
+
+}
+
+

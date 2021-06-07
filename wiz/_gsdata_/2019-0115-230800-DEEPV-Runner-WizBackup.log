@@ -1,0 +1,11 @@
+2019-01-15 23:08:00: -- Analysis Started by On Schedule Hour=23 DayWeek=2 , Under Runner
+2019-01-15 23:08:00: Not enough free space on disk file:///G: need 26.7 MB, have 0 bytes
+2019-01-15 23:08:00: Changes: 325, Conflicts: 0, CopyTime: 0, CopyState: 0/0, Errors: 0, All: 332
+2019-01-15 23:08:00: Left to Right: Copy File: 325 
+2019-01-15 23:08:00: == Sync Started by On Schedule Hour=23 DayWeek=2 , Under Runner
+2019-01-15 23:08:00: DISK FULL error reported but 5 % of the disk is free (204474048 Kb). 
+This is most likely caused by FAT volume not accepting a large file or too many files in one folder.
+2019-01-15 23:08:00: Copy New 'H:/maya/scripts/wiz/aiScripts/To_Gif_Jpeg_Png/ToGIF.jsx' -> 'G:/maya/scripts/wiz/aiScripts/To_Gif_Jpeg_Png/ToGIF.jsx'
+- ERROR: Error copying file: There is not enough space on the disk.  (error 112)
+2019-01-15 23:08:00: Error copying file: There is not enough space on the disk.  (error 112)
+2019-01-15 23:08:00: 

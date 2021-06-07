@@ -1,0 +1,25 @@
+global proc helpWiz()
+{
+	
+}
+
+global proc starfieldWizHelp()
+{
+	string $about = (
+	"Starfield Wiz can build starfields from CSV Data.\n"
+	
+	);
+	
+	string $vars = (
+	"Starfield Data CSV: The CSV data file\n"
+	+"Format Data: If the data is already formatted correctly un-check this option\n"
+	+"Duplication Method: You can duplicate, instance, or duplicate a reference file"
+	+"Scale: How big is the star object.\m"
+	+"A value of 1 would take an object that is 1 unit in size and place it in the scene so that it looks like a real starry sky\n"
+	);
+	
+	wizText($about);	
+	
+	wizText($vars);
+		
+}

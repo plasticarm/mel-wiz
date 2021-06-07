@@ -1,0 +1,1065 @@
+
+
+// Copyright (C) 1997-2014 Autodesk, Inc., and/or its licensors.
+// All rights reserved.
+//
+// The coded instructions, statements, computer programs, and/or related
+// material (collectively the "Data") in these files contain unpublished
+// information proprietary to Autodesk, Inc. ("Autodesk") and/or its licensors,
+// which is protected by U.S. and Canadian federal copyright law and by
+// international treaties.
+//
+// The Data is provided for use exclusively by You. You have the right to use,
+// modify, and incorporate this Data into other products for purposes authorized 
+// by the Autodesk software license agreement, without fee.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. AUTODESK
+// DOES NOT MAKE AND HEREBY DISCLAIMS ANY EXPRESS OR IMPLIED WARRANTIES
+// INCLUDING, BUT NOT LIMITED TO, THE WARRANTIES OF NON-INFRINGEMENT,
+// MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, OR ARISING FROM A COURSE 
+// OF DEALING, USAGE, OR TRADE PRACTICE. IN NO EVENT WILL AUTODESK AND/OR ITS
+// LICENSORS BE LIABLE FOR ANY LOST REVENUES, DATA, OR PROFITS, OR SPECIAL,
+// DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES, EVEN IF AUTODESK AND/OR ITS
+// LICENSORS HAS BEEN ADVISED OF THE POSSIBILITY OR PROBABILITY OF SUCH DAMAGES.
+
+//
+//
+//
+//
+//
+//
+//
+//  Creation Date:  Oct 1997
+//
+//  Description:
+//     This is an example script for the Maya Artisan Script
+//     Paint tool. It will paint geometry onto the selected surfaces.
+//     Various aspects of the geometry are controlled by the painted
+//     values.
+//
+// Usage:
+// 1) Place this script into your scripts directory (usually the
+//    maya/scripts directory in your home directory
+// 2) Select the Script Paint Tool (Modify->Script Paint Tool)
+//    and bring up the Tool Settings window
+// 3) Go to the Setup tab and enter "geometryPaint" into the
+//    "Tool Setup Cmd" field and hit enter
+// 4) Paint Geometry
+//
+// Tips:
+// Once you have the Geometry Paint Tool setup you may want to drag
+// it from the minibar to the shelf so that it is always accessible
+//
+// These are global variables used to keep track of multiple
+// surfaces and the name prefixes used for the geometries on each
+// surface
+//
+global string $dupliNamePrefix[];
+global string $dupliParentName[];
+global string $dupliGroupName[];
+global int $dupliType[];		// 0 - NURBS surface, 1 - mesh, 2 - subd
+global int $dupliPaintFreeSlot = 0;
+global int $dupliPaintSlots = 0;
+
+global string $dupliGeom[];
+global string $dupliValidGeom[];
+
+// determines which operation we are in:
+// 1 - create/modify, 2 - modify, 3 - remove
+//
+global int $dupliOperation = 1;
+
+// These are global variables used to control what will happen
+// during painting. These globals are modified using a separate
+// UI window created when this tool becomes active.
+//
+global int $dupliUseGrid = 1;
+global int $dupliGridSizeU = 20;
+global string $dupliGridSizeUSlider;
+global int $dupliGridSizeV = 20;
+global string $dupliGridSizeVSlider;
+global int $dupliJitterGrid = 1;
+global float $dupliJitterValueAmt = 0.0;
+global int $dupliAttachToSrf = 1;
+global int $dupliAlignToSrf = 0;
+global int $dupliDuplicate = 1;
+global int $dupliGroup = 1;
+global int $dupliProportional = 0;
+global int $dupliIsolate = 1;
+global string $dupliAttrName[] = { ".sx", ".sy", ".sz", ".rx", ".ry", ".rz", ".tx", ".ty", ".tz" };
+global int $dupliModifyAttr[] = { 1, 1, 1, 0, 0, 0, 0, 0, 0 };
+global float $dupliModifyAttrNorm[] = { 1, 1, 1, 360, 360, 360, 1, 1, 1 };
+global int $dupliModifyAttrWrap[] = { 0, 0, 0, 1, 1, 1, 0, 0, 0 };
+global string $dupliIdentifier = "Geom";
+global string $dupliAlignChkBoxGrp;
+
+proc chkRotateHelperPlugin()
+{
+	global int $dupliAlignToSrf;
+	global string $dupliAlignChkBoxGrp;
+
+	if ( $dupliAlignToSrf && !`pluginInfo -q -loaded rotateHelper.so` ) {
+		if ( catch( `loadPlugin rotateHelper.so` ) ) {
+			warning (uiRes("m_geometryPaint.kPlugInWarning"));
+			$dupliAlignToSrf = 0;
+
+			// disable Align option
+			//
+			checkBoxGrp -e -en3 0 -v3 0 $dupliAlignChkBoxGrp;
+		}
+	}
+}
+
+global proc dupliPaintAlignToSrfCB( int $align )
+{
+	global int $dupliAlignToSrf;
+	
+	$dupliAlignToSrf = $align;
+	chkRotateHelperPlugin;
+}
+
+// This procedure creates the dialog box used to control various
+// parameters that control what happens when painting.
+// NOTE: This is in no way meant to be an example of good UI
+// design!
+//
+proc dupliPaintUI( string $context ) 
+{
+	global int $dupliOperation;
+	global int $dupliUseGrid;
+	global int $dupliGridSizeU;
+	global int $dupliGridSizeV;
+	global string $dupliGridSizeUSlider;
+	global string $dupliGridSizeVSlider;
+	global string $dupliAlignChkBoxGrp;
+	global int $dupliJitterGrid;
+	global int $dupliAttachToSrf;
+	global int $dupliAlignToSrf;
+	global int $dupliDuplicate;
+	global int $dupliGroup;
+	global int $dupliProportional;
+	global int $dupliIsolate;
+	global string $dupliGeom[];
+	global int $dupliModifyAttr[];
+	global float $dupliJitterValueAmt;
+	global string $dupliIdentifier;
+
+	/*
+	if ( `window -ex geometryPaintWindow` )
+	{
+		showWindow geometryPaintWindow ;
+		return ;
+	}
+	*/
+	
+	//setUITemplate -pushTemplate DefaultTemplate;
+	//window -title (uiRes("m_geometryPaint.kGeometryPaintSettings"))  geometryPaintWindow;
+	
+	
+	if (`columnLayout -ex wizCraft_dupliPaintUI_columnLayout`){
+		deleteUI wizCraft_dupliPaintUI_columnLayout;
+	}
+	
+	columnLayout
+		//-adj true		
+		//-w 400
+		-adj false
+		-w 512
+		-cal left
+		-p wizCraft_dupliPaint_frameLayout
+		wizCraft_dupliPaintUI_columnLayout
+		;
+		
+		
+	dupliSourceButtonLayout("wizCraft_dupliPaintUI_columnLayout");
+	
+					
+			string $geom;
+			
+			
+			
+			
+			int $numGeoms = size($dupliGeom);
+			int $g;
+			for ( $g = 0; $g < $numGeoms; $g++ ) {
+				$geom = ($geom + " " + $dupliGeom[$g]);
+			}
+		
+			
+			textFieldGrp -label (uiRes("m_geometryPaint.kGeometry")) 
+						 -text $geom
+						 -cc "tokenize( \"#1\", $dupliGeom )"
+						 dupliPaintGeometryName; 
+			textFieldGrp -label (uiRes("m_geometryPaint.kIdentifier")) 
+						 -text $dupliIdentifier
+						 -cc "$dupliIdentifier = \"#1\""
+						 geometryIdentifier; 
+			radioButtonGrp -label (uiRes("m_geometryPaint.kOperation"))  -nrb 3
+				-label1 (uiRes("m_geometryPaint.kCreateModify")) 
+				-on1 "$dupliOperation = 1"
+				-label2 (uiRes("m_geometryPaint.kModify")) 
+				-on2 "$dupliOperation = 2"
+				-label3 (uiRes("m_geometryPaint.kRemove")) 
+				-on3 "$dupliOperation = 3"
+				-sl $dupliOperation 
+				operation;
+			checkBoxGrp -ncb 2 -label ""
+						-label1 (uiRes("m_geometryPaint.kGrid")) 
+						-v1 $dupliUseGrid
+						-cc1 "$dupliUseGrid = #1; intSliderGrp -e -en $dupliUseGrid $dupliGridSizeUSlider; intSliderGrp -e -en $dupliUseGrid $dupliGridSizeVSlider"
+						-label2 (uiRes("m_geometryPaint.kJitterGrid")) 
+						-v2 $dupliJitterGrid
+						-cc2 "$dupliJitterGrid = #1"
+						useGrid;
+			$dupliGridSizeUSlider=`
+				intSliderGrp -field true -label (uiRes("m_geometryPaint.kUGridSize"))  -min 2 -max 100
+						 -v $dupliGridSizeU
+						 -cc "$dupliGridSizeU = #1"
+						 -en $dupliUseGrid
+						 uGrid`; 
+			$dupliGridSizeVSlider=`
+				intSliderGrp -field true -label (uiRes("m_geometryPaint.kVGridSize"))  -min 2 -max 100
+						 -v $dupliGridSizeV
+						 -cc "$dupliGridSizeV = #1"
+						 -en $dupliUseGrid
+						 vGrid`;
+						 
+			checkBox
+				-l "All Scale"
+				-v true
+				-cc ("checkBoxGrp -e -v1 #1 control0; checkBoxGrp -e -v2 #1 control0; checkBoxGrp -e -v3 #1 control0;"
+				+"$dupliModifyAttr[0] = #1; $dupliModifyAttr[1] = #1; $dupliModifyAttr[2] = #1")
+				;
+				
+			checkBoxGrp -ncb 3 -label (uiRes("m_geometryPaint.kControl")) 
+						-label1 (uiRes("m_geometryPaint.kXScale"))  -v1 $dupliModifyAttr[0]
+						-cc1 "$dupliModifyAttr[0] = #1"
+						-label2 (uiRes("m_geometryPaint.kYScale"))  -v2 $dupliModifyAttr[1]
+						-cc2 "$dupliModifyAttr[1] = #1"
+						-label3 (uiRes("m_geometryPaint.kZScale"))  -v3 $dupliModifyAttr[2]
+						-cc3 "$dupliModifyAttr[2] = #1"
+						control0;
+						
+			checkBox
+				-l "All Rotatation"
+				-v true
+				-cc ("checkBoxGrp -e -v1 #1 control1; checkBoxGrp -e -v2 #1 control1; checkBoxGrp -e -v3 #1 control1;"
+				+"$dupliModifyAttr[3] = #1; $dupliModifyAttr[4] = #1; $dupliModifyAttr[5] = #1;")
+				;
+				
+				
+			checkBoxGrp -ncb 3 -label ""
+						-label1 (uiRes("m_geometryPaint.kXRot"))  -v1 $dupliModifyAttr[3]
+						-cc1 "$dupliModifyAttr[3] = #1"
+						-label2 (uiRes("m_geometryPaint.kYRot"))  -v2 $dupliModifyAttr[4]
+						-cc2 "$dupliModifyAttr[4] = #1"
+						-label3 (uiRes("m_geometryPaint.kZRot"))  -v3 $dupliModifyAttr[5]
+						-cc3 "$dupliModifyAttr[5] = #1"
+						control1;
+			checkBoxGrp -ncb 3 -label ""
+						-label1 (uiRes("m_geometryPaint.kXTrans"))  -v1 $dupliModifyAttr[6]
+						-cc1 "$dupliModifyAttr[6] = #1"
+						-label2 (uiRes("m_geometryPaint.kYTrans"))  -v2 $dupliModifyAttr[7]
+						-cc2 "$dupliModifyAttr[7] = #1"
+						-label3 (uiRes("m_geometryPaint.kZTrans"))  -v3 $dupliModifyAttr[8]
+						-cc3 "$dupliModifyAttr[8] = #1"
+						control2;
+			checkBoxGrp -ncb 3 -label (uiRes("m_geometryPaint.kOptions")) 
+						-label1 (uiRes("m_geometryPaint.kProportional")) 
+						-v1 $dupliProportional
+						-cc1 "$dupliProportional = #1"
+						-label2 (uiRes("m_geometryPaint.kAttach")) 
+						-v2 $dupliAttachToSrf
+						-cc2 "$dupliAttachToSrf = #1"
+						-label3 (uiRes("m_geometryPaint.kDuplicate")) 
+						-v3 $dupliDuplicate
+						-cc3 "$dupliDuplicate = #1"
+						options0;
+
+				checkBoxGrp -ncb 3 -label ""
+						-label1 (uiRes("m_geometryPaint.kGroup")) 
+						-v1 $dupliGroup
+						-cc1 "$dupliGroup = #1"
+						-label2 (uiRes("m_geometryPaint.kIsolate")) 
+						-v2 $dupliIsolate
+						-cc2 "$dupliIsolate = #1"
+						-label3 (uiRes("m_geometryPaint.kAlign")) 
+						-v3 $dupliAlignToSrf
+						-cc3 "dupliPaintAlignToSrfCB( #1 )"
+						options1;
+			floatSliderGrp -field true -label (uiRes("m_geometryPaint.kJitterValue"))  -min 0 -max 1 -pre 2
+						 -v $dupliJitterValueAmt
+						 -cc "$dupliJitterValueAmt = #1"
+						 jitterRange;
+						 
+			//button -l "Intitialize" -c (
+			
+		setParent ..;
+	setParent ..;
+
+	//setUITemplate -popTemplate;
+}
+
+// This procedure should be set as the "Tool Setup Cmd" in the 
+// Setup tab of the Maya Artisan Script Paint tool's tool
+// settings window. The tool context is supplied as an argument.
+//
+global proc wizCraftDupliPaint( string $context )
+{
+	// initialize all the other commands in this scriptable 
+	// paint tool context.
+	// 
+	
+	artUserPaintCtx -e
+		-ic "initDupliPaint"
+		-fc "finishDupliPaint"
+		-svc "setDupliPaintValue"
+		-gvc "getDupliPaintValue"
+		-gsc ""
+		-cc ""
+		-tcc "cleanupDupliPaint"
+		-gac ""
+		$context;
+		
+	// create the dialog box to control various parameters
+	//
+	dupliPaintUI( $context );
+
+	// We force the tool to use texture paint
+	// mode (as opposed to projection paint mode)
+	//
+	// userPaintCtx -e -painttype "forceTexture" $context;
+}
+
+// This is the "Tool Cleanup Cmd". It is called when the tool is
+// exited. In this case, the special dialog window that was created
+// is deleted
+//
+global proc cleanupDupliPaint( string $context )
+{
+/*
+	if ( `window -ex geometryPaintWindow` ) {
+		deleteUI geometryPaintWindow;
+	}
+	*/
+	if (`columnLayout -ex wizCraft_dupliPaintUI_columnLayout`){
+		deleteUI wizCraft_dupliPaintUI_columnLayout;
+	}
+}
+
+global proc int checkForValidDupliPaintObject()
+{
+	global string $dupliGeom[];
+	global string $dupliValidGeom[];
+
+	int $numGeom = size($dupliGeom);
+	int $g, $fg;
+
+	clear($dupliValidGeom);
+	for( $g = 0, $fg = 0; $g < $numGeom; $g++ ) {
+		// check if geometry exists
+		//
+		if ( `objExists $dupliGeom[$g]` ) {
+			$dupliValidGeom[$fg] = $dupliGeom[$g];
+			$fg++;
+		}
+	}
+	return $fg;
+}
+
+// This is the "Initialize Cmd". This procedure is called once
+// for every selected surface when an intial click is received
+// on any surface. The argument is the name of the surface. This
+// procedure returns a string which indicates to the scriptable
+// tool how to behave for the duration of the stroke. 
+//
+global proc string initDupliPaint( string $name )
+{
+	global string $dupliNamePrefix[];
+	global string $dupliParentName[];
+	global string $dupliGroupName[];
+	global int $dupliType[];
+	global int $dupliPaintFreeSlot;
+	global int $dupliPaintSlots;
+	global int $dupliUseGrid;
+	global int $dupliGridSizeU;
+	global int $dupliGridSizeV;
+	global int $dupliJitterGrid;
+	global int $dupliGroup;
+	global int $dupliAttachToSrf;
+	global int $dupliAlignToSrf;
+	global int $dupliOperation;
+	global string $dupliIdentifier;
+
+	
+	string $targetName = `textFieldButtonGrp -q -tx wizCraft_dupliPaintTarget_textFieldButtonGrp`;
+	wizlog ("	[#] Taget Name : " + $targetName);
+	if (`size $targetName` > 0){
+		string $meshShape[] = smartSelectObjectsOfType({$targetName}, "-type mesh");
+		if (`size $meshShape` > 0){
+			$name = $meshShape[0];
+		}
+		wizlog ("	[#] Taget Surface : " + $name);
+	}
+	
+
+	string $idName = `textFieldButtonGrp -q -tx wizCraft_dupliPaintIdentifyName_textFieldButtonGrp`;
+	if (`size $idName` > 0){
+		$dupliIdentifier = $idName;
+	}
+
+	
+	if ( checkForValidDupliPaintObject() == 0 ) {
+		// return enough to make sure the set method gets
+		// called correctly
+		//
+		warning (uiRes("m_geometryPaint.kGeometryWarning"));
+		return "-uv surface -position local -normal world";
+	}
+
+	// find a free slot for this surface in the global arrays
+	//
+	int $slot;
+
+	for ( $slot = $dupliPaintFreeSlot; $slot < $dupliPaintSlots; $slot++ ) {
+		if ( $dupliNamePrefix[$slot] == "" ) {
+			break;
+		}
+	}  
+
+	if ( $slot == $dupliPaintSlots ) {
+		$dupliPaintSlots++;
+		$dupliPaintFreeSlot = $dupliPaintSlots;
+	}
+
+	int		$paintableObject = 1;
+
+	if ( `nodeType $name` == "nurbsSurface" ) {
+		$dupliType[$slot] = 0;
+	} else if ( `nodeType $name` == "mesh" ) {
+		$dupliType[$slot] = 1;
+	} else if ( `nodeType $name` == "subdiv" ) {
+		$dupliType[$slot] = 2;
+	} else {
+		$paintableObject = 0;
+	}
+
+	if ( $paintableObject ) {
+		// save the name of the parent of this shape as well
+		// as a prefix to use when creating the geometrys and
+		// and a group name if $dupliGroup is true
+		//
+		string $parent[] = `listRelatives -p $name`;
+		$dupliParentName[$slot] = $parent[0];
+		$dupliNamePrefix[$slot] = $parent[0] + $dupliIdentifier;
+		$dupliGroupName[$slot] = $parent[0] + $dupliIdentifier + "Grp";
+
+		if ( $dupliOperation == 1 && $dupliGroup && ! `objExists $dupliGroupName[$slot]` ) {
+			// Make a group for the painted geometries. Place it at the
+			// same level as the surface
+			//
+			string $parentParent[] = `listRelatives -p $dupliParentName[$slot]`;
+
+			if ( size($parentParent) > 0 ) {
+				group -em -p $parentParent[0] -n $dupliGroupName[$slot];
+			} else {
+				group -em -w -n $dupliGroupName[$slot];
+			}
+
+			// Connect this new transform to the surface's transform
+			//
+			string $from = $dupliParentName[$slot];
+			string $to = $dupliGroupName[$slot];
+			string $attr[] = { "t", "r", "ro", "s", "sh",
+							   "rp", "rpt", "sp", "spt" };
+
+			for ( $a = 0; $a < size($attr); $a++ ) {
+				connectAttr ($from + "." + $attr[$a]) ($to + "." + $attr[$a]);
+			}
+		}
+
+		if ( $dupliAlignToSrf ) {
+			// check if we have rotateHelper plugin
+			// - this may change $dupliAlignToSrf flag
+			//
+			chkRotateHelperPlugin;
+
+			// if geometry alignment is desired but geometry attachment isn't, create
+			// some dependency nodes to help out with this and create the constant
+			// connections
+			// - at the current time only NURBS surfaces can be attached to
+			//
+			if ( $dupliAlignToSrf
+			  && ( ! $dupliAttachToSrf || $dupliType[$slot] != 0 ) ) {
+				int $created = 0;
+	
+				if ( ! `objExists geometryPaintPOSNode` ) {
+					createNode pointOnSurfaceInfo -name geometryPaintPOSNode;
+					$created = 1;
+				}
+				if ( ! `objExists geometryPaintBRNode` ) {
+					createNode rotateHelper -name geometryPaintBRNode;
+					$created = 1;
+				}
+				if ( ! `objExists geometryPaintMeshBRNode` ) {
+					createNode rotateHelper -name geometryPaintMeshBRNode;
+					$created = 1;
+				}
+				if ( ! `objExists geometryPaintSubdBRNode` ) {
+					createNode rotateHelper -name geometryPaintSubdBRNode;
+					$created = 1;
+				}
+				if ( $created ) {
+					connectAttr geometryPaintPOSNode.normal geometryPaintBRNode.up;
+					connectAttr geometryPaintPOSNode.tangentU geometryPaintBRNode.forward;
+				}
+			}
+		}
+	}
+
+	// Return an argument string which:
+	// - tells the tool what surface ID to use for this surface
+	// - indicate that the associated surface parameter location
+	//   should also be passed to the "Set Value Cmd".
+	//
+	string $jitter;
+	string $position;
+	string $grid;
+
+	if ( $dupliJitterGrid ) {
+		$jitter = "true";
+	} else { 
+		$jitter = "false";
+	}
+	if ( $dupliGroup ) {
+		$position = "local";
+	} else { 
+		$position = "world";
+	}
+	if ( $dupliUseGrid ) {
+		$grid = (" -grid " + $dupliGridSizeU  + " " + $dupliGridSizeV);
+	} else {
+		$grid = "";
+	}
+	return ( "-id " + $slot
+		   + $grid
+		   + " -jitter " + $jitter
+		   + " -uv surface"
+		   + " -position " + $position
+		   + " -normal " + $position );
+}
+
+// This is the "Finalize Cmd". This procedure is called at the
+// end of the stroke. It is passed the surface ID, that was
+// generated by the "Initialize Cmd".
+//
+global proc finishDupliPaint( int $slot )
+{
+	global string $dupliNamePrefix[];
+	global int $dupliPaintFreeSlot;
+
+	// clear out the slot that was used for this surface
+	//
+	if ( $slot >= 0 ) {
+		$dupliNamePrefix[$slot] = "";
+		if ( $slot < $dupliPaintFreeSlot ) {
+			$dupliPaintFreeSlot = $slot;
+		}
+	}
+}
+
+proc string getRandomDupli()
+{
+	global string $dupliValidGeom[];
+
+	int $index = trunc( rand( size($dupliValidGeom) - 0.5 ) );
+	return $dupliValidGeom[$index];
+}
+
+proc setDupliPaintAttributes(
+	string $objname,
+	float $val
+)
+{
+	global int $dupliModifyAttr[];
+	global float $dupliModifyAttrNorm[];
+	global string $dupliAttrName[];
+	global int $dupliModifyAttrWrap[];
+	global int $dupliProportional;
+	global float $dupliJitterValueAmt;
+
+	int $attr;
+	int $numAttr = size($dupliModifyAttr);
+	float $normVal;
+
+	if ( $dupliJitterValueAmt > 0 ) {
+		float $jitterRange = abs( $val ) * $dupliJitterValueAmt;
+
+		$val = rand( $val - $jitterRange, $val + $jitterRange );
+	}
+
+	if ( $dupliProportional ) {
+		float $proportions[];
+		float $total;
+		float $curVal;
+
+		// proportionally split the passed in value across all
+		// modifiable attributes 
+		//
+
+		// find the proportions of all modifiable attributes
+		//
+		for ( $attr = 0; $attr < $numAttr; $attr++ ) {
+			if ( $dupliModifyAttr[$attr] ) {
+				$curVal = `getAttr ($objname + $dupliAttrName[$attr])`;
+				
+				if ( $dupliModifyAttrNorm[$attr] != 1 ) {
+					$curVal /= $dupliModifyAttrNorm[$attr];
+				}
+				if ( $dupliModifyAttrWrap[$attr] ) {
+					$curVal = fmod( $curVal, 1.0 );
+				}
+				$proportions[$attr] = $curVal;
+				$total += abs( $curVal );
+			}
+		}
+
+		// go through them all again and split the passed in
+		// value proportionately
+		//
+		for ( $attr = 0; $attr < $numAttr; $attr++ ) {
+			if ( $dupliModifyAttr[$attr] ) {
+				if ( $total > 0 ) {
+					$normVal = $val * $proportions[$attr] / $total;
+				} else {
+					$normVal = $val;
+				}
+
+				if ( $dupliModifyAttrNorm[$attr] != 1 ) {
+					$normVal = $normVal * $dupliModifyAttrNorm[$attr];
+				}
+
+				// print ($objname + $dupliAttrName[$attr] + " set to " + $normVal + "\n");
+				setAttr ($objname + $dupliAttrName[$attr]) $normVal;
+			}
+		}
+	} else {
+		// replace all modifiable attributes with normalized value
+		//
+		for ( $attr = 0; $attr < $numAttr; $attr++ ) {
+			if ( $dupliModifyAttr[$attr] ) {
+				if ( $dupliModifyAttrNorm[$attr] != 1 ) {
+					$normVal = $val * $dupliModifyAttrNorm[$attr];
+				} else {
+					$normVal = $val;
+				}
+
+				// print ($objname + $dupliAttrName[$attr] + " set to " + $normVal + "\n");
+				setAttr ($objname + $dupliAttrName[$attr]) $normVal;
+			}
+		}
+	}
+}
+
+// This is the "Set Value Cmd". It is called everytime a value
+// on the surface is changed. A surface ID, a grid index
+// on the surface and the value associated with that grid index
+// is passed. There can be additional arguments depending on the
+// options generated by the return value of the "Initialize Cmd".
+// In this case the (u,v) surface parameter position for this
+// grid point as well as its local position is passed.
+// 
+global proc setDupliPaintValue(
+	int $slot,
+	int $index,
+	float $val,
+	float $u,
+	float $v,
+	float $x,
+	float $y,
+	float $z,
+	float $nx,
+	float $ny,
+	float $nz
+)
+{
+	global string $dupliNamePrefix[];
+	global string $dupliParentName[];
+	global string $dupliGroupName[];
+	global int $dupliType[];
+	global int $dupliAttachToSrf;
+	global int $dupliAlignToSrf;
+	global int $dupliDuplicate;
+	global int $dupliGroup;
+	global int $dupliOperation;
+	global int $dupliIsolate;
+
+	if ( $slot < 0 ) {
+		return;
+	}
+
+	if ( $dupliNamePrefix[$slot] != "" ) {
+		// determine the name of the geometry associated with this
+		// grid location as well as the name of the
+		// pointOnSurfaceInfo node that attaches the geometry to
+		// the surface
+		//
+		string $objname = $dupliNamePrefix[$slot] + $index;
+		string $srfpoint = ($objname + "Loc");
+		string $alignGeom = ($objname + "Align");
+		string $posname = ($objname + "Pos");
+
+		if ( `objExists $objname` ) {
+			// the geometry already exists
+			//
+			if ( $dupliOperation == 3 ) {
+				// we are removing geometry; only remove if val > 0
+				//
+				if ( $val > 0 ) {
+					if ( `objExists $posname` ) {
+						delete $posname;
+					} else {
+						delete $objname;
+					}
+					if ( `objExists $srfpoint` ) {
+						delete $srfpoint;
+					}
+					if ( `objExists $alignGeom` ) {
+						delete $alignGeom;
+					}
+
+					// if there is a group and it's empty delete it
+					//
+					if ( `objExists $dupliGroupName[$slot]` ) {
+						string $children[] = `listRelatives -c $dupliGroupName[$slot]`;
+
+						if ( size($children) == 0 ) {
+							delete $dupliGroupName[$slot];
+						}
+					}
+				}
+			} else {
+				// modify geometry attributes
+				//
+				setDupliPaintAttributes( $objname, $val );
+			}
+		} else if ( $val > 0 && $dupliOperation == 1 ) {
+			// the geometry doesn't exist
+			//
+			string $sname[];
+			string $geom = getRandomDupli();
+
+			// create a geometry with the proper name, scale it by
+			// the passed value
+			//
+			if ( $dupliDuplicate ) {
+				$sname=`duplicate -n $objname $geom`;
+			} else {
+				$sname=`instance -n $objname $geom`;
+			}
+			if ( $sname[0] != $objname ) {
+				string $dupliNameError =(uiRes("m_geometryPaint.kGeometryNameError"));
+				error (`format -s $objname -s $sname[0] $dupliNameError`);
+				return;
+			}
+			showHidden $objname;
+
+			if ( $dupliIsolate ) {
+				group -n $posname $objname;
+
+				// make sure the rotate and scale pivots and
+				// translations are the same in $posname as
+				// they are in $objname
+				//
+				float $p[3];
+				
+				$p = `xform -q -os -rp $objname`;
+				xform -p false -os -rp $p[0] $p[1] $p[2];
+				$p = `xform -q -os -rt $objname`;
+				xform -p false -os -rt $p[0] $p[1] $p[2];
+				$p = `xform -q -os -sp $objname`;
+				xform -p false -os -sp $p[0] $p[1] $p[2];
+				$p = `xform -q -os -st $objname`;
+				xform -p false -os -st $p[0] $p[1] $p[2];
+			} else {
+				$posname = $objname;
+			}
+			if ( $dupliGroup ) {
+				parent -r $posname $dupliGroupName[$slot];
+			}
+			setDupliPaintAttributes( $objname, $val );
+
+			string $outSrfAttr;
+
+			if ( $dupliGroup ) {
+				$outSrfAttr = ".local";
+			} else {
+				$outSrfAttr = ".worldSpace";
+			}
+
+			// attach only works on NURBS surfaces right now
+			//
+			if ( $dupliAttachToSrf && $dupliType[$slot] == 0 ) {
+				// create point on surface node which will be used to
+				// attach the geometry to the surface
+				//
+				createNode pointOnSurfaceInfo -n $srfpoint;
+				setAttr ($srfpoint + ".u") $u;
+				setAttr ($srfpoint + ".v") $v;
+				connectAttr ($dupliParentName[$slot] + $outSrfAttr) ($srfpoint + ".is");
+				connectAttr ($srfpoint + ".position") ($posname + ".translate");
+
+				if ( $dupliAlignToSrf ) {
+					createNode rotateHelper -n $alignGeom;
+
+					connectAttr ($srfpoint + ".normal") ($alignGeom + ".up");
+					connectAttr ($srfpoint + ".tangentU") ($alignGeom + ".forward");
+					connectAttr ($alignGeom + ".rotate") ($posname + ".rotate");				
+				}
+			} else {
+				if ( $dupliGroup ) {
+					move -ls $x $y $z $posname;
+				} else {
+					move -ws $x $y $z $posname;
+				}
+
+				if ( $dupliAlignToSrf ) {
+					string	$helperNode;
+					string	$outSrf;
+
+					switch ( $dupliType[$slot] ) {
+					case 0:	// NURBS surface
+						// use global nodes to calculate required rotation
+						//
+						$outSrf = ($dupliParentName[$slot] + $outSrfAttr);
+						connectAttr $outSrf geometryPaintPOSNode.is;
+						setAttr geometryPaintPOSNode.u $u;
+						setAttr geometryPaintPOSNode.v $v;
+						$helperNode = "geometryPaintBRNode";
+						break;
+					case 1:	// poly mesh
+						setAttr geometryPaintMeshBRNode.upX $nx;
+						setAttr geometryPaintMeshBRNode.upY $ny;
+						setAttr geometryPaintMeshBRNode.upZ $nz;
+						$helperNode = "geometryPaintMeshBRNode";
+						break;
+					case 2:	// subd
+						setAttr geometryPaintSubdBRNode.upX $nx;
+						setAttr geometryPaintSubdBRNode.upY $ny;
+						setAttr geometryPaintSubdBRNode.upZ $nz;
+						$helperNode = "geometryPaintSubdBRNode";
+						break;
+					}
+
+
+					// set rotation of object 
+					// - rotateHelper plugin has a bug where it doesn't recompute
+					//   unless asked for rotate attribute
+					//
+					getAttr ($helperNode + ".rotate");
+					rotate `getAttr ($helperNode + ".rx")`
+						   `getAttr ($helperNode + ".ry")`
+						   `getAttr ($helperNode + ".rz")` $posname;
+
+					switch ( $dupliType[$slot] ) {
+					case 0:	// NURBS surface
+						// disconnect the surface
+						//
+						disconnectAttr $outSrf geometryPaintPOSNode.is;
+						break;
+					case 1:	// poly mesh
+						break;
+					case 2:	// subd
+						break;
+					}
+				}
+			}
+		}
+	}
+}
+
+// This is the "Get Value Cmd". It is called everytime a value
+// on the surface is needed by the scriptable paint tool. A
+// surface ID and a grid index is passed in. This procedure should
+// return the value for this grid location on the specified surface.
+// 
+global proc float getDupliPaintValue( int $slot, int $index )
+{
+	global string $dupliNamePrefix[];
+	global int $dupliModifyAttr[];
+	global int $dupliModifyAttrWrap[];
+	global float $dupliModifyAttrNorm[];
+	global string $dupliAttrName[];
+	global int $dupliOperation;
+	global int $dupliProportional;
+
+	if ( $slot >= 0 && $dupliNamePrefix[$slot] != "" ) {
+		// if this slot is valid, generate the name for the
+		// geometry at this grid index
+		//
+		string $objname = $dupliNamePrefix[$slot] + $index;
+
+		if ( `objExists $objname` ) {
+			if ( $dupliOperation == 3 ) {
+				// we are removing geometry
+				//
+				return 0.0;
+			} else {
+				float $total = 0;
+				int $num = 0;
+				int $attr;
+				int $numAttr = size($dupliModifyAttr);
+				float $val;
+	
+				// get the sum of normalized attributes
+				//
+				for ( $attr = 0; $attr < $numAttr; $attr++ ) {
+					if ( $dupliModifyAttr[$attr] ) {
+						$val = `getAttr ($objname + $dupliAttrName[$attr])`;
+						
+						// print ("getAttr " + $objname + $dupliAttrName[$attr] + " = " + $val);
+						if ( $dupliModifyAttrNorm[$attr] != 1 ) {
+							$val /= $dupliModifyAttrNorm[$attr];
+						}
+						if ( $dupliModifyAttrWrap[$attr] ) {
+							$val = fmod( $val, 1.0 );
+						}
+						// print (" normalized = " + $val + "\n");
+						if ( $dupliProportional ) {
+							$val = abs( $val );
+						}
+						$total += $val;
+						$num++;
+					}
+				}
+				if ( $num > 0 ) {
+					if ( $dupliProportional ) {
+						return $total;
+					} else {
+						return $total / $num;
+					}
+				} else {
+					return 0.0;
+				}
+			}
+		} else {
+			// the geometry doesn't exist, therefore return 0 as
+			// the value for this grid location
+			//
+			return 0.0;
+		}
+	} else {
+		return 0.0;
+	}
+}
+
+
+global proc dupliSourceButtonLayout( string $parent )
+{
+	global int $WIZ_objectIconButtonSize;
+	/*
+	flowLayout
+		-w 512
+		-cs 5
+		-wr true
+		-p $parent
+		wizCraft_dupliSourceButtonLayout_flowLayout
+		;
+		*/
+		
+	string $duplis[] = `textScrollList -q -ai wizCraft_dupliPaintSource_textScrollList`;
+	
+	gridLayout
+		-nc 7
+		-ag true
+		-aec true
+		-cwh $WIZ_objectIconButtonSize $WIZ_objectIconButtonSize
+		-p $parent
+		wizCraft_dupliSourceButtonLayout_gridLayout
+		;
+		
+	
+	for ($i=0;$i<`size $duplis`;$i++){
+		string $icon = wizObjectSelectionGetIcon("-obj " + $duplis[$i] + " -bi");
+		
+
+		int $fileExists = `filetest -e $icon`;
+		
+		if ($fileExists == 0){
+			wizlog ("[!] Object Has No Icon : " + $icon);
+			//int $ranNullIcon = randInt(1, 4);
+			//$iconFile = $iconDir + "ObjectIconPlaceholderIcon" + $ranNullIcon + ".png";
+			string $iconDir = getWizIconsDirectory();
+			//int $ranNullIcon = randInt(1, 4);
+			//$iconFile = $iconDir + "objectIconPlaceholderIcon" + $ranNullIcon + ".png";
+			$icon = $iconDir + "objectIconPlaceholderIcon1.png";
+		}
+
+	
+		wizlog ("	[#] Object Button Icon : " + $icon);
+		string $c = ("string $selDupli = `iconTextButton -q -l (\"" + $duplis[$i] + "\" + \"_iconTextButton\")`;"+"\n"
+		+"if(`textFieldGrp -q -ex dupliPaintGeometryName`){"+"\n"
+		+"	textFieldGrp -e -tx $selDupli -fcc dupliPaintGeometryName;"+"\n"
+		+"}"+"\n"
+		);
+		
+		iconTextButton
+			-l $duplis[$i]
+			-ann $duplis[$i]
+			-w $WIZ_objectIconButtonSize
+			-h $WIZ_objectIconButtonSize
+			-ebg true
+			-bgc 0 0 0
+			-fn "tinyBoldLabelFont"
+			-image $icon
+			-st "iconOnly"
+			-c $c
+			($duplis[$i] + "_iconTextButton")
+			;
+			
+			
+	}
+	
+	setParent ..;
+
+}
+
+global proc dupliPaintProxy( string $flags )
+{
+	string $obj, $type;
+	string $sel[];
+	int $edit;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-typ" : case "-type" :
+			$type = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	for ($i=0;$i<`size $sel`;$i++){
+		string $icon = wizObjectSelectionGetIcon("-obj " + $sel[$i]);	
+		
+	}
+	
+	
+
+}
+
+

@@ -1,0 +1,501 @@
+// Copyright (C) 1997-2014 Autodesk, Inc., and/or its licensors.
+// All rights reserved.
+//
+// The coded instructions, statements, computer programs, and/or related
+// material (collectively the "Data") in these files contain unpublished
+// information proprietary to Autodesk, Inc. ("Autodesk") and/or its licensors,
+// which is protected by U.S. and Canadian federal copyright law and by
+// international treaties.
+//
+// The Data is provided for use exclusively by You. You have the right to use,
+// modify, and incorporate this Data into other products for purposes authorized 
+// by the Autodesk software license agreement, without fee.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. AUTODESK
+// DOES NOT MAKE AND HEREBY DISCLAIMS ANY EXPRESS OR IMPLIED WARRANTIES
+// INCLUDING, BUT NOT LIMITED TO, THE WARRANTIES OF NON-INFRINGEMENT,
+// MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, OR ARISING FROM A COURSE 
+// OF DEALING, USAGE, OR TRADE PRACTICE. IN NO EVENT WILL AUTODESK AND/OR ITS
+// LICENSORS BE LIABLE FOR ANY LOST REVENUES, DATA, OR PROFITS, OR SPECIAL,
+// DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES, EVEN IF AUTODESK AND/OR ITS
+// LICENSORS HAS BEEN ADVISED OF THE POSSIBILITY OR PROBABILITY OF SUCH DAMAGES.
+
+//
+// paintCreateFunc
+//
+// This is provided to users as a template for creating
+// custom tube generation for paint effects brushes.
+// If one toggles on "Tubes" and types the name of this
+// script into the field "creation script"(under User Mel Scripts)
+// then this mel function overrides the normal tube creation
+// routine(C code) for that brush.
+// Maya assumes that this function has the exact arguments
+// listed here. The newly created tubes ( a bit like emitted particles )
+// are passed back to maya by returning an array of values.
+// The first element in this array is the number of new tubes, and
+// the rest of the array is a set of parameters that define each tube.
+// This template makes use of the passed in stroke segment and normal
+// to orient the created tubes along the brushstoke.
+
+global proc float []
+wizPaintCreateFunc(
+
+	// current segment count on base brushstroke
+int	  $step,
+
+	// start stroke segment in worldspace
+float $strokeX1, float $strokeY1, float $strokeZ1,
+
+	// end stroke segment in worldspace
+float $strokeX2, float $strokeY2, float $strokeZ2,
+
+	// current surface normal
+float $nX, float $nY, float $nZ,
+
+	// a random seed that is unique for this stroke segment
+int   $randSeed,
+
+	// The following parameters are attributes directly from the brush node
+	// Not all parameters have been provided for brevity and efficiency.
+	// TubesPerStep and segments may be affected by display quality when
+	// this function is called during a wireframe redraw
+float $width,	 // worldspace brush width
+float $tubesPerStep, // requested number of new tubes for this step
+int	  $maxSegments, // max number of segments in a tube 
+float $tubeWidth1, 
+float $tubeWidth2, 
+float $elevationMax, 
+float $azimuthMax, 
+float $lengthMax, 
+// start twist value 
+float $twist,
+float $spiralMax, 
+float $color1R, float $color1G, float $color1B,
+float $color2R, float $color2G, float $color2B,
+float $transparency1R, float $transparency1G, float $transparency1B,
+float $incandescence1R, float $incandescence1G, float $incandescence1B,
+                                                                                            
+// name of brush and stroke
+string $brushName, string $strokeName
+)
+{
+
+	print ("Create Tube>>>>>>>>>>>>>>>>>>>>>>>>\n");
+    float $tubes[];
+	float $along[3], $nAlong[3], $normal[3], $across[3], $pnt[3], $dir[3];
+	float $strokeSegLength, $elev, $azim, $length, $cosAz, $sinAz, $mid, $pu, $pv;
+	int   $i, $j, $numSegments;
+
+	// We seed the rand function so that the tubes generated do
+	// not change every time they are drawn. The passed in
+	// seed changes from step to step along the stroke, but
+	// it stays constant across multiple redraws.
+	seed( $randSeed++ ); 
+
+	// determine how many tubes we want to generate this step 
+	int $newTubes =  rand(1) * (1.0 + $tubesPerStep);
+
+	if( !$newTubes )
+	{
+		$tubes[0] = 0;
+		return( $tubes ); // no tubes to create in this step
+	}
+
+	// create a vector pointing along the stroke direction
+	$along[0] = $strokeX2 - $strokeX1;
+	$along[1] = $strokeY2 - $strokeY1;
+	$along[2] = $strokeZ2 - $strokeZ1;
+
+	// normalize this vector
+	$strokeSegLength = sqrt( $along[0] * $along[0] + $along[1]*$along[1] + $along[2]*$along[2] );
+	$nAlong[0] = $along[0]/$strokeSegLength;
+	$nAlong[1] = $along[1]/$strokeSegLength;
+	$nAlong[2] = $along[2]/$strokeSegLength;
+
+	$normal[0] = $nX;
+	$normal[1] = $nY;
+	$normal[2] = $nZ;
+
+	// create a vector pointing across the stroke (using a cross product)
+	$across[0]  = $nAlong[1] * $normal[2] - $nAlong[2] * $normal[1];
+	$across[1]  = $nAlong[2] * $normal[0] - $nAlong[0] * $normal[2];
+	$across[2]  = $nAlong[0] * $normal[1] - $nAlong[1] * $normal[0];
+
+	// Start with the twist vector = along and rotate by twist value about the
+	// normal. Ideally, one may wish to set this vector for each new tube.
+	float $sinTwist = sin( $twist );
+	float $cosTwist = cos( $twist );
+	float $twistX = $nAlong[0] * $cosTwist + $across[0] * $sinTwist;
+	float $twistY = $nAlong[1] * $cosTwist + $across[1] * $sinTwist;
+	float $twistZ = $nAlong[2] * $cosTwist + $across[2] * $sinTwist;
+
+	// We create the tubes by adding the new tube definitions to the
+	// array $tubes.
+	// The first value in the array is the number of tubes to generate
+	$tubes[0] = $newTubes;
+
+    for( $i = 0; $i < $newTubes; $i++ )
+    {
+		$elev = rand(3.14) * $elevationMax;
+		$azim = rand(-3.14,3.14) * $azimuthMax;
+		$length = rand(1) * $lengthMax; 
+		
+        // compute new tube start direction
+		$sinAz = sin( $azim );
+		$cosAz = cos( $azim );
+		$sinEl = sin( $elev );
+		$cosEl = cos( $elev );
+		$dir[0] = $cosAz * $nAlong[0] + $sinAz * $across[0];
+		$dir[1] = $cosAz * $nAlong[1] + $sinAz * $across[1];
+		$dir[2] = $cosAz * $nAlong[2] + $sinAz * $across[2];
+		$dir[0] = $dir[0] * $cosEl + $normal[0] * $sinEl;
+		$dir[1] = $dir[1] * $cosEl + $normal[1] * $sinEl;
+		$dir[2] = $dir[2] * $cosEl + $normal[2] * $sinEl;
+		// pick a random location between the start and
+		// end of the stroke segment
+		$mid = rand(1);
+		$pnt[0] =  $strokeX1 + $along[0] * $mid;
+		$pnt[1] =  $strokeY1 + $along[1] * $mid;
+		$pnt[2] =  $strokeZ1 + $along[2] * $mid;
+
+		// randomize the new position within
+		// a region the size of the brush width
+		$pu = rand(-1,1) * $width;
+		$pv = rand(-1,1) * $width;
+		$pnt[0] += $pv * $nAlong[0] + $pu * $across[0];
+		$pnt[1] += $pv * $nAlong[1] + $pu * $across[1];
+		$pnt[2] += $pv * $nAlong[2] + $pu * $across[2];
+
+		if( $lengthMax  > 0)	
+		{
+			$numSegments = ($maxSegments * $length)/$lengthMax;
+			if( $numSegments < 1 )
+			{
+				$numSegments = 1;
+			}
+		}
+		else
+		{
+			$numSegments = 1;
+		}
+
+		$j = $i * 36; // there are 36 parameters for a tube
+
+		// fill out the array tubes for each new tube
+        $tubes[$j+1] = 0; // type: 0 branch, 1 twig, 2 leaf, 3 flower
+        $tubes[$j+2] = $randSeed++; // seed to use for noise,etc on tube
+        $tubes[$j+3] = $maxSegments; // max segments for tubes
+		$tubes[$j+4] = $numSegments; // segments for this tube
+
+		$tubes[$j+5] = $pnt[0]; // start position of tube( x,y,z)
+		$tubes[$j+6] = $pnt[1];
+		$tubes[$j+7] = $pnt[2];
+
+		$tubes[$j+8] = $length/(float)$numSegments; // length per segment
+
+		$tubes[$j+9] = $dir[0]; // start direction of tube( x,y,z ) 
+		$tubes[$j+10] = $dir[1];
+		$tubes[$j+11] = $dir[2];
+
+		$tubes[$j+12] = $tubeWidth1; // width of tube
+		// change in width each segment 
+		$tubes[$j+13] = ($tubeWidth2-$tubeWidth1)/(float)$numSegments;
+
+		$tubes[$j+14] = $twistX;       // twist vector along tube 
+		$tubes[$j+15] = $twistY;
+		$tubes[$j+16] = $twistZ;
+		$tubes[$j+17] = $spiralMax;
+		$tubes[$j+18] = 0;			  // flatness
+
+		$tubes[$j+19] = $color1R;	  // start color( r,g,b )
+		$tubes[$j+20] = $color1G;	
+		$tubes[$j+21] = $color1B;	
+
+		 // change in color each segment( r,g,b)
+		$tubes[$j+22] = ($color2R-$color1R)/(float)$numSegments;	
+		$tubes[$j+23] = ($color2G-$color1G)/(float)$numSegments;	
+		$tubes[$j+24] = ($color2B-$color1B)/(float)$numSegments;	
+
+		$tubes[$j+25] = $transparency1R; // start transparency( r,g,b )
+		$tubes[$j+26] = $transparency1G;	
+		$tubes[$j+27] = $transparency1B;	
+		$tubes[$j+28] = 0;	  // change in transparency each segment( r,g,b)
+		$tubes[$j+29] = 0;	
+		$tubes[$j+30] = 0;	
+
+		$tubes[$j+31] = $incandescence1R; // start incandescence( r,g,b )
+		$tubes[$j+32] = $incandescence1G;	
+		$tubes[$j+33] = $incandescence1B;	
+		$tubes[$j+34] = 0;	  // change in incandescence each segment( r,g,b)
+		$tubes[$j+35] = 0;	
+		$tubes[$j+36] = 0;	
+    }
+	
+    return( $tubes );
+}
+
+/*
+global proc float []
+wizPaintCreateFuncTest(
+int	  $step,
+float $strokeX1, float $strokeY1, float $strokeZ1,
+float $strokeX2, float $strokeY2, float $strokeZ2,
+float $nX, float $nY, float $nZ,
+int   $randSeed,
+float $width,	 
+float $tubesPerStep, 
+int	  $maxSegments,
+float $tubeWidth1, 
+float $tubeWidth2, 
+float $elevationMax, 
+float $azimuthMax, 
+float $lengthMax, 
+float $twist,
+float $spiralMax, 
+float $color1R, float $color1G, float $color1B,
+float $color2R, float $color2G, float $color2B,
+float $transparency1R, float $transparency1G, float $transparency1B,
+float $incandescence1R, float $incandescence1G, float $incandescence1B,                                                                                  
+string $brushName, string $strokeName
+)
+{
+
+	float $tubes[];
+	$tubes[0] = 
+	$tubes[1] = 
+	$tubes[2] = 
+	$tubes[3] = 
+	$tubes[4] = 
+	$tubes[5] = 
+	$tubes[6] = 
+	$tubes[7] = 
+	$tubes[8] = 
+	$tubes[9] = 
+	$tubes[10] = 
+	$tubes[11] = 
+	$tubes[12] = 
+	$tubes[13] = 
+	$tubes[14] = 
+	$tubes[15] = 
+	$tubes[16] = 
+	$tubes[17] = 
+	$tubes[18] = 
+	$tubes[19] = 
+	$tubes[20] = 
+	$tubes[21] = 
+	$tubes[22] = 
+	$tubes[23] = 
+	$tubes[24] = 
+	$tubes[25] = 
+	$tubes[26] = 
+	$tubes[27] = 
+	$tubes[28] = 
+	$tubes[29] = 
+	$tubes[30] = 
+	$tubes[31] = 
+	$tubes[32] = 
+	$tubes[33] = 
+	$tubes[34] = 
+	$tubes[35] = 
+	$tubes[36] = 
+
+
+}
+
+*/
+
+/*
+
+global proc float []
+paintCreateFunc(
+
+	// current segment count on base brushstroke
+int	  $step,
+
+	// start stroke segment in worldspace
+float $strokeX1, float $strokeY1, float $strokeZ1,
+
+	// end stroke segment in worldspace
+float $strokeX2, float $strokeY2, float $strokeZ2,
+
+	// current surface normal
+float $nX, float $nY, float $nZ,
+
+	// a random seed that is unique for this stroke segment
+int   $randSeed,
+
+	// The following parameters are attributes directly from the brush node
+	// Not all parameters have been provided for brevity and efficiency.
+	// TubesPerStep and segments may be affected by display quality when
+	// this function is called during a wireframe redraw
+float $width,	 // worldspace brush width
+float $tubesPerStep, // requested number of new tubes for this step
+int	  $maxSegments, // max number of segments in a tube 
+float $tubeWidth1, 
+float $tubeWidth2, 
+float $elevationMax, 
+float $azimuthMax, 
+float $lengthMax, 
+// start twist value 
+float $twist,
+float $spiralMax, 
+float $color1R, float $color1G, float $color1B,
+float $color2R, float $color2G, float $color2B,
+float $transparency1R, float $transparency1G, float $transparency1B,
+float $incandescence1R, float $incandescence1G, float $incandescence1B,
+                                                                                            
+// name of brush and stroke
+string $brushName, string $strokeName
+)
+{
+    float $tubes[];
+	float $along[3], $nAlong[3], $normal[3], $across[3], $pnt[3], $dir[3];
+	float $strokeSegLength, $elev, $azim, $length, $cosAz, $sinAz, $mid, $pu, $pv;
+	int   $i, $j, $numSegments;
+
+	// We seed the rand function so that the tubes generated do
+	// not change every time they are drawn. The passed in
+	// seed changes from step to step along the stroke, but
+	// it stays constant across multiple redraws.
+	seed( $randSeed++ ); 
+
+	// determine how many tubes we want to generate this step 
+	int $newTubes =  rand(1) * (1.0 + $tubesPerStep);
+
+	if( !$newTubes )
+	{
+		$tubes[0] = 0;
+		return( $tubes ); // no tubes to create in this step
+	}
+
+	// create a vector pointing along the stroke direction
+	$along[0] = $strokeX2 - $strokeX1;
+	$along[1] = $strokeY2 - $strokeY1;
+	$along[2] = $strokeZ2 - $strokeZ1;
+
+	// normalize this vector
+	$strokeSegLength = sqrt( $along[0] * $along[0] + $along[1]*$along[1] + $along[2]*$along[2] );
+	$nAlong[0] = $along[0]/$strokeSegLength;
+	$nAlong[1] = $along[1]/$strokeSegLength;
+	$nAlong[2] = $along[2]/$strokeSegLength;
+
+	$normal[0] = $nX;
+	$normal[1] = $nY;
+	$normal[2] = $nZ;
+
+	// create a vector pointing across the stroke (using a cross product)
+	$across[0]  = $nAlong[1] * $normal[2] - $nAlong[2] * $normal[1];
+	$across[1]  = $nAlong[2] * $normal[0] - $nAlong[0] * $normal[2];
+	$across[2]  = $nAlong[0] * $normal[1] - $nAlong[1] * $normal[0];
+
+	// Start with the twist vector = along and rotate by twist value about the
+	// normal. Ideally, one may wish to set this vector for each new tube.
+	float $sinTwist = sin( $twist );
+	float $cosTwist = cos( $twist );
+	float $twistX = $nAlong[0] * $cosTwist + $across[0] * $sinTwist;
+	float $twistY = $nAlong[1] * $cosTwist + $across[1] * $sinTwist;
+	float $twistZ = $nAlong[2] * $cosTwist + $across[2] * $sinTwist;
+
+	// We create the tubes by adding the new tube definitions to the
+	// array $tubes.
+	// The first value in the array is the number of tubes to generate
+	$tubes[0] = $newTubes;
+
+    for( $i = 0; $i < $newTubes; $i++ )
+    {
+		$elev = rand(3.14) * $elevationMax;
+		$azim = rand(-3.14,3.14) * $azimuthMax;
+		$length = rand(1) * $lengthMax; 
+		
+        // compute new tube start direction
+		$sinAz = sin( $azim );
+		$cosAz = cos( $azim );
+		$sinEl = sin( $elev );
+		$cosEl = cos( $elev );
+		$dir[0] = $cosAz * $nAlong[0] + $sinAz * $across[0];
+		$dir[1] = $cosAz * $nAlong[1] + $sinAz * $across[1];
+		$dir[2] = $cosAz * $nAlong[2] + $sinAz * $across[2];
+		$dir[0] = $dir[0] * $cosEl + $normal[0] * $sinEl;
+		$dir[1] = $dir[1] * $cosEl + $normal[1] * $sinEl;
+		$dir[2] = $dir[2] * $cosEl + $normal[2] * $sinEl;
+		// pick a random location between the start and
+		// end of the stroke segment
+		$mid = rand(1);
+		$pnt[0] =  $strokeX1 + $along[0] * $mid;
+		$pnt[1] =  $strokeY1 + $along[1] * $mid;
+		$pnt[2] =  $strokeZ1 + $along[2] * $mid;
+
+		// randomize the new position within
+		// a region the size of the brush width
+		$pu = rand(-1,1) * $width;
+		$pv = rand(-1,1) * $width;
+		$pnt[0] += $pv * $nAlong[0] + $pu * $across[0];
+		$pnt[1] += $pv * $nAlong[1] + $pu * $across[1];
+		$pnt[2] += $pv * $nAlong[2] + $pu * $across[2];
+
+		if( $lengthMax  > 0)	
+		{
+			$numSegments = ($maxSegments * $length)/$lengthMax;
+			if( $numSegments < 1 )
+			{
+				$numSegments = 1;
+			}
+		}
+		else
+		{
+			$numSegments = 1;
+		}
+
+		$j = $i * 36; // there are 36 parameters for a tube
+
+		// fill out the array tubes for each new tube
+        $tubes[$j+1] = 0; // type: 0 branch, 1 twig, 2 leaf, 3 flower
+        $tubes[$j+2] = $randSeed++; // seed to use for noise,etc on tube
+        $tubes[$j+3] = $maxSegments; // max segments for tubes
+		$tubes[$j+4] = $numSegments; // segments for this tube
+
+		$tubes[$j+5] = $pnt[0]; // start position of tube( x,y,z)
+		$tubes[$j+6] = $pnt[1];
+		$tubes[$j+7] = $pnt[2];
+
+		$tubes[$j+8] = $length/(float)$numSegments; // length per segment
+
+		$tubes[$j+9] = $dir[0]; // start direction of tube( x,y,z ) 
+		$tubes[$j+10] = $dir[1];
+		$tubes[$j+11] = $dir[2];
+
+		$tubes[$j+12] = $tubeWidth1; // width of tube
+		// change in width each segment 
+		$tubes[$j+13] = ($tubeWidth2-$tubeWidth1)/(float)$numSegments;
+
+		$tubes[$j+14] = $twistX;       // twist vector along tube 
+		$tubes[$j+15] = $twistY;
+		$tubes[$j+16] = $twistZ;
+		$tubes[$j+17] = $spiralMax;
+		$tubes[$j+18] = 0;			  // flatness
+
+		$tubes[$j+19] = $color1R;	  // start color( r,g,b )
+		$tubes[$j+20] = $color1G;	
+		$tubes[$j+21] = $color1B;	
+
+		 // change in color each segment( r,g,b)
+		$tubes[$j+22] = ($color2R-$color1R)/(float)$numSegments;	
+		$tubes[$j+23] = ($color2G-$color1G)/(float)$numSegments;	
+		$tubes[$j+24] = ($color2B-$color1B)/(float)$numSegments;	
+
+		$tubes[$j+25] = $transparency1R; // start transparency( r,g,b )
+		$tubes[$j+26] = $transparency1G;	
+		$tubes[$j+27] = $transparency1B;	
+		$tubes[$j+28] = 0;	  // change in transparency each segment( r,g,b)
+		$tubes[$j+29] = 0;	
+		$tubes[$j+30] = 0;	
+
+		$tubes[$j+31] = $incandescence1R; // start incandescence( r,g,b )
+		$tubes[$j+32] = $incandescence1G;	
+		$tubes[$j+33] = $incandescence1B;	
+		$tubes[$j+34] = 0;	  // change in incandescence each segment( r,g,b)
+		$tubes[$j+35] = 0;	
+		$tubes[$j+36] = 0;	
+    }
+    return( $tubes );
+}
+*/

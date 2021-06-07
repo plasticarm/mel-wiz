@@ -1,0 +1,382 @@
+global proc emitterWiz()
+{
+/*
+global string $emitterWizWindow;
+$emitterWizWindow = "emitterWiz";
+if(`window -exists $emitterWizWindow`){
+	deleteUI $emitterWizWindow;
+}
+
+window
+	-title "Emitter Wiz"
+	-widthHeight 400 200
+	-menuBar on
+	-menuBarVisible on
+	-minimizeButton on
+	-maximizeButton on
+	-sizeable on		
+	-resizeToFitChildren off
+	-titleBar on
+	$emitterWizWindow;
+	
+	string $masterLayout = `columnLayout
+		-adjustableColumn true
+		masterLayout
+		`;
+		
+	valveLayout();
+	
+	showWindow $emitterWizWindow;
+*/
+}
+
+
+global proc valve () 
+{
+
+	print ("Opening Valve" + "\n");
+	
+	string $window = "valveWindow";//Global name for window
+	
+	if (`window -exists $window`)//Is my window there?
+		deleteUI $window;
+	
+	window
+		-title "Valve"
+		-widthHeight 400 300
+		-menuBar on
+		-menuBarVisible on
+		-minimizeButton on
+		-maximizeButton on
+		-sizeable on
+		-resizeToFitChildren on
+		-titleBar on
+		$window;
+		
+	valveLayout();
+	
+	showWindow $window;
+	
+}
+
+global proc valveLayout()
+{
+	columnLayout -adjustableColumn true;
+	string $masterLayout = `frameLayout
+			-label "Pick a particle or fluid emitter to control."`;
+			
+	//Find a particle and fluid to pick for default.
+/*	
+	string $allParticles[] = `ls -et "particle" -v`;
+	//print $allParticles;
+	//print ("SizeAllParticles: " + `size $allParticles` + "\n");	
+	if(`size $allParticles` < 1){
+		$allParticles = `ls -et "nParticle" -v`;
+		//print $allParticles;
+	}
+	if(`size $allParticles` < 1){
+		$allParticles[0] = "nParticleShape1";
+	}
+	string $allFluids[] = `ls -et "fluid" -v`;
+	//print $allFluids;
+	if(`size $allFluids` < 1){
+		$allFluids[0] = "fluidShape1";
+	}	
+*/
+ 		textFieldButtonGrp
+    			-ed true
+    			-label "Emitter"
+    			-text  "emitter1"    			
+    			-cal 1 "center"
+    			-buttonLabel "Pick"
+    			-bc "assignValveEmitter"
+    			getEmitter;
+	
+	//-------------------------------
+	string $controlLayout = `frameLayout
+		-l "Valve Control"
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll false
+		-cl false
+		-parent $masterLayout`;
+
+	floatSliderGrp 
+		-cal 1 "left" 
+		-cw3 140 70 100
+		-l "Emission Rate" 
+		-minValue 0  
+		-maxValue 100
+		-value 1 
+		-fieldMinValue 0 
+		-fieldMaxValue 1000
+		-field true  	
+		-dc "updateEmissionRate"
+		valveEmissionRate;
+
+		//-------------------------------
+        frameLayout
+		-l "Keying"
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+				
+		-cll false
+		-cl false
+		-parent $controlLayout;		
+       	 
+		checkBox		
+       		-label "Auto Key" 
+       		-v true       		
+			autoKey;
+		
+		button
+			-label "Delete Recording"
+			-command "deleteRecording";
+			
+		button
+			-label "Delete Keys"
+			-command "deleteKeys";
+		
+        //-------------------------------
+        frameLayout
+		-l "Time Controls"
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+				
+		-parent $controlLayout;
+		
+        //Set the start and end time
+        float $s=`playbackOptions -q -min`;
+        float $e=`playbackOptions -q -max`;
+        	floatFieldGrp 
+        		-numberOfFields 2
+    			-label "Time Range"
+    			-precision 3
+    			-value1 $s
+    			-value2 $e 
+    			simulationTime;
+    			
+    		floatFieldGrp 
+    			-numberOfFields 1
+    			-label "By Frame"
+    			-precision 2
+    			-value1 1
+    			simulationByFrame;	 	
+    	    	
+	button
+		-label "Run Simulation"
+		-command "runSimulation";
+	
+	button
+		-label "Stop"
+		-command "stopSimulation";
+	button
+		-label "Rewind"
+		-command "rewindToBeginning";
+	
+		//-------------------------------
+        frameLayout
+		-l "Expressions"
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+				
+		-parent $controlLayout;
+		
+    	    	
+	button
+		-label "Create Valve Expression"
+		-command "createValveExpression";
+	
+		
+}
+
+global proc assignValveEmitter ()
+{
+
+	string $sel[] = `ls -sl`;
+	if(`size $sel`==0){ 
+		print ("Error. Select an Emitter." + "\n");
+	}
+	textFieldButtonGrp
+		-ed true
+		-e
+		-text $sel[0]
+		getEmitter;	
+
+	/*	
+	float $emitRate = `getAttr ($sel[0] + ".rate")`;	
+	floatSliderGrp
+		-l "Emission Rate"
+		-value $emitRate 
+		valveEmissionRate;
+	*/
+}
+
+global proc runSimulation ()
+{
+	
+		
+	$autoKey = `checkBox -q -v autoKey`;
+	if($autoKey){
+		autoKeyEmissionRate();
+	} else {
+		play -forward true;
+	}
+		
+}
+
+global proc stopSimulation ()
+{
+	play -state off;
+	
+}
+
+global proc rewindToBeginning ()
+{
+	float $simTime = `floatFieldGrp -q -value1 simulationTime`;
+	currentTime -edit $simTime;	
+}
+
+global proc updateEmissionRate()
+{
+
+string $emitter = `textFieldButtonGrp -q -text getEmitter`;
+float $emitRate = `floatSliderGrp -q -v valveEmissionRate`; 
+setAttr ($emitter + ".rate") $emitRate; 
+
+
+}
+
+global proc autoKeyEmissionRate()
+{
+print ("Recording" + "\n");
+string $emitter = `textFieldButtonGrp -q -text getEmitter`;
+select $emitter;
+recordAttr -at rate;
+play -record;
+
+}
+
+global proc deleteRecording()
+{
+string $emitter = `textFieldButtonGrp -q -text getEmitter`;
+select $emitter;
+delete `ls -type record`;
+
+}
+
+global proc deleteKeys()
+{
+string $emitter = `textFieldButtonGrp -q -text getEmitter`;
+//select $emitter;
+cutKey -time ":" -attribute rate -option keys $emitter;
+
+}
+
+global proc createValveExpression()
+{
+string $sel[] = `ls -sl`;	
+
+if (attributeExists ("startEmissionTime", $sel[0])==0){
+	addAttr -ln startEmissionTime -at double -k 1 -min -1000000 -max 1000000 -smn 0 -smx 100 -dv 1 $sel[0];
+}
+
+if (attributeExists ("maxEmissionTime", $sel[0])==0){
+	addAttr -ln maxEmissionTime -at double -k 1 -min -1000000 -max 1000000 -smn 0 -smx 100 -dv 10 $sel[0];
+}
+
+if (attributeExists ("maxEmissionEndTime", $sel[0])==0){
+	addAttr -ln maxEmissionEndTime -at double -k 1 -min -1000000 -max 1000000 -smn 0 -smx 100 -dv 90 $sel[0];
+}
+
+if (attributeExists ("endEmissionTime", $sel[0])==0){
+	addAttr -ln endEmissionTime -at double -k 1 -min -1000000 -max 1000000 -smn 0 -smx 100 -dv 100 $sel[0];
+}
+
+if (attributeExists ("emissionRate", $sel[0])==0){
+	addAttr -ln emissionRate -at double -k 1 -min -1000000 -max 1000000 -smn 0 -smx 1000 -dv 100 $sel[0];
+}
+
+if (attributeExists ("densityRate", $sel[0])==0){
+	addAttr -ln densityRate -at double -k 1 -min -1000000 -max 1000000 -smn 0 -smx 100 -dv 1 $sel[0];
+}
+
+if (attributeExists ("temperatureRate", $sel[0])==0){
+	addAttr -ln temperatureRate -at double -k 1 -min -1000000 -max 1000000 -smn 0 -smx 100 -dv 1 $sel[0];
+}
+
+if (attributeExists ("fuelRate", $sel[0])==0){
+	addAttr -ln fuelRate -at double -k 1 -min -1000000 -max 1000000 -smn 0 -smx 100 -dv 1 $sel[0];
+}
+
+string $quotes="\"";
+string $objVar = "string $obj = " + $quotes + $sel[0] + $quotes;
+string $endLine = "\"\n\"";
+
+//_______________________________________________
+
+// The actual expression
+expression -s (
+"animateEmissionRate();\n"
++"global proc animateEmissionRate()\n"
++"{\n"
++ $objVar + " ;\n"
++"float $startET = startEmissionTime;\n"
++"float $maxET = maxEmissionTime;\n"
++"float $maxEET = maxEmissionEndTime;\n"
++"float $endET = endEmissionTime;\n"
++"float $emitRate = emissionRate;\n"
++"float $densRate = densityRate;\n"
++"float $tempRate = temperatureRate;\n"
++"float $fuelRate = fuelRate;\n"
++"float $curRate = 0;\n"
++"float $addDens, $addTemp, $addFuel;\n"
++"float $currentTime = `currentTime -q`;\n"
++"float $startLength = $maxET - $startET;\n"
++"float $endLength = $endET - $maxEET;\n"
+
++"\n"
++"if($currentTime >= $startET && $currentTime < $maxET){\n"
++"	$curRate = $emitRate - ((($maxET - $currentTime) / $startLength ) * $emitRate);\n"
++"	$addDens = $densRate - ((($maxET - $currentTime) / $startLength ) * $densRate);\n"
++"	$addTemp = $tempRate - ((($maxET - $currentTime) / $startLength ) * $tempRate);\n"
++"	$addFuel = $fuelRate - ((($maxET - $currentTime) / $startLength ) * $fuelRate);\n"
++"} else if($currentTime >= $maxET && $currentTime < $maxEET){\n"
++"	$curRate = $emitRate;\n"
++"	$addDens = $densRate;\n"
++"	$addTemp = $tempRate;\n"
++"	$addFuel = $fuelRate;\n"
++"} else if($currentTime > $maxEET && $currentTime < $endET){\n"
++"	$curRate = $emitRate - ((($endLength - ($endET - $currentTime)) / $endLength) * $emitRate);\n"
++"	$addDens = $densRate - ((($endLength - ($endET - $currentTime)) / $endLength) * $densRate);\n"
++"	$addTemp = $tempRate - ((($endLength - ($endET - $currentTime)) / $endLength) * $tempRate);\n"
++"	$addFuel = $fuelRate - ((($endLength - ($endET - $currentTime)) / $endLength) * $fuelRate);\n"
++"}\n"
+
++"setAttr ($obj + \".rate\") $curRate;\n"
++"setAttr ($obj + \".fluidDensityEmission\") $addDens;\n"
++"setAttr ($obj + \".fluidHeatEmission\") $addTemp;\n"
++"setAttr ($obj + \".fluidFuelEmission\") $addFuel;\n"
++"//print(\"EmissionRate: \" + $curRate + \"\\n\");\n"
++"}\n"
+) -o $sel[0] -n ($sel[0] + "ValveExpression"); // end of the expression
+
+
+}

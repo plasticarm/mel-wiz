@@ -1,0 +1,1339 @@
+
+
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         ARRAY BUILDER
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//Array BUILDER LAYOUT
+//=======================================================
+global proc arrayBldrLayout( string $parent)
+{
+	string $layout = `frameLayout
+		-l "Array Bldr"	
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $parent		
+		arrayBldr_frameLayout
+		`;
+		
+	arrayBldrMainMenuBarLayout();
+	//-----------------------------
+    wizSeparator();
+    //-----------------------------	
+	
+	checkBox
+		-l "Enable Duplication"
+		-v true
+		arrayBldr_EnableDuplication_checkBox
+		;
+		
+	string $dupType[] = { "Copy", "Instance", "Reference Copy" };
+	string $dupTypeOmg = wizOptionMenuGrpMenuItems("Duplicate Type", "arrayBldr_DuplicateType_optionMenuGrp", $dupType);
+
+	string $spacMeth[] = { "Count", "CurvePercent", "WorldDistance", "BoundingBoxFit" };
+	string $dupTypeOmg = wizOptionMenuGrpMenuItems("Spacing Method", "arrayBldr_SpacingMethod_optionMenuGrp", $spacMeth);
+	
+    //-----------------------------
+    wizSeparator();
+    //-----------------------------
+
+	wizIntFieldGrp(
+		"-l Duplicate Count"
+		+"-nf 3"
+		+"-min 1 "
+		+"-max 999999999 "
+		+"-v1 1 "
+		+"-v2 1 "
+		+"-v3 1 "
+		+"-n arrayBldr_DuplicateCount_intFieldGrp"
+		);
+    //-----------------------------
+    wizSeparator();
+    //-----------------------------
+    		
+	wizFloatFieldGrp(
+		"-l Translate "
+		+"-nf 3"
+		+"-v1 0 "
+		+"-v2 0 "
+		+"-v3 0 "
+		+"-n arrayBldr_translate_floatFieldGrp"
+		);
+		
+	wizFloatFieldGrp(
+		"-l Rotate "
+		+"-nf 3"
+		+"-v1 0 "
+		+"-v2 0 "
+		+"-v3 0 "
+		+"-n arrayBldr_rotate_floatFieldGrp"
+		);	
+	
+	wizFloatFieldGrp(
+		"-l Rotate "
+		+"-nf 3"
+		+"-v1 1 "
+		+"-v2 1 "
+		+"-v3 1 "
+		+"-n arrayBldr_scale_floatFieldGrp"
+		);		
+
+    //-----------------------------
+    wizSeparator();
+    //-----------------------------
+    
+	checkBox
+		-l "Randomize Spacing"
+		-v false
+		arrayBldr_RandomizeSpacing_checkBox
+		;
+		
+	floatFieldGrp
+		-l "Random Amount"
+		-nf 2
+		-cal 1 "left"
+		-cw1 80
+		-v1 5.0
+		arrayBldr_RandomAmount_floatFieldGrp
+		;
+	
+    //-----------------------------
+    wizSeparator();
+    //-----------------------------
+	checkBox
+		-l "Follow Path"
+		-v true
+		arrayBldr_FollowPath_checkBox
+		;
+	
+	string $frontAxis[] = { "x", "y", "z" };
+	string $frontAxisOmg = wizOptionMenuGrpMenuItems("Front Axis", "arrayBldr_FollowPathFrontAxis_optionMenuGrp", $frontAxis);
+	optionMenuGrp -e -sl 2 arrayBldr_FollowPathFrontAxis_optionMenuGrp;
+	
+	checkBox
+		-l "Inverse Front"
+		-v false
+		arrayBldr_InverseFront_checkBox
+		;
+		
+	string $upAxis[] = { "x", "y", "z" };
+	string $upAxisOmg = wizOptionMenuGrpMenuItems("Up Axis", "arrayBldr_FollowPathUpAxis_optionMenuGrp", $upAxis);
+	optionMenuGrp -e -sl 3 arrayBldr_FollowPathUpAxis_optionMenuGrp;
+	
+	checkBox
+		-l "Inverse Up"
+		-v false
+		arrayBldr_InverseUp_checkBox
+		;	
+		
+	checkBox
+		-l "Parametric Length"
+		-v false
+		arrayBldr_ParametricLength_checkBox
+		;	
+		
+	//-----------------------------
+    wizSeparator();
+    //-----------------------------
+
+	
+	checkBox
+		-l "Flow Path"
+		-v false
+		arrayBldr_FlowPath_checkBox
+		;
+		
+    intFieldGrp
+        -nf 3
+        -l "Lattice Divisions"
+        -v1 10
+        -v2 10
+        -v3 10
+        -cal 1 "left"
+        -adj 1
+        arrayBldr_LatticeDivisions_intFieldGrp
+        ;
+		
+	
+    //-----------------------------
+    wizSeparator();
+    //-----------------------------   
+
+	checkBox
+		-l "Surface Normal Constraint"
+		-v false
+		arrayBldr_SurfaceNormalConstraint_checkBox
+		;
+	
+	textFieldButtonGrp
+		-l "Surface Normal Object"
+		-cal 1 "left"
+		-bl "Select"
+		-bc ("assignObjectToTextFieldButtonGrp(\"arrayBldrCurveTextFieldButtonGrp\");")
+		arrayBldr_SurfaceNormalObject_textFieldButtonGrp
+		;
+
+	floatFieldGrp
+		-nf 3
+		-l "Aim Vector"
+		-v1 0
+		-v2 0
+		-v3 1
+		arrayBldr_AimVector_floatFieldGrp
+		;
+	
+	floatFieldGrp
+		-nf 3
+		-l "Up Vector"
+		-v1 0
+		-v2 1
+		-v3 0
+		arrayBldr_UpVector_floatFieldGrp
+		;
+		
+	
+	//-----------------------------
+    wizSeparator();
+    //-----------------------------   
+	
+	checkBox
+		-l "Group Duplicates"
+		-v true
+		arrayBldr_GroupDuplicates_checkBox
+		;
+	
+	checkBox
+		-l "Use Sets"
+		-v false
+		arrayBldr_UseSets_checkBox
+		;	
+	//-----------------------------
+    wizSeparator();
+    //-----------------------------
+	checkBox
+		-l "Always Cap"
+		-v false
+		arrayBldr_AlwaysCap_checkBox
+		;
+		
+    checkBox
+		-l "Scale To Fill"
+		-v false
+		arrayBldr_ScaleToFill_checkBox
+		;
+    
+	checkBox
+		-l "Use Replacement Curves"
+		-v false
+		arrayBldr_UseReplacementCurves_checkBox
+		;	
+		
+	textFieldButtonGrp
+		-l "Replacement Curves"
+		-ann "This is only used for arrayBldr Assets."		
+		-cal 1 "left"
+		-bl "Select"
+		-bc ("assignObjectToTextFieldButtonGrp(\"arrayBldr_ReplacementCurves_textFieldButtonGrp\");")
+		arrayBldr_ReplacementCurves_textFieldButtonGrp
+		;	
+		
+    //-----------------------------
+    wizSeparator();
+    //-----------------------------
+	string $setOrdering[] = { "sequence", "random", "headSequence", "sequenceTail", "headSequenceTail", "headRandom", "randomTail", "headRandomTail" };
+	string $setOrderOmg = wizOptionMenuGrpMenuItems("Set Order", "arrayBldr_SetOrder_optionMenuGrp", $setOrdering);
+
+	//int $spacMethVal = `optionMenuGrp -q -v arrayBldrSpacingMethodOptionMenuGrp`;
+	
+	textFieldButtonGrp
+		-l "Duplicate Object"
+		-ann "Use this field to select the objects to duplicate on the selected curve."		
+		-cal 1 "left"
+		-bl "Select"
+		-bc ("assignObjectToTextFieldButtonGrp(\"arrayBldr_DuplicateObject_textFieldButtonGrp\");")
+		arrayBldr_DuplicateObject_textFieldButtonGrp
+		;
+	
+	textFieldButtonGrp
+		-l "Curve"
+		-ann "Use this field to select the curve to duplicate on.\nSelect the curve that you would like the actions menu to perform operations on."
+		-cal 1 "left"
+		-bl "Select"
+		-bc ("assignObjectToTextFieldButtonGrp(\"arrayBldr_Curve_textFieldButtonGrp\");")
+		arrayBldr_Curve_textFieldButtonGrp
+		;
+        
+    //-----------------------------
+    wizSeparator();
+    //-----------------------------  
+    
+	button 
+        -l "Create arrayBldr Asset " 
+        -ann "This will create an asset with controls for duplicating objects on the selected curve"
+        -c ("wizCreateCBldrAsset(`ls -sl`);");
+	
+    button
+		-l "Update Current Curve"
+		-ann "This will update the curve from the above curve field."
+		-c ("string $curCurve = `textFieldButtonGrp -q -tx arrayBldrCurveTextFieldButtonGrp`;updateDuplicatesOnCurve($curCurve);")
+		;
+		
+}	
+
+//@ Array BUILDER MAIN MENU BAR LAYOUT
+//======================================================
+global proc arrayBldrMainMenuBarLayout()
+{
+	string $menuBarLayout = `menuBarLayout arrayBldrMainMenuBarLayout`;	
+	   
+    menu -l "Actions" -to true;
+		arrayBldrActionsMenuItems();
+	setParent -menu..;
+    
+}
+
+global proc arrayBldrActionsMenuItems()
+{
+	menuItem -l "Update Current Curve" -c ("updateDuplicatesOnCurve($curCurve);");
+	menuItem -l "Replace arrayBldr Curve And Build" -c ("arrayBldrSetSourceCurveAndBuild(`ls -sl`);");
+	menuItem -l "Select Duplicates" -c ("selectArrayBuilderDuplicateOnCurveDuplicates(\"duplicates\");");
+	menuItem -l "Select Motion Paths" -c ("selectArrayBuilderDuplicateOnCurveDuplicates(\"motionPaths\");");
+	
+	menuItem -l "Delete Duplicates" -c ("removeDuplicateOnCurveDuplicates(\"duplicates\");");
+	menuItem -l "Delete Motion Paths" -c ("removeDuplicateOnCurveDuplicates(\"motionPaths\");");
+
+}
+
+//WIZ CREATE DUPLICATE ON CURVE RIG
+//=====================================================
+global proc string wizCreateArrayBldrAsset( string $sel[] )
+{
+	wizLog("[@] wizCreateCBldrAsset");
+	
+	// To Do
+    if (`size $sel` == 0){
+		$sel[0] = `textFieldButtonGrp -q -tx arrayBldr_DuplicateObject_textFieldButtonGrp`;
+		$sel[1] = `textFieldButtonGrp -q -tx arrayBldr_Curve_textFieldButtonGrp`;
+	}
+	
+	//string $s[] = `listRelatives -type nurbsCurve $sel`;
+	string $s[] = `listRelatives -type nurbsCurve $sel[1]`;
+	string $curveShape = $s[0];
+	if (`size $s` == 0){
+		$s = `listRelatives -type nurbsCurve $sel[0]`;
+		if (`size $s` == 0){
+			string $curve = $sel[0];
+			$sel[0] = $sel[1];
+			$sel[1] = $curve;
+			wizLog("	[!] No curve selected to add to arrayBldrAsset. Dont forget to add a curve [!]");
+			return "";
+		}
+	}
+    string $assetName = ($sel[1] + "arrayBldr");
+    string $addContents[] = { $sel[1] };
+
+    //Create an asset to control the duplication values
+    string $arrayBldr = `container -n $assetName -type dagContainer -ind "inputs" -includeHierarchyBelow -includeShapes -includeTransform -force -addNode $addContents`;
+	addWizAssetTypeAttributeToSelectedAsset($arrayBldr, "arrayBldrAsset");
+    //Add the assetWiz command to the asset
+    setAttr -type "string" ($arrayBldr + ".rmbCommand") "assetWiz";
+    
+	//Make arcLengthDimension to get length of curve
+	addCurveMeasuringToSelectedCurve({$sel[1]});
+
+	//string $name = $sel[1] + "StartCurveLengthChangeScriptJob";
+    string $name = $arrayBldr + "StartCurveLengthChangeScriptJob";
+	$name = makeNiceName($name);
+
+	//string $selName = removeAllSpaces($sel[1]);
+    string $selName = removeAllSpaces($arrayBldr);
+    
+	string $curveLengthAttr = $sel[1] + ".curveLength";
+    
+	string $cDupCount = $selName + ".duplicateCount";
+	string $cSpac = $selName + ".spacing";
+	string $spacMethName = $selName + ".spacingMethod";
+
+	
+	/*
+	//Create a scriptNode that executes a scriptJob when opening scene so we can monitor when curve attr are changed.
+	string $bs = (
+	"scriptJob -kws -ac " + $cDupCount + " (\"updateDuplicatesOnCurve(" + "\\\"" + $arrayBldr + "\\\"" + ");\");"+"\n"
+	+"scriptJob -kws -ac " + $cSpac + " (\"updateDuplicatesOnCurve(" + "\\\"" + $arrayBldr + "\\\"" + ");\");"+"\n"
+	+"scriptJob -kws -ac " + $spacMethName + " (\"updateDuplicatesOnCurve(" + "\\\"" + $arrayBldr + "\\\"" + ");\");"+"\n"
+	+"scriptJob -kws -ac " + $curveLengthAttr + " (\"updateDuplicatesOnCurve(" + "\\\"" + $arrayBldr + "\\\"" + ");\");"+"\n"
+	);	
+	*/
+	
+	/*
+	createObjAttributesFromGUIObjectsInLayout($arrayBldr, "arrayBldr_frameLayout", "-sm");	
+	*/
+	
+	//<ToDoWiz!> Implement This
+
+	createObjAttributesFromGUIObjectsInLayout($arrayBldr, "arrayBldr_frameLayout", "-sm");	
+	
+	string $cSet = createSetFromSelection({$sel[1]}, ($assetName + "CurveSet"));
+	string $sSet = createSetFromSelection({$sel[0]}, ($assetName + "ObjectSet"));
+	string $snoSet = `sets -em -n ($assetName + "SurfaceConstraintSet")`;
+	connectAttr ($cSet + ".message") ($arrayBldr + ".curve");
+	connectAttr ($sSet + ".message") ($arrayBldr + ".duplicateObject");
+	connectAttr ($snoSet + ".message") ($arrayBldr + ".surfaceNormalObject");
+	
+	string $allSets = createSetFromSelection({$cSet,$sSet,$snoSet}, ($assetName + "Sets"));
+	
+	wizlog ("	[+] Put Curve Objects Into Set : " + $cSet + " [+]");
+	wizlog ("	[+] Put Duplicate Objects Into Set : " + $sSet + " [+]");
+	wizlog ("	[+] Put Surface Normal Constraint Objects Into Set : " + $snoSet + " [+]");
+
+	
+	
+	if (`attributeExists "lastCurveLength" $arrayBldr` == 0){
+		addAttr -ln "lastCurveLength" -at double -h true $arrayBldr;
+		wizlog ("	[+] addAttr -ln \"lastCurveLength\" -at double -h true " + $arrayBldr + ";"); 
+	}
+	
+	/*
+	setAttr ($arrayBldr + ".duplicateObject") -type "string" $sel[0];
+	*/
+	
+	if (`objExists $name`){
+		delete $name;
+	}
+	
+	/*
+	scriptNode -st 1 -bs $bs -n $name;
+	
+	//Run the scriptJob now.
+	eval($bs);   
+      */
+	  
+	updateDuplicatesOnCurve($arrayBldr);
+	
+	wizLog ("	[+] Attributes For Changing The Duplicate On Curve Parameters Were Added To : " + $arrayBldr + "\n");
+	wizLog ("	[#] The Duplicates Will Update If The Length Of The Curve Changes, Or If The Spacing Attribute Changes.\n"+wizDiv("se")+"\n");
+	
+	return $arrayBldr;
+}
+
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         CBLDR BUILD
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//@ C BLDR SET SOURCE CURVE AND BUILD
+//====================================================================
+/*****************************************************************//**
+	Use this to replace the curve that is in a arrayBldr asset with 
+	another curve before building.
+	<hr>
+	<b>Synopsis</b><br>
+	arrayBldrSetSourceCurveAndBuild [string $sel[]] <br>
+	This does not actually replace the curve inside asset but
+	just sets an override (useReplacementCurves) to true and
+	sets the attribute (replacementCurves) to contain the curve
+	passed to this command.
+	
+	<b>Return value</b><br>
+	none.
+	
+	<b>Flags</b><br>
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	arrayBldrSetSourceCurveAndBuild(`ls -sl`);  // the arrayBldr asset and a curve selection
+	
+	</code>
+*********************************************************************/
+global proc arrayBldrSetSourceCurveAndBuild( string $sel[] )
+{
+	string $dc[] = `ls -typ dagContainer $sel`;
+	string $arrayBldr = $dc[0];
+	string $c[] = stringArrayRemove($arrayBldr, $sel);
+	string $curve = $c[0];
+	
+	string $reCurve = `getAttr ($arrayBldr + ".replacementCurves")`;
+	$reCurve = $reCurve + $curve;
+	setAttr ($arrayBldr + ".replacementCurves") $reCurve;
+	setAttr ($arrayBldr + ".useReplacementCurves") 1;
+	updateDuplicatesOnCurve($arrayBldr);
+}
+//><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><
+
+
+/*
+string $sel[] = `ls -sl`;
+string $arrayBldr = $sel[0];
+string $assContents[] = `container -q -nl $arrayBldr`;
+string $curveShapes[] = `ls -typ nurbsCurve $assContents`;
+string $curves[] = `listTransforms $curveShapes[0]`;
+string $curve = $curves[0];
+print("Curve : " + $curve + "\n");
+    
+*/
+//UPDATE DUPLICATES ON CURVE
+//=========================================================
+global proc wizUpdateDuplicatesOnOnCurve( string $object )
+{
+    string $sel[] = `ls -sl`;
+    for ($i=0;$i<`size $sel`;$i++){
+        updateDuplicatesOnCurve($sel[$i]);
+    
+    }
+}
+
+//UPDATE DUPLICATE ON CURVE
+//=========================================================
+global proc updateDuplicatesOnCurve( string $arrayBldr )
+{
+	wizlog ("[@] updateDuplicatesOnCurve");
+    if ($arrayBldr == ""){
+        string $sel[] = `ls -sl`;
+        $arrayBldr = $sel[0];
+    }
+	
+	
+	string $curves[] = getArrayCurveBuilderCurves({$arrayBldr});
+	
+	/*
+	string $curves[];	
+	// First look for the curve attribute for curves
+	string $curveString;
+	if (`objExists $arrayBldr`){
+		$curveString = `getAttr ($arrayBldr + ".curve")`;
+		if (`size $curveString` > 0){
+			$curves = tokenizeString($curveString, " ");
+		}
+	}
+	*/
+	
+	/*
+	
+	if (`objExists $arrayBldr`){
+		string $con[] = `listConnections ($arrayBldr + ".curve")`;
+		if (`size $con` > 0){
+			$curves = `sets -q $con[0]`;
+			
+		}
+	}
+	
+
+	
+	// Then look in the asset hierarchy for curves
+	if (`size $curves` == 0){
+		string $assContents[] = `container -q -nl $arrayBldr`;
+		string $curveShapes[] = `ls -typ nurbsCurve $assContents`;		
+		for ($i=0;$i<`size $curveShapes`;$i++){
+			string $crvs[] = `listTransforms $curveShapes[$i]`;
+			appendStringArray($curves, $crvs, `size $crvs`);
+		}
+		
+	}
+    
+	// Then look for replacement curves
+    string $curve = $curves[0];
+	if (`getAttr ($arrayBldr + ".useReplacementCurves")` == 1){
+		string $reCurve = `getAttr ($arrayBldr + ".replacementCurves")`;
+		if (`size $reCurve` > 0){
+			$curves = tokenizeString($reCurve, " ");
+		}
+	}
+	
+	$curves = stringArrayRemoveDuplicates($curves);
+	
+	*/
+	
+	wizlog ("	[#] Building On : " + `size $curves` + " Curves");
+	/*
+	if (`objExists $arrayBldr` == 1 && `size $curveString` == 0){
+		setAttr ($arrayBldr + ".curve") -type "string" (stringArrayToString($curves, " "));
+	}
+	*/
+	
+	for ($i=0;$i<`size $curves`;$i++){
+		if (`attributeExists "curveLength" $curves[$i]` == 0){
+			addCurveMeasuringToSelectedCurve({$curves[$i]});
+		}
+		updateCurveObjects($curves[$i], $arrayBldr);	
+		
+	}
+	
+}
+	
+global proc updateCurveObjects( string $curve , string $arrayBldr )
+{
+	wizlog ("[@] updateCurveObjects");
+	string $dbl = "-dmi UpdateDuplicatesOnCurveDebugMenuItem -t Update Duplicates On Curve";
+	int $dbc = 1;
+	string $dbm = "add";
+	menuItem -e -cb true UpdateDuplicatesOnCurveDebugMenuItem;
+
+	debugListString($dbl,(" * Updating Duplicates On Curve : " + $curve + " *"), $dbc, $dbm);
+	
+	print ("Updating Curve Duplicates : " + $curve + "\n-------------------\n");
+	
+	/*
+	int $enabled = `getAttr ($arrayBldr + ".enableDuplication")`;
+	if ($enabled == 0){ return; }
+	string $curSel[] = `ls -sl`;
+	float $arcLength = `getAttr ($curve + ".curveLength")`;
+	float $lastCurveLength = `getAttr ($arrayBldr + ".lastCurveLength")`;
+	
+	//print ("Curve Length : " + $arcLength + "\n");
+	debugListString($dbl,(" - Curve Length : " + $arcLength), $dbc, $dbm);
+	
+	int $dupType = `getAttr ($arrayBldr + ".duplicateType")`;
+
+	string $obj[];
+	string $source = `getAttr ($arrayBldr + ".duplicateName")`;
+	if (`referenceQuery -inr $arrayBldr`){
+		string $ns = `referenceQuery -ns $arrayBldr`;
+		$source = $ns + ":" + $source;
+		
+	}
+
+	int $useSets = `getAttr ($arrayBldr + ".useSets")`;
+	string $nodeType = `nodeType $source`;
+	if ($nodeType == "objectSet"){
+		$obj = `sets -q $source`;
+	} else {
+		$obj[0] = $source;
+	}
+
+	int $dupCount = `getAttr ($arrayBldr + ".duplicateCount")`;
+	float $spacing = `getAttr ($arrayBldr + ".spacing")`;
+	int $spaMeth = `getAttr ($arrayBldr + ".spacingMethod")`;
+	int $fracMode = `getAttr ($arrayBldr + ".parametricLength")`;
+	int $randomize = `getAttr ($arrayBldr + ".randomizeSpacing")`;
+	float $ran = `getAttr ($arrayBldr + ".randomAmount")`;
+	float $offsetU = `getAttr ($arrayBldr + ".offsetU")`;
+	if ($fracMode == 1){
+		$fracMode = 0;
+	} else {
+		$fracMode = 1;
+	}
+	
+	// Follow Path Options
+	int $follow = `getAttr ($arrayBldr + ".followPath")`;
+	//string $frontAxis = `optionMenuGrp -q -v arrayBldrFollowPathFrontAxisOptionMenuGrp`;
+	//string $upAxis = `optionMenuGrp -q -v arrayBldrFollowPathUpAxisOptionMenuGrp`;
+	string $frontAxis = `getAttr -as ($arrayBldr + ".frontAxis")`;
+	int $inverseFront = `getAttr -as ($arrayBldr + ".inverseFront")`;
+	string $upAxis = `getAttr -as ($arrayBldr + ".upAxis")`;
+	int $inverseUp = `getAttr -as ($arrayBldr + ".inverseUp")`;
+    //Flow path options
+    int $flow = `getAttr ($arrayBldr + ".flowPath")`;
+    int $flowLatDiv[] = `getAttr ($arrayBldr + ".flowLatticeDivisions")`;
+    
+	int $alwaysCap = `getAttr -as ($arrayBldr + ".alwaysCap")`;
+    int $scaleToFill = `getAttr -as ($arrayBldr + ".scaleToFill")`;
+	
+	//string $dup[] = `ls -tr ($source + "CurveDuplicateObject*")`;
+    string $dup[] = getArrayCurveBuilderDuplicateObjects({$arrayBldr, $curve});
+    
+	debugListString($dbl,(" - Existing Duplicates : " + `size $dup`), $dbc, $dbm);
+	//print ("Existing Duplicates : " + `size $dup` + "\n");
+	
+	
+	// Grouping 
+	int $groupDup = `getAttr ($arrayBldr + ".groupDuplicates")`;
+	string $groupName = ($arrayBldr + "_" + $curve + "_DuplicateObjectGroup");
+	string $group[] = `ls -tr ($groupName + "*")`;
+	if ($groupDup == 1 && `size $group` == 0){
+		$group[0] = `group -em -n $groupName`;
+	}
+		
+	//print ("Objects To Duplicate : " + stringArrayToString($obj, ", ") + "\n");
+	debugListArray($dbl, " - Objects To Duplicate : ", $obj, $dbc, $dbm, "NEArrayT", 100);
+	
+	//_________________________________________
+	// Generate a indice array
+	
+	string $setOrdering = `getAttr -as ($arrayBldr + ".setOrdering")`;
+		
+		
+	*/
+		
+	if (`objExists $arrayBldr` == 0){
+		$arrayBldr = "arrayBldr";
+	}
+	
+	int $enabled = int(getWizAttr("-obj " + $arrayBldr + " -attr EnableDuplication -typ checkBox"));
+	if ($enabled == 0){ return; }
+	string $curSel[] = `ls -sl`;
+	
+	float $arcLength = `getAttr ($curve + ".curveLength")`;
+	float $lastCurveLength = `getAttr ($arrayBldr + ".lastCurveLength")`;
+	
+	//print ("Curve Length : " + $arcLength + "\n");
+	debugListString($dbl,(" - Curve Length : " + $arcLength), $dbc, $dbm);
+	
+	string $dupType = getWizAttr("-obj " + $arrayBldr + " -attr DuplicateType -typ optionMenuGrp");
+
+	/*
+	string $obj[];
+	string $source = getWizAttr("-obj " + $arrayBldr + " -attr DuplicateObject -typ textFieldButtonGrp");
+	
+	if (`referenceQuery -inr $arrayBldr`){
+		string $ns = `referenceQuery -ns $arrayBldr`;
+		$source = $ns + ":" + $source;
+		
+	}
+
+	int $useSets = int(getWizAttr("-obj " + $arrayBldr + " -attr UseSets -typ checkBox"));
+	string $nodeType = `nodeType $source`;
+	if ($nodeType == "objectSet"){
+		$obj = `sets -q $source`;
+	} else {
+		$obj[0] = $source;
+	}
+	*/
+	
+	string $obj[] = getArrayCurveBuilderSourceObjects({$arrayBldr});
+	
+	int $dupCount = int(getWizAttr("-obj " + $arrayBldr + " -attr DuplicateCount -typ intSliderGrp"));
+	float $spacing = float(getWizAttr("-obj " + $arrayBldr + " -attr Spacing -typ floatSliderGrp"));
+	string $spaMeth = getWizAttr("-obj " + $arrayBldr + " -attr SpacingMethod -typ optionMenuGrp");
+	
+	int $fracMode = int(getWizAttr("-obj " + $arrayBldr + " -attr ParametricLength -typ checkBox"));
+	int $randomize = int(getWizAttr("-obj " + $arrayBldr + " -attr RandomizeSpacing -typ checkBox"));
+	
+	
+	string $ranAmount = getWizAttr("-obj " + $arrayBldr + " -attr RandomAmount -typ floatFieldGrp");
+	float $ran[] = stringToFloatArray($ranAmount);
+	
+	float $offsetU = float(getWizAttr("-obj " + $arrayBldr + " -attr OffsetU -typ floatSliderGrp"));
+	if ($fracMode == 1){
+		$fracMode = 0;
+	} else {
+		$fracMode = 1;
+	}
+	
+	// Follow Path Options
+	int $follow = int(getWizAttr("-obj " + $arrayBldr + " -attr FollowPath -typ checkBox"));
+	//string $frontAxis = `optionMenuGrp -q -v arrayBldrFollowPathFrontAxisOptionMenuGrp`;
+	//string $upAxis = `optionMenuGrp -q -v arrayBldrFollowPathUpAxisOptionMenuGrp`;
+	string $frontAxis = getWizAttr("-obj " + $arrayBldr + " -attr FollowPathFrontAxis -typ optionMenuGrp");
+	int $inverseFront = int(getWizAttr("-obj " + $arrayBldr + " -attr InverseFront -typ checkBox"));
+	string $upAxis = getWizAttr("-obj " + $arrayBldr + " -attr FollowPathUpAxis -typ optionMenuGrp");
+	int $inverseUp = int(getWizAttr("-obj " + $arrayBldr + " -attr InverseUp -typ checkBox"));
+    //Flow path options
+    int $flow = int(getWizAttr("-obj " + $arrayBldr + " -attr FlowPath -typ checkBox"));
+	string $flowLatDivString = getWizAttr("-obj " + $arrayBldr + " -attr LatticeDivisions -typ intFieldGrp");
+    int $flowLatDiv[] = stringToIntArray($flowLatDivString);
+    
+	// Normal Constraint Options
+	int $normAlign = int(getWizAttr("-obj " + $arrayBldr + " -attr SurfaceNormalConstraint -typ checkBox"));
+	string $surNormObj = getWizAttr("-obj " + $arrayBldr + " -attr SurfaceNormalObject -typ textFieldButtonGrp");
+	string $normAimString = getWizAttr("-obj " + $arrayBldr + " -attr AimVector -typ floatFieldGrp");
+    float $aimVector[] = stringToFloatArray($normAimString);
+    string $normUpString = getWizAttr("-obj " + $arrayBldr + " -attr UpVector -typ floatFieldGrp");
+    float $upVector[] = stringToFloatArray($normUpString);
+    
+	
+	
+	int $alwaysCap = int(getWizAttr("-obj " + $arrayBldr + " -attr AlwaysCap -typ checkBox"));
+    int $scaleToFill = int(getWizAttr("-obj " + $arrayBldr + " -attr ScaleToFill -typ checkBox"));
+	
+	//string $dup[] = `ls -tr ($source + "CurveDuplicateObject*")`;
+    string $dup[] = getArrayCurveBuilderDuplicateObjects({$arrayBldr, $curve});
+    
+	debugListString($dbl,(" - Existing Duplicates : " + `size $dup`), $dbc, $dbm);
+	//print ("Existing Duplicates : " + `size $dup` + "\n");
+	
+	
+	// Grouping 
+	int $groupDup = int(getWizAttr("-obj " + $arrayBldr + " -attr GroupDuplicates -typ checkBox"));
+	string $groupName = ($arrayBldr + "_" + $curve + "_DuplicateObjectGroup");
+	string $group[] = `ls -tr ($groupName + "*")`;
+	if ($groupDup == 1 && `size $group` == 0){
+		$group[0] = `group -em -n $groupName`;
+	}
+		
+	//print ("Objects To Duplicate : " + stringArrayToString($obj, ", ") + "\n");
+	debugListArray($dbl, " - Objects To Duplicate : ", $obj, $dbc, $dbm, "NEArrayT", 100);
+	
+	//_________________________________________
+	// Generate a indice array
+	
+	string $setOrdering = getWizAttr("-obj " + $arrayBldr + " -attr SetOrder -typ optionMenuGrp");		
+		
+		
+		
+	float $objSize[];
+	
+	float $uVal[];
+	clear $uVal;
+	if ($spaMeth == "count"){	
+		$uVal[0] = 1.0 / ($dupCount - 1);
+	} else if ($spaMeth == "curvePercent"){	
+		$uVal[0] = 1.0 * ($spacing + $offsetU);
+		$dupCount = 1.0 / ($spacing + $offsetU);
+	} else if ($spaMeth == "worldDistance"){
+		$uVal[0] = (1.0 / $arcLength) * ($spacing + $offsetU);	
+		$dupCount = $arcLength / ($spacing + $offsetU);
+	} else if ($spaMeth == "boundingBoxFit"){
+		wizlog ("	[#] Spacing Method : bboxFit");
+		// get the smallest object and estimate our duplication count from that
+		float $objMinSize = 999999999.99;
+		for ($i=0;$i<`size $obj`;$i++){
+			float $bboxSize[] = `getAttr ($obj[$i] + ".boundingBoxSize")`;
+			float $bboxp;
+			switch ($frontAxis){
+				case "x" :
+				$bboxp = $bboxSize[0];
+				break;
+				
+				case "y" :
+				$bboxp = $bboxSize[1];
+				break;
+				
+				case "z" :
+				$bboxp = $bboxSize[2];
+				break;
+				
+			}
+			if ($bboxp < $objMinSize){
+				$objMinSize = $bboxp;	
+			}
+			$objSize[$i] = $bboxp;
+		}
+		
+		$dupCount = $arcLength / ($objMinSize + $offsetU);
+		wizlog ("	[#] Duplication Count : " + $dupCount + " = ");
+		wizlog ("	[#] ArcLength : " + $arcLength + " / ( ObjMinSize : " + $objMinSize + " + OffsetU : " + $offsetU + " )");
+		
+	}
+	
+	// calculate how many objects fit on curve and how much scaling is need to get a precise fit
+	int $so[] = wizIndiceSequence(("-c " + $dupCount + " -as " + `size $obj` + " -st " + $setOrdering));
+	//wizlog ("	[+] Indice Sequence : ");
+	
+	float $scaleFactor;
+	if ($spaMeth == "boundingBoxFit"){
+		float $remSpace;
+		float $objFitting = $arcLength;
+		int $ss;
+		while (true){
+			float $subSize = $objFitting - $objSize[($so[$ss])];
+			//wizlog ("	[#] ObjectFitting : " + $objFitting + " - ObjectSize : " + $objSize[($so[$ss])] + " = " + $subSize);
+			
+			$uVal[`size $uVal`] = 1.0 / ($arcLength / $objSize[($so[$ss])]);	
+			//wizlog ("	[#] UVal : " + $uVal[(`size $uVal` - 1)] + " = 1.0 / ObjectSize : " + $objSize[($so[$ss])]);
+			if ($subSize <= 0 || $ss > `size $so`){
+				$remSpace = $objFitting;
+				break ;
+			}
+			$objFitting = $objFitting - $objSize[($so[$ss])];
+				
+			$ss++;
+		}
+		
+		// divide the remainder by number of objects
+		$scaleFactor = $remSpace / $ss;
+		//wizlog ("	[#] Scale Factor : " + $scaleFactor + " = RemainderSpace : " + $remSpace + " / NumObjects : " + $ss);
+		//wizlog ("	[#] Duplication Count : " + $ss);
+		$dupCount = $ss;
+		if ($scaleToFill == 1){
+			for ($i=0;$i<`size $uVal`;$i++){
+				//wizlog ("	[#] UVal : " + $uVal[(`size $uVal` - 1)] + " + ( 1.0 / ScaleFactor : " + $scaleFactor + " ) = ");
+				$uVal[$i] = 1.0 / ($arcLength / ($objSize[($so[$i])] + $scaleFactor));	
+				//wizlog ("	[#] UVal : " + $uVal[(`size $uVal` - 1)]);
+			}
+		}
+	}
+	
+	
+	
+	debugListString($dbl, (" - Duplication Count : " + $dupCount), $dbc, $dbm);
+	//print ("Duplication Count : " + $dupCount + "\n");
+	
+	//If we have made the curve smaller - delete everything and start over
+	if ($lastCurveLength >= $arcLength){
+		string $del[];
+		for ($i=0;$i<`size $dup`;$i++){
+			$del[`size $del`] = $dup[$i];
+		}
+		if ($dupType == "copy" || $dupType == "instance"){
+			delete $del;
+		} else if ($dupType == "referenceCopy"){
+			removeSelectedObjectReferenceFile($del);
+		}
+		$dup = stringArrayRemove($del, $dup);
+	} else if (`size $dup` > $dupCount){
+		// Remove Excess Duplicates 
+		string $del[];
+		for ($i=$dupCount;$i<`size $dup`;$i++){
+			$del[`size $del`] = $dup[$i];
+			//stringArrayRemoveAtIndex($i, $dup);
+		}
+		if ($dupType == "copy" || $dupType == "instance"){
+			delete $del;
+		} else if ($dupType == "referenceCopy"){
+			removeSelectedObjectReferenceFile($del);
+		}
+		$dup = stringArrayRemove($del, $dup);
+	}
+
+	if ($dupCount > 100){
+        wizProgressWindowStart("arrayBldr [working]", ("Making : " + ($dupCount - `size $dup`) + " : Duplicates"), 1);
+        wizProgressWindowMinMax(0,(($dupCount - `size $dup`) * 2));
+    }
+    
+	if (`size $dup` < $dupCount){
+		// Do the duplication 	
+		int $d = 0;
+		int $dupCountCap = $dupCount;
+
+		//int $dupCountCap;
+		//if ($alwaysCap){
+		//	$dupCountCap = $dupCount + 1;
+		//}
+		for ($i=(`size $dup`);$i<$dupCountCap;$i++){
+			string $new[];
+			//print ("-------------------\nDuplicating : " + $obj[$d] + "\n");
+			debugListString($dbl, (" - Duplicating : " + $obj[$d]), $dbc, $dbm);
+			
+			if ($dupType == "copy"){
+				$new = `duplicate -rr -rc -n ($obj[($so[$i])] + "_" + $curve + "_CurveDuplicateObject" + $i) $obj[($so[$i])]`;
+			} else if ($dupType == "instance"){
+				$new = `instance -n ($obj[($so[$i])] + "_" + $curve + "_CurveDuplicateObject" + $i) $obj[($so[$i])]`;
+			} else if ($dupType == "referenceCopy"){
+				$new = duplicateReferenceObject($obj[($so[$i])]);
+			}
+			if ($groupDup == 1 && `size $group` > 0){
+				parent $new[0] $group[0];
+			}
+			$dup[`size $dup`] = $new[0];
+
+			select -r $new[0];
+			select -add $curve;
+		
+			
+			string $mp = `pathAnimation -ua $upAxis -iu $inverseUp -fa $frontAxis -if $inverseFront -fractionMode $fracMode -follow $follow -startTimeU 1 -endTimeU 10`;
+			cutKey -t ":" -f ":" -at "u" $mp;
+
+			// Add Flow 
+			if ($flow == 1){
+				select -r $curve;
+				select -r $new[0];
+                
+				string $flow[] = `flow -divisions $flowLatDiv[0] $flowLatDiv[1] $flowLatDiv[2] -objectCentered 1 -localCompute 0 -localDivisions 2 2 2 $new[0]`;	
+				if ($groupDup == 1 && `size $group` > 0){
+					catchQuiet(`parent $flow $group[0]`);
+				}	
+			}
+
+            wizProgressWindowStep(1);
+            if (wizProgressCancelled() == 1) return;	
+		}
+
+		float $uTot = 0;
+		
+		float $iuVal;
+
+		if ($spaMeth == "boundingBoxFit"){
+			$iuVal = 0;
+		}
+		for ($i=0;$i<`size $dup`;$i++){
+			// Move the duplicates into position on motion path 
+			string $mp[] = `listConnections -type motionPath $dup[$i]`;
+			if (`size $mp` == 0){ continue;}
+			debugListString($dbl, (" - Object :  " + $obj[$d]), $dbc, $dbm);
+			debugListString($dbl, (" - Spacing :  " + $uVal[$d]), $dbc, $dbm);
+			print ("Object : " + $obj[$d] + " Spacing : " + $uVal[$i] + "\n");
+			//float $iuVal = $uVal[$d] + $uTot;
+			
+			if ($randomize == 1){
+				$iuVal = rand(($iuVal + $ran[0]), ($iuVal - $ran[1]));
+			}
+			
+			if ($spaMeth != "boundingBoxFit"){
+				$iuVal = $uVal[0] * $i;
+			} 
+			/*
+			if ($alwaysCap && $i == (`size $dup` - 1)){
+				$iuVal = 1;
+			}
+			*/
+			setAttr ($mp[0] + ".uValue") $iuVal;
+			
+			if ($scaleToFill == 1){				
+				float $curScale[] = `getAttr ($dup[$i] + ".scale")`;
+				float $curSize[] = `getAttr ($dup[$i] + ".boundingBoxSize")`;
+				float $desiredSize[] = { ($curSize[0] + $scaleFactor), ($curSize[1] + $scaleFactor), ($curSize[2] + $scaleFactor) };
+				float $scaleBy[] = { ($desiredSize[0] / $curSize[0]), ($desiredSize[1] / $curSize[1]), ($desiredSize[2] / $curSize[2]) };
+				
+				
+				wizlog ("	[#] Scale To Fill : Current Scale : " + $curScale[0] + " " + $curScale[1] + " " +  $curScale[2] + " : Scale By : " + $scaleFactor + "\n");
+				//xform -s (($curScale[0] / $scaleFactor) + $curScale[0]) (($scaleFactor / $curScale[1]) + $curScale[1]) (($scaleFactor / $curScale[2]) + $curScale[2]) $dup[$i];
+
+				xform -s ($curScale[0] * $scaleBy[0]) ($curScale[1] * $scaleBy[1]) ($curScale[2] * $scaleBy[2]) $dup[$i];
+			 
+			 
+			}
+			
+			if ($normAlign == 1){
+				if (`objExists $surNormObj`){
+					select -r $surNormObj;
+					select -add $dup[$i];
+					normalConstraint -weight 1 -aimVector $aimVector[0] $aimVector[1] $aimVector[2] -upVector $upVector[0] $upVector[1] $upVector[2] -worldUpType "scene";
+				
+					select -r $dup[$i];
+				}
+			}
+			
+			
+			if ($spaMeth == "boundingBoxFit"){
+				$iuVal = $uVal[$i] + $uTot;
+				$uTot = $iuVal;
+				debugListString($dbl, (" - UTot : " + $uTot), $dbc, $dbm);
+			
+			}
+
+            wizProgressWindowStep(1);
+            if (wizProgressCancelled() == 1) return;
+            
+		}
+		
+	}
+    
+    wizProgressWindowEnd();
+    
+	setAttr ($arrayBldr + ".lastCurveLength") $arcLength;
+
+	select -r $curSel;
+	
+}
+
+//@ C BLDR REPLACE CURVE WITH CURVE
+//====================================================================
+/*****************************************************************//**
+	Replaces a arrayBldrAsset curve [0] with another curve [1]
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	arrayBldrReplaceCurveWithCurve(`ls -sl`);
+	
+	</code>
+*********************************************************************/
+global proc arrayBldrReplaceCurveWithCurve( string $sel[] )
+{
+	wizlog("[@] arrayBldrReplaceCurveWithCurve");
+	// be a little flexible with the selection.
+	// if we can't find an asset in sel[0] then just look for a curve
+	string $asset[] = `ls -type dagContainer $sel`;
+	string $arrayBldr;
+	if (`size $asset` > 0){
+		$arrayBldr = $asset[0];		
+	} else {
+		$asset = smartSelectObjectsOfType({$sel[0]}, "-type nurbsCurve");
+	}
+	string $arrayBldrCurve[] = smartSelectObjectsOfType($asset, "-type nurbsCurve");
+	
+	// use remainder of selection to search for a second curve
+	$sel = stringArrayRemove($asset, $sel);
+	string $curve[] = smartSelectObjectsOfType($sel, "-type nurbsCurve");	
+	
+	if (`objExists $arrayBldrCurve[0]` == 0 || `objExists $curve[0]` == 0){
+		wizLog("-w		[!] Can Not Replace arrayBldr Curve. Not enough curves found [!]");
+	}
+	
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//	Node casting will not work on referenced objects	
+	//	We can connect the curve to a stroke if we can fine one.
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	if (catch(`referenceQuery -f $arrayBldrCurve[0]`) == 1){
+		wizLog("-w	[!] " + $arrayBldrCurve[0] + " Is From A Referenced File. Will Attempt To Replace stroke curves [!]");
+		
+		string $stroke[] = smartSelectObjectsOfType(`ls -sl`, "-typ stroke");
+		
+		if (`size $stroke` > 0){
+			catchQuiet(`connectAttr -f ($curve[0] + ".worldSpace[0]") ($stroke[0] + ".pathCurve[0].curve")`);
+		} else {
+			wizLog("	[!] No Stokes Found [!]");
+		}
+	} else {
+		wizNodeCastSelected({$arrayBldrCurve[0], $curve[0]});
+	}
+
+}
+
+//--------------------------------------------------------------------
+//////////////////////////////////////////////////////////////////////
+//			SELECTION
+//////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------
+//@ RMB SELECT DUPLICATE ON CURVE DUPLICATES
+//=====================================================
+global proc rmbSelectDuplicateOnCurveDuplicates( string $object )
+{
+    selectArrayBuilderDuplicateOnCurveDuplicates("duplicates");
+}
+
+//@ RMB SELECT DUPLICATE ON CURVE DUPLICATES MOTION PATHS
+//====================================================================
+global proc rmbSelectDuplicateOnCurveDuplicatesMotionPaths( string $object )
+{
+    selectArrayBuilderDuplicateOnCurveDuplicates("motionPaths");
+}
+
+//@ RMBC BLDR REPLACE CURVE WITH CURVE
+//====================================================================
+global proc rmbarrayBldrReplaceCurveWithCurve( string $object )
+{
+    arrayBldrReplaceCurveWithCurve(`ls -sl`);
+}
+
+//@ SELECT DUPLICATE ON CURVE DUPLICATES
+//====================================================================
+global proc selectArrayBuilderDuplicateOnCurveDuplicates( string $type )
+{
+    string $sel[] = `ls -sl`;
+    string $arrayBldr = $sel[0];
+    string $curves[] = getArrayCurveBuilderCurves(`ls -sl`);
+    
+	if (`size $curves` == 0){ print ("No Curve Selected\n"); return;}
+	
+	for ($i=0;$i<`size $curves`;$i++){
+				
+
+		//string $dup[] = `ls -tr ($curve + "CurveDuplicateObject*")`;
+		string $dup[] = getArrayCurveBuilderDuplicateObjects({$arrayBldr});
+		if (`size $dup` == 0){ return;}
+		
+		int $groupDup = `getAttr ($arrayBldr + ".groupDuplicates")`;
+		string $groupName = $arrayBldr + "_" + $curves[$i] + "_DuplicateObjectGroup";
+		string $group[] = `ls -tr ($groupName + "*")`;
+			
+		select -cl;   
+		if ($type == "duplicates"){
+			select -r $dup;
+					
+			return;
+		}
+
+		if ($type == "motionPaths"){
+			for ($p=0;$p<`size $dup`;$p++){
+				string $mp[] = `listConnections -type motionPath $dup[$p]`;
+				select -add $mp;
+			}
+			return;
+		}
+	
+	}
+}
+
+//@ GET Array CURVE BUILDER CURVE
+//====================================================================
+global proc string[] getArrayCurveBuilderCurves( string $sel[] )
+{
+	string $arrayBldr;
+	if (`size $sel` == 0){
+		$sel = `ls -sl`;
+        
+    }
+	
+	$arrayBldr = $sel[0];
+		
+	string $curves[];
+	
+	// get the set connected to the curve attr
+	if (`objExists $arrayBldr`){
+		string $con[] = `listConnections ($arrayBldr + ".curve")`;
+		if (`size $con` > 0){
+			$curves = `sets -q $con[0]`;
+			
+		}
+	}
+
+	// Then look in the asset hierarchy for curves
+	if (`size $curves` == 0){
+		string $assContents[] = `container -q -nl $arrayBldr`;
+		string $curveShapes[] = `ls -typ nurbsCurve $assContents`;		
+		for ($i=0;$i<`size $curveShapes`;$i++){
+			string $crvs[] = `listTransforms $curveShapes[$i]`;
+			appendStringArray($curves, $crvs, `size $crvs`);
+		}
+		
+	}
+
+	/*
+	// First look for the curve attribute for curves
+	string $curveString;
+	if (`objExists $arrayBldr`){
+		$curveString = `getAttr ($arrayBldr + ".curve")`;
+		if (`size $curveString` > 0){
+			$curves = tokenizeString($curveString, " ");
+		}
+	}
+	 */
+	  
+	// Then look for replacement curves
+    string $curve = $curves[0];
+	if (`getAttr ($arrayBldr + ".useReplacementCurves")` == 1){
+		string $reCurve = `getAttr ($arrayBldr + ".replacementCurves")`;
+		if (`size $reCurve` > 0){
+			$curves = tokenizeString($reCurve, " ");
+		}
+	}
+	
+	$curves = stringArrayRemoveDuplicates($curves);
+	
+	/*
+	if (`objExists $arrayBldr` == 1 && `size $curveString` == 0){
+		setAttr ($arrayBldr + ".curve") -type "string" (stringArrayToString($curves, " "));
+	}
+	*/
+	
+	return $curves;
+}
+
+//@ GET Array CURVE BUILDER SOURCE OBJECTS
+//====================================================================
+global proc string[] getArrayCurveBuilderSourceObjects( string $sel[] )
+{
+    string $arrayBldr = $sel[0];
+    string $obj[];
+	
+	// get the set connected to the duplicateObject attr
+	if (`objExists $arrayBldr`){
+		string $con[] = `listConnections ($arrayBldr + ".duplicateObject")`;
+		if (`size $con` > 0){
+			$obj = `sets -q $con[0]`;
+			
+		}
+	}
+
+	/*
+	string $source = `getAttr ($arrayBldr + ".duplicateObject")`;
+	if (`referenceQuery -inr $arrayBldr`){
+		string $ns = `referenceQuery -ns $arrayBldr`;
+		$source = $ns + ":" + $source;
+		
+	}
+    //int $useSets = `getAttr ($arrayBldr + ".useSets")`;
+	
+	*/
+	
+	/*
+	// Then look in the asset hierarchy for objects
+	if (`size $obj` == 0){
+		string $assContents[] = `container -q -nl $arrayBldr`;
+		string $mesh[] = `ls -typ mesh $assContents`;		
+		$obj = `listTransforms $mesh`;		
+	}
+	*/
+    /*
+	if ($source == ""){
+        string $assContents[] = `container -q -nl $arrayBldr`;
+        string $s[] = `ls -typ mesh $assContents`;
+        string $curves[] = `listTransforms $curveShapes[0]`;
+        $obj = 
+    }
+
+	
+	string $nodeType = `nodeType $source`;
+	if ($nodeType == "objectSet"){
+		$obj = `sets -q $source`;
+	} else {
+		$obj[0] = $source;
+	}
+    */
+	
+    return $obj;   
+}
+
+//@ GET Array CURVE BUILDER DUPLICATE OBJECTS
+//====================================================================
+global proc string[] getArrayCurveBuilderDuplicateObjects( string $sel[] )
+{
+
+    string $arrayBldr = $sel[0];
+    string $dupObjs[];
+    string $curve = $sel[1];
+
+	/*
+    string $source[] = getArrayCurveBuilderSourceObjects({$arrayBldr});
+	*/
+	
+	string $curves[] = getArrayCurveBuilderCurves(`ls -sl`);
+    
+	if (`size $curves` == 0){ print ("No Curve Selected\n"); return $sel;}
+	
+	for ($i=0;$i<`size $curves`;$i++){
+		string $dup[] = `ls -tr ("*_" + $curves[$i] + "_CurveDuplicateObject*")`;
+		appendStringArray($dupObjs, $dup, `size $dup`);
+	
+	}
+	
+	/*
+    for ($i=0;$i<`size $source`;$i++){    
+        string $dup[] = `ls -tr ($source[$i] + "_" + $curve + "_CurveDuplicateObject*")`;
+        appendStringArray($dupObjs, $dup, `size $dup`);
+        
+    }
+	*/
+    return $dupObjs;
+    
+}
+
+//--------------------------------------------------------------------
+//////////////////////////////////////////////////////////////////////
+//			REMOVAL
+//////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------
+//REMOVE DUPLICATE ON CURVE DUPLICATES
+//=====================================================
+global proc removeDuplicateOnCurveDuplicates( string $type )
+{
+    string $sel[] = `ls -sl`;
+    string $arrayBldr = $sel[0];
+    string $curve = getArrayCurveBuilderCurve(`ls -sl`);
+    
+	//string $dup[] = `ls -tr ($curve + "CurveDuplicateObject*")`;
+    string $dup[] = getArrayCurveBuildrDuplicateObjects($arrayBldr);
+    
+	if (`size $dup` == 0){ return;}
+	
+	int $groupDup = `getAttr ($arrayBldr + ".groupDuplicates")`;
+	string $groupName = $arrayBldr + "DuplicateObjectGroup";
+	string $group[] = `ls -tr ($groupName + "*")`;
+		
+	if ($type == "duplicates"){
+		delete $dup;
+		if ($groupDup == 1 && `size $group` == 0){
+			delete $group;
+		}		
+		return;
+	}
+	
+	if ($type == "motionPaths"){
+		for ($i=0;$i<`size $dup`;$i++){
+			string $mp[] = `listConnections -type motionPath $dup[$i]`;
+			select -r $mp;
+			delete $mp;
+		}
+		return;
+	}
+	
+	
+}

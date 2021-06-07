@@ -1,0 +1,7 @@
+
+void Main(){
+	ModalDialog("What Is This Dialog?"," ");
+	//string curDialog;
+	//GetCurrentDialog();
+	
+}

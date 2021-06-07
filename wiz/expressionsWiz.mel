@@ -1,0 +1,204 @@
+global proc expressionsWiz()
+{
+
+}
+
+global proc toggleExpressionsAndFluidEvaluations()
+{
+	int $ee = `menuItem -q -cb toggleExpressionsAndFluidEvaluations`;
+	if($ee == 1){
+		enableExpressionsAndFluidEvaluations();
+	} else {
+		disableExpressionsAndFluidEvaluations();
+	}
+}
+
+global proc toggleExpressionEvaluations()
+{
+	int $ee = `menuItem -q -cb toggleExpressionEvaluations`;
+	if($ee == 1){
+		enableExpressionEvaluations();
+	} else {
+		disableExpressionEvaluations();
+	}
+}
+
+global proc disableExpressionEvaluations()
+{
+	global int $tempExpressionsDisabled;
+	if($tempExpressionsDisabled == 1){
+		return;
+	}
+	string $allExp[] = `ls -type "expression"`;
+	global string $enabledExpressions[];
+	for($i=0;$i<`size $allExp`;$i++){
+		$enabled = `getAttr ($allExp[$i] + ".nodeState")`;
+		if($enabled == 0){
+			$enabledExpressions[`size $enabledExpressions`] = $allExp[$i];
+			setAttr ($allExp[$i] + ".nodeState") 1;
+		}
+	}
+	$tempExpressionsDisabled = 1;
+}
+
+global proc enableExpressionEvaluations()
+{
+	global int $tempExpressionsDisabled;
+	if($tempExpressionsDisabled == 0){
+		return;
+	}
+
+	global string $enabledExpressions[];
+	for($i=0;$i<`size $enabledExpressions`;$i++){
+		setAttr ($enabledExpressions[$i] + ".nodeState") 0;
+	}
+	$tempDisabled = 0;	
+	clear $enabledExpressions;
+}
+
+global proc enableFluidEvaluations()
+{
+	string $allFluids[] = `ls -type "fluidShape"`;
+	int $i;
+	for($i=0;$i<`size $allFluids`;$i++){
+		$disabled = `getAttr ($allFluids[$i] + ".disableInteractiveEval")`;
+		if($disabled == 1){
+			
+			setAttr ($allFluids[$i] + ".disableInteractiveEval") 0;
+		}
+	}
+
+}
+
+global proc disableFluidEvaluations()
+{
+	string $allFluids[] = `ls -type "fluidShape"`;
+	int $i;
+	for($i=0;$i<`size $allFluids`;$i++){
+		$disabled = `getAttr ($allFluids[$i] + ".disableInteractiveEval")`;
+		if($disabled == 0){
+			
+			setAttr ($allFluids[$i] + ".disableInteractiveEval") 1;
+		}
+	}
+
+}
+
+//DISABLE EXPRESSIONS AND FLUID EVALUATIONS
+//====================================================
+global proc disableExpressionsAndFluidEvaluations()
+{
+	//float $curTime = `currentTime -q`;
+	//float $startTime = `playbackOptions -q -min`;
+	//currentTime -edit $startTime;
+	global string $enabledExpressions[];
+	global string $enabledFluids[];
+	global int $tempDisabled;
+	if($tempDisabled == 1){
+		return;
+	}
+	string $allFluids[] = `ls -type "fluidShape"`;
+	string $getAllFluidsInScene = getObjectListExpression($allFluids, "AllFluidsInScene");
+	
+	int $i;
+	for($i=0;$i<`size $allFluids`;$i++){
+		$disabled = `getAttr ($allFluids[$i] + ".disableInteractiveEval")`;
+		if($disabled == 0){
+			$enabledFluids[`size $enabledFluids`] = $allFluids[$i];
+			setAttr ($allFluids[$i] + ".disableInteractiveEval") 1;
+		}
+	}
+	
+	string $allExp[] = `ls -type "expression"`;
+	createExpressionsInSceneExpression($allExp);
+	for($i=0;$i<`size $allExp`;$i++){
+		$enabled = `getAttr ($allExp[$i] + ".nodeState")`;
+		if($enabled == 0){
+			$enabledExpressions[`size $enabledExpressions`] = $allExp[$i];
+			catchQuiet(`setAttr ($allExp[$i] + ".nodeState") 1`);
+	
+		}
+	}
+	$tempDisabled = 1;
+
+}
+
+//ENABLE EXPRESSIONS AND FLUID EVALUATIONS
+//====================================================
+global proc enableExpressionsAndFluidEvaluations()
+{
+	//float $curTime = `currentTime -q`;
+	//float $startTime = `playbackOptions -q -min`;
+	//currentTime -edit $startTime;
+	
+	global int $tempDisabled;
+	if($tempDisabled == 0){
+		return;
+	}
+	global string $enabledFluids[];
+	int $i;
+	for($i=0;$i<`size $enabledFluids`;$i++){
+		setAttr ($enabledFluids[$i] + ".disableInteractiveEval") 0;
+	}
+	global string $enabledExpressions[];
+	for($i=0;$i<`size $enabledExpressions`;$i++){
+		//setAttr ($enabledExpressions[$i] + ".nodeState") 0;
+		catchQuiet(`setAttr ($enabledExpressions[$i] + ".nodeState") 0`);
+	}
+	$tempDisabled = 0;	
+	clear $enabledFluids;
+	clear $enabledExpressions;
+
+}
+
+global proc createExpressionsInSceneExpression(string $expressions[])
+{
+	global string $enabledExpressions[];
+	if(`size $expressions` == `size $enabledExpressions`){ return;}
+	
+	string $expScriptNodeName = "ExpressionsInSceneExpression";
+	catchQuiet(`delete $expScriptNodeName`);
+	
+	string $exp = "string $expressions[] = ";
+	$exp += stringArrayToStringArrayString($expressions) + " ;";
+	string $getExp = ("global proc string[] getExpressionsInScene()\n"
+	+"{\n"
+	+ $exp + "\n"
+	+"return $expressions;\n"
+	+"}\n"
+	);
+	
+	expression -s $getExp -ae false -n $expScriptNodeName;
+	
+	//scriptNode -st 0 -n $expScriptNodeName -bs $getExp
+}
+
+global proc string getObjectListExpression(string $sel[], string $name)
+{
+	$name = capitalizeString($name);
+	string $procName = "get" + $name;
+	string $selString = "string $sel[] = ";
+	$selString += stringArrayToStringArrayString($sel) + " ;";
+	string $getExp = ("global proc string[] " + $procName + "()\n"
+	+"{\n"
+	+ $selString + "\n"
+	+"return $sel;\n"
+	+"}\n"
+	);
+	expression -s $getExp -ae false -n $name;
+	return $name;
+}
+
+global proc string newGetObjectListExpression(string $sel[], string $name)
+{
+	$name = getUniqueNumberedName($name);
+	string $exp = getObjectListExpression($sel, $name);
+	return $exp;
+}
+
+global proc string overwriteGetObjectListExpression(string $sel[], string $name)
+{
+	catchQuiet(`delete $name`);
+	string $exp = getObjectListExpression($sel, $name);
+	return $exp;
+}

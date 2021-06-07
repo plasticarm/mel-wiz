@@ -1,0 +1,1745 @@
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//|||||||||||||||||||||||||:::WIZ:::||||||||||||||||||||||||||||||||||
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//                         ASSET WIZ
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+/*====================================================================
+Author: Glen Johnson
+Email: plasticarm@gmail.com
+Website: plasticarm.com / hrpictures.com
+----------------------------------------------------------
+Summary:
+
+
+
+====================================================================*/
+
+global proc string[] assetWiz()
+{
+    string $sel[] = `ls -sl`;
+    string $assetTypeCommands[];
+    if (`attributeExists "wizAssetType" $sel[0]`){
+        string $type = `getAttr -as ($sel[0] + ".wizAssetType")`;
+        $assetTypeCommands = wizGetAssetWizTypeMenuCommands($type);
+    } else {
+        if (`objectType -i "dagContainer" $sel[0]`){
+            //addWizObjectTypePrompt();
+            return { "Add Wiz Object Type Attribute", "addWizObjectTypePrompt" };
+        }
+    }
+    return $assetTypeCommands;
+}
+
+//========================================================================================================
+//[][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][]
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//                     WINDOWS
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//[][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][]
+//========================================================================================================
+
+
+//ASSET WIZ WINDOW
+//====================================================
+global proc string assetWizWindow( string $name )
+{
+	if(`window -exists $name`){
+		deleteUI $name;
+	}
+	
+	window
+		-title $name
+		//-widthHeight 500 700
+		-menuBar on
+		-menuBarVisible on
+		-minimizeButton on
+		-maximizeButton on
+		-sizeable on		
+		-resizeToFitChildren on
+		-titleBar on
+		$name
+		;
+		
+	string $columnLayout = `columnLayout
+		-adjustableColumn true
+		`;
+	
+	showWindow $name;
+	
+	return $columnLayout;
+
+}
+
+//========================================================================================================
+//""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//                     MENUS
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+//========================================================================================================
+
+global proc assetWizMainMenu()
+{
+	menu -l "Assets" -to true;
+		assetWizMainMenuItems();
+		
+}
+
+global proc assetWizMainMenu()
+{
+	menuItem -l "Add All Selected Assets To Asset" -c ("addAllSelectedAssetsToAsset(`ls -sl`);");
+	menuItem -l "Create Misc Asset" -c ("wizCreateMiscAsset(\"-sl\");");
+	
+		
+}
+
+global proc assetWizMenuBarLayout()
+{
+	//string $menuBarLayout = `menuBarLayout assetWizMenuBarLayout`;	
+	//assetWizMenuItems();
+
+}
+
+global proc assetWizMenuItems()
+{
+	menuItem -l "Add All Selected Assets To Asset" -c ("addAllSelectedAssetsToAsset(`ls -sl`);");
+	
+	menuItem -l "Transfer Asset Conents" -c ("transferAssetContents(`ls -sl`);");
+
+	menuItem -sm true -l "Publish";
+		menuItem -l "Publish All User Defined Attributes" -c ("wizAssetPublishing(\"-sl -ud\");");
+		menuItem -l "Publish Texture Thumbnails" -c ("wizAssetPublishing(\"-sl -tm\");");
+		
+}
+
+//========================================================================================================
+//()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//                     FUNCTIONS
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()
+//========================================================================================================
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         GENERAL ASSET FUNCTIONS
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+global proc assetWizSelectAssetContainer( string $object )
+{
+    string $sel[] = `ls -typ dagContainer -sl`;
+    select -r $sel[0];
+    if (`size $sel` > 1){
+        for ($i=1;$i<`size $sel`;$i++){
+            select -add $sel[$i];
+        }
+    }
+}
+//@ ASSET CONFIRM DIALOG
+//=========================================================
+global string $WIZ_assetConfirmDia; //This just hold the confirm string since we have to eval the confirm dialog
+/* USAGE:
+	string $pt = "Title";
+	string $mes = "Is It OK?";
+	string $but[] = `ls -sl`;
+	string $confirm = assetConfirmDialog($pt, $mes, $but, "OK", "Cancel");
+	if($confirm == "OK"){
+		DoSomething();
+	} else {
+		return;		
+	}
+*/
+global proc string assetConfirmDialog( string $title, string $message, string $buttons[], string $db, string $cb)
+{	
+	global string $WIZ_assetConfirmDia;
+	$WIZ_assetConfirmDia = "Cancel";
+	
+	string $bCommand = ("-db \"" + $buttons[0] + "\"" + "\n");
+	for($i=0;$i<`size $buttons`;$i++){
+		$bCommand += ("	-b \"" + $buttons[$i] + "\"" + "\n");		
+	}
+	$bCommand += "     -b \"" + $cb + "\"" + "\n";
+	
+	string $c = (
+	"global string $WIZ_assetConfirmDia;" + "\n"
+	+"string $confirm = `confirmDialog" + "\n"
+	+"	-t (\"" + $title + "\")" + "\n"
+	+"	-m (\"" + $message + "\")" + "\n"
+	+"	-ma \"center\"" + "\n"	
+	+"	" + $bCommand + "\n"
+	+"	-cb \"" + $cb + "\"" + "\n"
+	+"	`;" + "\n"
+	+"$WIZ_assetConfirmDia = $confirm;" + "\n"
+	);	
+	//print($pCommand);
+	
+	eval($c);
+	return $WIZ_assetConfirmDia;
+	
+}
+
+global proc addAllSelectedAssetsToAsset( string $sel[] )
+{
+	for ($i=1;$i<`size $sel`;$i++){
+		container -e -includeTransform -force -addNode $sel[$i] $sel[0];
+	}
+}
+
+global proc transferAssetContents(string $sel[])
+{
+	/*
+	select -r $sel[0];
+	
+	containerTemplate -force -fromContainer $sel[0] tempTemplate;
+	
+	
+	
+	containerTemplate -force -save tempTemplate;
+	
+	containerTemplate -force -abs tempTemplate;
+	containerTemplate -force -save tempTemplate;
+	
+	string $nodes[] = `container -query -nodeList $sel[0]`;
+	
+	container -e -rc $sel[0];
+	
+	select -r $sel[1];
+	
+	container -an $nodes $sel[1];
+	
+	containerTemplate -l tempTemplate;
+	*/
+	/*
+		string $sel[] = `ls -sl`;
+	containerTemplate -force -fromContainer $sel[0] tempTemplate;
+	containerCreateBindingSet($sel[0],"",1,1);
+	containerBind -bindingSet MayaBindings -force -allNames;
+	
+	containerTemplate -force -save tempTemplate;
+	containerTemplate -force -load tempTemplate;
+	*/
+	
+	/*	
+	
+		
+	containerTemplate -force -abs tempTemplate;
+	containerTemplate -force -save tempTemplate;
+		
+	string $nodes[] = `container -query -nodeList $sel[0]`;
+		
+	container -e -rc $sel[0];
+		
+	select -r $sel[1];
+		
+	container -an $nodes $sel[1];
+		
+	containerTemplate -l tempTemplate;
+	*/
+
+}
+
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                      ASSET WIZ ATTRIBUTES
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+//ADD WIZ OBJECT TYPE PROMPT
+//===========================================================
+global proc addWizObjectTypePrompt( string $object )
+{
+    string $sel[] = `ls -typ dagContainer -sl`;
+    string $ass = $sel[0];
+	string $pt = "Add Wiz Object Type";
+	string $mes = "Add A Object Type Attribute To This Asset To Identify It";
+	string $but[] = wizGetAssetWizTypes();
+	string $confirmDialog = wizConfirmDialog($pt, $mes, $but, $but[0], "Cancel");
+
+	if ($confirmDialog == "Cancel"){
+		return;
+	} else {
+		addWizAssetTypeAttributeToSelectedAsset($ass, $confirmDialog);
+		setAttr -type "string" ($ass + ".containerType") $confirmDialog;
+		
+	}
+
+}
+
+//ADD WIZ ASSET TYPE ATTRIBUTE TO SELECTED ASSETS
+//===========================================================
+global proc addWizAssetTypeAttributeToSelectedAssets( string $sel[] , string $type )
+{
+    for ($i=0;$i<`size $sel`;$i++){
+        addWizAssetTypeAttributeToSelectedAsset($sel[$i], $type);
+    } 
+}
+
+//ADD WIZ ASSET TYPE ATTRIBUTE TO SELECTED ASSET
+//===========================================================
+global proc addWizAssetTypeAttributeToSelectedAsset( string $ass, string $type )
+{
+	wizLog("[@] addWizAssetTypeAttributeToSelectedAsset");
+    string $assType[] = wizGetAssetWizTypes();
+    string $enumSelName[];
+    for ($i=0;$i<`size $assType`;$i++){
+        $enumSelName[$i] = $assType[$i] + "=" + $i + ":";			
+    }
+    addAttr -ln "wizAssetType" -at "enum" -en (stringArrayToString($enumSelName,"")) $ass;
+    int $selType = stringArrayFind($type, 0, $assType);
+	wizLog("	[#] Asset : [" + $ass + "] Asset Type : [" + $type + "]");
+	
+    if($selType == -1){
+        wizLog("-w 	[!] Something is wrong in addWizAssetTypeAttributeToSelectedAsset : in assetWiz\n");
+    }
+	setAttr ($ass + ".wizAssetType") $selType;
+	
+	string $dir = getWizIconsDirectory();
+	int $exists = `filetest -e ($dir + $type + "Icon.png")`;
+	
+	if ($exists == 1){
+		wizLog("	[+] Adding Icon : " + ($dir + $type + "Icon.png"));
+		setAttr -type "string" ($ass + ".iconName") ($dir + $type + "Icon.png");
+	} else {
+		wizLog("	[!] Asset Type Icon Not Found : " + ($dir + $selType + "Icon.png [!]"));
+		wizLog("	[+] Adding Default Wiz Asset Icon : " + ($dir + "wizCraftIcon1.png [+]"));
+		setAttr -type "string" ($ass + ".iconName") ($dir + "wizCraftIcon1.png");
+	}
+}
+
+//ADD WIZ ASSET TYPE ATTRIBUTE TO SELECTED ASSETS
+//===========================================================
+global proc string[] wizGetAssetWizTypes()
+{
+    string $types[] = { "shaderAsset", "skinShaderAsset", "hairAsset", "sunAsset",
+    "cBldrAsset", "lBldrAsset", "sBldrAsset", "ramputationAsset", "texturePoolAsset", "cameraAsset", "renderEnvAsset",
+    "referencePoolAsset", "polySelectConstraintAsset", "wizCraftAsset", "wizCraftComponentAsset", "textureLayerAsset",
+	"surfaceTileBldrAsset", "miscAsset", "importPoolAsset", "thinLineShader", "PBRMaterialAsset" };
+    
+    return $types;
+    
+}
+
+//GET ALL WIZ ASSETS OF TYPE
+//===========================================================
+global proc string[] getAllWizAssetsOfType( string $type )
+{
+	string $return[];
+	string $dg[] = `ls -typ dagContainer`;
+	//print ("Dag Containers : \n - " + stringArrayToString($dg, "\n - ") + "\n");
+	for ($i=0;$i<`size $dg`; $i++){
+		if (`attributeExists "wizAssetType" $dg[$i]`){
+			//print ("Obj : " + $dg[$i] + " : Is Wiz Asset" + "\n");
+			string $curType = `getAttr -as ($dg[$i] + ".wizAssetType")`;
+			//print ("Wiz Asset Type Is : " + $curType + "\n");
+			if ($curType == $type){
+				//print ("Wiz Asset : " + $dg[$i] + " : Is Type We Are Looking For\n");
+				$return[`size $return`] = $dg[$i];
+			}
+		}
+	}
+	return $return;
+}
+
+//@ LS WIZ ASSET OF TYPE
+//====================================================================
+/*****************************************************************//**
+	Pass a selection list and multiple types.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-tag1 string] [-tag2 linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-tag1, -tag2
+	
+	<hr>
+	<b>Examples</b><br>
+	<code>
+	string $wizAss[] = lsWizAssetOfType(`ls -sl`, "-typ wizCraftAsset -typ texturePoolAsset");
+	
+	</code>
+*********************************************************************/
+global proc string[] lsWizAssetOfType( string $sel[], string $tags )
+{
+    string $tok[] = tokenizeString($tags, " ");
+    string $types[];
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-typ" : case "-type" :
+			$types[`size $types`] = $tok[($i + 1)];
+			break;
+		}
+	}
+	//printNiceArrayList("Selected : ", $sel);
+	//print("Looking For Type(s) : " + stringArrayToString($types, ", ") + "\n");
+    string $return[];
+    for ($i=0;$i<`size $sel`;$i++){
+		if (`attributeExists "wizAssetType" $sel[$i]`){
+			string $curType = `getAttr -as ($sel[$i] + ".wizAssetType")`;
+            for ( $t=0;$t<`size $types`;$t++ ){
+                if ($curType == $types[$t]){
+					print ("Found WizAsset Of Type : " + $curType + " : Obj : " + $sel[$i] + "\n");
+                    $return[`size $return`] = $sel[$i];
+                }
+            }
+		}
+	}
+	return $return;
+}
+
+//WIZ GET ASSET WIZ TYPE MENU COMMANDS
+//===========================================================
+global proc string[] wizGetAssetWizTypeMenuCommands( string $type )
+{    
+	string $lssl[] = `ls -sl`;
+	string $con[] = `ls -con -sl`;
+	string $sel[] = stringArrayRemove($con, $lssl);
+	wizlog ((niceArrayList("	[#] Selected Objects [#]", $sel)));
+	
+    switch($type){
+        case "shaderAsset" :
+		//select -r $con;
+		//SelectContainerContents;
+		string $nl[] = `container -q -nl $con[0]`;
+		string $mat[] = `ls -mat $nl`;
+		wizlog ((niceArrayList("	[#] Materials [#]", $mat)));
+		
+		string $sac[];
+		for ($i=0;$i<`size $mat`;$i++){
+			$sac[`size $sac`] = "Assign " + $mat[$i];
+			$sac[`size $sac`] = ("wizAssignMaterialToSelected(\"-mat " + $mat[$i] + " -sl\");");
+			
+		}
+		for ($i=0;$i<`size $mat`;$i++){
+			$sac[`size $sac`] = "Replace Material Assignment With " + $mat[$i];
+			string $replace[] = $mat;
+			stringArrayRemoveAtIndex($i, $replace);
+			$sac[`size $sac`] = ("replaceMaterialConnectionsWithMaterial(\"-r " + (stringArrayToString($replace, " ")) + " -mat " + $mat[$i] + "\");");
+			
+		}
+		/*
+		$sac[`size $sac`] = { "Assign Asset Material To Selected Objects", "connectAssetMaterialToSelected",
+        "Select Asset Container", "assetWizSelectAssetContainer" };
+		*/
+		$sac[`size $sac`] = "Select Asset Container";
+		$sac[`size $sac`] = "assetWizSelectAssetContainer";
+		$sac[`size $sac`] = "Update Textures";
+		$sac[`size $sac`] = "rmbWizUpdateOutputTextures";
+        return $sac;
+        
+        case "skinShaderAsset" : 
+        string $ssac[] = { "Assign Asset Material To Selected Objects", "connectAssetMaterialToSelected",
+        "Select Skin Shader", "wizSelectSkinShaderInAsset",
+        "Transfer Maya Shader Maps To Skin Shader", "transferMayaShaderMapsToSkinShader",
+        "Connect Skin Shader Attributes", "wizConnectSkinShaderAttributes" };
+        return $ssac;
+    
+        case "hairAsset" : 
+        string $hac[] = { "Connect Hair System To Hair Color", "connectHairSystemToHairAssetColor" };
+        return $hac;
+        
+        case "sunAsset" : 
+        string $sunac[] = { "Toggle Sun Handle Visibility", "toggleSunHandleVisibility" };
+        return $sunac;
+        
+        case "cBldrAsset" :
+        string $xbac[] = { "Update Duplicates On Curve", "wizUpdateDuplicatesOnOnCurve",
+        "Select Duplicates", "rmbSelectDuplicateOnCurveDuplicates",
+        "Select Motion Paths", "rmbSelectDuplicateOnCurveDuplicatesMotionPaths",
+		"Replace cBldr Curve With Curve", "rmbcBldrReplaceCurveWithCurve" };
+        return $xbac;
+        
+		case "lBldrAsset" :
+        string $lbac[] = { "Build", "rmbLBldrDoBuild" };
+        return $lbac;
+		
+		case "ramputationAsset" :
+        string $rac[] = { "Randomize Selected Ramputations", "rmbRandomizeRamputation", 
+        "Radomize All Ramputation Assets", "rmbRandomizeAllRamputationAssets",
+        "Make New Ramps", "rmbRamputationMakeNewRamps",
+        "Add Selected To Ramps To Randomize", "rmbRamputationAddSelectedToRampsToRandomize",
+        "Add Selected To Pool", "rmbRamputationAddSelectedToPool",
+        "Reset Ramps", "rmbRamputationResetRamps",
+        "Add Overrides To Ramps", "rmbAddPerRampOverrideAttributes",
+        "Fit Selected Textures Into Ramp Space", "setSelectedTexturesToFitIntoRampSpaces" };
+        return $rac;
+		
+        case "texturePoolAsset" :
+        string $tpac[] = { "Randomize Texture Pools", "rmbRandomizeTexturePools" };
+        return $tpac;
+        
+        case "cameraAsset" :
+        string $xbac[] = { "Render To Planetarium", "rmbRenderToPlanetarium",
+        "Fit Cameras To View Object", "fitWizCamerasToViewSelectedObject" };
+        return $xbac;
+        
+        case "renderEnvAsset" :
+        string $reac[] = { "Render To Planetarium", "rmbRenderToPlanetarium",
+        "Fit Cameras To View Object", "fitWizCamerasToViewSelectedObject" };
+        return $reac;
+        
+        case "referencePoolAsset" :
+        string $rpac[] = { "Add Reference To Pool", "rmbAddSelectedReferencesToReferencePool",
+        "Add Files To Reference Pool", "rmbAddSelectedFilesToReferencePool",
+		"Add Directory To Reference Pool", "rmbAddDirectoryToReferencePool",
+		"Load Random Reference", "rmbLoadReferencePoolReference" };
+        return $rpac;
+        
+		case "importPoolAsset" :
+        string $ipac[] = { 
+        "Add Files To Import Pool", "rmbAddSelectedFilesToImportPool",
+		"Add Directory To Import Pool", "rmbAddDirectoryToImportPool",
+		"Load Random Import", "rmbLoadImportPoolImport" };
+        return $ipac;
+		
+        case "polySelectConstraintAsset" :
+        string $pscac[] = { "Run Poly Select Constraint", "runPolySelectConstraintAssetScriptJobs",
+        "Set Selection", "setPolySelectConstraintAssetSelection" 
+        };
+        return $pscac;
+        
+        case "wizCraftAsset" :  
+        string $wcac[] = { "Build", "rmbWizCraftDoBuild", 
+		"Analyse Structure", "doBuildAnalysisOnObject",
+		"Set As Current wizCraft Asset", "rmbSetCurrentWizCraftAsset"
+        };  
+		global string $WIZCRAFT_componentPoolTypes[];
+        string $refPool[] = getWizCraftPoolNames();
+        for ($i=0;$i<`size $WIZCRAFT_componentPoolTypes`;$i++){
+            $wcac[`size $wcac`] = ("Add Selected To " + $WIZCRAFT_componentPoolTypes[$i]);
+            $wcac[`size $wcac`] = ("rmbAddSelectedObjectsToComponentPool(\"" + $WIZCRAFT_componentPoolTypes[$i] + "\");");
+            $wcac[`size $wcac`] = ("Add Files To " + $WIZCRAFT_componentPoolTypes[$i]);
+            $wcac[`size $wcac`] = ("rmbAddFilesToReferenceComponentPool(\"" + $WIZCRAFT_componentPoolTypes[$i] + "\");");
+        }
+        return $wcac;
+		
+		/*
+		case "sBldrAsset" :  
+        string $sbac[] = { "Set As Live Bldr", "",
+		"Build", "rmbWizCraftDoBuild", 
+		"Analyse Structure", "doBuildAnalysisOnObject",
+		"CreateSurfaceFeatureMaskTexture", "",
+		"CreateSurfaceFeatureHairs", "",
+		"Flatten Features", "",
+		"Do Curve Replacement", ""
+		"Call Build On Components", ""
+        };  
+		
+        return $wcac;
+        */
+		
+		case "textureLayerAsset" :
+		string $tlac[] = { "Layer Onto Selected Object", "rmbAddTextureLayerToObject" };
+		return $tlac;
+		
+		case "wizCraftComponentAsset" :
+        string $wccac[] = { "Add Files To Pool", "rmbAddSelectedFilesToReferencePool"
+        };
+        return $wccac;
+        
+		case "surfaceTileBldrAsset" :
+        string $stbac[] = { "Build On Surface", "rmbWizCraftTileSurface"
+        };
+		return $stbac;
+		
+		case "thinLineShader" :
+		string $tnsac[] = { "Build Lines On Select Path Curves", "rmbWizBuildThinLines"
+        };
+		return $tnsac;
+		
+        case "miscAsset" :
+        string $mac[] = { "Execute String Command", "rmbExecuteMiscAssetStringCommand"
+        };
+        return $mac;
+		
+        case "PBRMaterialAsset" :
+		string $tnsac[] = { "Find Texture Files", "rmbPBRMaterialFindTextureFiles"
+        };
+		return $tnsac;
+        
+        
+    }
+
+}
+
+//@ UNLOAD ALL WIZ REFERENCED ASSETS OF TYPE 
+//====================================================================
+/*****************************************************************//**
+*	Pass a wizAssetType and this will unload any references that contain 
+objects of that wizAssetType.
+*	More information.
+*	USAGE : 
+*
+*********************************************************************/
+global proc unloadAllWizReferencedAssetsOfType( string $type )
+{
+    string $wa[] = getAllWizAssetsOfType($type);
+    unloadSelectedReferenceObjects($wa);
+}
+
+//@ REMOVE ALL WIZ REFERENCED ASSETS OF TYPE 
+//====================================================================
+global proc removeAllWizReferencedAssetsOfType( string $type )
+{
+    string $wa[] = getAllWizAssetsOfType($type);
+    removeSelectedObjectReferenceFile($wa);
+}
+
+//@ LOAD ALL WIZ REFERENCED ASSETS OF TYPE 
+//====================================================================
+global proc loadAllWizReferencedAssetsOfType( string $type )
+{
+    string $wa[] = getAllWizAssetsOfType($type);
+   // unloadSelectedReferenceObjects($wa);
+}
+
+
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			CUBEMAP WIZ
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//====================================================================
+global proc cubemapWiz()
+{
+	
+}
+
+
+//@ UNLOAD CAMERA ASSET REFERENCES
+//====================================================================
+global proc unloadCameraAssetReferences( )
+{
+    string $ca[] = getAllWizAssetsOfType("cameraAsset");
+    unloadSelectedReferenceObjects($ca);
+}
+
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         SHADER ASSET WIZ
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+global proc string[] shaderAssetWiz()
+{
+    
+	return { "Assign Asset Material To Selected Objects", "connectAssetMaterialToSelected",
+    "Select Asset Container", "assetWizSelectAssetContainer"
+    };
+		
+}
+
+
+/*
+//CONNECT ASSET SHADER TO SELECTED
+//=====================================================================
+global proc string[] shaderAssetWiz()
+{
+	string $sel[] = `ls -sl`;
+	//Get the container that is selected
+	string $con[] = `ls -con -sl`;
+	if (`size $con` == 0){
+		print ("WIZ| connectAssetMaterialToSelected : Make Sure You Have Selected A Asset.\n");
+		return;
+	}
+	//select -r $sel[(`size $sel` - 1)];
+	select -r $con[0];
+	
+	//Select the contents so we can find materials inside container
+	SelectContainerContents;
+	string $ass[] = `ls -sl`;
+	//print ("WIZ| Asset Contents : \n	- " + stringArrayToString($ass, "\n	- ") + "\n");
+	
+	//Remove the containers from the selection
+	//stringArrayRemoveAtIndex((`size $sel` - 1), $sel);
+	$sel = stringArrayRemove($con, $sel);
+	
+	//Get the materials inside asset container
+	string $mat[] = `ls -mat -sl`;
+	if (`size $mat` == 0){
+		print ("WIZ| connectAssetMaterialToSelected : No Materials Found In Asset. Make Sure You Have Selected An Asset That Has A Shader Inside.\n");
+		return;
+	}
+	//print ("WIZ| Materials In Asset : \n	- " + stringArrayToString($mat, "\n 	- ") + "\n");
+	string $selShader = $mat[0];
+	//If the asset has more than one material, let the user select the wanted material
+	string $return[];
+	for ($i=0;$i<`size $mat`;$i++){
+		$return[`size $return`] = "Assign - " + $mat[$i];
+		$return[`size $return`] = "Assign - " + $mat[$i];
+	}
+	
+}
+*/
+/*
+global
+proc string[] containerRmbMenu()
+{
+	return {"Select Selection Transform", "containerSelectRootExample",
+			"Select Parent Anchors", "containerSelectParentAnchorsExample",
+			"Select Child Anchors", "containerSelectParentAnchorsExample"};
+}
+*/
+/*
+global proc shaderAssetWiz()
+{
+	string $win = assetWizWindow("shaderAssetWiz");
+	
+	button
+		-l "Assign Asset Material To Selected Objects"
+		-ann "Select Objects And Shader Asset Container"
+		-c ("connectAssetMaterialToSelected(`ls -sl`);")
+		;
+		
+}
+*/
+
+/*
+global proc rmbAssignMaterialToSelected( string $object ){
+	string $lssl[] = `ls -sl`;
+	string $con[] = `ls -con -sl`;
+	string $sel[] = stringArrayRemove($con, $lssl);
+
+	string $nl[] = `container -q -nl $con[0]`;
+	string $mat[] = `ls -mat $nl`;
+	//wizlog ((niceArrayList("	[#] Materials [#]", $mat)));
+	
+	string $sac[];
+	for ($i=0;$i<`size $mat`;$i++){
+		$sac[`size $sac`] = "Assign " + $mat[$i];
+		$sac[`size $sac`] = ("wizAssignMaterialToSelected(\"-mat " + $mat[$i] + " -sl\");");		
+	}
+	for ($i=0;$i<`size $mat`;$i++){
+		$sac[`size $sac`] = "Replace Material Assignment With " + $mat[$i];
+		string $replace[] = $mat;
+		stringArrayRemoveAtIndex($i, $replace);
+		$sac[`size $sac`] = ("replaceMaterialConnectionsWithMaterial(\"-r " + (stringArrayToString($replace, " ")) + " -mat " + $mat[$i] + "\");");
+		
+	}
+		
+}
+*/
+
+//CONNECT ASSET SHADER TO SELECTED
+//=====================================================================
+global proc connectAssetMaterialToSelected( string $object )
+{
+    string $sel[] = `ls -sl`;
+     
+	//Get the container that is selected
+	string $con[] = `ls -con -sl`;
+	if (`size $con` == 0){
+		print ("WIZ| connectAssetMaterialToSelected : Make Sure You Have Selected A Asset.\n");
+		return;
+	}
+	//select -r $sel[(`size $sel` - 1)];
+	select -r $con[0];
+	
+	//Select the contents so we can find materials inside container
+	SelectContainerContents;
+	string $ass[] = `ls -sl`;
+	//print ("WIZ| Asset Contents : \n	- " + stringArrayToString($ass, "\n	- ") + "\n");
+	
+	//Remove the containers from the selection
+	//stringArrayRemoveAtIndex((`size $sel` - 1), $sel);
+	$sel = stringArrayRemove($con, $sel);
+	
+	//Get the materials inside asset container
+	string $mat[] = `ls -mat -sl`;
+	if (`size $mat` == 0){
+		print ("WIZ| connectAssetMaterialToSelected : No Materials Found In Asset. Make Sure You Have Selected An Asset That Has A Shader Inside.\n");
+		return;
+	}
+	//print ("WIZ| Materials In Asset : \n	- " + stringArrayToString($mat, "\n 	- ") + "\n");
+	string $selShader = $mat[0];
+	//If the asset has more than one material, let the user select the wanted material
+	if (`size $mat` > 1){
+		string $confirm = assetConfirmDialog("Asset Material Assignment", "Select Asset Material To Assign", $mat, $mat[0], "Cancel");
+	
+		for ($i=0;$i<`size $mat`;$i++){
+			if ($confirm == $mat[$i]){
+				$selShader = $mat[$i];
+			}
+		}
+	}
+	
+	//Get the shading engine from the selected material
+	string $sg[] = listConnections("-type" ,"shadingEngine" , $selShader);	
+	if (`size $sg` == 0){	
+		//string $shadingEngine = `shadingNode -n $name -asShader $type`;
+		string $sgName = $selShader + "SG";
+		sets -renderable true -noSurfaceShader true -empty -name $sgName;	
+		connectAttr -f ($selShader+ ".outColor") ($sgName + ".surfaceShader");
+		
+	}
+	print ("WIZ| Connecting : " + $selShader + " Shading Engine: " + $sg[0] + " To : " + stringArrayToString($sel, " ") + "\n");
+	
+	print ("select -r " + $sg[0] + ";\n"
+	+"select -add " + stringArrayToString($sel, " ") + " ;\n"
+	+"sets -e -forceElement " + $sg[0] + ";\n"
+	);
+	
+	select -r $sg[0];
+	select -add $sel;
+		
+	sets -e -forceElement $sg[0];
+	
+}
+
+global proc wizAssignMaterialToObject( string $mat, string $sel[] )
+{
+
+}
+
+global proc createShaderSceneThumbnail( string $object )
+{
+    string $sel[] = `ls -sl`;
+    string $sphere = `polySphere -ch on -o on -r 10 `;
+    select -r $sphere;
+    select -add $sel;
+    sets -e -forceElement $sel;	
+    string $tempCam = `camera -centerOfInterest 5 -focalLength 35 -lensSqueezeRatio 1 -cameraScale 1 -horizontalFilmAperture 1.4173 -horizontalFilmOffset 0 -verticalFilmAperture 0.9449 -verticalFilmOffset 0 -filmFit Fill -overscan 1 -motionBlur 0 -shutterAngle 144 -nearClipPlane 0.1 -farClipPlane 10000 -orthographic 0 -orthographicWidth 30 -panZoomEnabled 0 -horizontalPan 0 -verticalPan 0 -zoom 1`;
+    setAttr ($tempCam + ".translateZ") 40; 
+        
+
+}
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         SKIN SHADER ASSET WIZ
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+global proc string[] skinShaderAssetWiz()
+{
+	string $commands[] = 
+	{ "Assign Asset Material To Selected Objects", "connectAssetMaterialToSelected",
+	"Select Skin Shader", "wizSelectSkinShaderInAsset",
+	"Transfer Maya Shader Maps To Skin Shader", "transferMayaShaderMapsToSkinShader",
+	"Connect Skin Shader Attributes", "wizConnectSkinShaderAttributes"	
+	};
+    
+	return $commands;
+	
+	/*
+	return { "Assign Asset Material To Selected Objects", "connectAssetMaterialToSelected(`ls -sl`);",
+	"Select Skin Shader", "wizSelectSkinShaderInAsset();",
+	"Transfer Maya Shader Maps To Skin Shader", "transferMayaShaderMapsToSkinShader(`ls -sl`);",
+	"Connect Skin Shader Attributes", "wizConnectSkinShaderAttributes(`ls -sl`);",
+	"Connect Selected Meshes To Shading Switches", "connectSelectedMeshesToSkinShadingSwitchNodes(`ls -sl`, \"replace\");",
+	"Add Selected Meshes To Shading Switches", "connectSelectedMeshesToSkinShadingSwitchNodes(`ls -sl`, \"add\");"
+	
+	};
+	*/
+}
+/*
+global proc skinShaderAssetWiz()
+{
+	string $win = assetWizWindow("skinShaderAssetWiz");
+	
+	button
+		-l "Assign Asset Material To Selected Objects"
+		-ann "Select Objects And Shader Asset Container"
+		-c ("connectAssetMaterialToSelected(`ls -sl`);")
+		;
+		
+	button
+		-l "Transfer Maya Shader Maps To Skin Shader"
+		-ann " - Select Material Or Object With Material To Replace\n - Then Select Skin Shader Asset Container"
+		-c ("transferMayaShaderMapsToSkinShader(`ls -sl`);")
+		;
+		
+	button
+		-l "Connect Selected Meshes To Shading Switches"
+		-ann "Select Meshes, Then Select Asset."
+		-c ("connectSelectedMeshesToSkinShadingSwitchNodes(`ls -sl`, \"replace\");")
+		;	
+		
+	button
+		-l "Add Selected Meshes To Shading Switches"
+		-ann "Select Meshes, Then Select Asset."
+		-c ("connectSelectedMeshesToSkinShadingSwitchNodes(`ls -sl`, \"add\");")
+		;	
+		
+	button
+		-l "Connect Skin Shader Attributes"
+		-ann "This will connect the attributes of the 2nd selected skin shader to the 1st selected skin shader"
+		-c ("wizConnectSkinShaderAttributes(`ls -sl`);")
+		;	
+		
+		
+}
+*/
+
+//@ TRANSFER MAYA SHADER MAPS TO MENTAL RAY FAST SKIN SHADER
+//================================================================
+global proc transferMayaShaderMapsToSkinShader( string $object )
+{
+    string $sel[] = `ls -sl`;
+	string $mat[] = `ls -mat $sel[0]`;
+	string $ms[];
+	if(`size $mat` > 0){
+		$ms[0] = $mat[0];	
+	} else {
+		$ms = getMaterialsFromSelected({$sel[0]});
+	}	
+	string $material = $ms[0];
+	
+	string $skinShader = $sel[1];
+	
+	//Tranfer Color Map
+	string $colTex[] = getAllDownstreamNodesOfType(($material + ".color"), "file");
+	
+	if(`size $colTex` > 0){
+		string $ftn = `getAttr ($colTex[0] + ".fileTextureName")`;
+		setAttr ($skinShader + ".epidermisFileTexture") -type "string" $ftn;
+		
+	}
+	
+	//Tranfer Bump Map
+	string $bumpTex[] = getAllDownstreamNodesOfType(($material + ".normalCamera"), "file");
+	if(`size $bumpTex` > 0){
+		string $ftn = `getAttr ($bumpTex[0] + ".fileTextureName")`;
+		setAttr ($skinShader + ".skinBumpFileTexture") -type "string" $ftn;
+		
+	}
+	
+	//Tranfer Glossyness Map
+	string $cosTex[] = getAllDownstreamNodesOfType(($material + ".cosinePower"), "file");
+	string $eccTex[] = getAllDownstreamNodesOfType(($material + ".eccentricity"), "file");
+	string $specRollTex[] = getAllDownstreamNodesOfType(($material + ".specularRollOff"), "file");
+
+	if(`size $cosTex` > 0){
+		string $ftn = `getAttr ($cosTex[0] + ".fileTextureName")`;
+		setAttr ($skinShader + ".shininessFileTexture") -type "string" $ftn;
+		
+	}
+	if(`size $eccTex` > 0){
+		string $ftn = `getAttr ($eccTex[0] + ".fileTextureName")`;
+		setAttr ($skinShader + ".shininessFileTexture") -type "string" $ftn;
+		
+	}
+	if(`size $specRollTex` > 0){
+		string $ftn = `getAttr ($specRollTex[0] + ".fileTextureName")`;
+		setAttr ($skinShader + ".shininessFileTexture") -type "string" $ftn;
+		
+	}
+	
+}
+
+//@ CONNECT SELECTED MESHES TO SKIN SHADING SWITCH NODES
+//=================================================================
+global proc connectSelectedMeshesToSkinShadingSwitchNodes( string $sel[], string $action )
+{
+	string $asset = $sel[(`size $sel` - 1)];
+	print ("Skin Shader Asset : " + $asset + "\n");
+	string $switchTypes[] = { "singleShadingSwitch", "doubleShadingSwitch", "tripleShadingSwitch", "quadShadingSwitch" };
+
+	//$sel = stringArrayRemoveAtIndex($sel, (`size $sel` - 1));	
+	stringArrayRemoveAtIndex((`size $sel` - 1), $sel);
+	print ("Meshes To Connect : \n" + stringArrayToString($sel, "\n	- ") + "\n");
+	string $switches[] = getConnectedObjectsOfTypes($asset, $switchTypes);
+	string $s[] = getMainShapeNodesFromSelection($sel);
+	print ("Shape Nodes : \n" + stringArrayToString($s, "\n	- ") + "\n");
+	
+	for ($i=0;$i<`size $switches`;$i++){
+		int $mi[];
+		int $si = 0;;
+		if ($action == "add"){
+			$mi = `getAttr -mi ($switches[$i] + ".input")`;
+			$si = `size $mi`;
+			print ("Switch : " + $switches[$i] + " Has : " + `size $mi` + " Inputs\n");
+		} 
+		
+		for ($p=0;$p<`size $s`;$p++){
+			catchQuiet(`connectAttr -f ($s[$p] + ".instObjGroups") ($switches[$i] + ".input[" + $si + "].inShape")`);
+			$si++;
+		}
+		$si = 0;
+	}
+
+}
+
+//@ WIZ CONNECT SKIN SHADER ATTRIBUTES
+//=================================================================
+global proc wizConnectSkinShaderAttributes( string $object )
+{
+    string $sel[] = `ls -sl`;
+	string $conAttr[] = { "diffuse_weight", "front_sss_weight", "front_sss_radius", 
+	"mid_sss_weight", "mid_sss_radius", "back_sss_weight", "back_sss_radius",
+	"back_sss_depth", "overall_weight", "edge_factor", "primary_edge_weight",
+	"secondary_edge_weight", "reflect_weight", "reflect_edge_weight", "reflect_shinyness",
+	"reflect_environment_only", "scale_conversion", "samples" };
+	
+	for ($i=0;$i<`size $conAttr`;$i++){	
+		print ("connectAttr -f \"" + $sel[0] + "." + $conAttr[$i] + "\"" + " " + "\"" + $sel[1] + "." + $conAttr[$i] + "\""); //"
+		catchQuiet(`connectAttr -f ($sel[0] + "." + $conAttr[$i]) ($sel[1] + "." + $conAttr[$i])`);
+	}
+
+}
+
+//@ WIZ SELECT SKIN SHADER IN ASSET
+//=================================================================
+global proc wizSelectSkinShaderInAsset( string $object )
+{
+	/*
+	string $sel[] = `ls -sl`;
+	//Get the container that is selected
+	string $con[] = `ls -con -sl`;
+	if (`size $con` == 0){
+		print ("WIZ| connectAssetMaterialToSelected : Make Sure You Have Selected A Asset.\n");
+		return;
+	}
+	select -r $con[0];
+	
+	//Select the contents so we can find materials inside container
+	SelectContainerContents;
+	string $ass[] = `ls -sl`;
+	//print ("WIZ| Asset Contents : \n	- " + stringArrayToString($ass, "\n	- ") + "\n");
+	
+	//Remove the containers from the selection
+	//stringArrayRemoveAtIndex((`size $sel` - 1), $sel);
+	$sel = stringArrayRemove($con, $sel);
+	
+	//Get the materials inside asset container
+	string $mat[] = `ls -mat -sl`;
+	if (`size $mat` == 0){
+		print ("WIZ| connectAssetMaterialToSelected : No Materials Found In Asset. Make Sure You Have Selected An Asset That Has A Shader Inside.\n");
+		return;
+	}
+	//print ("WIZ| Materials In Asset : \n	- " + stringArrayToString($mat, "\n 	- ") + "\n");
+	for ($i=0;$i<`size $mat`;$i++){
+		string $matName = getObjectNameNoNamespaces($mat[$i]);
+		if ($matName == "miss_fast_skin_maya1"){
+			select -r $matName;
+			
+		}
+	
+	}
+	*/
+	string $sel[] = `ls -sl`;
+	//Get the container that is selected
+	string $con[] = `ls -con $sel`;
+	if (`size $con` == 0){
+		//print ("WIZ| connectAssetMaterialToSelected : Make Sure You Have Selected A Asset.\n");
+		return;
+	}
+	select -r $con[0];
+	SelectContainerContents;
+		
+	string $mat[] = `ls -mat -sl`;
+	//print ("Mat : " + stringArrayToString($mat, " ") + "\n");
+	string $skinMat[] = `ls -type "misss_fast_skin_maya" $mat`;
+	//print ("Skin Mat : " + stringArrayToString($skinMat, " ") + "\n");
+	select -r $skinMat[0];
+	
+}
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			HAIR ASSET WIZ
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//====================================================================
+
+global proc string[] hairAssetWiz()
+{
+/*
+	string $win = assetWizWindow("hairAssetWiz");
+	
+	button
+		-l "Connect Hair System To Hair Color"
+		-ann "Select Hair Asset Container, Then Select Hair System To Connect"
+		-c ("connectHairSystemToHairAssetColor(`ls -sl`);")
+		;
+    */  
+    return { "Connect Hair System To Hair Color", "connectHairSystemToHairAssetColor" };
+    
+		
+}
+
+global proc connectHairSystemToHairAssetColor( string $object )
+{
+	string $sel[] = `ls -sl`;
+	connectAttr -f ($sel[0] + ".selectedHairColor") ($sel[1] + ".hairColor");
+	connectAttr -f ($sel[0] + ".selectedSpecularColor") ($sel[1] + ".specularColor");
+	//connectAttr -f ($sel[0] ".output ($sel[0] + ".hairColor");
+	//connectAttr -f HairSpecularColorChoice1.output ($sel[0] + ".specularColor");
+}
+
+
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//////////////////////////////////////////////////////////////////////
+//			SUN LIGHT ASSET WIZ
+//////////////////////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//====================================================================
+
+//@ SUN ASSET WIZ
+//====================================================================
+global proc string[] sunAssetWiz()
+{
+/*
+	string $sel[] = `ls -sl`;
+	string $return[];
+	if (`attributeExists "handleVisibility" $sel[0]`){
+		int $vis = `getAttr ($sel[0] + ".handleVisibility")`;
+		if ($vis == 1){
+			$return = { "Hide Sun Handle", ("setAttr \"" + $sel[0] + ".handleVisibility\" 0;")};	
+		} else {
+			$return = { "Show Sun Handle", ("setAttr \"" + $sel[0] + ".handleVisibility\" 1;")};	
+		}
+	}
+    */
+    //string $return[] = { "Toggle Sun Handle Visibility", "toggleSunHandleVisibility" };
+	return { "Toggle Sun Handle Visibility", "toggleSunHandleVisibility" };
+}
+
+//@ TOGGLE SUN HANDLE VISIBILITY
+//====================================================================
+global proc toggleSunHandleVisibility( string $object )
+{
+    string $sel[] = `ls -sl`;
+    if (`attributeExists "handleVisibility" $sel[0]`){
+		int $vis = `getAttr ($sel[0] + ".handleVisibility")`;
+		if ($vis == 1){
+			setAttr ($sel[0] + ".handleVisibility") 0;	
+		} else {
+			setAttr ($sel[0] + ".handleVisibility") 1;
+		}
+	}
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         RENDER ENV ASSET
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//@ UNLOAD RENDER ENV REFERENCES
+//====================================================================
+global proc unloadRenderEnvReferences( )
+{
+    string $rea[] = getAllWizAssetsOfType("renderEnvAsset");
+    unloadSelectedReferenceObjects($rea);
+}
+
+
+//@ WIZ CREATE MISC ASSET
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-fa string] [-fb linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-fa, -fb
+	
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName("-fa aString -fb anotherString");
+	
+	</code>
+*********************************************************************/
+global proc wizCreateMiscAsset( string $flags )
+{
+	string $obj, $type;
+	string $name = "WizAsset";
+	string $sel[];
+	int $edit;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+			
+			case "-nm" : case "-name" :
+			$name = $tok[($i + 1)];
+			break ;
+			
+			case "-typ" : case "-type" :
+			$type = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+		}
+	}
+	string $asset;
+	string $dc[] = `ls -type dagContainer -sl`;
+	if ($edit == 1 || `size $dc` > 0){
+		$asset = $dc[0];
+	} else {
+		$asset = `container -n $name -type dagContainer -ind "inputs" -includeHierarchyBelow -includeShapes -includeTransform`;
+	
+	}
+	
+	setAttr -type "string" ($asset + ".rmbCommand") "assetWiz";
+	
+	if (`attributeExists "evalCommand" $asset` == 0){
+		addAttr -ln "evalCommand" -dt "string" $asset;
+	}	
+	
+
+}
+
+
+global proc rmbExecuteMiscAssetStringCommand( string $object )
+{
+	string $lssl[] = `ls -sl`;
+	string $con[] = `ls -con -sl`;
+	string $sel[] = stringArrayRemove($con, $lssl);
+	string $eval = `getAttr ($con[0] + ".evalCommand")`;
+	
+	select -r $sel;
+	
+	eval($eval);
+	//wizlog ((niceArrayList("	[#] Selected Objects [#]", $sel)));	
+	
+}
+
+
+
+global string $WIZ_wizAssetIconSuffix;
+$WIZ_wizAssetIconSuffix = "AICON";
+
+global proc string createWizAssetIcon( string $flags )
+{
+	wizLog("[@] createWizAssetIcon");
+	
+    global string $WIZ_wizAssetIconSuffix;
+    global string $WIZ_sceneFileRenderIconSuffix;
+	
+	string $sel[] = `ls -typ dagContainer -sl`;
+    string $ass = $sel[0];
+	
+    
+    //string $sceneDir = getDirectoryFromFullFilePath($sceneFile);
+	string $assDir = `workspace -q -rd`;
+	string $templateDir = `workspace -q -fre templates`;
+	string $dir = $assDir + $templateDir + "/" + "icons/";
+	
+	//string $dir = getWizIconsDirectory();
+  
+	// Remove Extension
+	string $fileName = $dir + $ass + "_" + $WIZ_wizAssetIconSuffix + ".png";
+
+	//setCurrentRenderer mentalRay;
+	
+	/*
+	if (`checkBox -q -v wizAssetIconUseDefaultPreset_checkBox`){
+		loadPreferredRenderGlobalsPreset("mentalRay");
+    
+    }
+    */
+	
+    //Temporarily set the image format to png so we are always rendering png files
+    int $curImageFormat = `getAttr "defaultRenderGlobals.imageFormat"`;    
+    setAttr "defaultRenderGlobals.imageFormat" 32;
+    
+	if (`checkBox -q -v wizAssetIconFitVisibleInView_checkBox`){
+		fitVisibleObjectsInView();
+	}
+	
+	// Load the default render environment - will only load if there are no ligths in scene.
+	if (`checkBox -q -v wizAssetIconLoadIconRenderEnv_checkBox` == 1){		
+		wizLog("	[+] Load Default Render Environment [+]");		
+		wizLoadRenderEnv("-ai");
+	}
+	
+	string $curCam = getCurrentCamera();	
+	float $fl = `getAttr ($curCam + ".focalLength")`;
+	float $thumbFl = `floatSliderGrp -q -v wizAssetIconCameraFocalLength_floatSliderGrp`;
+	setAttr ($curCam + ".focalLength") $thumbFl;
+
+    wizlog ("	[#] Asset Icon Image : " + $fileName);
+    
+    //Do a single image playblast to get a thumbnail image
+    int $currentFrame = `currentTime -q`;
+
+	// set render globals to render large sq image
+	int $h = `getAttr "defaultResolution.height"`;
+	int $w = `getAttr "defaultResolution.width"`;
+	int $al = `getAttr "defaultResolution.aspectLock"`;
+	int $iconSize = `intFieldGrp -q -v1 wizAssetIcon_iconSize_checkBox`;
+	
+	setAttr "defaultResolution.height" $iconSize;
+	setAttr "defaultResolution.width" $iconSize;
+	setAttr "defaultResolution.aspectLock" 1;
+	
+	setTestResolutionVar(1);
+	print ("Rendering Icon : " + $fileName + "\n");
+
+	RenderIntoNewWindow;
+	renderWindowEditor -edit -writeImage $fileName -com renderView;
+	
+	// reset render settings to where they were
+	setAttr "defaultResolution.height" $h;
+	setAttr "defaultResolution.width" $w;
+	setAttr "defaultResolution.aspectLock" $al;
+	
+	setTestResolutionVar(4);
+
+	
+    //Return render globals to previous state
+    setAttr "defaultRenderGlobals.imageFormat" $curImageFormat;
+    setAttr ($curCam + ".focalLength") $fl;
+	
+	// Remove the render env
+	//wizLog("	[-] Remove Default Render Environment [-]");	
+	//wizMGMT("-ex removeRenEnv","");
+	
+
+	int $exists = `filetest -e $fileName`;
+	
+	if ($exists == 1){
+		wizLog("	[+] Adding Icon : " + $fileName);
+		setAttr -type "string" ($ass + ".iconName") $fileName;
+	} else {
+		wizLog("	[!] Asset Type Icon Not Found : " + $fileName + " [!]");
+		//wizLog("	[+] Adding Default Wiz Asset Icon : " + ($dir + "wizCraftIcon1.png [+]"));
+		//setAttr -type "string" ($ass + ".iconName") ($dir + "wizCraftIcon1.png");
+	}
+	
+	if (`checkBox -q -v wizAssetIconLoadIconRenderEnv_checkBox` == 1){	
+		string $drenv = `optionVar -q WIZ_assetIconRenderEnv`;	
+		file -f -rr $drenv;
+	}
+	
+    return $fileName;
+
+}
+
+//@ WIZ ASSET PUBLISHING
+//====================================================================
+/*****************************************************************//**
+	Publish en mass, different kinds of attributes.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	none
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-textureMessages(-tm) : publish all texture messages<br>
+	-userDefined(-ud) : publish all user definded attributes<br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	wizAssetPublishing("-sl -tm -ud");
+	
+	</code>
+*********************************************************************/
+global proc wizAssetPublishing( string $flags )
+{
+	string $obj, $type;
+	string $sel[];
+	int $tm, $ud, $caa;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			$sel[`size $sel`] = $obj;
+			break ;
+				
+			case "-typ" : case "-type" :
+			$type = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-tm" : case "-textureMessages" :
+			$tm = 1;
+			break ;
+			
+			case "-ud" : case "-userDefined" :
+			$ud = 1;
+			break ;
+			
+			case "-caa" : case "-childAssetAttributes" :
+			$caa = 1;
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	//_________________________________________
+	// Get Conents Of Asset
+	string $nl[] = `container -q -nl $sel[0]`;
+	
+	//_________________________________________
+	// Publish All Texture Messages
+	if ($tm){	
+		string $tex[] = `ls -tex $nl`;
+		for ($i=0;$i<`size $tex`;$i++){
+			if (`attributeExists "message" $tex[$i]` == 1){
+				container -e -pb ($tex[$i] + ".message") $tex[$i] $sel[0];
+			}
+		}
+	}
+	
+	//_________________________________________
+	// Publish All User Defined Attributes
+	if ($ud){
+		for ($i=0;$i<`size $nl`;$i++){
+			string $udAttr[] = `listAttr -ud $nl[$i]`;	
+			wizlog ((niceArrayList("	[#] User Defined Attributes [#]", $udAttr)));
+			
+			
+			for ($ui=0;$ui<`size $udAttr`;$ui++){
+				// skip notes attr. maya things that notes is a user defined attribute.
+				if ($udAttr[$ui] == "notes"){ continue; };
+				container -e -pb ($nl[$i] + "." + $udAttr[$ui]) $udAttr[$ui] $sel[0];	
+			}
+			
+		}
+	}
+	
+	if ($caa){
+		SelectContainerContents;
+		string $ca[] = `ls -con -sl`;
+		if (`size $ca` == 0){
+			wizlog ("[!] No Assets Found Inside Selected Container");
+			return ;
+		}
+		for ($i=0;$i<`size $ca`;$i++){
+			string $bindAttr[] = `container -query -publishName -bindAttr`;
+				
+		}
+		
+		string $bindAttr[] = `container -query -publishName -bindAttr`;
+		
+	
+	}
+}
+
+
+//@ WIZ ASSET PROXY IMAGE PLANE
+//====================================================================
+/*****************************************************************//**
+	Creates an image plane with image of object.
+	<hr>
+	<b>Synopsis</b><br>
+	wizAssetProxyImagePlane [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName("-obj someObject -q -sl");
+	
+	</code>
+*********************************************************************/
+global proc wizAssetProxyImagePlane( string $flags )
+{
+	string $obj, $type;
+	string $sel[];
+	int $edit;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-typ" : case "-type" :
+			$type = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+			case "-ax" : case "-axis" :
+			string $axis = $tok[($i + 1)];
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	
+
+}
+
+//@ ASSET WIZ SELECTION
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $sel[] = assetWizSelection("-d -sl -type renderEnvAsset");
+	
+	</code>
+*********************************************************************/
+global proc string[] assetWizSelection( string $flags )
+{
+	string $obj, $type;
+	string $sel[];
+	string $remove[];
+	int $select;
+	int $deselect;
+	int $edit;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-d" :  case "-deselect" :
+			$deselect = 1;
+			break ;
+			
+			case "-typ" : case "-type" :
+			$type = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	
+	
+	
+	if ($deselect){			
+		if (`size $type` > 0){		
+			$remove = lsWizAssetOfType($sel, "-type " + $type);
+			select -r $remove;
+			SelectContainerContents;
+			string $ass[] = `ls -sl`;
+			appendStringArray($remove, $ass, `size $ass`);
+			wizlog (niceArrayList("	[#] Remove [#] ", $remove));
+		}
+		
+		select -cl;
+		
+		select -r $sel;
+		select -d $remove;
+		return (`ls -sl`);
+		
+	}
+	
+
+}
+
+//@ WIZ ADD TO ASSET
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = wizAddToAsset("-sl");
+	
+	</code>
+*********************************************************************/
+global proc wizAddToAsset( string $flags )
+{
+	string $obj, $type;
+	string $sel[];
+	string $asset;
+	int $edit;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-typ" : case "-type" :
+			$type = wizFlagString($tok, $i);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			
+			$sel = `ls -sl`;
+			$asset = $sel[(`size $sel` - 1)];
+			$sel = stringArrayRemove({$asset}, $sel);
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+		}
+	}
+
+	select -r $asset;
+	
+	//container -ind "inputs" -includeHierarchyBelow -includeShapes -includeTransform -addNode $sel;'
+	for ($i=0;$i<`size $sel`;$i++){
+		container -e -addNode $sel[$i];
+	}
+	
+	
+	
+
+}
+
+global proc wizPublishAttribute( string $flags )
+{
+	string $sel[];
+	int $edit;
+	string $attr;
+	string $obj;
+	string $ass;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-attr" : case "-attribute" :
+			$attr = $tok[($i + 1)];
+			break ;
+				
+			case "-wiz" :
+			$sel = `textScrollList -q -ai selectMasterListA`;
+			$obj = $sel[0];			
+			string $si[] = `textScrollList -q -si connectMasterListA`;
+			$attr = $si[0];			
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-e" : case "-edit" :
+			$edit = 1;
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	// Find the container that the object belongs to
+	$ass = `container -q -fc $obj`;
+	
+	if (`size $ass` == 0){
+		wizlog ("[!] Object : " + $obj + " Does Not Belong To Any Asset");
+	}
+	
+	// Prompt for a name
+	string $attrName = wizFieldPromptDialog("Name", ($obj + " " + $attr + " Name : "), "OK", "Cancel");
+		
+	// Do the publishing	
+	//container -e -publishAndBind "railingBrush1.tubeSections" "tubeSections" LedgeStructure;
+	wizlog ("container -e -publishAndBind " + $obj + "." + $attr + " " + $attrName + " " + $ass + ";");
+	container -e -publishAndBind ($obj + "." + $attr) $attrName $ass;
+
+
+}

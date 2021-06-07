@@ -1,0 +1,68 @@
+int n = 0;
+void main(){
+	n = 0;
+	//ModalDialogOKCancel("", "");
+	//ModalDialog("What Is This Dialog?"," ");
+	//string curDialog;
+	//inDiag = GetCurrentDialog();
+	RemoveModalDialogCallbacks();
+	
+	SetModalDialogCallback("ModalDialogCallbackBakewPerPixelPaintingwDisplacement");
+	//cmd("$MergeForDP_disp");
+	//SetModalDialogCallback("ModalDialogCallback");
+	cmd("$MergeForDP_disp");
+	
+}
+
+void DialogCallbackBakeTextures(){
+	
+	//cmd("$DialogButton#1");/*press Ok*/
+	string dialogID;
+	string dialogCaption;
+	bool inDialog;
+	inDialog = GetCurrentDialog(dialogID, dialogCaption);
+	//ModalDialog(("In Dialog: " + inDialog + " ID: " + dialogID + " Caption : " + dialogCaption), "");
+	ShowFloatingMessage(("In Dialog: " + inDialog + " ID: " + dialogID + " Caption : " + dialogCaption), 5);
+}
+
+void ModalDialogCallback(){
+
+	if(n++>100){
+
+		//cmd("$DialogButton#1");/*press Ok*/
+	string dialogID;
+	string dialogCaption;
+	bool inDialog;
+	inDialog = GetCurrentDialog(dialogID, dialogCaption);
+	//ModalDialog(("In Dialog: " + inDialog + " ID: " + dialogID + " Caption : " + dialogCaption), "");
+	ShowFloatingMessage(("In Dialog: " + inDialog + " ID: " + dialogID + " Caption : " + dialogCaption), 5);
+	}
+}
+
+void ModalDialogCallbackBakewPerPixelPaintingwDisplacement(){
+
+		//cmd("$DialogButton#1");/*press Ok*/
+	string dialogID;
+	string dialogCaption;
+	bool inDialog;
+	inDialog = GetCurrentDialog(dialogID, dialogCaption);
+	
+	//ModalDialog(("In Dialog: " + inDialog + " ID: " + dialogID + " Caption : " + dialogCaption), "");
+	ShowFloatingMessage(("In Dialog: " + inDialog + " ID: " + dialogID + " Caption : " + dialogCaption), 5);
+
+	if(n++>100){
+		//ModalDialogOKCancel("", "");
+		cmd("$DialogButton#1");
+	}
+}
+
+
+//"Bake w/ Per Pixel Painting w/ Displacement" or "$MergeForDP_disp"
+"map1" or "$ImpUV2::UVSetName[0]"
+"map1" or "$ImpUV2::UVSetName[0]"
+"COMBOBOX_TEXTURE_SIZE_X"
+"COMBOBOX_InitialSubdivision""$COMBOBOX_TEXTURE_SIZE_X8192"
+"$COMBOBOX_TEXTURE_SIZE_X8192"
+"$ImpUV2::CUSTOM_SIZE_X[0]"
+"COMBOBOX_TEXTURE_SIZE_Y"
+

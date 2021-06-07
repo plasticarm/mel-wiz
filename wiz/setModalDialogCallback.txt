@@ -1,0 +1,52 @@
+void main(){
+	RemoveModalDialogCallbacks();
+	//SetModalDialogCallback("ModalDialogCallbackExportObjectsTextures");
+	//cmd("$EXPORTOBJECT");
+	
+	
+	//ToRoom("UV");
+	//SetModalDialogCallback("ModalDialogCallbackDeleteObject");
+	//cmd("$OneSubObject::&OneSubObject::DeleteElm[0]");	
+	//SetModalDialogCallback("ModalDialogCallbackDeleteObject");
+	//cmd("$OneSubObject::&OneSubObject::DeleteElm[0]");
+	/*
+		do {		
+			//cmd("$LayersPanel::TrashLayer");
+			cmd("$OneSubObject::&OneSubObject::DeleteElm[0]");
+			SetModalDialogCallback("ModalDialogCallbackDeleteObject");
+		} while (SelectNextRetopoLayer(false));
+	*/
+	//RemoveModalDialogCallbacks();
+	bool doesExist = SetCurVolume("NM2b");
+	if (doesExist == false){
+	
+	}
+	//SetCurVolume("NM2b");
+	
+	SetVolumeVisibility(true);
+}
+
+void ModalDialogCallbackExportObjectsTextures(){
+
+	string outFilename;
+	outFilename = "ass.fbx";
+	SetFileForFileDialogs(outFilename); 
+	
+	SubstituteInputText(outFilename);
+	cmd("$ExportOpt::ExportMeshName");
+	
+	cmd("$COMBOBOX_Unity (Specular)");
+	//cmd("$COMBOBOX_Marmoset (GGX - Spacular)");
+	
+	SetBoolField("$ExportOpt::PickSourcePositions", true);
+	//cmd("$ExportOpt::PickSourcePositions");
+	
+	//cmd("$DialogButton#1");/*press Ok*/ 
+	
+}
+
+void ModalDialogCallbackDeleteObject()
+{
+	cmd("$DialogButton#1");/*press Ok*/ 
+
+}

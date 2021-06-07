@@ -1,0 +1,897 @@
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//|||||||||||||||||||||||||:::WIZ:::||||||||||||||||||||||||||||||||||
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//                         COLOR WIZ
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+/*====================================================================
+Author: Glen Johnson
+Email: plasticarm@gmail.com
+Website: plasticarm.com / hrpictures.com
+----------------------------------------------------------
+Summary:
+
+
+
+====================================================================*/
+
+global proc colorWiz()
+{
+
+}
+
+//========================================================================================================
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//                     LAYOUTS
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//========================================================================================================
+
+//COLOR WIZ LAYOUT
+//---------------------------------
+global proc colorWizLayout(string $parent)
+{
+	
+	string $layout = wizStandardFrameLayout($parent, "Colors", "colorWizFrameLayout");
+	
+	colorWizMenuBarLayout();
+	
+	/*
+	textFieldGrp
+		-l "Name Color"
+		-cal 1 "left"
+		colorWizNewColorNameTextFieldGrp
+		;
+	*/	
+	colorSliderGrp -cal 1 "left" -cw 1 50 -l "RGB" -rgb 0 0 0 -cc ("updateColorWizTextFieldValues()") colorWizRGBColorSelectorColorSliderGrp;
+	//colorSliderGrp -l "HSV" -hsv 0 0 0 -cc ("updateColorWizTextFieldValues()") colorWizRGBColorSelectorColorSliderGrp;
+	
+		
+	textFieldGrp -cal 1 "left" -cw 1 50 -l "RGB:" -tx "" colorWIZRGBColorValueTextField;
+	textFieldGrp -cal 1 "left" -cw 1 50 -l "RGB Array:" -tx "" colorWIZRGBColorValueArrayTextField;
+	
+	textFieldButtonGrp
+		-l "Color Name: "
+		-tx ""
+		-cal 1 "left"
+		-bl "Add Color Attr"
+		-bc ("string $colorName = `textFieldButtonGrp -q -tx colorWizNewColorAttrTextFieldButtonGrp`;addColorAttributeToNodes(`ls -sl`, {$colorName});")
+		colorWizNewColorAttrTextFieldButtonGrp
+		;
+		
+	textFieldButtonGrp
+		-l "Color Name: "
+		-tx ""
+		-cal 1 "left"
+		-bl "Add Color Palette Color"
+		-bc ("addColorPaletteAssetColor(`ls -sl`);")
+		colorWizNewColorPaletteColorTextFieldButtonGrp
+		;	
+		
+	scrollField
+		-w 200
+		-h 400
+		-tx "white, black, grey, red, blue, green"
+		colorWizNewColorList_scrollField
+		;
+		
+	/*
+white, black, grey, charcoal, silver, stone, brown, coffee, khaki, tan, beige, denimBlue, navyBlue, airForceBlue, royalBlue, oliveGreen, lincolnGreen, hunterGreen, englishRed, maroon, orange, salmon, purple, pink, hotPink, yellow, florescentYellow
+	
+	
+	
+	*/
+		
+	textFieldButtonGrp
+		-l "Add Color Selection Name: "
+		-tx "colorSelection"
+		-cal 1 "left"
+		-bl "Add Color Selector"
+		-bc ("addColorSelectorToNode(\"-sl\");")
+		colorWizColorSelectionName_TextFieldButtonGrp
+		;
+}
+
+//WIZ OUTLINE COLOR LAYOUT
+//---------------------------------
+global proc wizOutlineColorLayout( string $parent )
+{
+	//string $layout = wizStandardFrameLayout($parent, "Colors", "colorWiz_outlinerColor_frameLayout");
+	string $col = `columnLayout
+		-adjustableColumn true
+		-p $parent		
+		`;
+	
+	wizCheckBox ("-l Change Object Override Color "
+	+"-v 1 "
+	+"-n wiz_outlinerColorChangeObjOverrideColor_checkBox");
+	
+	int $colSliderCount = 20;
+	
+	for ($i=0;$i<$colSliderCount;$i++){
+		//gridLayout -cr on -nc 2 -cwh 100 20;
+		//rowColumnLayout -nc 2 -columnWidth 1 100 -columnWidth 2 60 ;
+		
+		//string $formLayout = `formLayout -nd 2`;
+		
+		string $csgName = "colorWiz_outlinerColor" + $i + "_colorSliderButtonGrp";
+		string $occ = ("float $ocRgb[] = `colorSliderButtonGrp -q -rgb " + $csgName + "`;\n"
+		+"wizSetSelectedOutlineColor(\"-sl -cs " + $csgName + "\");");
+		
+		float $ranCol[] = {  (rand(0.0, 1.0)), (rand(0.0, 1.0)), (rand(0.0, 1.0)) };
+		float $rgb[] = $ranCol;
+		
+		string $colorName = "RGB" + $i;
+		
+		switch ($i){
+			case 0 :
+			$colorName = "Light";
+			$rgb = { 1.0, 0.951399982, 0.5881999731 };			
+			break ;			
+			case 1 :
+			$colorName = "Dyn";
+			$rgb = { 0.0, 1.0, 0.0 };			
+			break ;			
+			case 2 :
+			$colorName = "Fluid";
+			$rgb = { 0.1764000058, 0.4458999634, 1.0 };			
+			break ;			
+			case 3 :
+			$colorName = "Camera";
+			$rgb = { 0.8410000205, 0.8930274248, 1.0 };			
+			break ;
+			case 4 :
+			$colorName = "Shading";
+			$rgb = { 0.9593256116, 0.2790646553, 0.7294468284 };			
+			break ;
+			case 5 :
+			$colorName = "Construction";
+			$rgb = { 0.9131692052, 0.9509999752, 0.3803999722 };		
+			break ;
+			
+						
+					
+		}
+		
+		string $csg = `colorSliderButtonGrp 
+			-cal 1 "left"
+			-cw 1 30
+			-cw 2 80
+			-cw 3 10
+			-cw 4 30
+			-l $colorName
+			-bl "Apply"
+			-rgb $rgb[0] $rgb[1] $rgb[2]
+			-bc $occ 
+			$csgName
+			`;
+		
+		// Popup Menu
+		popupMenu -p $csg;
+		
+			menuItem -l "Get Color" -c ("wizSetSelectedOutlineColor(\"-sl -q -cs " + $csgName + "\");");
+		
+		setParent -menu..;
+		
+		
+		//string $scb = `button -l "Set Color" -c $occ`;
+		
+		/*
+		formLayout -e
+			-af $csg "left" 1 
+			-af $scb "right" 1
+			$formLayout;
+		*/			
+		//setParent ..;
+	}
+	
+	button -l "Turn Off Use Outliner Color" -c ("wizSetSelectedOutlineColor(\"-sl -off\");");
+		
+}
+
+//========================================================================================================
+//""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//                     MENUS
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+//========================================================================================================
+
+global proc colorWizMenuBarLayout()
+{
+	string $menuBarLayout = `menuBarLayout colorWizMenuBarLayout`;
+	
+	colorWizMenu();
+	
+}
+
+global proc colorWizMenu()
+{
+
+	menu -l "Attributes" -to true;
+		colorWizAttributesMenuItems();
+	menu -l "Ramps" -to true;
+		colorWizRampsMenuItems();
+}
+
+global proc colorWizAttributesMenuItems()
+{
+	menuItem -l "Add Color Selection To Selected" -c ("addColorSelectorToNode(\"-prompt -sl\");");
+	
+}
+
+global proc colorWizRampsMenuItems()
+{
+	menuItem -l "Create Black And White Ramp" -c ("createNewColorRamp(\"blackAndWhite\");");
+
+}
+
+//========================================================================================================
+//########################################################################################################
+//********************************************************************************************************
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//                     FUNCTIONS
+///////////////////                  /////////////////////////////////////////////////////////////////////
+//********************************************************************************************************
+//########################################################################################################
+//========================================================================================================
+
+//COLOR WIZ FUNCTIONS
+//===============================================================================
+//UPDATE COLOR WIZ TEXT FIELD VALUES
+//---------------------------------------
+global proc updateColorWizTextFieldValues()
+{
+	float $rgb[] = `colorSliderGrp -q -rgb colorWizRGBColorSelectorColorSliderGrp`;
+	
+	string $rgbS[] = floatArrayToStringArray($rgb);
+	//Knock off all the digits after the 4th digit
+	//$rgbS = substringArray($rgbS, 1, 5);
+	
+	
+	string $rgbText = $rgbS[0] + " " + $rgbS[1] + " " + $rgbS[2];
+	textFieldGrp -e -tx $rgbText colorWIZRGBColorValueTextField;
+	
+	string $rgbArrayText = "{ " + $rgbS[0] + ", " + $rgbS[1] + ", " + $rgbS[2] + " }";
+	textFieldGrp -e -tx $rgbArrayText colorWIZRGBColorValueArrayTextField;
+
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         COLOR ATTRIBUTES
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//ADD COLOR ATTRIBUTE TO NODES
+//================================================================
+global proc addColorAttributeToNodes( string $sel[], string $colors[])
+{
+	float $col[] = `colorSliderGrp -q -rgb colorWizRGBColorSelectorColorSliderGrp`;
+	
+	for ($s=0;$s<`size $sel`;$s++){
+		for ($i=0;$i<`size $colors`; $i++){	
+			string $colorName = $colors[$i];
+			if (`attributeExists $colorName $sel[$s]` == 1){
+				wizlog ("-w		[!] " + $sel[$s] + " Already Has Attribute : " + $colorName + " [!]");
+				continue;
+			}
+			addAttr -ln $colorName -at float3 -uac -nc 3 $sel[$s];
+			addAttr -ln ($colorName + "R") -at "float" -defaultValue $col[0] -p $colorName $sel[$s];
+			addAttr -ln ($colorName + "G") -at "float" -defaultValue $col[1] -p $colorName $sel[$s];
+			addAttr -ln ($colorName + "B") -at "float" -defaultValue $col[2] -p $colorName $sel[$s];
+
+		}
+	}
+	
+}
+
+global proc addColorAttributesToNodes( string $sel[], string $colors[])
+{
+	float $col[] = `colorSliderGrp -q -rgb colorWizRGBColorSelectorColorSliderGrp`;
+	
+	for ($s=0;$s<`size $sel`;$s++){
+		for ($i=0;$i<`size $colors`; $i++){	
+			string $colorName = $colors[$i];
+			if (`attributeExists $colorName $sel[$s]` == 1){
+				wizlog ("-w		[!] " + $sel[$s] + " Already Has Attribute : " + $colorName + " [!]");
+				continue;
+			}
+			addAttr -ln $colorName -at float3 -uac -nc 3 $sel[$s];
+			addAttr -ln ($colorName + "R") -at "float" -defaultValue $col[0] -p $colorName $sel[$s];
+			addAttr -ln ($colorName + "G") -at "float" -defaultValue $col[1] -p $colorName $sel[$s];
+			addAttr -ln ($colorName + "B") -at "float" -defaultValue $col[2] -p $colorName $sel[$s];
+
+		}
+	}
+	
+} 
+
+//@ WIZ ADD COLOR ATTRIBUTE
+//====================================================================
+/*****************************************************************//**
+	Adds a color attr to and object
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-color(-col) <br>
+	-name(-n) <br>
+	-value(-v) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	wizAddColorAttribute("-obj someObject -col 0 1 0 -n myColor");
+	
+	</code>
+*********************************************************************/
+global proc wizAddColorAttribute( string $flags)
+{
+	string $obj;
+	float $col[];
+	string $name;
+	int $v;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-col" : case "-color" :
+			string $colString = wizFlagString($tok, $i);
+			$col = stringToFloatArray($colString);
+			break ;
+			
+			case "-n" : case "-name" :
+			$name = $tok[($i + 1)];
+			break ;			
+	
+			case "-v" : case "-value" :
+			$v = 1;
+			break ;
+		}
+	}
+	
+	if ($v == 1){
+		if (`attributeExists $name $obj` == 0){
+			addAttr -ln $name -at "float" $obj;
+		} 
+		setAttr -e -keyable true ($obj + "." + $name);
+		
+	}
+	
+	if (`size $col` == 0){
+		$col = { 0.0, 0.0, 0.0 };
+	}
+
+	if (`attributeExists $name $obj` == 0){
+		addAttr -ln $name -at float3 -uac -nc 3 $obj;
+		addAttr -ln ($name + "R") -at "float" -defaultValue $col[0] -p $name $obj;
+		addAttr -ln ($name + "G") -at "float" -defaultValue $col[1] -p $name $obj;
+		addAttr -ln ($name + "B") -at "float" -defaultValue $col[2] -p $name $obj;
+		wizlog ("	[+] Added Color Attribute : " + $name + " To : " + $obj);
+	} else {
+		wizlog ("-w		[!] " + $obj + " Already Has Attribute : " + $name + " [!]");
+	}
+	
+}
+
+global proc addColorPaletteAssetColor( string $sel[])
+{
+	string $asset = $sel[0];
+	float $col[] = `colorSliderGrp -q -rgb colorWizRGBColorSelectorColorSliderGrp`;
+	string $colName = `textFieldButtonGrp -q -tx colorWizNewColorPaletteColorTextFieldButtonGrp`;
+	
+	string $ramp = $asset + (capitalizeString($colName));	
+	string $texPlace = $ramp + "Place2dTexture";
+	
+	//Create the ramp and place2dTexture
+	shadingNode -asTexture ramp -n $ramp;
+	shadingNode -asUtility place2dTexture -n $texPlace;
+	connectAttr ($texPlace + ".outUV") ($ramp + ".uv");
+	connectAttr ($texPlace + ".outUvFilterSize") ($ramp + ".uvFilterSize");	
+	
+	//Get rid of the extra colors and set color 0 to the color 
+	removeMultiInstance -break true ($ramp + ".colorEntryList[1]");
+	removeMultiInstance -break true ($ramp + ".colorEntryList[2]");	
+	setAttr ($ramp + ".colorEntryList[0].color") -type double3 $col[0] $col[1] $col[2] ;
+	
+	select -r $ramp;
+	select -add $texPlace;
+	container -e -includeNetwork -includeShaders -includeHierarchyBelow -includeTransform -force -addNode `ls -sl` $asset;
+	
+	//Publish and bind to selected asset
+	container -e -publishAndBind ($ramp + ".colorEntryList[0].color") $colName $asset;
+	
+	select -r $asset;
+}
+
+//========================================================================================================
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+///////////////////                                 //////////////////////////////////////////////////////
+//                         COLOR SELECTOR
+///////////////////                                 //////////////////////////////////////////////////////
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//========================================================================================================
+
+//@ ADD COLOR SELECTOR TO NODE
+//====================================================================
+/*****************************************************************//**
+	Adds multiple colors and connects them to a choice node controlled
+	by an enum.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	addColorSelectorToNode("-sl");
+	
+	</code>
+*********************************************************************/
+global proc addColorSelectorToNode( string $flags )
+{/*
+global proc addColorSelectorToNode( string $sel[] )
+{*/
+	string $colorSelectorName;
+	int $count;
+	string $colNames[];
+	string $obj, $type;
+	string $sel[];
+	string $col[];
+	int $prompt;
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-obj" : case "-object" :
+			$obj = $tok[($i + 1)];
+			break ;
+				
+			case "-col" : case "-color" :
+			$col[`size $col`] = $tok[($i + 1)];
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-p" : case "-prompt" :
+			$edit = 1;
+			break ;
+			
+		}
+	}
+	if (`size $sel` == 0){
+		$sel = wizFlagObjTrail($flags);
+	}
+	
+	if ($prompt){
+	
+		string $selNamePrompt =`promptDialog 
+				-t "Color Selection Name"
+				-m "Color Selection Name ( Must Be Unique ):"
+				-tx "colorSelector"
+				-ma "center"	
+				-b "OK" 
+				-db "OK"
+				`;
+				
+		$colorSelectorName = `promptDialog -q -tx $selNamePrompt`;		
+		
+		string $prompt = `promptDialog
+			-t "Number Of Colors"
+			-m "Number Of Colors To Add:"
+			-tx "4"
+			-ma center
+			`;
+			
+		string $promptString = `promptDialog -query -tx $prompt`;
+		$count = int($promptString);
+		if ($count == 0){
+			print ("You must enter an integer in the prompt\n");
+		}		
+		
+		for ($i=0;$i<$count;$i++){
+			string $namePrompt =`promptDialog 
+				-t "Color Name"
+				-m "Color Name ( Must Be Unique ):"
+				-tx "color"
+				-ma "center"	
+				-b "OK" 
+				-db "OK"
+				`;
+			$colNames[$i] = `promptDialog -q -tx $namePrompt`;
+		
+		}
+
+	} else {
+		$colorSelectorName = `textFieldButtonGrp -q -tx colorWizColorSelectionName_TextFieldButtonGrp`;
+		
+		string $sftx = `scrollField -q -tx colorWizNewColorList_scrollField`;
+		$colNames = tokenizeString($sftx, ", ");
+		wizlog ((niceArrayList("	[#] Color Names [#]", $colNames)));
+		
+		$count = (`size $colNames` - 1);
+		
+	}
+	
+	string $selectedColorName = $colorSelectorName + "SelectedColor";
+	string $choiceName = $colorSelectorName + "Choice";
+	
+		
+	//Get the choice node we are using to connect color names
+	string $choices[] = `listConnections -t choice $sel[0]`;
+	print ("Size Choices : " + `size $choices` + " Choices : " + stringArrayToString($choices, " ") + "\n");
+	
+	string $choice;
+	if (`size $choices` == 0){
+		$choice = `shadingNode -asUtility choice -n $choiceName`;
+
+	} else {
+		for ($i=0;$i<`size $choices`;$i++){
+			if ($choices[$i] == $choiceName){
+				$choice = $choices[$i];
+			} 
+			
+		}
+		if ($choice == ""){
+			$choice = `shadingNode -asUtility choice -n $choiceName`;
+		}
+
+	}
+	print ("Choice: " + $choice + "\n");
+	
+	select -r $sel[0];
+	int $newI = 0;
+	string $selectEnum[];
+	if (`attributeExists $colorSelectorName $sel[0]`){	
+	
+		//Get the names of all the enum attributes because the enum needs to be rebuilt
+		$selectEnum = getEnumAttributeNames(($sel[0] + "." + $colorSelectorName));
+		//Need to add =i because maya is weird
+		for ($i=0;$i<`size $selectEnum`;$i++){
+			$selectEnum[$i] = $selectEnum[$i] + "=" + $i + ":";			
+		}
+		$newI = (`size $selectEnum`);
+		int $p = 0;
+		for ($i=$newI;$i<($newI + $count);$i++){	
+			$selectEnum[`size $selectEnum`] = $colNames[$p] + "=" + $i + ":";	
+			//print ("addAttr -ln \"textureSelection\" -at \"enum\" -en " + $texName + "=0: " + $texFile + ";\n");
+			//Add the attribute and set the attr to the file texture path
+			$p++;
+		}
+
+		addAttr -e -enumName (stringArrayToString($selectEnum,"")) ("." + $colorSelectorName);
+		//print ("addAttr -e -enumName " + stringArrayToString($selectEnum,"") + " \".textureSelection\";\n");
+	} else {	
+		//$selectEnum[0] = "selectedColor=0:";	
+		for ($i=0;$i<$count;$i++){
+			$selectEnum[$i] = $colNames[$i] + "=" + $i + ":";			
+		}
+		
+		addAttr -ln $colorSelectorName -at "enum" -en (stringArrayToString($selectEnum,"")) $sel[0];
+	
+		addColorAttributeToNodes({$sel[0]}, {$selectedColorName});
+	} 
+	
+	
+	//Set the texture selection to keyable so you can select the texture from the channel box
+	setAttr -k on ($sel[0] + "." + $colorSelectorName);
+	
+	//Add the new color to the choice inputs
+	int $inputSize = `getAttr -s ($choice + ".input")`;
+	
+	int $f = 0;
+	for ($i=$newI;$i<($newI + $count);$i++){
+		string $newColorName = $colNames[$f];
+		addColorAttributeToNodes({$sel[0]}, {$newColorName});
+		connectAttr -f ($sel[0] + "." + $newColorName) ($choice + ".input[" + $i + "]");
+		//print ("connectAttr -f " + $texFile + "." + $newTextureFileString + " " + $choice + ".input[" + $inputSize + "];\n");
+		$f++;
+	}
+	
+	//Make sure the textureSelection is connected to the choice selector
+	if (`isConnected ($sel[0] + "." + $colorSelectorName) ($choice + ".selector")`== 0){
+		//Connect the textureSelection enum to the choice selector
+		connectAttr -f ($sel[0] + "." + $colorSelectorName) ($choice + ".selector");
+		//print("connectAttr -f " + $texFile + ".textureSelection " + $choice + ".selector;\n");
+		
+	}
+	
+	//Make sure that the choice output is connected to the texture
+
+	if (`isConnected ($choice + ".output") ($sel[0] + "." + $selectedColorName)`== 0){
+		connectAttr -f ($choice + ".output") ($sel[0] + "." + $selectedColorName);	
+	}
+	
+	//print ("connectAttr -f " + $texFile + ".textureSelection " + $choice + ".selector;\n");
+	
+	//Set the texture selection to the new texture
+	setAttr ($sel[0] + "." + $colorSelectorName) $newI;
+	//print ("WIZ| addFilePathToFileTextureSelector : Added : " + $texFile + " To Texture Selection\n");
+	
+	string $notes = ("To Use Color Selection Connect : " + $choice + ".output To Any Color Attribute\n"
+	+"connectAttr -f " + $choice + ".output someNode.color;\n");
+	
+	addNotesToObject($sel[0], $notes);
+
+
+}
+
+global proc createNewColorRamp( string $kind )
+{
+	string $newRamp = `shadingNode -asTexture ramp`;
+	string $p2d = `shadingNode -asUtility place2dTexture`;
+	
+	connectAttr ($p2d + ".outUV")($newRamp + ".uv");
+	connectAttr ($p2d + ".outUvFilterSize") ($newRamp + ".uvFilterSize");
+
+	switch($kind){
+		case "blackAndWhite" :
+		removeMultiInstance -break true ($newRamp + ".colorEntryList[2]");
+		setAttr ($newRamp + ".colorEntryList[0].color") -type double3 0 0 0 ;
+		setAttr ($newRamp + ".colorEntryList[1].color") -type double3 1 1 1;
+		setAttr ($newRamp + ".colorEntryList[1].position") 1;
+		break;
+		
+	}
+/*
+	shadingNode -asUtility projection;
+ 
+	select -r projection1 ;
+	select -r ramp1 ;
+	select -r projection1 ;
+
+	connectAttr -force ramp1.outColor projection1.image;
+	*/
+}
+
+//@ WIZ GET RANDOM COLOR
+//==========================================================
+global proc float[] wizGetRandomColor( string $type )
+{
+		float $randColor[];
+		if ($type == "rgb"){
+			$randColor = { (`rand 0.0 1.0`), (`rand 0.0 1.0`), (`rand 0.0 1.0`) };		
+		} else if ($type == "rgb255"){
+			$randColor = { (floor(`rand 0.0 256.0`)), (floor(`rand 0.0 256.0`)), (floor(`rand 0.0 256.0`)) };
+		} else if ($type == "hsv"){
+			$randColor = { (`rand 0.0 360.0`), (`rand 0.0 1.0`), (`rand 0.0 1.0`) };
+		} else if ($type == "value" || $type == "luminance" || $type == "alpha"){
+			float $randValue = `rand 0.0 1.0`;
+			$randColor = { $randValue, $randValue, $randValue };
+		}
+		
+		return $randColor;
+}
+
+
+//@ STEPPED REMAPPER
+//====================================================================
+/*****************************************************************//**
+	Creates a hsvRemap utility and steppes its values.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	Use this to create a stepped gradient effect on textures.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $steppedRemapper = steppedRemapper("-sl -s 10");
+	
+	</code>
+*********************************************************************/
+global proc string steppedRemapper( string $flags )
+{
+	int $steps;
+	string $remapHsv;
+	string $sel[];
+
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			case "-rhsv" : case "-remapHsv" :
+			$remapHsv = $tok[($i + 1)];
+			break ;
+				
+			case "-s" : case "-steps" :
+			$steps = int ($tok[($i + 1)]);
+			break ;
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			$remapHsv = $sel[0];
+			break ;			
+			
+		}
+	}
+	if ($steps == 0){
+		$steps = `intFieldGrp -q -v1 steppedRemapper_steps_intFieldGrp`;
+	}
+	
+	wizlog ("	[Steps] : " + $steps);
+	
+	if (`size $remapHsv` == 0){
+		$remapHsv = `shadingNode -asUtility remapHsv`;
+	} else {		
+		resetMultiIndiceAttribute($remapHsv, "hue");
+		resetMultiIndiceAttribute($remapHsv, "saturation");
+		resetMultiIndiceAttribute($remapHsv, "value");
+	}
+	
+	float $stepSize = 1.0 / $steps;
+	float $ss = 0.0;
+	wizlog ("	[Step Size] : " + $ss);
+	
+	for ($i=0;$i<$steps;$i++){
+		setAttr ($remapHsv + ".hue" + "[" + $i + "].hue_FloatValue") $ss;
+		setAttr ($remapHsv + ".hue" + "[" + $i + "].hue_Position") $ss;
+		setAttr ($remapHsv + ".hue" + "[" + $i + "].hue_Interp") 0;
+		
+		setAttr ($remapHsv + ".saturation" + "[" + $i + "].saturation_FloatValue") $ss;
+		setAttr ($remapHsv + ".saturation" + "[" + $i + "].saturation_Position") $ss;
+		setAttr ($remapHsv + ".saturation" + "[" + $i + "].saturation_Interp") 0;
+
+		setAttr ($remapHsv + ".value" + "[" + $i + "].value_FloatValue") $ss;
+		setAttr ($remapHsv + ".value" + "[" + $i + "].value_Position") $ss;
+		setAttr ($remapHsv + ".value" + "[" + $i + "].value_Interp") 0;
+		
+		$ss = $ss + $stepSize;
+			
+		wizlog ("	[Current Step] : " + $ss);
+	}
+	
+	return $remapHsv;
+}
+
+
+//@ WIZ SET SELECTED OUTLINE COLOR
+//====================================================================
+/*****************************************************************//**
+	Brief description.
+	<hr>
+	<b>Synopsis</b><br>
+	procName [-obj string] [-typ linear] <br>
+	A more detailed description.
+	
+	<b>Return value</b><br>
+	string[] description of return.
+	
+	<b>Flags</b><br>
+	-object(-obj) <br>
+	-selected(-sl) <br>
+	-type(-typ) <br>
+	-edit(-e) <br>
+	-query(-q) <br>
+		
+	<hr>
+	<b>Related</b><br>
+	someProcedure(),
+	
+	<b>Examples</b><br>
+	<code>
+	string $arr[] = procName("-obj someObject -q -sl");
+	
+	</code>
+*********************************************************************/
+global proc wizSetSelectedOutlineColor( string $flags )
+{
+	string $colSlider;
+	string $sel[];
+	int $off;
+	int $q;
+	int $oc;
+	float $rgb[] = { 0.0, 0.0, 0.0 };
+	string $tok[] = tokenizeString($flags, " ");
+	for ($i=0;$i<`size $tok`;$i++){
+		switch ($tok[$i]){
+			
+			case "-sl" : case "-selected" :
+			$sel = `ls -sl`;
+			break ;			
+			
+			case "-cs" : case "-colorSlider" :
+			$colSlider = $tok[($i + 1)];
+			$rgb = `colorSliderButtonGrp -q -rgb $colSlider`;
+			break ;
+			
+			case "-off" :
+			$off = 1;
+			break ;
+			
+			case "-q" : 
+			$q = 1;
+			break ;
+			
+			case "-oc" : case "-objColor" :
+			$oc = 1;
+			break ;
+		}
+	}
+	
+	if (`size $sel` == 0){
+		return ;
+	}
+	
+	if ($q){
+		if (`attributeExists "useOutlinerColor" $sel[0]` == 0){
+			wizlog ("[!] Object : " + $sel[0] + " Does Not Have A useOutlinerColor Attribute");
+			
+			return ;
+		}
+		
+		$rgb = `getAttr ($sel[0] + ".outlinerColor")`;
+		colorSliderButtonGrp -e -rgb $rgb[0] $rgb[1] $rgb[2] $colSlider;
+		
+		string $rgbArrayText = "{ " + $rgb[0] + ", " + $rgb[1] + ", " + $rgb[2] + " }";
+		textFieldGrp -e -tx $rgbArrayText colorWIZRGBColorValueArrayTextField;
+		wizlog ("[RGB] : " + "{ " + $rgb[0] + ", " + $rgb[1] + ", " + $rgb[2] + " }");
+		return;
+	}
+	
+	for ($i=0;$i<`size $sel`;$i++){
+		if (`attributeExists "useOutlinerColor" $sel[$i]` == 0){
+			continue ;
+		}
+		if ($off){
+			setAttr ($sel[$i] + ".useOutlinerColor") 0;	
+			continue ;
+		}
+		
+		setAttr ($sel[$i] + ".useOutlinerColor") 1;	
+		setAttr ($sel[$i] + ".outlinerColor") $rgb[0] $rgb[1] $rgb[2];
+
+		if (`checkBox -q -v wiz_outlinerColorChangeObjOverrideColor_checkBox` == 1){
+		
+			setAttr ($sel[$i] + ".overrideEnabled") 1;
+			setAttr ($sel[$i] + ".overrideRGBColors") 1;	
+			setAttr ($sel[$i] + ".overrideColorRGB") $rgb[0] $rgb[1] $rgb[2];
+		}
+		
+	}	
+
+}

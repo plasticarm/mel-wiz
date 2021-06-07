@@ -1,0 +1,1484 @@
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//|||||||||||||||||||||||||:::WIZ:::||||||||||||||||||||||||||||||||||
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//                         POPULATOR WIZ
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+/*====================================================================
+Author: Glen Johnson
+Email: plasticarm@gmail.com
+Website: plasticarm.com / hrpictures.com
+----------------------------------------------------------
+Summary:
+
+
+
+====================================================================*/
+
+global proc populatorWiz()
+{
+
+
+}
+
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+//////////////////////////////////////////////////////////////////////
+//			LAYOUTS
+//////////////////////////////////////////////////////////////////////
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+global proc populatorWizLayout(string $parent)
+{
+
+	/*
+	string $layout = `frameLayout
+		-l "Populator"	
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $parent		
+		`;
+	*/	
+	string $layout = `columnLayout
+		-adjustableColumn true
+		-p $parent
+		`;
+		
+	//populateSurfaceLayout($layout);
+	//referenceFileLayout($layout);
+
+	//cBldrLayout($layout);
+	
+	//lBldrLayout($layout);
+	
+	instancesLayout($layout);
+	
+	starfieldWizLayout($layout);
+	sunRiggingLayout($layout);
+	
+	//starfieldWizLayout($layout);	
+	
+	terrainWizLayout($layout);	
+	
+	wizMagneticFieldCurvesLayout($layout);	
+	
+}
+
+global proc duplicateOnCurveLayout( string $parent )
+{
+
+}
+
+global proc referenceFileLayout(string $parent)
+{
+	string $layout = wizStandardFrameLayout($parent, "Reference Files", "referenceFilesFrameLayout");
+	
+	
+}
+
+global proc instancesLayout(string $parent)
+{
+	string $layout = wizStandardFrameLayout($parent, "Instances", "instancesFrameLayout");
+	
+	instancesMenuBarLayout($layout);
+	
+}
+
+
+
+global proc terrainWizLayout(string $parent)
+{
+	string $layout = `frameLayout
+		-l "Terrain"	
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $parent		
+		`;
+		
+	string $terrainFromCSVDataCommand = ("string $file = `textFieldButtonGrp -q -tx csvFile`;"
+	+"terrainFromCSVData($file);");
+	
+	button -l "Terrain From CSV Data"
+		-c $terrainFromCSVDataCommand
+		;
+		
+}
+
+//""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+//////////////////////////////////////////////////////////////////////
+//			MENUS
+//////////////////////////////////////////////////////////////////////
+//""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+global proc instancesMenuBarLayout(string $parent)
+{
+	string $menuBarLayout = `menuBarLayout -p $parent instancesMenuBarLayout`;
+	
+	menu -l "Replace";
+		instancesMenuItems();
+		
+}
+
+
+global proc instancesMenuItems()
+{
+	menuItem -l "Replace Selected With Instances" -c ("replaceSelectedWithInstances(`ls -sl`);");
+	menuItem -l "Replace All Duplicates With Instances" -c ("replaceAllDuplicatesWithInstances();");
+	menuItem -l "Replace Selected With Duplicates" -c ("replaceSelectedWithDuplicates(`ls -sl`);");
+	menuItem -l "Replace Instances With Duplicates" -c ("replaceInstancesWithDuplicates(`ls -sl`);");
+}
+
+
+//()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()
+//////////////////////////////////////////////////////////////////////
+//			FUNCTIONS
+//////////////////////////////////////////////////////////////////////
+//()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()
+
+global proc terrainFromCSVData(string $file)
+{
+	string $data[] = getCSVDataByLine($file);	
+	
+	string $formatted[] = formatCSVData($data);
+	
+	float $pos[] = stringArrayToFloatArray($formatted);
+	
+	string $locators[];
+	
+	for($i=0;$i<`size $pos`;$i = $i + 3){
+
+		string $loc[] = `spaceLocator -p 0 0 0`;
+		xform -ws -t $pos[$i] $pos[($i + 1)] $pos[($i + 2)] $loc[0];
+		$locators[`size $locators`] = $loc[0];
+		
+	}
+		
+}
+
+
+//########################################################################################################
+//########################################################################################################
+///////////////////                                 //////////////////////////////////////////////////////
+//			                GARBAGE PILE
+///////////////////                                 //////////////////////////////////////////////////////
+//########################################################################################################
+//########################################################################################################
+/*
+//CREATE DUPLICATE ON CURVE EXPRESSION
+//=====================================================
+global proc createDuplicateOnCurveExpression()
+{
+	
+	//The expression for doing the duplication
+		
+	string $exp = (
+	"global proc updateDuplicatesOnCurve( string $curve )"+"\n"
+	+"{"+"\n"
+	+"	print (\"Updating Curve Duplicates : \" + $curve + \"\\n-------------------\\n\");"+"\n"
+	+"	int $enabled = `getAttr ($curve + \".enableDuplication\")`;"+"\n"
+	+"	if($enabled == 0){ return; }"+"\n"
+	+"	string $curSel[] = `ls -sl`;"+"\n"
+	+"	float $arcLength = `getAttr ($curve + \".curveLength\")`;"+"\n"
+	+"	//print (\"Curve Length : \" + $arcLength + \"\\n\");"+"\n"
+	+"	int $dupType = `getAttr ($curve + \".duplicateType\")`;"+"\n"
+	
+	+"	string $obj[];"+"\n"
+	+"	string $source = `getAttr ($curve + \".duplicateName\")`;"+"\n"
+	+"	int $useSets = `getAttr ($curve + \".useSets\")`;"+"\n"
+	+"	string $nodeType = `nodeType $source`;"+"\n"
+	+"	if ($nodeType == \"objectSet\"){"+"\n"
+	+"		$obj = `sets -q $source`;"+"\n"
+	+"	} else {"+"\n"
+	+"		$obj[0] = $source;"+"\n"
+	+"	}"+"\n"
+	
+	+"	int $dupCount = `getAttr ($curve + \".duplicateCount\")`;"+"\n"
+	+"	float $spacing = `getAttr ($curve + \".spacing\")`;"+"\n"
+	+"	int $spaMeth = `getAttr ($curve + \".spacingMethod\")`;"+"\n"
+	+"	int $fracMode = `getAttr ($curve + \".parametricLength\")`;"+"\n"
+	+"	int $randomize = `getAttr ($curve + \".randomizeSpacing\")`;"+"\n"
+	+"	float $ran = `getAttr ($curve + \".randomAmount\")`;"+"\n"
+	+"	float $offsetU = `getAttr ($curve + \".offsetU\")`;"+"\n"
+	+"	if($fracMode == 1){"+"\n"
+	+"		$fracMode = 0;"+"\n"
+	+"	} else {"+"\n"
+	+"		$fracMode = 1;"+"\n"
+	+"	}"+"\n"
+	+"	int $follow = `getAttr ($curve + \".followPath\")`;"+"\n"
+	+"	string $dup[] = `ls -tr ($curve + \"CurveDuplicateObject*\")`;"+"\n"
+	+"	print (\"Existing Duplicates : \" + `size $dup` + \"\\n\");"+"\n"
+	+"	// Grouping "+"\n"
+	+"	int $groupDup = `getAttr ($curve + \".groupDuplicates\")`;"+"\n"
+	+"	string $groupName = $curve + \"DuplicateObjectGroup\";"+"\n"
+	+"	string $group[] = `ls -tr ($groupName + \"*\")`;"+"\n"
+	+"	if($groupDup == 1 && `size $group` == 0){"+"\n"
+	+"		$group[0] = `group -em -n $groupName`;"+"\n"
+	+"	}"+"\n"
+	+"	"+"\n"
+	+"	print (\"Objects To Duplicate : \" + stringArrayToString($obj, \", \") + \"\\n\");"+"\n"
+	
+	+"	float $uVal[];"+"\n"
+	+"	clear $uVal;"+"\n"
+	+"	if ($spaMeth == 0){"+"\n"	
+	+"		$uVal[0] = 1.0 / ($dupCount - 1);"+"\n"
+	+"	} else if ($spaMeth == 1){"+"\n"	
+	+"		$uVal[0] = 1.0 * ($spacing + $offsetU);"+"\n"
+	+"		$dupCount = 1.0 / ($spacing + $offsetU);"+"\n"
+	+"	} else if ($spaMeth == 2){"+"\n"
+	+"		$uVal[0] = (1.0 / $arcLength) * ($spacing + $offsetU);"+"\n"	
+	+"		$dupCount = $arcLength / ($spacing + $offsetU);"+"\n"
+	+"	} else if ($spaMeth == 3){"+"\n"
+	+"		float $bboxTotal;"+"\n"
+	+"		for ($i=0;$i<`size $obj`;$i++){"+"\n"
+	+"			float $bboxSize[] = `getAttr ($obj[$i] + \".boundingBoxSize\")`;"+"\n"
+	+"			float $bboxp = $arcLength / ($bboxSize[1] + $offsetU);"+"\n"	
+	+"			$uVal[`size $uVal`] = 1.0 / $bboxp;"+"\n"	
+	+"			$bboxTotal += $bboxp;"+"\n"
+	+"		}"+"\n"
+	+"		$dupCount = ($bboxTotal / `size $obj`);"+"\n"
+	+"	}"+"\n"
+	+"	print (\"Duplication Count : \" + $dupCount + \"\\n\");"+"\n"
+	
+	+"	// Remove Excess Duplicates "+"\n"
+	+"	if (`size $dup` > $dupCount){"+"\n"
+	+"		string $del[];"+"\n"
+	+"		for ($i=$dupCount;$i<`size $dup`;$i++){"+"\n"
+	+"			$del[`size $del`] = $dup[$i];"+"\n"
+	+"			//stringArrayRemoveAtIndex($i, $dup);"+"\n"
+	+"		}"+"\n"
+	+"		if($dupType == 0 || $dupType == 1){"+"\n"
+	+"			delete $del;"+"\n"
+	+"		} else if ($dupType == 2){"+"\n"
+	+"			removeSelectedObjectReferenceFile($del);"+"\n"
+	+"		}"+"\n"
+	+"		$dup = stringArrayRemove($del, $dup);"+"\n"
+	+"	}"+"\n"
+	
+	+"	if (`size $dup` < $dupCount){"+"\n"
+	+"		// Do the duplication "+"\n"	
+	+"		int $d = 0;"+"\n"
+	+"		for ($i=(`size $dup`);$i<$dupCount;$i++){"+"\n"
+	+"			string $new[];"+"\n"
+	+"			print (\"-------------------\\nDuplicating : \" + $obj[$d] + \"\\n\");"+"\n"
+	+"			if($dupType == 0){"+"\n"
+	+"				$new = `duplicate -rr -rc -n ($curve + \"CurveDuplicateObject\" + $i) $obj[$d]`;"+"\n"
+	+"			} else if ($dupType == 1){"+"\n"
+	+"				$new = `instance -n ($curve + \"CurveDuplicateObject\" + $i) $obj[$d]`;"+"\n"
+	+"			} else if ($dupType == 2){"+"\n"
+	+"				$new = duplicateReferenceObject($obj[$d]);"+"\n"
+	+"			}"+"\n"
+	+"			if ($groupDup == 1 && `size $group` > 0){"+"\n"
+	+"				parent $new[0] $group[0];"+"\n"
+	+"			}"+"\n"
+	+"			$dup[`size $dup`] = $new[0];"+"\n"
+	
+	+"			select -r $new[0];"+"\n"
+	+"			select -add $curve;"+"\n"
+	+"			string $mp = `pathAnimation -fractionMode $fracMode -follow $follow -startTimeU 1 -endTimeU 10`;"+"\n"
+	+"			cutKey -t \":\" -f \":\" -at \"u\" $mp;"+"\n"
+	
+	+"			// Add Flow "+"\n"
+	+"			if(`getAttr ($curve + \".flowPath\")`){"+"\n"
+	+"				select -r $curve;"+"\n"
+	+"				select -r $new[0];"+"\n"
+	+"				string $flow[] = `flow -divisions 5 5 5 -objectCentered 1 -localCompute 0 -localDivisions 2 2 2 $new[0]`;"+"\n"	
+	+"				if ($groupDup == 1 && `size $group` > 0){"+"\n"
+	+"					parent $flow $group[0];"+"\n"
+	+"				}"+"\n"	
+	+"			}"+"\n"
+	
+	+"			$d++;"+"\n"
+	+"			if ($d == `size $obj`){"+"\n"
+	+"				$d = 0;"+"\n"
+	+"			}"+"\n"
+	+"		}"+"\n"
+	
+	+"		float $uTot = 0;"+"\n"
+	+"		int $d = 0;"+"\n"
+	+"		for ($i=0;$i<`size $dup`;$i++){"+"\n"
+	+"			// Move the duplicates into position on motion path "+"\n"
+	+"			string $mp[] = `listConnections -type motionPath $dup[$i]`;"+"\n"
+	+"			if (`size $mp` == 0){ continue;}"+"\n"
+	+"			print (\"Spacing : \" + $uVal[$d] + \"\\n\");"+"\n"
+	+"			float $iuVal = $uVal[$d] + $uTot;"+"\n"
+	+"			if ($randomize == 1){"+"\n"
+	+"				$iuVal = rand(($iuVal + $ran), ($iuVal - $ran));"+"\n"
+	+"			}"+"\n"
+	+"			setAttr ($mp[0] + \".uValue\") $iuVal;"+"\n"
+	+"			$uTot = $iuVal;"+"\n"
+	+"			print (\"UTot : \" + $uTot + \"\\n------------------------\\n\");"+"\n"
+	+"			$d++;"+"\n"
+	+"			if ($d == `size $obj`){"+"\n"
+	+"				$d = 0;"+"\n"
+	+"			}"+"\n"
+	+"		}"+"\n"
+	+"	}"+"\n"
+	+"	//select -r $curve;"+"\n"
+	+"	select -r $curSel;"+"\n"
+	+"}"+"\n"
+	);
+
+	string $expName = ("UpdateDuplicatesOnCurveExpression");
+	if (`objExists $expName`){
+		delete $expName;
+	}
+	expression -s $exp -alwaysEvaluate 0 -n $expName;
+	
+}
+*/
+/*
+	
+	string $exp = (
+	"global proc updateDuplicatesOnCurve( string $curve )"+"\n"
+	+"{"+"\n"
+	+"	int $enabled = `getAttr ($curve + \".enableDuplication\")`;"+"\n"
+	+"	if($enabled == 0){ return; }"+"\n"
+	+"	string $curSel[] = `ls -sl`;"+"\n"
+	+"	float $arcLength = `getAttr ($curve + \".curveLength\")`;"+"\n"
+	+"	//print (\"Curve Length : \" + $arcLength + \"\\n\");"+"\n"
+	+"	int $dupType = `getAttr ($curve + \".duplicateType\")`;"+"\n"
+	
+	+"	string $obj[];"+"\n"
+	+"	string $source = `getAttr ($curve + \".duplicateName\")`;"+"\n"
+	+"	int $useSets = `getAttr ($curve + \".useSets\")`;"+"\n"
+	+"	string $nodeType = `nodeType $source`;"+"\n"
+	+"	if ($nodeType == \"objectSet\"){"+"\n"
+	+"		$obj = `sets -q $source`;"+"\n"
+	+"	} else {"+"\n"
+	+"		$obj[0] = $source;"+"\n"
+	+"	}"+"\n"
+	
+	+"	int $dupCount = `getAttr ($curve + \".duplicateCount\")`;"+"\n"
+	+"	float $spacing = `getAttr ($curve + \".spacing\")`;"+"\n"
+	+"	int $spaMeth = `getAttr ($curve + \".spacingMethod\")`;"+"\n"
+	+"	int $fracMode = `getAttr ($curve + \".parametricLength\")`;"+"\n"
+	+"	int $randomize = `getAttr ($curve + \".randomizeSpacing\")`;"+"\n"
+	+"	float $ran = `getAttr ($curve + \".randomAmount\")`;"+"\n"
+	+"	float $offsetU = `getAttr ($curve + \".offsetU\")`;"+"\n"
+	+"	if($fracMode == 1){"+"\n"
+	+"		$fracMode = 0;"+"\n"
+	+"	} else {"+"\n"
+	+"		$fracMode = 1;"+"\n"
+	+"	}"+"\n"
+	+"	int $follow = `getAttr ($curve + \".followPath\")`;"+"\n"
+	+"	string $dup[] = `ls -tr ($curve + \"CurveDuplicateObject*\")`;"+"\n"
+	
+	+"	// Grouping "+"\n"
+	+"	int $groupDup = `getAttr ($curve + \".groupDuplicates\")`;"+"\n"
+	+"	string $groupName = $curve + $obj[0] + \"DuplicateGroup\";"+"\n"
+	+"	string $group[] = `ls -tr ($groupName + \"*\")`;"+"\n"
+	+"	if($groupDup == 1 && `size $group` == 0){"+"\n"
+	+"		$group[0] = `group -em -n $groupName`;"+"\n"
+	+"	}"+"\n"
+	+"	"+"\n"
+	
+	+"	float $uVal[];"+"\n"
+	+"	if ($spaMeth == 0){"+"\n"	
+	+"		$uVal[0] = 1.0 / ($dupCount - 1);"+"\n"
+	+"	} else if ($spaMeth == 1){"+"\n"	
+	+"		$uVal[0] = 1.0 * ($spacing + $offsetU);"+"\n"
+	+"		$dupCount = 1.0 / ($spacing + $offsetU);"+"\n"
+	+"	} else if ($spaMeth == 2){"+"\n"
+	+"		$uVal[0] = (1.0 / $arcLength) * ($spacing + $offsetU);"+"\n"	
+	+"		$dupCount = $arcLength / ($spacing + $offsetU);"+"\n"
+	+"	} else if ($spaMeth == 3){"+"\n"
+	+"		float $bboxTotal;"+"\n"
+	+"		for ($i=0;$i<`size $obj`;$i++){"+"\n"
+	+"			float $bboxSize[] = `getAttr ($obj[$i] + \".boundingBoxSize\")`;"+"\n"
+	+"			float $bboxp = $arcLength / ($bboxSize[1] + $offsetU);"+"\n"	
+	+"			$uVal[`size $uVal`] = 1.0 / $bboxp;"+"\n"	
+	+"			$bboxTotal += $bboxp;"+"\n"
+	+"		}"+"\n"
+	+"		$dupCount = ($bboxTotal / `size $obj`);"+"\n"
+	+"	}"+"\n"
+
+	+"	if (`size $dup` > $dupCount){"+"\n"
+	+"		// Delete extra duplicates "+"\n"
+	+"		string $del[];"+"\n"
+	+"		for ($i=$dupCount;$i<`size $dup`;$i++){"+"\n"
+	+"			$del[`size $del`] = $dup[$i];"+"\n"
+	+"			//stringArrayRemoveAtIndex($i, $dup);"+"\n"
+	+"		}"+"\n"
+	+"		if($dupType == 0 || $dupType == 1){"+"\n"
+	+"			delete $del;"+"\n"
+	+"		} else if ($dupType == 2){"+"\n"
+	+"			removeSelectedObjectReferenceFile($del);"+"\n"
+	+"		}"+"\n"
+	+"		$dup = stringArrayRemove($del, $dup);"+"\n"
+	+"	} else if (`size $dup` < $dupCount){"+"\n"
+	+"		// Do the duplication "+"\n"	
+	+"		int $d = 0;"+"\n"
+	+"		for ($i=(`size $dup`);$i<$dupCount;$i++){"+"\n"
+	+"			string $new[];"+"\n"
+	+"			if($dupType == 0){"+"\n"
+	+"				$new = `duplicate -rr -rc -n ($curve + \"CurveDuplicateObject\" + $i) $obj[$d]`;"+"\n"
+	+"			} else if ($dupType == 1){"+"\n"
+	+"				$new = `instance -n ($curve + \"CurveDuplicateObject\" + $i) $obj[$d]`;"+"\n"
+	+"			} else if ($dupType == 2){"+"\n"
+	+"				$new = duplicateReferenceObject($obj[$d]);"+"\n"
+	+"			}"+"\n"
+	+"			if ($groupDup == 1 && `size $group` > 0){"+"\n"
+	+"				parent $new $group[0];"+"\n"
+	+"			}"+"\n"
+	+"			$dup[`size $dup`] = $new[0];"+"\n"
+	+"			select -r $new[0];"+"\n"
+	+"			select -add $curve;"+"\n"
+	+"			string $mp = `pathAnimation -fractionMode $fracMode -follow $follow -startTimeU 1 -endTimeU 10`;"+"\n"
+	+"			cutKey -t \":\" -f \":\" -at \"u\" $mp;"+"\n"
+	+"			if(`getAttr ($curve + \".flowPath\")`){"+"\n"
+	+"				select -r $curve;"+"\n"
+	+"				select -r $new[0];"+"\n"
+	+"				string $flow[] = `flow -divisions 5 5 5 -objectCentered 1 -localCompute 0 -localDivisions 2 2 2 $new[0]`;"+"\n"	
+	+"				if ($groupDup == 1 && `size $group` > 0){"+"\n"
+	+"					parent $flow $group[0];"+"\n"
+	+"				}"+"\n"	
+	+"			}"+"\n"
+	+"			// Move the duplicates into position on motion path "+"\n"
+	+"			print (\"Spacing : \" + $uVal[$d] + \"\\n\");"+"\n"
+	+"			string $mp[] = `listConnections -type motionPath $dup[$i]`;"+"\n"
+	+"			if (`size $mp` == 0){ continue;}"+"\n"
+	+"			float $iuVal = $uVal[$d] * $i;"+"\n"
+	+"			if ($randomize == 1){"+"\n"
+	+"				$iuVal = rand(($iuVal + $ran), ($iuVal - $ran));"+"\n"
+	+"			}"+"\n"
+	+"			$iuVal += $offsetU;"+"\n"
+	+"			setAttr ($mp[0] + \".uValue\") $iuVal;"+"\n"
+	+"				$d++;"+"\n"
+	+"			if ($d == `size $obj`){"+"\n"
+	+"				$d = 0;"+"\n"
+	+"			}"+"\n"
+	+"		}"+"\n"
+	+"	//select -r $curve;"+"\n"
+	+"	select -r $curSel;"+"\n"
+	+"}"+"\n"
+	);
+
+	
+	*/
+/*
+global proc populateSurfaceLayout(string $parent)
+{
+global string $PopulateRAN_surface;
+global string $PopulateRAN_obj;
+global string $PopulateRAN_refTransform;
+global int $PopulateRAN_dupTypeCopy;
+global int $PopulateRAN_dupTypeInstance;
+global int $PopulateRAN_dupTypeRefDup;
+
+string $populateOnSurfaceLayout = `frameLayout
+		-l "Populate on Surface"	
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $parent		
+		`;		
+
+		text
+			-l "Objects To Place On Surface"
+			;
+		
+		textScrollList
+			-w 80
+			-h 90
+			-ams true
+			-dkc "removeObjectToPlaceOnPopulate"
+			getObjectsToPlaceOnPopulate
+			;
+			
+		rowLayout
+			-numberOfColumns 2
+			;	
+			button
+				-label "Select Object(s)"
+				-command "assignObjectsToPlaceOnPopulate"
+				;
+			button
+				-label "Clear List"
+				-command "clearObjectsToPlaceOnPopulate"
+				;
+		setParent..;
+		
+			
+		textFieldButtonGrp
+			-ed true
+			-label "Surface to Populate"
+			-text  ""
+			-ann ""
+			-cal 1 "center"
+			-buttonLabel "Select"
+			-bc "assignPopulateSurfaceObject"
+			getPopulateSurfaceObject
+			;
+
+								
+		optionMenuGrp -l "Duplicate Type"
+			populateOnSurfaceDuplicateType;
+				menuItem -label "copy";
+				menuItem -label "instance";
+				menuItem -label "referenceCopy";				
+					
+		checkBox
+			-l "Group Duplicates"
+			-v true
+			randomSurfaceObjectDuplicationGroupingOption
+			;			
+					
+		checkBox
+			-l "Align Objects To Surface Faces"
+			-v false
+			randomSurfaceObjectAlignToSurfaceFacesOption
+			;
+			
+		checkBoxGrp
+			-ncb 2
+			-l "Constraint Options"
+			-l1 "Geometry Constraint"
+			-l2 "Normal Constraint"
+			-v1 true
+			-v2 true
+			-vr
+			randomlyPlaceObjectConstraintOptions			
+			;
+		
+		referenceDuplicationLayout($layout);
+		
+		randomizationSettingsLayout($layout);	
+		
+				
+		intSliderGrp 
+			-l "Number of Duplicates" 
+			-minValue 1		
+			-maxValue 100
+			-value 10 
+			-fieldMinValue 1 
+			-fieldMaxValue 10000000
+			-field true	
+			-ann ""
+			-cw3 300 50 90
+			-p $numberOfDuplicatesSettingsLayout
+			duplicateObjectsOnSurfaceCount			
+			;
+		
+		textFieldGrp
+			-l "Populate Objects Groupt Name"
+			-text "PopulateObjectsGrp"
+			-p $numberOfDuplicatesSettingsLayout
+			populateSurfaceObjectsGroupName
+			;
+						
+		button 
+			-l "Populate Surface"
+			-c ("populateSurface();")
+
+			;
+			
+		progressBar
+			populateSurfaceProgressBar			
+			;
+			
+		setParent..;
+}
+*/
+
+/*
+global proc referenceDuplicationLayout(string $parent)
+{
+string $layout = `frameLayout
+	-l "Referenece Duplication Options"	
+	-ann ""
+	-bv true
+	-la "center"
+	-li 10
+	-lv true
+	-mw 10
+	-mh 10		
+	
+	-cll true
+	-cl true
+	-parent $parent		
+	`;
+	
+	textFieldButtonGrp
+		-ed true
+		-label "Specify Transform"
+		-text  ""
+		-ann ""
+		-cal 1 "center"
+		-buttonLabel "Select"
+		-bc "assignReferenceCopyTransform"
+		getReferenceCopyTransform
+		;
+		
+	textFieldButtonGrp
+		-ed true
+		-label "Reference Object"
+		-text  ""
+		-ann ""
+		-cal 1 "center"
+		-buttonLabel "Select"
+		-bc "selectReferenceObjectToDuplicate"
+		selectReferenceObjectToDuplicate
+		;
+	
+	intSliderGrp
+		-l "Duplicate Reference Object" 
+		-minValue 1		
+		-maxValue 100
+		-value 10
+		-fieldMinValue 1 
+		-fieldMaxValue 10000000	
+		-field true
+		-ann ""
+		PopulateDuplicateSelectedReferenceObjectCount				
+		;	
+		
+	button 
+		-l "Duplicate Reference Object"
+		-c "PopulateDuplicateSelectedReferenceObject"
+		;	
+		
+	setParent..;
+}
+*/
+
+/*
+global proc radomizationSettingsLayout(string $parent)
+{
+	string $layout = `frameLayout
+		-l "Randomazation Settings"	
+		-ann ""
+		-bv true
+		-la "center"
+		-li 10
+		-lv true
+		-mw 10
+		-mh 10		
+		
+		-cll true
+		-cl true
+		-parent $parent		
+		`;
+	floatSliderButtonGrp 
+		-l "Randomize All Translate, Rotate, and Scale Settings" 
+		-minValue 1		
+		-maxValue 500
+		-value 100 
+		-buttonLabel "Randomize"
+		-buttonCommand "PopulateRandomizeRandomSurfaceObjectRandomizeAllSettings"
+		-field true	
+		-ann ""
+		-cw4 300 50 60 50
+		-p $randomazationSettingsLayout
+		randomSurfaceObjectRandomizeAllSettings				
+		;
+
+	string $randomTranslationgSettingsLayout = `frameLayout
+	
+	
+	rowLayout -nc 3 -cw3 70 70 70;
+		floatField -w 70 -v 50 randomTranslationX;
+		floatField -w 70 -v 50 randomTranslationY;
+		floatField -w 70 -v 50 randomTranslationZ;
+	setParent..;
+	
+	floatSliderButtonGrp 
+		-l "Randomize Settings" 
+		-minValue 1		
+		-maxValue 100
+		-fieldMinValue 1 
+		-fieldMaxValue 10000000
+		-value 100 
+		-buttonLabel "Randomize"
+		-buttonCommand "PopulateRandomizeRandomSurfaceObjectRandomizeTransformSettings"
+		-field true	
+		-ann ""
+		-cw4 300 50 60 50
+		-p $randomTranslationgSettingsLayout
+		randomSurfaceObjectRandomizeTransformSettings				
+		;
+		
+	
+
+	string $randomRotationSettingsLayout = `frameLayout
+	-l "Random Rotation Settings"	
+	-ann ""
+	-bv true
+	-la "center"
+	-li 10
+	-lv true
+	-mw 10
+	-mh 10		
+	
+	-cll true
+	-cl true
+	-parent $layout		
+	`;
+	
+	checkBox 
+		-align left
+		-l "Use Vertex Normal as orientation"
+		-v false
+		orientBox
+		;
+		
+	text -align left "      (Override rotation settings)";
+
+	text "Min Rotation (0 - 360): ";
+	rowLayout -nc 3 -cw3 70 70 70;
+		floatField -w 70 -max 360 minRotationX;
+		floatField -w 70 -max 360 minRotationY;
+		floatField -w 70 -max 360 minRotationZ;
+	setParent..;
+	text "Max Rotation (0 - 360): ";
+	rowLayout -nc 3 -cw3 70 70 70;
+		floatField -w 70 -max 360 maxRotationX;
+		floatField -w 70 -max 360 -v 360 maxRotationY;
+		floatField -w 70 -max 360 maxRotationZ;
+	setParent..;
+	rowLayout -nc 3 -cw3 70 70 70;
+		checkBox -l "Invert X" invertXBox;
+		checkBox -l "Invert Y" invertYBox;
+		checkBox -l "Invert Z" invertZBox;
+	setParent..;	
+	floatSliderButtonGrp 
+		-l "Randomize Settings" 
+		-minValue 1		
+		-maxValue 360
+		-value 180 
+		-buttonLabel "Randomize"
+		-buttonCommand "PopulateRandomizeRandomSurfaceObjectRandomizeRotationSettings"
+		-field true	
+		-ann ""
+		-cw4 300 50 60 50
+		-p $randomRotationSettingsLayout
+		randomSurfaceObjectRandomizeRotationSettings				
+		;		
+	
+	string $randomScaleSettingsLayout = `frameLayout
+	-l "Random Scale Settings"	
+	-ann ""
+	-bv true
+	-la "center"
+	-li 10
+	-lv true
+	-mw 10
+	-mh 10		
+	
+	-cll true
+	-cl true
+	-parent $layout		
+	`;
+	
+	checkBox 
+		-align left
+		-l "Scale Uniformly"
+		-v true
+		randomScaleUniformlySetting
+		;
+	
+	text "Min Scale: ";
+	rowLayout -nc 3 -cw3 70 70 70;
+		floatField -w 70 -v 1 minScaleX;
+		floatField -w 70 -v 1 minScaleY;
+		floatField -w 70 -v 1 minScaleZ;
+	setParent..;
+	text "Max Scale: ";
+	rowLayout -nc 3 -cw3 70 70 70;
+		floatField -w 70 -v 1 maxScaleX;
+		floatField -w 70 -v 1 maxScaleY;
+		floatField -w 70 -v 1 maxScaleZ;
+	setParent..;	
+	
+	floatSliderButtonGrp 
+		-l "Randomize Settings" 
+		-minValue 1		
+		-maxValue 100
+		-fieldMinValue 1 
+		-fieldMaxValue 10000000
+		-value 100 
+		-buttonLabel "Randomize"
+		-buttonCommand "PopulateRandomizeRandomSurfaceObjectRandomizeScaleSettings"
+		-field true	
+		-ann ""
+		-cw4 300 50 60 50
+		-p $randomScaleSettingsLayout
+		randomSurfaceObjectRandomizeScaleSettings				
+		;
+
+	setParent..;
+}
+*/
+
+/*
+global proc string[] populateOnSurface()
+{
+	
+	progressBar -e -pr 0 placeObjectRandomlyOnPopulateSurfaceProgressBar;
+	string $dupType = `optionMenuGrp -q -v placeRandomObjectOnSurfaceDuplicteType`;
+	string $refTransf = `textFieldButtonGrp -q -text getReferenceCopyTransform`;
+	$doGrouping = `checkBox -q -v randomSurfaceObjectDuplicationGroupingOption`;
+	$createGeometryConstraints = `checkBoxGrp -q -v1 randomlyPlaceObjectConstraintOptions`;
+	$createNormalConstraints = `checkBoxGrp -q -v2 randomlyPlaceObjectConstraintOptions`;
+	$scaleUniformly = `checkBox -q -v randomScaleUniformlySetting`;
+	string $filePath = "";
+	string $objs[];
+	$objs[0] = `textFieldButtonGrp -q -tx getObjectToPlaceOnPopulate`;
+	string $sourceObjs[] = `textScrollList -q -ai getObjectsToPlaceOnPopulate`;
+	$sourceObj = $objs[0];
+	if($dupType == "referenceCopy"){
+		$filePath = `referenceQuery -f $objs[0]`;
+		print("Referencing File: " + $filePath + "\n");
+	}
+	float $vertexPos[];
+	string $surface = `textFieldButtonGrp -q -tx getPopulateSurfaceObject`;
+	int $vtxCount[] = `polyEvaluate -v $surface`;
+	string $objPos[];
+	string $objOrient[] = {""};
+	string $finalCmd;
+	int $random = 0;
+	int $duplicate = `intSliderGrp -q -v duplicateObjectsOnSurfaceCount`;
+	string $objName[];
+	string $groupName = "";
+	
+	float $displacementX = `floatField -q -v randomTranslationX`;
+	float $displacementY = `floatField -q -v randomTranslationY`;
+	float $displacementZ = `floatField -q -v randomTranslationZ`;
+	
+	float $minScaleX = `floatField -q -v minScaleX`;
+	float $minScaleY = `floatField -q -v minScaleY`;
+	float $minScaleZ = `floatField -q -v minScaleZ`;
+	
+	float $maxScaleX = `floatField -q -v maxScaleX`;
+	float $maxScaleY = `floatField -q -v maxScaleY`;
+	float $maxScaleZ = `floatField -q -v maxScaleZ`;
+	
+	float $pivPos[];
+	
+	int $orientState = `checkBox -q -v orientBox`;
+	
+	float $minRotationX = `floatField -q -v minRotationX`;
+	float $minRotationY = `floatField -q -v minRotationY`;
+	float $minRotationZ = `floatField -q -v minRotationZ`;
+	
+	float $maxRotationX = `floatField -q -v maxRotationX`;
+	float $maxRotationY = `floatField -q -v maxRotationY`;
+	float $maxRotationZ = `floatField -q -v maxRotationZ`;
+	
+	int $invertX = `checkBox -q -v invertXBox`;
+	int $invertY = `checkBox -q -v invertYBox`;
+	int $invertZ = `checkBox -q -v invertZBox`;
+	
+	float $rotAngle[] = {};
+	float $vertexNormal[] = {};
+	
+	if ($invertX == 1){
+		$invertX = -1;
+	}
+			
+	if ($invertY == 1){
+		$invertY = -1;
+	}
+			
+	if ($invertZ == 1){
+		$invertZ = -1;
+	}
+		
+	if ($invertX == 0){
+		$invertX = 1;
+	}
+	
+	if ($invertY == 0){
+		$invertY = 1;
+	}
+	
+	if ($invertZ == 0){
+		$invertZ = 1;
+	}
+	
+	
+	float $progress = ($duplicate + $vtxCount[0] + (`size $objs`));
+	string $objList[];
+	for ($i = 0; $i < $duplicate; $i++){
+		if($dupType == "referenceCopy"){
+			string $refSn = `referenceQuery -f -shn $sourceObj`;
+			string $buffer[];
+			tokenize $refSn "." $buffer;
+			string $namespace = $buffer[0];
+			//string $namespace = basename( $refSn, ".mb");
+			//print ("RefName: " + $refSn + " Namespace: " + $namespace + "\n");
+			string $newRefFile = `file -r -gl -loadReferenceDepth "all" -namespace $namespace -options "v=0" $filePath`;
+			file -sa $newRefFile;
+			if($refTransf == ""){
+				$objName = `ls -hd 1 -sl`;
+			} else {
+				string $topRefObj[] = `ls -hd 1 -sl`;
+				$objList[$i] = $topRefObj[0];
+				string $sel[] = `ls -sl`;
+				int $s;
+				for($s=0;$s<`size $sel`;$s++){
+					string $matchSel = stripOutNumbersFromString($sel[$s]);
+					string $matchRef = stripOutNumbersFromString($refTransf);
+					if($matchSel == $matchRef){
+						$objName[0] = $sel[$s];					
+					}
+				}
+			}
+			$objs[$i] = $objName[0];
+		} else if($dupType == "copy"){
+			$objName = `duplicate -rr $objs[0]`;
+			$objs[$i] = $objName[0];
+		} else if($dupType == "instance"){
+			$objName = `instance $sourceObj`;
+			$objs[$i] = $objName[0];
+		}
+		progressBar -e -max $progress -s 1 populateSurfaceProgressBar;
+	} 
+	
+	if($createGeometryConstraints || $createNormalConstraints){
+		for($i=0;$i<`size $objs`;$i++){
+			if($createGeometryConstraints){
+				geometryConstraint -weight 1 $surface $objs[$i];
+			}
+			if($createNormalConstraints){
+				normalConstraint -weight 1 -aimVector 0 1 0 -upVector 0 1 0 -worldUpType "vector" -worldUpVector 0 1 0 $surface $objs[$i];
+			}
+		}
+	}
+	
+	for ($i = 0; $i < $vtxCount[0]; $i++)
+	{
+		$vertexPos = `xform -q -ws -t ($surface+".vtx["+$i+"]")`;
+		$vertexNormal = `polyNormalPerVertex -q -xyz ($surface+".vtx["+$i+"]")`;
+		$rotAngle =`angleBetween -euler -v1 0.0 1.0 0.0 -v2 $vertexNormal[0] $vertexNormal[1] $vertexNormal[2]`;
+		
+		int $rotAngleClearX = $rotAngle[0];
+		int $rotAngleClearY = $rotAngle[1];
+		int $rotAngleClearZ = $rotAngle[2];
+		
+		$objOrient[$i] = $rotAngleClearX+" "+$rotAngleClearY+" "+$rotAngleClearZ;
+		$objPos[$i] = "("+$vertexPos[0]+") ("+$vertexPos[1]+") ("+$vertexPos[2]+")";
+		progressBar -e -max $progress -s 1 populateSurfaceProgressBar;
+	}
+	
+	for ($i = 0; $i < size($objs); $i++){
+			
+		$random = floor(rand(0,$vtxCount[0]));
+		$finalCmd = "move -a -xyz "+$objPos[$random]+" "+$objs[$i];
+		float $rotateX = (rand($minRotationX,$maxRotationX) * $invertX);
+		float $rotateY = (rand($minRotationY,$maxRotationY) * $invertY);
+		float $rotateZ = (rand($minRotationZ,$maxRotationZ) * $invertZ);
+		eval($finalCmd);
+		if($scaleUniformly){
+			float $scaleFactor = rand((($minScaleX + $minScaleY + $minScaleZ) / 3), (($maxScaleX + $maxScaleY + $maxScaleZ) / 3));
+			scale -r -xyz $scaleFactor $scaleFactor $scaleFactor $objs[$i];
+		} else {
+			scale -r -xyz (rand($minScaleX,$maxScaleX)) (rand($minScaleY,$maxScaleY)) (rand($minScaleZ,$maxScaleZ)) $objs[$i];
+		}
+				
+		//xform -os -r -t ($displacementX * (rand(-0.1,0.1))) ($displacementY * (rand(-0.1,0.1))) ($displacementZ * (rand(-0.1,0.1))) $objs[$i];
+		xform -r -t ($displacementX * (rand(-0.1,0.1))) ($displacementY * (rand(-0.1,0.1))) ($displacementZ * (rand(-0.1,0.1))) $objs[$i];
+		
+		
+		string $buffer[];
+		$numTokens = `tokenize $objOrient[$random] " " $buffer`;
+		
+		if($orientState == 1){
+			string $rotateEval;
+			$rotateEval = ("rotate -a -xyz "+$buffer[0]+" "+$buffer[1]+" "+$buffer[2]+" "+$objs[$i]);
+			eval($rotateEval);
+		}else{
+			//rotate -a -xyz $rotateX $rotateY $rotateZ $objs[$i];
+			rotate -r -os $rotateX $rotateY $rotateZ $objs[$i];
+			//rotate -os -a -xyz $rotateX $rotateY $rotateZ $objs[$i];
+		}
+		
+		progressBar -e -max $progress -s 1 populateSurfaceProgressBar;
+	}
+	
+	
+	if($createGeometryConstraints || $createNormalConstraints){
+		for($i=0;$i<`size $objs`;$i++){
+			if($createGeometryConstraints){
+				geometryConstraint -weight 1 $surface $objs[$i];
+			}
+			if($createNormalConstraints){
+				normalConstraint -weight 1 -aimVector 0 1 0 -upVector 0 1 0 -worldUpType "vector" -worldUpVector 0 1 0 $surface $objs[$i];
+			}
+		}
+	}
+	
+	if($doGrouping){
+		string $newGroupName = `textFieldGrp -q -text randomlyPlaceSurfaceObjectsGroupName`;
+		$groupName = `group -em -n $newGroupName`;
+		for($i=0;$i<`size $objs`;$i++){	
+			if(`size $objList` > 0){
+				$objs[$i] = $objList[$i];
+			}
+			parent $objs[$i] $groupName;
+		}
+	}
+	
+	progressBar -e -pr 0 populateSurfaceProgressBar;
+	return $objs;	
+
+}
+*/
+
+/*
+global proc assignPopulateSurfaceObject()
+{
+	string $sel[] = `ls -sl`;
+	textFieldButtonGrp
+		-e 
+		-tx $sel[0] 
+		getPopulateSurfaceObject
+		;
+		
+	global string $PopulateRAN_surface;
+	$PopulateRAN_surface = $sel[0];
+}
+*/
+
+/*
+global proc assignObjectToPlaceOnPopulate() 
+{
+	string $sel[] = `ls -sl`;
+	textFieldButtonGrp
+			-e 
+			-tx $sel[0]
+			getObjectToPlaceOnPopulate
+			;
+	
+	global string $PopulateRAN_obj;
+	$PopulateRAN_obj = $sel[0];
+}
+*/
+
+/*
+global proc assignReferenceCopyTransform()
+{
+	string $sel[] = `ls -sl`;
+	textFieldButtonGrp
+		-e 
+		-tx $sel[0]
+		getReferenceCopyTransform
+		;	
+	
+	global string $PopulateRAN_refTransform;
+	$PopulateRAN_refTransform = $sel[0];
+}
+*/
+
+/*
+global proc assignObjectsToPlaceOnPopulate()
+{
+	string $sel[] = `ls -sl`;
+	int $i;
+	for($i=0;$i<`size $sel`;$i++){
+		textScrollList -edit -append $sel[$i] getObjectsToPlaceOnPopulate;
+	}
+	
+	}
+*/
+
+/*
+global proc removeObjectToPlaceOnPopulate()
+{
+	string $sel[] = `textScrollList -q -si getObjectsToPlaceOnPopulate`;
+	int $i;
+	for($i=0;$i<`size $sel`;$i++){
+		textScrollList	-edit -ri $sel[$i] getObjectsToPlaceOnPopulate;
+	}
+
+}
+*/
+
+/*
+global proc clearObjectsToPlaceOnPopulate()
+{
+	textScrollList -e -ra getObjectsToPlaceOnPopulate;
+}
+*/
+
+/*
+global proc assignRandomlyPlacedFluids()
+{
+	string $sel[] = `ls -sl`;
+	//global string $Populate_PopulateFlamesFluids[];
+	if(`size $sel` == 0){
+		error "Nothing is selected. Select the Randomly Placed Source Object.";
+		return;
+	}
+	int $i;
+	for($i=0;$i<`size $sel`;$i++){
+		textScrollList
+			-edit
+			-append $sel[$i]
+			getRandomlyPlacedFluidObjects;
+		//$Populate_PopulateFlamesFluids[$i] = $sel[$i];
+	}
+
+}
+*/
+
+/*
+global proc removeRandomlyPlacedFluidsObjects()
+{
+	string $sel[] = `textScrollList -q -si getRandomlyPlacedFluidObjects`;
+	int $i;
+	for($i=0;$i<`size $sel`;$i++){
+		textScrollList
+			-edit
+			-ri $sel[$i]
+			getRandomlyPlacedFluidObjects
+			;
+	}
+}
+*/
+
+/*
+global proc clearRandomlyPlacedFluidsObjects()
+{
+	textScrollList
+		-e
+		-ra
+		getRandomlyPlacedFluidObjects;
+}
+*/
+
+/*
+global proc PopulateRandomizeRandomSurfaceObjectRandomizeTransformSettings()
+{
+	float $ran = `floatSliderButtonGrp -q -v randomSurfaceObjectRandomizeTransformSettings`;
+	float $newRan;
+	$newRan = rand(0, rand($ran));
+	floatField -edit -v $newRan randomTranslationX;
+	$newRan = rand(0, rand($ran));
+	floatField -edit -v $newRan randomTranslationY;
+	$newRan = rand(0, rand($ran));
+	floatField -edit -v $newRan randomTranslationZ;
+}
+
+global proc PopulateRandomizeRandomSurfaceObjectRandomizeRotationSettings()
+{
+	float $ran = `floatSliderButtonGrp -q -v randomSurfaceObjectRandomizeRotationSettings`;
+	float $newRan;
+	$newRan = rand(0, rand($ran));
+	floatField -edit -v $newRan minRotationX;
+	$newRan = rand(0, rand($ran));
+	floatField -edit -v $newRan minRotationY;
+	$newRan = rand(0, rand($ran));
+	floatField -edit -v $newRan minRotationZ;
+	
+	$newRan = rand(0, rand($ran));
+	floatField -edit -v $newRan maxRotationX;
+	$newRan = rand(0, rand($ran));
+	floatField -edit -v $newRan maxRotationY;
+	$newRan = rand(0, rand($ran));
+	floatField -edit -v $newRan maxRotationZ;
+
+}
+
+global proc PopulateRandomizeRandomSurfaceObjectRandomizeScaleSettings()
+{
+	float $ran = `floatSliderButtonGrp -q -v randomSurfaceObjectRandomizeScaleSettings`;
+	float $newRan;
+	$newRan = rand(0, rand($ran));
+	floatField -edit -v $newRan minScaleX;
+	$newRan = rand(0, rand($ran));
+	floatField -edit -v $newRan minScaleY;
+	$newRan = rand(0, rand($ran));
+	floatField -edit -v $newRan minScaleZ;
+	
+	$newRan = rand(0, rand($ran));
+	floatField -edit -v $newRan maxScaleX;
+	$newRan = rand(0, rand($ran));
+	floatField -edit -v $newRan maxScaleY;
+	$newRan = rand(0, rand($ran));
+	floatField -edit -v $newRan maxScaleZ;
+	
+	}
+	
+	global proc PopulateRandomizeRandomSurfaceObjectRandomizeAllSettings()
+	{
+	float $ran = `floatSliderButtonGrp -q -v randomSurfaceObjectRandomizeAllSettings`;
+	float $newRan;
+	
+	$newRan = rand(0, rand($ran));
+	floatSliderButtonGrp -edit -v $newRan randomSurfaceObjectRandomizeTransformSettings;
+	PopulateRandomizeRandomSurfaceObjectRandomizeTransformSettings();
+	
+	$newRan = rand(0, rand($ran));
+	floatSliderButtonGrp -edit -v $newRan randomSurfaceObjectRandomizeRotationSettings;
+	PopulateRandomizeRandomSurfaceObjectRandomizeRotationSettings();
+	
+	$newRan = rand(0, rand($ran));
+	floatSliderButtonGrp -edit -v $newRan randomSurfaceObjectRandomizeScaleSettings;
+	PopulateRandomizeRandomSurfaceObjectRandomizeScaleSettings();
+
+}
+
+global proc string[] getListOfGroupHierarchy(string $obj[])
+{
+	int $i;
+	string $allRel[];
+	for($i=0;$i<`size $obj`;$i++){
+		string $rel[] = `listRelatives -ad $obj[$i]`;
+		appendStringArray($allRel, $rel, `size $rel`);
+	}
+	return $allRel;
+}
+*/
+
+/*
+global proc string[] PopulateDuplicateOnSurfaceFaces()
+{
+	progressBar -e -pr 0 placeObjectRandomlyOnPopulateSurfaceProgressBar;
+	string $dupType = `optionMenuGrp -q -v placeRandomObjectOnSurfaceDuplicteType`;
+	string $refTransf = `textFieldButtonGrp -q -text getReferenceCopyTransform`;
+	$doGrouping = `checkBox -q -v randomSurfaceObjectDuplicationGroupingOption`;
+	$doCentering = `checkBox -q -v randomSurfaceObjectDuplicationCenteringOption`;
+	$createGeometryConstraints = `checkBoxGrp -q -v1 randomlyPlaceObjectConstraintOptions`;
+	$createNormalConstraints = `checkBoxGrp -q -v2 randomlyPlaceObjectConstraintOptions`;
+	$scaleUniformly = `checkBox -q -v randomScaleUniformlySetting`;
+	string $filePath = "";
+	string $sourceObj = `textFieldButtonGrp -q -tx getObjectToPlaceOnPopulate`;
+	if($dupType == "referenceCopy"){
+		$filePath = `referenceQuery -f $sourceObj`;
+		print("Referencing File: " + $filePath + "\n");
+	}
+	float $vertexPos[];
+	string $surface = `textFieldButtonGrp -q -tx getPopulateSurfaceObject`;
+	int $vtxCount[] = `polyEvaluate -v $surface`;
+	string $objPos[];
+	string $objOrient[] = {""};
+	string $finalCmd;
+	int $random = 0;
+	string $objName[];
+	string $groupName = "";
+	
+	$normAlign = true;
+	$faceAlign = true;
+	
+	select -r $surface;
+	ConvertSelectionToFaces;
+	$selected = `ls -sl`;
+	//$dup = `textFieldButtonGrp -q -text getFlamesFluid`; //For single duplicate obj
+	//string $dups[] = `textScrollList -q -ai getObjectToPlaceOnPopulate`; //For multiple duplicate objects
+	
+	$arrayVert = `filterExpand -sm 31 $selected`; // Filter selected verts as an array.
+	$arrayEdge = `filterExpand -sm 32 $selected`; // Filter selected edges as an array.
+	$arrayFace = `filterExpand -sm 34 $selected`; // Filter selected faces as an array.
+	$arrayCVs = `filterExpand -sm 28 $selected`; // Filter selected CV's as an array.
+	
+	// Get size of arrays.
+	int $vertSize = `size($arrayVert)`;
+	int $edgeSize = `size($arrayEdge)`;
+	int $faceSize = `size($arrayFace)`;
+	int $CVsSize = `size($arrayCVs)`;
+	
+	int $selSize = `size($selected)`;
+	string $newRefObj[];
+	
+	waitCursor -state on; // Turn waitcursor on for duplication process
+	if ($faceSize != 0){
+		string $grpName = `textFieldGrp -q -text randomlyPlaceSurfaceObjectsGroupName`;
+		$grpFace = `group -em -n $grpName`;
+		int $p;
+		for($faceNum in $arrayFace){
+			string $obj[];
+			if($dupType == "referenceCopy"){
+				$obj = duplicateReferenceObjectGetNewObjAndTransform($sourceObj, $refTransf);			
+			} else if($dupType == "copy"){
+				$obj[0] = `duplicate $sourceObj`;
+			} else if($dupType == "instance"){
+				$obj[0] = `instance $sourceObj`;
+			}	
+		   
+			float $avgFacePos[]= `xform -q -t -ws $faceNum`;
+			
+			int $avgFacePosListSize = size($avgFacePos)/3;
+			
+			float $fcX = 0;
+			float $fcY = 0;
+			float $fcZ = 0;
+			
+			for($i=0;$i<$avgFacePosListSize;$i++){
+				$fcX = $fcX + $avgFacePos[$i * 3];
+				$fcY = $fcY + $avgFacePos[$i * 3 + 1];
+				$fcZ = $fcZ + $avgFacePos[$i * 3 + 2];
+			}
+			
+			$fcX = $fcX / $avgFacePosListSize;
+			$fcY = $fcY / $avgFacePosListSize;
+			$fcZ = $fcZ / $avgFacePosListSize;
+			
+			move -rpr $fcX $fcY $fcZ $obj;
+			if($normAlign){
+				normalConstraint -weight 1 -aimVector 0 1 0 -upVector 0 1 0 -worldUpType "scene" $faceNum $obj[0];
+				delete -constraints $obj[0];
+			
+			}
+			   
+			if($faceAlign){
+				//string $faceVerts[] = `polyInfo -faceToVertex ($selected[0] + ".f[$faceNum]")`;
+				string $faceVerts[] = `polyInfo -faceToVertex $faceNum`;
+				
+				//Tokenize the faceVerts string so we have usefull numbers to work with.
+				string $tokens[];
+				tokenize $faceVerts[0] " :\n\r" $tokens;
+				// Result: 6 //
+				
+				int $vertexOrder[];
+				clear $vertexOrder;
+				int $t;
+				
+				for($t=2;$t<`size $tokens`;$t++){
+					$vertexOrder[`size $vertexOrder`] = $tokens[$t];
+				}
+					   
+				//Get the dir of each vert to vert, then get the vector of that dir
+				//Get the smallest angle - that the angle we want to point in
+				//Get the direction from the center or the face to the vert that has the smallest angle.         
+				
+				//select -r ($PopulateObj + ".vtx[" + $vertexOrder[0] + "]");
+				float $vertPos[] = `xform -ws -q -t ($surface + ".vtx[" + $vertexOrder[0] + "]")`;
+				string $vertLoc[] = `spaceLocator -a -p $vertPos[0] $vertPos[1] $vertPos[2]`;
+				xform -cp $vertLoc[0];	  
+				
+				string $faceNorm[] = `polyInfo -fn $faceNum`;
+				vector $normVect = translatePolyInfoNormal($faceNorm[0]);
+				float $nv[3] = {$normVect.x,$normVect.y,$normVect.z};		
+				cycleCheck -e off;
+				
+				aimConstraint -offset 0 0 0 -weight 1 -aimVector 0 0 1 -upVector 0 1 0 -worldUpType "vector" -worldUpVector $nv[0] $nv[1] $nv[2]  $vertLoc[0] $obj[0];
+				delete -constraints $obj[0];
+				delete $vertLoc[0];
+			
+			}		
+			parent $obj[0] $grpFace;
+			select -cl;
+			$newRefObj[`size $newRefObj`] = $obj[1];
+			progressBar -e	-max $faceSize	-s 1 placeObjectRandomlyOnPopulateSurfaceProgressBar;
+			$p++;
+		}
+	}
+	print ("Duplicated " + $faceSize + " objects on faces... ");
+	waitCursor -state off;
+	progressBar -e -pr 0 placeObjectRandomlyOnPopulateSurfaceProgressBar;	
+	select -cl;
+	return $newRefObj;
+
+}
+*/
+
+/*
+global proc string[] duplicateReferenceObjectGetNewObjAndTransform(string $obj, string $refTransf)
+{
+	string $filePath = `referenceQuery -f $obj`;
+	string $refSn = `referenceQuery -f -shn $obj`;
+	string $buffer[];
+	tokenize $refSn "." $buffer;
+	string $namespace = $buffer[0];
+	string $newRefFile = `file -r -gl -loadReferenceDepth "all" -namespace $namespace -options "v=0" $filePath`;
+	file -sa $newRefFile;
+	string $newRefObj;
+	string $newRefTransform;
+	if($refTransf == ""){
+		$newRefTransform = `ls -hd 1 -sl`;
+		$newRefObj = $newRefTransform;
+	} else {
+		string $topRefObj[] = `ls -hd 1 -sl`;
+		$newRefObj = $topRefObj[0];
+		string $sel[] = `ls -sl`;
+		int $i;
+		for($i=0;$i<`size $sel`;$i++){
+			string $matchSel = stripOutNumbersFromString($sel[$i]);
+			string $matchRef = stripOutNumbersFromString($refTransf);
+			if($matchSel == $matchRef){
+				$newRefTransform = $sel[$i];					
+			}
+		}
+	}
+	string $returnObjs[2] = { $newRefTransform, $newRefObj};
+	return $returnObjs;
+	
+	}
+	*/
+	
+	/*
+	global proc selectReferenceObjectToDuplicate()
+	{
+	string $sel[] = `ls -sl`;
+	textFieldButtonGrp -e -tx $sel[0] selectReferenceObjectToDuplicate;	
+}
+*/
+
+/*
+global proc PopulateDuplicateSelectedReferenceObject()
+{
+	//string $sel[] = `ls -sl`;
+	//string $refObj = $sel[0];
+	string $refObj = `textFieldButtonGrp -q -text selectReferenceObjectToDuplicate`;
+	float $count = `intSliderGrp -q -v PopulateDuplicateSelectedReferenceObjectCount`;
+	
+	int $i;
+	for($i=0;$i<$count;$i++){
+		string $filePath = `referenceQuery -f $refObj`;
+		string $refSn = `referenceQuery -f -shn $refObj`;
+		string $buffer[];
+		tokenize $refSn "." $buffer;
+		string $namespace = $buffer[0];
+		string $newRefFile = `file -r -gl -loadReferenceDepth "all" -namespace $namespace -options "v=0" $filePath`;
+		//file -sa $newRefFile;
+	}
+
+}
+*/
+
+/*
+global proc createScaleYProportionalToScaleXZExpression()
+{
+	string $objs[] = `ls -sl`;
+	string $obj = $objs[0];
+	
+	if (attributeExists ("yScaleMultiplier", $obj)==0){
+		addAttr -ln yScaleMultiplier -at double -k 1 -smx 10 -dv 2 $obj;
+	}
+	
+	expression -s (
+	"float $yMult = yScaleMultiplier;\n"
+	+"scaleYProportionalToScaleXZ(\"" + $obj + "\", $yMult);\n"
+	+"global proc scaleYProportionalToScaleXZ(string $obj, float $amount)\n"
+	+"{\n"
+	+"float $scale[] = `getAttr ($obj + \".scale\")`;\n"
+	+"$scale[1] = pow($scale[0], $amount);\n"
+	+"setAttr ($obj + \".scale\") $scale[0] $scale[1] $scale[2];\n"
+	+"}\n"
+	) -o $obj -n ($obj + "ScaleYProportionalToScaleXZ");
+
+}
+*/
