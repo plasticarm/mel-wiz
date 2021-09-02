@@ -6,7 +6,7 @@ There are many scripts designed for generation of variants by creating ranges fo
 Installation :
 source > wiz.mel
 
-then enter mel command : installLocalWiz
+Then enter mel command : installLocalWiz
 
 select the directory the scripts are in.
 
